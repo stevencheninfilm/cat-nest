@@ -15,50 +15,91 @@ const FOOD_DETAILS = {
   treat: { category: 'treats', note: '舔一舔，快乐多一点', position: '50% 100%' },
   water: { category: 'drinks', note: '咕嘟咕嘟，补点水吧', position: '100% 100%' },
 };
+const selectedMeal = id => Object.hasOwn(FOODS, id) ? id : 'meal';
+
 export function foodArt(id, className = '') {
   return `<span class="food-sprite ${className}" style="--food-position:${FOOD_DETAILS[id]?.position || '50% 0%'}" aria-hidden="true"></span>`;
 }
+/** Kept for callers that only need the menu's selected-food preview. */
 export function foodPreview(id) {
-  const food = FOODS[id] || FOODS.meal;
-  return `${foodArt(id)}<span class="food-preview-copy"><small>猫咪小餐桌</small><strong>${food.name}</strong><span>♡ +${food.love} <i>·</i> ${food.cost} 猫爪币</span><em>${Object.keys(FOODS).length} 种食物，挑一份喜欢的 <b>›</b></em></span>`;
+  id = selectedMeal(id);
+  const food = FOODS[id];
+  return `${foodArt(id)}<span class="food-preview-copy"><small>准备喂食 · 尚未上桌</small><strong>${food.name}</strong><span>♡ +${food.love} <i>·</i> ${food.cost} 猫爪币</span><em>点这里，挑一份喜欢的 <b>›</b></em></span>`;
+}
+function roleRecord(info, role, clientId) {
+  // Stable identities are the normal path. Legacy two-person records remain
+  // visible until both partners have served a meal with the current identities.
+  const exact = info.records.find(item => item.actorId === role.clientId);
+  if (exact) return exact;
+  const mine = role.clientId === clientId;
+  if (!COUPLE_ROLES.some(item => item.clientId === clientId)) return null;
+  return mine ? info.mine : info.partner;
+}
+function statusFor(record, info) {
+  if (record?.inCurrentWindow) return { className: 'has-fed', label: '✓ 本轮已喂' };
+  if (record?.active) return { className: 'previous-meal', label: '上餐未结束' };
+  if (record) return { className: 'meal-ended', label: info.windowActive ? '本轮未喂' : '本餐已结束' };
+  return { className: 'not-fed', label: '本轮未喂' };
+}
+function pairChips(info, clientId, members = []) {
+  return `<span class="feeding-pair-chips" aria-label="我和对方的喂食状态">${[...COUPLE_ROLES].sort((a, b) => Number(b.clientId === clientId) - Number(a.clientId === clientId)).map(role => {
+    const mine = role.clientId === clientId;
+    const record = roleRecord(info, role, clientId);
+    const status = statusFor(record, info);
+    const online = members.some(member => member.id === role.clientId);
+    return `<span class="feeding-status-chip ${status.className}" data-feeder="${role.id}"><b>${mine ? '我' : '对方'}</b><span>${status.label}</span>${online ? '<i class="feeder-online" aria-label="在线"></i>' : ''}</span>`;
+  }).join('')}</span>`;
+}
+function pairSummary(info, clientId, members) {
+  return `<section class="feeding-pair-summary" aria-label="本轮双人喂食状态"><div class="feeding-pair-summary-label"><strong>我们的小餐桌</strong><span>${info.windowActive ? `本轮剩余 <time data-feed-until="${info.windowEndsAt}">${countdown(info.windowRemainingMs)}</time>` : '一人一份，开始新的 4 小时喂养'}</span></div>${pairChips(info, clientId, members)}</section>`;
+}
+/** The home dish follows served records, never the currently selected menu card. */
+export function feedingHome({ state, clientId, members = [], selectedFood, now = Date.now() }) {
+  const info = feedingInfo(state, clientId, now);
+  const latest = (info.records.filter(record => record.active).length ? info.records.filter(record => record.active) : info.records).reduce((newest, record) => !newest || record.at > newest.at ? record : newest, null);
+  const food = latest ? FOODS[latest.food] : null;
+  const selected = FOODS[selectedMeal(selectedFood)];
+  return `<span class="home-meal-copy food-preview-copy"><small>猫咪小餐桌 · ${latest ? '目前食物' : '等你开饭'}</small><strong>${food?.name || '还没开饭'}</strong><span class="home-meal-status">${latest?.active ? `正在享用 · <time data-feed-until="${latest.expiresAt}">${countdown(latest.remainingMs)}</time>` : latest ? '本餐已结束 · 等你添一份' : `已选${selected.name} · 尚未上桌`}</span>${pairChips(info, clientId, members)}<em>查看食物和双人喂养 <b>›</b></em></span><span class="home-food-dish ${latest?.active ? 'meal-active' : latest ? 'meal-ended' : 'meal-empty'}" ${latest ? `data-current-food="${latest.food}"` : ''}><span class="food-dish"></span>${latest ? foodArt(latest.food, 'home-dish-food') : '<span class="empty-dish-heart" aria-hidden="true">♡</span>'}</span>`;
 }
 function pairSlots(info, clientId, members = []) {
   return COUPLE_ROLES.map(role => {
-    const record = info.records.find(item => item.actorId === role.clientId);
+    const record = roleRecord(info, role, clientId);
     const mine = clientId === role.clientId;
     const online = members.some(member => member.id === role.clientId);
-    return `<article class="feeder-card ${record?.inCurrentWindow ? 'has-fed' : ''}"><span class="feeder-avatar ${mine ? 'mine' : ''} ${role.id}">${role.id === 'male' ? '👦🏻' : '👧🏻'}</span><strong>${role.name}${mine ? '<small>我</small>' : online ? '<small>在线</small>' : ''}</strong>${record ? `${foodArt(record.food, 'feeder-food')}<span class="feeder-food-name">${FOODS[record.food]?.name || '美味小餐'}</span><time ${record.active ? `data-feed-until="${record.expiresAt}"` : ''}>${record.active ? countdown(record.remainingMs) : '本次喂养已结束'}</time><small class="feeder-round-status">${record.inCurrentWindow ? '✓ 本轮已喂养' : '本轮还未喂养'}${record.active && !record.inCurrentWindow ? ' · 上一餐计时' : ''}</small>` : '<span class="empty-feeder">♡</span><span class="feeder-empty-label">本轮还未喂养</span>'}</article>`;
+    const status = statusFor(record, info);
+    return `<article class="feeder-card ${status.className}"><span class="feeder-avatar ${mine ? 'mine' : ''} ${role.id}">${role.id === 'male' ? '👦🏻' : '👧🏻'}</span><strong>${role.name}${mine ? '<small>我</small>' : online ? '<small>在线</small>' : ''}</strong>${record ? `${foodArt(record.food, 'feeder-food')}<span class="feeder-food-name">${FOODS[record.food]?.name || '美味小餐'}</span><time ${record.active ? `data-feed-until="${record.expiresAt}"` : ''}>${record.active ? countdown(record.remainingMs) : '本次喂养已结束'}</time><small class="feeder-round-status">${status.label}${record.active && !record.inCurrentWindow ? ' · 本轮还未喂养' : ''}</small>` : '<span class="empty-feeder">♡</span><span class="feeder-empty-label">本轮还未喂养</span>'}</article>`;
   }).join('');
 }
 export function feedingButtonContent({ state, selectedFood, clientId, saving = false, connected = true, now = Date.now() }) {
-  const food = FOODS[selectedFood] || FOODS.meal;
+  const food = FOODS[selectedMeal(selectedFood)];
   const care = careActionInfo(state, { type:'feed' }, clientId, now);
   const disabled = !connected || saving || !care.allowed || state.coins < food.cost;
-  const content = saving ? '正在保存这份心意…' : !connected ? '正在连接云端小窝…' : care.reason === 'daily_limit' ? '今日喂食次数已用完' : care.reason === 'cooldown' ? `${countdown(care.remainingMs)} 后可喂食` : state.coins < food.cost ? '猫爪币还不够啦' : `喂这个 <span>♡ +${food.love}</span>`;
+  const content = saving ? '正在保存这份心意…' : !connected ? '正在连接云端小窝…' : care.reason === 'daily_limit' ? '今日喂食次数已用完' : care.reason === 'cooldown' ? `${countdown(care.remainingMs)} 后可喂食` : state.coins < food.cost ? '猫爪币还不够啦' : `喂这个 <span>成长气泡 +${food.love}</span>`;
   return { disabled, content };
 }
 export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'all', clientId, members = [], saving = false, connected = true, now = Date.now() }) {
-  const food = FOODS[selectedFood] || FOODS.meal;
+  selectedFood = selectedMeal(selectedFood);
+  const food = FOODS[selectedFood];
   const info = feedingInfo(state, clientId, now);
   const care = careActionInfo(state, { type:'feed' }, clientId, now);
   const pairCare = careActionInfo(state, { type:'pair' }, clientId, now);
-  const active = info.windowActive;
-  const completed = active && info.bonusClaimed;
+  const completed = info.windowActive && info.bonusClaimed;
   const serve = feedingButtonContent({ state, selectedFood, clientId, saving, connected, now });
   const filters = [['all', '全部'], ['meals', '主食'], ['treats', '小零食'], ['drinks', '饮水']];
   return `<div class="feeding-handle" aria-hidden="true"></div>
     <header class="feeding-sheet-heading"><span>FEED WITH LOVE</span><h2>一起喂养，快乐加倍</h2></header>
-    <div class="dish-preview"><span class="dish-time">◷ 4 小时一轮</span><div class="food-dish"></div>${foodArt(selectedFood, 'dish-food')}<div class="dish-caption"><strong>${food.name}</strong><span>${FOOD_DETAILS[selectedFood]?.note || ''}</span></div></div>
-    <div class="feeding-tabs" role="tablist" aria-label="喂食页面"><button id="food-menu-tab" role="tab" data-feeding-tab="menu" aria-controls="food-menu-panel" aria-selected="${tab === 'menu'}">挑选食物 <span>${Object.keys(FOODS).length}</span></button><button id="food-pair-tab" role="tab" data-feeding-tab="pair" aria-controls="food-pair-panel" aria-selected="${tab === 'pair'}">双人喂养${completed ? ' ✓' : ''}</button></div>
+    <div class="dish-preview"><span class="dish-time">◷ 4 小时一轮</span><div class="food-dish"></div>${foodArt(selectedFood, 'dish-food')}<div class="dish-caption"><strong>${food.name}</strong><span>准备喂食 · 尚未上桌</span></div></div>
+    ${pairSummary(info, clientId, members)}
+    <div class="feeding-tabs" role="tablist" aria-label="喂食页面"><button id="food-menu-tab" role="tab" data-feeding-tab="menu" aria-controls="food-menu-panel" aria-selected="${tab === 'menu'}">挑选食物 <span>${Object.keys(FOODS).length}</span></button><button id="food-pair-tab" role="tab" data-feeding-tab="pair" aria-controls="food-pair-panel" aria-selected="${tab === 'pair'}">喂养详情${completed ? ' ✓' : ''}</button></div>
     <section id="food-menu-panel" role="tabpanel" aria-labelledby="food-menu-tab" ${tab === 'menu' ? '' : 'hidden'}>
       <div class="food-filters" role="group" aria-label="食物分类">${filters.map(([id, label]) => `<button data-food-category="${id}" aria-pressed="${category === id}">${label}</button>`).join('')}</div>
-      <div class="pantry-grid" role="group" aria-label="选择喂食的食物">${Object.entries(FOODS).filter(([id]) => category === 'all' || FOOD_DETAILS[id]?.category === category).map(([id, item]) => `<button class="pantry-item ${id === selectedFood ? 'selected' : ''}" data-food="${id}" aria-pressed="${id === selectedFood}" aria-label="${item.name}，亲密度加${item.love}，${item.cost}猫爪币"><span class="pantry-love">♡ +${item.love}</span>${foodArt(id)}<strong>${item.name}</strong><span class="pantry-price">✦ ${item.cost}<span>猫爪币</span></span><span class="pantry-selected" aria-hidden="true">♥</span></button>`).join('')}</div>
+      <div class="pantry-grid" role="group" aria-label="选择喂食的食物">${Object.entries(FOODS).filter(([id]) => category === 'all' || FOOD_DETAILS[id]?.category === category).map(([id, item]) => `<button class="pantry-item ${id === selectedFood ? 'selected' : ''}" data-food="${id}" aria-pressed="${id === selectedFood}" aria-label="${item.name}，成长气泡加${item.love}，亲密度加${item.love}，${item.cost}猫爪币"><span class="pantry-love">成长 +${item.love}</span>${foodArt(id)}<strong>${item.name}</strong><span class="pantry-price">✦ ${item.cost}<span>猫爪币</span></span><span class="pantry-selected" aria-hidden="true">♥</span></button>`).join('')}</div>
     </section>
     <section id="food-pair-panel" role="tabpanel" aria-labelledby="food-pair-tab" ${tab === 'pair' ? '' : 'hidden'}>
-      <div class="pair-intro"><strong>${completed ? '这一轮，你们的心意都到啦' : '一人一份，都是对小猫的偏爱'}</strong><span>${active ? `本轮剩余 <time data-feed-until="${info.windowEndsAt}">${countdown(info.windowRemainingMs)}</time>` : '首次喂养后，开启 4 小时双人小任务'}</span></div>
+      <div class="pair-intro"><strong>${completed ? '这一轮，你们的心意都到啦' : '一人一份，都是对小猫的偏爱'}</strong><span>${info.windowActive ? '每人的食物时间各自计算，记录会一直保留' : '首次喂养后，开启 4 小时双人小任务'}</span></div>
       <div class="feeders-grid">${pairSlots(info, clientId, members)}</div>
-      <p class="pair-bonus ${completed ? 'earned' : ''}">${completed ? '♥ 本轮双人喂养已完成' : pairCare.allowed ? '♥ 本轮两人各喂一次，额外获得 10 亲密度和成长' : '♥ 今日双人奖励已达上限，本轮喂养仍可完成'}<small data-care-status="pair">${careStatusText('pair', pairCare)}</small></p>
+      <p class="pair-bonus ${completed ? 'earned' : ''}">${completed ? '♥ 本轮双人喂养已完成' : pairCare.allowed ? '♥ 本轮两人各喂一次，额外获得 10 亲密度和成长气泡' : '♥ 今日双人奖励已达上限，本轮喂养仍可完成'}<small data-care-status="pair">${careStatusText('pair', pairCare)}</small></p>
       <button class="pair-invite" id="feeding-role">当前：${clientId === COUPLE_ROLES[0].clientId ? '男方' : '女方'} · 切换身份 <span>›</span></button>
     </section>
-    <footer class="feeding-footer"><p class="feeding-care-status" data-care-status="feed">${careStatusText('feed', care)}</p><button class="serve-food" id="serve-food" ${serve.disabled ? 'disabled' : ''}>${serve.content}</button><p class="feeding-care-rule">小窝共享${careRuleText('feed')} · 北京时间 0 点重置次数</p><div class="feeding-balance"><span>✦ ${state.coins.toLocaleString('en-US')} 猫爪币可用</span><small id="feeding-save-status" aria-live="polite"></small></div></footer>`;
+    <footer class="feeding-footer"><p class="feeding-care-status" data-care-status="feed">${careStatusText('feed', care)}</p><button class="serve-food" id="serve-food" ${serve.disabled ? 'disabled' : ''}>${serve.content}</button><p class="feeding-growth-hint">喂后点击爱心气泡，成长值才会入账</p><p class="feeding-care-rule">小窝共享${careRuleText('feed')} · 北京时间 0 点重置次数</p><div class="feeding-balance"><span>✦ ${state.coins.toLocaleString('en-US')} 猫爪币可用</span><small id="feeding-save-status" aria-live="polite"></small></div></footer>`;
 }

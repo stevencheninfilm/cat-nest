@@ -90,7 +90,11 @@ test('three complete pair rounds receive exactly three bonuses and then no more 
     assert.equal(state.careLimits.counts.pair, round + 1);
     assert.equal(state.feedingWindow.bonusClaimed, true);
   }
-  assert.equal(state.xp, before.xp + 6 * FOODS.meal.love + 3 * FEEDING_BONUS);
+  assert.equal(state.xp, before.xp);
+  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 6 * FOODS.meal.love + 3 * FEEDING_BONUS);
+  const claimed = state.pendingGrowth.reduce((current, reward) => reduceAction(current, { type: 'claim-growth', rewardId: reward.id }, bob, start + 12 * 3600_000), state);
+  assert.equal(claimed.xp, before.xp + 6 * FOODS.meal.love + 3 * FEEDING_BONUS);
+  assert.deepEqual(claimed.careLimits.counts, state.careLimits.counts);
   assert.equal(careActionInfo(state, { type: 'pair' }, alice.id, start + 12 * 3600_000).reason, 'daily_limit');
   assert.equal(reduceAction(state, action('feed'), alice, start + 12 * 3600_000), null);
 });
@@ -120,7 +124,8 @@ test('Shanghai midnight resets daily counts, preserves cross-day cooldowns and s
   assert.equal(reduceAction(reloaded, action('pet'), bob, midnight), null);
   const next = reduceAction(reloaded, action('pet'), bob, midnight + 4 * 60_000);
   assert.equal(next.careLimits.counts.pet, 1);
-  assert.equal(next.xp, first.xp + 3);
+  assert.equal(next.xp, first.xp);
+  assert.deepEqual(next.pendingGrowth.map(reward => reward.amount), [3, 3]);
   const previousDay = normalizeState(next, midnight - 1);
   assert.equal(previousDay.careLimits.counts.pet, 1, 'clock rollback cannot reset the same quota again');
 });

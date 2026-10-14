@@ -172,6 +172,10 @@ test('simultaneous partner feeds across server instances save both actions and a
   assert.equal(saved.revision, 14);
   assert.equal(saved.state.coins, starting.coins - 30 - 45);
   assert.equal(saved.state.love, starting.love + 35 + 45 + 10);
+  assert.equal(saved.state.xp, starting.xp);
+  assert.equal(saved.state.pendingGrowth.length, 2);
+  assert.equal(saved.state.pendingGrowth.reduce((sum, reward) => sum + reward.amount, 0), 90);
+  assert.deepEqual(saved.state.pendingGrowth.map(reward => reward.id).sort(), [male.operationId, female.operationId].sort());
   assert.equal(saved.state.feedingWindow.bonusClaimed, true);
   assert.deepEqual(saved.state.feedRecords.map(record => record.actorId).sort(), ['partner-female', 'partner-male']);
   assert.deepEqual(saved.state.feedRecords.map(record => record.name).sort(), ['女方', '男方']);
@@ -179,6 +183,19 @@ test('simultaneous partner feeds across server instances save both actions and a
   assert.equal(replay.duplicate, true);
   assert.equal(replay.revision, 14);
   assert.equal(replay.state.love, saved.state.love);
+  const rewardId = saved.state.pendingGrowth[0].id;
+  const collect = { operationId: 'female-collect-growth', clientId: 'partner-female', name: '不可信昵称', action: { type: 'claim-growth', rewardId } };
+  const claimed = await (await post(second.base, `/api/rooms/${HOME}/actions`, collect)).json();
+  assert.equal(claimed.state.xp, starting.xp + saved.state.pendingGrowth[0].amount);
+  assert.deepEqual(claimed.event.actor, { id: 'partner-female', name: '女方' });
+  assert.equal(claimed.state.pendingGrowth.length, 1);
+  assert.deepEqual(claimed.state.careLimits, saved.state.careLimits);
+  const retriedClaim = await (await post(first.base, `/api/rooms/${HOME}/actions`, collect)).json();
+  assert.equal(retriedClaim.duplicate, true);
+  assert.equal(retriedClaim.state.xp, claimed.state.xp);
+  const duplicateReward = await post(first.base, `/api/rooms/${HOME}/actions`, { ...collect, operationId: 'male-recollect-growth', clientId: 'partner-male' });
+  assert.equal(duplicateReward.status, 409);
+  assert.equal((await duplicateReward.json()).error.code, 'REWARD_ALREADY_CLAIMED');
 });
 
 test('other room APIs retain their existing nickname and client identity contract', async t => {

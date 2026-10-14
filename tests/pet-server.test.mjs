@@ -18,7 +18,9 @@ function memoryStore() {
     async applyAction(id, input) {
       if (controls.block) await controls.block;
       if (controls.fail) throw new StorageError('STORAGE_WRITE_FAILED', '存档失败');
-      state = reduceAction(state, input.action, { id: input.clientId, name: input.name });
+      const next = reduceAction(state, input.action, { id: input.clientId, name: input.name }, Date.now(), input.operationId);
+      if (!next) throw new StorageError(input.action.type === 'claim-growth' ? 'REWARD_ALREADY_CLAIMED' : 'ACTION_REJECTED', '这次互动已不可用。', 409);
+      state = next;
       revision += 1;
       return { roomId, state: structuredClone(state), revision, event: { operationId: input.operationId, action: input.action, actor: { id: input.clientId, name: input.name } }, duplicate: false };
     },
@@ -146,13 +148,14 @@ test('malformed body and invalid membership information are rejected', async t =
   assert.equal(oversized.status, 413);
 });
 
-for (const code of ['CARE_COOLDOWN', 'DAILY_CARE_LIMIT']) {
+for (const code of ['CARE_COOLDOWN', 'DAILY_CARE_LIMIT', 'REWARD_ALREADY_CLAIMED']) {
   test(`${code} is exposed as HTTP 409 without acknowledging a saved action`, async () => {
     const store = memoryStore();
     const message = '摸摸暂不可用，请等待5分钟后再试。';
     store.applyAction = async () => { throw new StorageError(code, message, 409); };
     const handler = createPetHandler({ store, serveStatic: false });
-    const request = Readable.from([Buffer.from(JSON.stringify({ operationId: 'limited-action', clientId: 'client-one', name: '小鱼', action: { type: 'pet' } }))]);
+    const action = code === 'REWARD_ALREADY_CLAIMED' ? { type: 'claim-growth', rewardId: 'claimed-growth-one' } : { type: 'pet' };
+    const request = Readable.from([Buffer.from(JSON.stringify({ operationId: 'limited-action', clientId: 'client-one', name: '小鱼', action }))]);
     request.method = 'POST';
     request.url = `/api/rooms/${roomId}/actions`;
     request.headers = { 'content-type': 'application/json' };

@@ -200,26 +200,73 @@ test('temporary API failure retains the exact pending operation, reports an erro
   assert.equal(h.observed.saves.at(-1).phase, 'saved');
 });
 
-for (const [code, message] of [
-  ['CARE_COOLDOWN', '摸摸还在冷却中，请等待4分钟后再试。'],
-  ['DAILY_CARE_LIMIT', '今天摸摸已达20次上限，2小时后可继续；每日北京时间00:00重置。'],
+for (const [code, message, action] of [
+  ['CARE_COOLDOWN', '摸摸还在冷却中，请等待4分钟后再试。', { type: 'pet' }],
+  ['DAILY_CARE_LIMIT', '今天摸摸已达20次上限，2小时后可继续；每日北京时间00:00重置。', { type: 'pet' }],
+  ['REWARD_ALREADY_CLAIMED', '这颗成长气泡已经被领取，或暂时无法找到。', { type: 'claim-growth', rewardId: 'growth-reward-one' }],
 ]) {
   test(`${code} is removed from pending work and shows the server reason without automatic retries`, async t => {
     const h = harness(t, req => req.method === 'GET' ? response(snapshot()) : response({ error: { code, message } }, 409));
     await h.room.start();
-    assert.equal(h.room.dispatch({ type: 'pet' }), true);
+    assert.equal(h.room.dispatch(action), true);
     await flush();
     assert.deepEqual(h.persisted.pending, []);
     assert.equal(h.observed.saves.at(-1).phase, 'error');
     assert.equal(h.observed.saves.at(-1).message, message);
     assert.equal(h.observed.actions.length, 0);
-    assert.equal(h.observed.states.length, 1);
+    assert.equal(h.observed.states.length, action.type === 'claim-growth' ? 2 : 1);
     const requestCount = h.requests.length;
     t.mock.timers.tick(8000);
     await flush();
-    assert.equal(h.requests.length, requestCount, 'a care limit is a final refusal, not a retryable storage failure');
+    assert.equal(h.requests.length, requestCount, 'a rejected care action or missing reward is a final refusal, not a retryable storage failure');
   });
 }
+
+test('a losing claim immediately restores the saved shared snapshot even when its SSE update was missed', async t => {
+  const reward = { id:'shared-growth-reward', kind:'pet', amount:3, actorId:'partner-male', actor:'男方', at:1 };
+  const initial = { ...snapshot(5), state:{ name:'糯米', xp:86, pendingGrowth:[reward] } };
+  const claimed = { ...snapshot(6), state:{ name:'糯米', xp:89, pendingGrowth:[] } };
+  let reads = 0;
+  const h = harness(t, req => {
+    if (req.method === 'GET') return response(++reads === 1 ? initial : claimed);
+    return response({error:{code:'REWARD_ALREADY_CLAIMED',message:'对方已领取这颗气泡。'}},409);
+  });
+  await h.room.start();
+  assert.equal(h.room.dispatch({type:'claim-growth',rewardId:reward.id}),true);
+  await flush();
+  assert.equal(reads,2,'claim refusal triggers a fresh read without waiting for polling');
+  assert.deepEqual(h.observed.states.at(-1),claimed.state);
+  assert.deepEqual(h.persisted.pending,[]);
+  assert.equal(h.observed.actions.length,0,'a refused claim never animates or locally awards XP');
+  h.sources[0].emit('state',initial);
+  assert.deepEqual(h.observed.states.at(-1),claimed.state,'late snapshots cannot restore the collected bubble');
+  t.mock.timers.tick(8000);
+  await flush();
+  assert.equal(h.requests.filter(req => req.method === 'POST').length,1,'a losing claim is not retried');
+});
+
+test('a failed reconciliation preserves the last saved rewards until a live snapshot recovers', async t => {
+  const reward = { id:'unconfirmed-growth', kind:'pet', amount:3, actorId:'partner-male', actor:'男方', at:1 };
+  const initial = { ...snapshot(1), state:{ name:'糯米', xp:86, pendingGrowth:[reward] } };
+  let reads = 0;
+  const h = harness(t, req => {
+    if (req.method === 'GET') {
+      if (++reads === 1) return response(initial);
+      throw new TypeError('connection interrupted');
+    }
+    return response({error:{code:'REWARD_ALREADY_CLAIMED',message:'气泡已领取。'}},409);
+  });
+  await h.room.start();
+  h.room.dispatch({type:'claim-growth',rewardId:reward.id});
+  await flush();
+  assert.equal(reads,2);
+  assert.deepEqual(h.observed.states.at(-1),initial.state,'a refusal is not proof of a replacement snapshot');
+  assert.deepEqual(h.persisted.pending,[]);
+  assert.equal(h.observed.saves.at(-1).phase,'error');
+  h.sources[0].emit('state',{...snapshot(2),state:{name:'糯米',xp:89,pendingGrowth:[]}});
+  assert.deepEqual(h.observed.states.at(-1).pendingGrowth,[]);
+  assert.equal(h.observed.states.at(-1).xp,89);
+});
 
 test('a care limit refusal does not block the next permitted pending action', async t => {
   const h = harness(t, req => {

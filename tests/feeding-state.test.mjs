@@ -35,6 +35,7 @@ test('old version-one saves retain progress, timestamps and diary without invent
   const result = normalizeState(legacy, start);
   for (const [key, value] of Object.entries(legacy)) assert.deepEqual(result[key], value);
   assert.deepEqual(result.feedRecords, []);
+  assert.deepEqual(result.pendingGrowth, []);
   assert.equal(result.feedingWindow, null);
   assert.equal(feedingInfo(result, alice.id, start).windowEndsAt, null);
   assert.equal(feed(result, alice, start).version, 1);
@@ -57,7 +58,11 @@ test('same-name caregivers have separate records and earn exactly one pair bonus
   assert.equal(feedingInfo(first, alice.id, start + 1_000).waitingForPartner, true);
   const together = feed(first, bob, start + 2_000);
   assert.equal(together.love, before.love + 2 * FOODS.meal.love + FEEDING_BONUS);
-  assert.equal(together.xp, before.xp + 2 * FOODS.meal.love + FEEDING_BONUS);
+  assert.equal(together.xp, before.xp);
+  assert.deepEqual(together.pendingGrowth.map(reward => reward.amount), [FOODS.meal.love, FOODS.meal.love + FEEDING_BONUS]);
+  const claimed = together.pendingGrowth.reduce((state, reward) => reduceAction(state, { type: 'claim-growth', rewardId: reward.id }, alice, start + 2_001), together);
+  assert.equal(claimed.xp, before.xp + 2 * FOODS.meal.love + FEEDING_BONUS);
+  assert.deepEqual(claimed.pendingGrowth, []);
   assert.deepEqual(together.feedRecords.map(record => record.actorId), [alice.id, bob.id]);
   assert.equal(together.feedingWindow.bonusClaimed, true);
   assert.match(together.history[0].text, /双人喂养/);

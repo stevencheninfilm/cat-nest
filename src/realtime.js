@@ -1,5 +1,5 @@
 import Peer from 'peerjs';
-import { FOODS } from './state.js';
+import { FOODS, validPendingGrowth } from './state.js';
 
 /**
  * Two-person, host-authoritative rooms over PeerJS/WebRTC.
@@ -16,6 +16,7 @@ const VERSION = 1;
 const ROOM_PATTERN = /^[a-z0-9]{6,12}$/;
 const ID_PATTERN = /^[a-zA-Z0-9_-]{6,80}$/;
 const EVENT_PATTERN = /^[a-zA-Z0-9_:-]{6,180}$/;
+const REWARD_PATTERN = /^[a-zA-Z0-9_.:-]{8,180}$/;
 const validId = (value) => typeof value === 'string' && ID_PATTERN.test(value);
 const validEventId = (value) => typeof value === 'string' && EVENT_PATTERN.test(value);
 const MAX_PACKET_BYTES = 48_000;
@@ -40,24 +41,29 @@ export function validateAction(value) {
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) {
     return { type: 'rename', name: value.name.trim() };
   }
+  if (value.type === 'claim-growth' && keys.length === 2 && keys.includes('rewardId') && typeof value.rewardId === 'string' && REWARD_PATTERN.test(value.rewardId)) return { type: 'claim-growth', rewardId: value.rewardId };
   return null;
 }
 
-function safeJson(value, depth = 0) {
+function safeJson(value, depth = 0, key = '') {
   if (depth > 10) return false;
   if (value === null || typeof value === 'boolean' || typeof value === 'string') return true;
   if (typeof value === 'number') return Number.isFinite(value);
-  if (Array.isArray(value)) return value.length <= 500 && value.every((item) => safeJson(item, depth + 1));
+  // Saved growth has no expiry or count cap. Only this validated collection is
+  // exempt from the generic array bound; other packet fields stay bounded.
+  if (Array.isArray(value)) return key === 'pendingGrowth' ? validPendingGrowth(value) : value.length <= 500 && value.every((item) => safeJson(item, depth + 1));
   if (!plain(value)) return false;
   const entries = Object.entries(value);
-  return entries.length <= 100 && entries.every(([key, item]) => !['__proto__', 'constructor', 'prototype'].includes(key) && safeJson(item, depth + 1));
+  return entries.length <= 100 && entries.every(([key, item]) => !['__proto__', 'constructor', 'prototype'].includes(key) && safeJson(item, depth + 1, key));
 }
+
+const growthBytes = state => plain(state) && validPendingGrowth(state.pendingGrowth) ? JSON.stringify(state.pendingGrowth).length : 0;
 
 function cloneState(value) {
   if (!plain(value) || !safeJson(value)) return null;
   try {
     const encoded = JSON.stringify(value);
-    return encoded.length <= MAX_PACKET_BYTES - 2000 ? JSON.parse(encoded) : null;
+    return encoded.length - growthBytes(value) <= MAX_PACKET_BYTES - 2000 ? JSON.parse(encoded) : null;
   } catch {
     return null;
   }
@@ -69,7 +75,7 @@ function validActor(value) {
 
 function validPacket(value) {
   if (!plain(value) || value.v !== VERSION || typeof value.kind !== 'string' || !safeJson(value)) return false;
-  try { return JSON.stringify(value).length <= MAX_PACKET_BYTES; } catch { return false; }
+  try { return JSON.stringify(value).length - growthBytes(value.state) <= MAX_PACKET_BYTES; } catch { return false; }
 }
 
 /**
@@ -186,7 +192,7 @@ export function createRoomSync({
   function commit(action, actor, eventId) {
     if (seenEvents.has(eventId) || !allowAction(actor.id)) return false;
     let next;
-    try { next = cloneState(reduceAction(cloneState(state), { ...action }, { ...actor })); } catch { return false; }
+    try { next = cloneState(reduceAction(cloneState(state), { ...action }, { ...actor }, Date.now(), eventId)); } catch { return false; }
     if (!next) return false;
     remember(eventId);
     state = next;

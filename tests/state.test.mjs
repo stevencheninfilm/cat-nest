@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, normalizeState, reduceAction, levelInfo } from '../src/state.js';
-test('feeding charges currency, caps needs and gives growth', () => {
+test('feeding charges currency and caps needs while growth waits for a bubble claim', () => {
   const before=initialState(); const after=reduceAction(before,{type:'feed',food:'fish'},{name:'小雨'});
   assert.equal(after.coins,1160); assert.equal(after.love,136); assert.equal(after.hunger,100);
-  assert.equal(before.coins,1200); assert.equal(after.history[0].actor,'小雨'); assert.equal(levelInfo(after.xp).level,2);
+  assert.equal(before.coins,1200); assert.equal(after.history[0].actor,'小雨'); assert.equal(after.xp,before.xp);
+  const claimed=reduceAction(after,{type:'claim-growth',rewardId:after.pendingGrowth[0].id});
+  assert.equal(claimed.xp,before.xp+50); assert.equal(levelInfo(claimed.xp).level,2);
 });
 test('insufficient currency and energy cannot create an accepted action', () => {
   const poor={...initialState(),coins:0}; assert.equal(reduceAction(poor,{type:'feed',food:'meal'}),null);

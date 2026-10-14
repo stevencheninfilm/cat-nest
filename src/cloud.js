@@ -18,7 +18,7 @@ export function createCloudRoom(options) {
     try {
       const res = await fetch(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
       const data = await res.json();
-      if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; throw error; }
+      if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
       return data;
     } finally { clearTimeout(timeout); }
   }
@@ -45,7 +45,15 @@ export function createCloudRoom(options) {
       } catch (error) {
         if (destroyed) break;
         if (error.status >= 400 && error.status < 500 && error.status !== 429) {
-          queue.shift(); saveQueue(); onSaveStatus({ phase:'error', message:error.message });
+          queue.shift(); saveQueue();
+          // Another device may have collected the same saved reward while our
+          // live stream was interrupted. Reconcile from the cloud immediately;
+          // never award XP or remove a bubble based only on the rejection.
+          if (item.action?.type === 'claim-growth' && error.status === 409) {
+            try { apply(await request(`/api/rooms/${room}`)); } catch { /* The next live snapshot or poll can still reconcile it. */ }
+            if (destroyed) break;
+          }
+          onSaveStatus({ phase:'error', message:error.message });
           if (queue.length) continue;
         } else {
           onSaveStatus({ phase:'error', message:'云端保存失败，将自动重试；请暂时保留本页' });

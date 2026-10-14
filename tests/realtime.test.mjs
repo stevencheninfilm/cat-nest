@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRoomSync, validateAction } from '../src/realtime.js';
-import { FOODS } from '../src/state.js';
+import { FOODS, initialState, reduceAction } from '../src/state.js';
 
 class Emitter {
   listeners = new Map();
@@ -102,9 +102,62 @@ test('strict action validation rejects unknown fields and malformed names', () =
   assert.deepEqual(validateAction({ type: 'rename', name: '  糯米  ' }), { type: 'rename', name: '糯米' });
   for (const food of Object.keys(FOODS)) assert.deepEqual(validateAction({ type:'feed', food }), { type:'feed', food });
   assert.equal(validateAction({ type:'feed', food:'__proto__' }), null);
+  assert.deepEqual(validateAction({ type: 'claim-growth', rewardId: 'growth.reward:001' }), { type: 'claim-growth', rewardId: 'growth.reward:001' });
+  for (const action of [
+    { type: 'claim-growth' }, { type: 'claim-growth', rewardId: 'bad' },
+    { type: 'claim-growth', rewardId: 'a'.repeat(181) },
+    { type: 'claim-growth', rewardId: '../growth-reward' },
+    { type: 'claim-growth', rewardId: 'valid-reward', amount: 99999 },
+  ]) assert.equal(validateAction(action), null);
   for (const action of [null, [], { type: 'feed', food: 'steak' }, { type: 'pet', coins: 99 }, { type: 'rename', name: '\n坏名字' }, { type: 'rename', name: 'a'.repeat(17) }]) {
     assert.equal(validateAction(action), null);
   }
+});
+
+test('growth bubbles synchronize before collection and a guest claim awards XP only once', async t => {
+  const network = makeNetwork();
+  const initial = initialState();
+  const host = makeClient(network, 'client-a', { initialState: initial, reduceAction });
+  const guest = makeClient(network, 'client-b', { initialState: initial, reduceAction });
+  t.after(() => { host.sync.destroy(); guest.sync.destroy(); });
+  host.sync.start(); guest.sync.start(); await flush();
+  assert.equal(guest.sync.dispatch({ type: 'pet' }), true);
+  await flush();
+  const cared = guest.observed.states.at(-1);
+  assert.equal(cared.xp, initial.xp);
+  assert.equal(cared.pendingGrowth.length, 1);
+  assert.equal(cared.pendingGrowth[0].amount, 3);
+  assert.deepEqual(cared.pendingGrowth, host.observed.states.at(-1).pendingGrowth);
+  const rewardId = cared.pendingGrowth[0].id;
+  assert.equal(guest.sync.dispatch({ type: 'claim-growth', rewardId }), true);
+  await flush();
+  const claimed = guest.observed.states.at(-1);
+  assert.equal(claimed.xp, initial.xp + 3);
+  assert.deepEqual(claimed.pendingGrowth, []);
+  assert.deepEqual(claimed.careLimits, cared.careLimits);
+  assert.equal(host.sync.dispatch({ type: 'claim-growth', rewardId }), false);
+  assert.equal(host.observed.states.at(-1).xp, initial.xp + 3);
+});
+
+test('a large persistent growth backlog synchronizes and keeps unrelated packet bounds intact', async t => {
+  const network = makeNetwork();
+  const initial = initialState();
+  initial.pendingGrowth = Array.from({ length: 700 }, (_, index) => ({ id: `growth-backlog-${String(index).padStart(5, '0')}`, kind: 'pet', amount: 3, actorId: 'client-a', actor: '猫友', at: initial.updatedAt - 90 * 24 * 3600_000 + index }));
+  assert.ok(JSON.stringify(initial).length > 48_000);
+  const host = makeClient(network, 'client-a', { initialState: initial, reduceAction });
+  const guest = makeClient(network, 'client-b', { initialState: initialState(), reduceAction });
+  t.after(() => { host.sync.destroy(); guest.sync.destroy(); });
+  host.sync.start(); guest.sync.start(); await flush();
+  assert.deepEqual(guest.observed.states.at(-1).pendingGrowth, initial.pendingGrowth);
+  assert.equal(guest.sync.dispatch({ type: 'claim-growth', rewardId: initial.pendingGrowth[0].id }), true);
+  await flush();
+  assert.equal(guest.observed.states.at(-1).xp, initial.xp + 3);
+  assert.deepEqual(guest.observed.states.at(-1).pendingGrowth, initial.pendingGrowth.slice(1));
+  for (const malformed of [
+    { ...initial, otherRecords: Array(501).fill(0) },
+    { ...initial, note: 'x'.repeat(48_000) },
+    { ...initial, pendingGrowth: [{ ...initial.pendingGrowth[0], payload: Array(501).fill(0) }] },
+  ]) assert.throws(() => createRoomSync({ roomId: 'bounds1', clientId: 'client-bounds', initialState: malformed, reduceAction }), /Initial state/);
 });
 
 test('room validation does not stringify missing identifiers', () => {

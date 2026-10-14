@@ -25,9 +25,42 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DAY_OFFSET_MS = 8 * 60 * 60 * 1000;
 const careDay = now => Math.floor((now + DAY_OFFSET_MS) / DAY_MS);
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
+const GROWTH_ID = /^[a-zA-Z0-9_.:-]{8,180}$/;
+const GROWTH_AMOUNTS = Object.freeze({ pet: 3, play: 8, sleep: 4 });
 const validTime = value => Number.isSafeInteger(value) && value >= 0;
 const cleanName = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 20) || '猫友' : '猫友';
 const validFood = key => typeof key === 'string' && Object.hasOwn(FOODS, key);
+function validGrowthReward(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.id !== 'string' || !GROWTH_ID.test(value.id)) return false;
+  if (!['feed', 'pet', 'play', 'sleep'].includes(value.kind) || !Number.isSafeInteger(value.amount) || value.amount <= 0) return false;
+  if (typeof value.actorId !== 'string' || !CLIENT_ID.test(value.actorId) || typeof value.actor !== 'string' || value.actor !== cleanName(value.actor) || !validTime(value.at)) return false;
+  if (Object.keys(value).some(key => !['id', 'kind', 'amount', 'actorId', 'actor', 'food', 'at'].includes(key))) return false;
+  if (value.kind === 'feed') {
+    if (value.food !== undefined && !validFood(value.food)) return false;
+    const amounts = value.food === undefined ? Object.values(FOODS).flatMap(food => [food.love, food.love + FEEDING_BONUS]) : [FOODS[value.food].love, FOODS[value.food].love + FEEDING_BONUS];
+    return amounts.includes(value.amount);
+  }
+  return value.food === undefined && value.amount === GROWTH_AMOUNTS[value.kind];
+}
+/** Unclaimed rewards have no expiry or length limit; every saved reward remains claimable. */
+export function validPendingGrowth(value) {
+  if (!Array.isArray(value)) return false;
+  const ids = new Set();
+  return value.every(reward => {
+    if (!validGrowthReward(reward) || ids.has(reward.id)) return false;
+    ids.add(reward.id);
+    return true;
+  });
+}
+function normalizePendingGrowth(value) {
+  if (!Array.isArray(value)) return [];
+  const ids = new Set();
+  return value.filter(reward => {
+    if (!validGrowthReward(reward) || ids.has(reward.id)) return false;
+    ids.add(reward.id);
+    return true;
+  }).map(reward => ({ ...reward }));
+}
 function emptyCareLimits(now) {
   return {
     day: careDay(now),
@@ -97,7 +130,7 @@ function feedRecords(value, now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), updatedAt: now };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -106,7 +139,8 @@ export function normalizeState(value, now = Date.now()) {
   if (!value || value.version !== 1) return fallback;
   const next = { ...fallback };
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
-    if (Number.isFinite(value[key])) next[key] = Math.max(0, Math.min(key === 'coins' || key === 'love' || key === 'xp' ? 999999 : 100, Math.round(value[key])));
+    const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : key === 'coins' || key === 'love' ? 999999 : 100;
+    if (Number.isFinite(value[key])) next[key] = Math.max(0, Math.min(max, Math.round(value[key])));
   }
   next.name = typeof value.name === 'string' ? value.name.trim().slice(0, 16) || fallback.name : fallback.name;
   next.sleeping = value.sleeping === true;
@@ -114,6 +148,7 @@ export function normalizeState(value, now = Date.now()) {
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
   next.feedRecords = feedRecords(value.feedRecords, now);
+  next.pendingGrowth = normalizePendingGrowth(value.pendingGrowth);
   next.careLimits = normalizeCareLimits(value.careLimits, now);
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
     next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
@@ -145,7 +180,9 @@ function careInfo(current, action, actorId, now) {
 /** Read-only availability shared by the UI and the authoritative server reducer. */
 export function careActionInfo(state, action, actorId, now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return careInfo(normalizeState(state, now), action, actorId, now);
+  // This selector reads only the care ledger. Unbounded saved rewards should
+  // never be validated or copied by the UI's per-second countdown refresh.
+  return careInfo(normalizeState(state && typeof state === 'object' ? { ...state, pendingGrowth: [] } : state, now), action, actorId, now);
 }
 function recordCare(state, type, actorId, now) {
   state.careLimits.counts[type] += 1;
@@ -163,7 +200,7 @@ function recordCare(state, type, actorId, now) {
  */
 export function feedingInfo(state, actorId, now = Date.now()) {
   now = validTime(now) ? now : 0;
-  const normalized = normalizeState(state, now);
+  const normalized = normalizeState(state && typeof state === 'object' ? { ...state, pendingGrowth: [] } : state, now);
   const window = normalized.feedingWindow;
   const windowStartedAt = window?.startedAt ?? null;
   const windowEndsAt = window ? window.startedAt + FEEDING_WINDOW_MS : null;
@@ -209,37 +246,54 @@ function recordFeeding(state, food, actor, now) {
   if (!careInfo(state, { type: 'pair' }, actor.id, now).allowed) return false;
   recordCare(state, 'pair', actor.id, now);
   state.love += FEEDING_BONUS;
-  state.xp += FEEDING_BONUS;
   return true;
 }
-export function reduceAction(state, action, actor = { name: '铲屎官' }, now = Date.now()) {
+export function reduceAction(state, action, actor = { name: '铲屎官' }, now = Date.now(), operationId) {
   now = validTime(now) ? now : 0;
   if (!action || typeof action !== 'object') return null;
   const current = normalizeState(state, now);
   const care = careInfo(current, action, actor?.id, now);
   if (!care.allowed) return null;
-  const next = { ...current, history: [...current.history], feedRecords: [...current.feedRecords], feedingWindow: current.feedingWindow ? { ...current.feedingWindow } : null, updatedAt: now };
+  const next = { ...current, history: [...current.history], feedRecords: [...current.feedRecords], pendingGrowth: [...current.pendingGrowth], feedingWindow: current.feedingWindow ? { ...current.feedingWindow } : null, updatedAt: now };
+  const createsGrowth = ['feed', 'pet', 'play', 'sleep'].includes(action.type) && !care.isWake;
+  const rewardActorId = typeof actor?.id === 'string' && CLIENT_ID.test(actor.id) ? actor.id : 'local-care';
+  const rewardId = operationId ?? `${action.type}:${rewardActorId}:${now}`;
+  if (createsGrowth && (typeof rewardId !== 'string' || !GROWTH_ID.test(rewardId) || next.pendingGrowth.some(reward => reward.id === rewardId))) return null;
+  let growth = 0;
   let text;
   switch (action.type) {
     case 'feed': {
       if (!validFood(action.food)) return null;
       const food = FOODS[action.food];
       if (next.coins < food.cost) return null;
-      next.coins -= food.cost; next.love += food.love; next.xp += food.love;
+      next.coins -= food.cost; next.love += food.love; growth = food.love;
       next.hunger = cap(next.hunger + food.hunger); next.mood = cap(next.mood + 4); next.sleeping = false;
       text = `喂了一份${food.name}`;
-      if (recordFeeding(next, action.food, actor, now)) text += '，双人喂养额外获得10点亲密度与成长';
+      if (recordFeeding(next, action.food, actor, now)) {
+        growth += FEEDING_BONUS;
+        text += '，双人喂养额外获得10点亲密度';
+      }
       break;
     }
     case 'pet':
-      next.love += 3; next.xp += 3; next.mood = cap(next.mood + 6); next.sleeping = false; text = '温柔地摸了摸小猫'; break;
+      next.love += 3; growth = GROWTH_AMOUNTS.pet; next.mood = cap(next.mood + 6); next.sleeping = false; text = '温柔地摸了摸小猫'; break;
     case 'play':
       if (next.energy < 8) return null;
       next.energy = cap(next.energy - 8); next.hunger = cap(next.hunger - 3); next.mood = cap(next.mood + 10);
-      next.coins += 10; next.love += 5; next.xp += 8; next.sleeping = false; text = '陪小猫玩了逗猫棒'; break;
+      next.coins += 10; next.love += 5; growth = GROWTH_AMOUNTS.play; next.sleeping = false; text = '陪小猫玩了逗猫棒'; break;
     case 'sleep':
-      next.sleeping = !next.sleeping; next.energy = cap(next.energy + (next.sleeping ? 20 : 0)); next.xp += next.sleeping ? 4 : 0;
+      next.sleeping = !next.sleeping; next.energy = cap(next.energy + (next.sleeping ? 20 : 0)); growth = next.sleeping ? GROWTH_AMOUNTS.sleep : 0;
       text = next.sleeping ? '陪小猫打了个盹' : '轻轻叫醒了小猫'; break;
+    case 'claim-growth': {
+      if (typeof action.rewardId !== 'string' || !GROWTH_ID.test(action.rewardId)) return null;
+      const index = next.pendingGrowth.findIndex(reward => reward.id === action.rewardId);
+      if (index < 0) return null;
+      if (!Number.isSafeInteger(next.xp + next.pendingGrowth[index].amount)) return null;
+      const [reward] = next.pendingGrowth.splice(index, 1);
+      next.xp += reward.amount;
+      text = `收下成长气泡，获得${reward.amount}点成长`;
+      break;
+    }
     case 'dress':
       if (!validAppearance(action.appearance)) return null;
       next.appearance = normalizeAppearance(action.appearance); text = '给小猫换上了新的魔法装扮'; break;
@@ -247,6 +301,10 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       if (typeof action.name !== 'string' || !action.name.trim()) return null;
       next.name = action.name.trim().slice(0, 16); text = `给小猫取名「${next.name}」`; break;
     default: return null;
+  }
+  if (growth > 0) {
+    next.pendingGrowth.push({ id: rewardId, kind: action.type, amount: growth, actorId: rewardActorId, actor: cleanName(actor?.name), ...(action.type === 'feed' ? { food: action.food } : {}), at: now });
+    text += `，生成${growth}点成长气泡待领取`;
   }
   if (Object.hasOwn(CARE_LIMITS, action.type) && !care.isWake) recordCare(next, action.type, actor?.id, now);
   next.history.unshift({ text, actor: cleanName(actor?.name).slice(0, 16), at: next.updatedAt });

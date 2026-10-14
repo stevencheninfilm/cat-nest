@@ -24,7 +24,7 @@ test('the serve button becomes available at cooldown expiry without changing sav
   const state = reduceAction(initialState(now), { type:'feed', food:'water' }, actor, now);
   const options = { state, selectedFood:'water', clientId:actor.id };
   assert.equal(feedingButtonContent({ ...options, now:now + CARE_LIMITS.feed.cooldownMs - 1 }).disabled, true);
-  assert.deepEqual(feedingButtonContent({ ...options, now:now + CARE_LIMITS.feed.cooldownMs }), { disabled:false, content:'喂这个 <span>♡ +5</span>' });
+  assert.deepEqual(feedingButtonContent({ ...options, now:now + CARE_LIMITS.feed.cooldownMs }), { disabled:false, content:'喂这个 <span>成长气泡 +5</span>' });
   assert.equal(state.careLimits.counts.feed, 1);
 });
 

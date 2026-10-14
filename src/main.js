@@ -1,12 +1,14 @@
 import './style.css';
 import './feeding.css';
+import './growth.css';
 import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight, Shirt } from 'lucide';
 import { FOODS, initialState, normalizeState, reduceAction, levelInfo, careActionInfo } from './state';
 import { COUPLE_ROLES, normalizeCoupleRole, getCoupleProfile } from './couple-profile.js';
 import { createCloudRoom } from './cloud';
 import { INTERACTION_MODES, normalizeInteractionMode, resolveInteraction, getInteractionHint } from './interaction-mode';
-import { foodPreview, feedingSheet, feedingButtonContent, countdown } from './feeding-ui';
+import { feedingHome, feedingSheet, feedingButtonContent, countdown } from './feeding-ui';
 import { careQuotaText, careStatusText, careBlockedMessage, careRuleText } from './care-ui.js';
+import { growthBubbles, growthTray, growthLabel } from './growth-ui.js';
 import { APPEARANCE_OPTIONS, normalizeAppearance, MAGE_CAT_VERSION, MAGE_CAT_AUTHOR } from './mage-cat-config.js';
 
 const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight, Shirt };
@@ -45,6 +47,9 @@ let actionLocked = false;
 let pendingCloudActions = 0;
 let reactionTimer, toastTimer;
 let careFeedbackKey = '', careFeedbackAt = 0;
+let growthPage = 0, claimingRewardId = null, growthGlowTimer;
+const rewardVisuals = new Map();
+const claimOrigins = new Map();
 
 
 
@@ -54,11 +59,11 @@ $('#app').innerHTML = `
   <header class="topbar"><a class="brand" href="./" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small>A LITTLE HOME, A LOT OF LOVE</small></span></a><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></header>
   <div class="wallet" aria-label="养成资源"><div class="currency"><span class="coin-icon">${icon('paw-print')}</span><strong id="coins">1,200</strong><span class="currency-label">猫爪币</span></div><div class="currency"><span class="heart-icon">${icon('heart')}</span><strong id="love">86</strong><span class="currency-label">亲密度</span></div><button class="currency level-currency" data-open="guide" aria-label="查看成长指南"><span class="star-icon">${icon('sparkles')}</span><strong id="top-level">Lv.1</strong><span class="currency-label">成长</span></button></div>
   <button class="together" data-open="roles" aria-label="查看或切换男方女方身份"><span class="together-avatars"><span class="male-avatar">男</span><span class="female-avatar">女</span></span><span id="together-label">一只小猫，两个人的家</span><span class="together-link" id="together-cta">选择身份 ›</span></button>
-  <div class="scene"><div class="speech-bubble" id="speech" role="status">今天也想和你贴贴喵～<span>♡</span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><button class="model-status" id="retry-cat-model" disabled aria-live="polite">小猫正在回家…</button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div></div>
+  <div class="scene"><div class="speech-bubble" id="speech" role="status">今天也想和你贴贴喵～<span>♡</span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><button class="model-status" id="retry-cat-model" disabled aria-live="polite">小猫正在回家…</button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div><div class="growth-rewards" id="growth-rewards" role="group" aria-label="待领取的成长气泡"></div></div>
   <div class="side-actions left-actions"><button data-action="pet" aria-label="摸摸小猫"><span>${icon('hand')}</span><small>摸摸</small><em class="care-badge" data-care-badge="pet"></em></button><button data-action="play" aria-label="用逗猫棒陪小猫玩"><span>${icon('wand-sparkles')}</span><small>逗猫</small><em class="care-badge" data-care-badge="play"></em></button></div>
   <div class="side-actions right-actions"><button data-open="diary" aria-label="查看养猫日记"><span>${icon('notebook-pen')}</span><small>日记</small></button><button data-action="sleep" id="sleep-button" aria-label="让小猫休息"><span>${icon('moon')}</span><small>休息</small><em class="care-badge" data-care-badge="sleep"></em></button><button data-open="appearance" aria-label="给小猫换装扮"><span>${icon('shirt')}</span><small>装扮</small></button></div>
   <section class="pet-card glass" aria-label="小猫状态"><div class="pet-title"><button class="pet-name" data-open="rename"><strong id="pet-name">糯米</strong>${icon('pencil')}</button><button class="mode-selector" data-open="modes" aria-label="选择互动模式">${icon('sparkles')}<span id="mode-label">随心互动</span>${icon('chevron-right')}</button><b id="level">Lv.1</b></div><div class="xp-row">${icon('heart')}<div class="progress-track"><div id="xp-bar"></div></div><span id="xp">86 / 120</span></div><div class="needs"><span><i class="need-dot hunger"></i>饱饱 <b id="hunger">68</b></span><span><i class="need-dot mood"></i>开心 <b id="mood">82</b></span><span><i class="need-dot energy"></i>活力 <b id="energy">76</b></span></div></section>
-  <button class="feeding-preview glass" data-open="feeding" aria-label="打开食物菜单，选择猫粮">${foodPreview(selectedFood)}</button>
+  <button class="feeding-preview glass" data-open="feeding" aria-label="查看当前餐食和双方喂养状态">${feedingHome({ state, clientId, members, selectedFood })}</button>
   <button class="feed-button" id="feed-button">${icon('paw-print')}<span>喂食</span><span class="feed-love">+25 ${icon('heart')}</span><span class="button-sparkle">✦</span><small class="feed-care-badge" data-care-status="feed" data-care-compact="true"></small></button>
   <nav class="bottom-nav" aria-label="小窝导航"><button class="nav-entry judge" data-open="judge"><span class="nav-icon">${icon('gavel')}</span><span>猫猫判官<small>CAT JUDGE</small></span></button><span class="home-note">${icon('heart')}<span id="save-status" aria-live="polite">本机预览 · 云端待连接</span></span><button class="nav-entry home" data-open="home"><span class="nav-icon">${icon('house')}</span><span>我的小窝<small>MY HOME</small></span></button></nav>
   <div class="connection-note" id="connection-note" aria-live="polite"></div>
@@ -81,13 +86,15 @@ function render() {
   $('.kitten').alt = `坐在暖暖房间里的橘色小猫${state.name}`;
   $('#xp').textContent = `${level.progress} / ${level.target}`;
   $('#xp-bar').style.width = `${level.progress / level.target * 100}%`;
+  $('.feed-love').firstChild.textContent = `+${FOODS[selectedFood].love} `;
   for (const key of ['hunger', 'mood', 'energy']) $(`#${key}`).textContent = state[key];
   catModel?.setState({ sleeping:state.sleeping, appearance:$('#modal').open && $('#modal-content').dataset.view==='appearance' ? appearanceDraft : state.appearance });
   $('.nest').classList.toggle('sleeping', state.sleeping);
   $('#sleep-button small').textContent = state.sleeping ? '叫醒' : '休息';
   $('#sleep-button').setAttribute('aria-label', state.sleeping ? '轻轻叫醒小猫' : '让小猫休息');
   save(`catnest.state.${roomId}`, state);
-  $('.feeding-preview').innerHTML = foodPreview(selectedFood);
+  renderFeedingHome();
+  renderGrowth();
   refreshFeedingSheet();
   updateCareControls();
 }
@@ -109,14 +116,71 @@ function renderConnection() {
   if (roleStatus) roleStatus.textContent = saveStatus.message;
   refreshFeedingSheet();
   updateCareControls();
+  renderFeedingHome();
+  renderGrowth();
 }
 function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 2800); }
+function renderFeedingHome(now = Date.now()) {
+  const home = $('.feeding-preview');
+  const content = feedingHome({ state, clientId, members, selectedFood, now });
+  if (home.innerHTML !== content) home.innerHTML = content;
+}
+function renderGrowth() {
+  const rewards = state.pendingGrowth || [];
+  for (const reward of rewards) rewardVisuals.set(reward.id, { ...reward });
+  if (claimingRewardId && !rewards.some(reward => reward.id === claimingRewardId)) claimingRewardId = null;
+  const options = { blocked:careSaving(), claimingRewardId, page:growthPage };
+  $('#growth-rewards').innerHTML = growthBubbles(rewards, options);
+  if ($('#modal').open && $('#modal-content').dataset.view === 'growth') {
+    const focusedId = document.activeElement?.dataset.growthReward;
+    const scroll = $('#modal').scrollTop;
+    $('#modal-content').innerHTML = growthTray(rewards, options);
+    $('#modal').scrollTop = scroll;
+    if (focusedId) Array.from(document.querySelectorAll('[data-growth-reward]')).find(button => button.dataset.growthReward === focusedId)?.focus({ preventScroll:true });
+  }
+  while (rewardVisuals.size > rewards.length + 100) rewardVisuals.delete(rewardVisuals.keys().next().value);
+}
+function animateGrowthCollection(rewardId) {
+  const target = $('#xp-bar').getBoundingClientRect();
+  const origin = claimOrigins.get(rewardId) || $('#growth-rewards').getBoundingClientRect();
+  const startX = origin.left + origin.width / 2, startY = origin.top + origin.height / 2;
+  const targetX = target.left + Math.max(10, target.width / 2), targetY = target.top + target.height / 2;
+  for (let index = 0; index < 4; index += 1) {
+    const heart = document.createElement('span');
+    heart.className = 'growth-flight'; heart.textContent = '♥';
+    heart.style.setProperty('--i', index);
+    heart.style.setProperty('--from-x', `${startX - 12}px`);
+    heart.style.setProperty('--from-y', `${startY - 12}px`);
+    heart.style.setProperty('--to-x', `${targetX - startX + index * 4}px`);
+    heart.style.setProperty('--to-y', `${targetY - startY}px`);
+    document.body.append(heart);
+    setTimeout(() => heart.remove(), 1400);
+  }
+  claimOrigins.delete(rewardId);
+  $('.pet-card').classList.add('growth-collected');
+  clearTimeout(growthGlowTimer);
+  growthGlowTimer = setTimeout(() => $('.pet-card').classList.remove('growth-collected'), 1500);
+}
 function chime() {
   if (!sound) return;
   try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const gain = ctx.createGain(); gain.connect(ctx.destination); gain.gain.setValueAtTime(.04, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .35); const osc = ctx.createOscillator(); osc.connect(gain); osc.type = 'sine'; osc.frequency.setValueAtTime(660, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + .1); osc.start(); osc.stop(ctx.currentTime + .35); osc.onended = () => ctx.close(); } catch {}
 }
 function react(action, actor) {
   const mine = actor.id === clientId;
+  if (action.type === 'claim-growth') {
+    const reward = rewardVisuals.get(action.rewardId);
+    if (reward) {
+      if (mine && $('#modal').open && $('#modal-content').dataset.view === 'growth') closeModal();
+      animateGrowthCollection(action.rewardId);
+      if (mine) toast(`已收下 ${reward.amount} 点成长 ♡`);
+      else toast(`${actor.name}收下了 ${reward.amount} 点成长 ♡`);
+      rewardVisuals.delete(action.rewardId);
+    }
+    claimingRewardId = null;
+    renderGrowth();
+    chime();
+    return;
+  }
   if (mine && action.type === 'feed') toast(`${state.name}吃到${FOODS[action.food]?.name || '美味小餐'}啦 · 已${cloudConfigured ? '保存到云端' : '记录在小窝'}`);
   if (mine && action.type==='dress') {
     if(appearanceSubmitting && JSON.stringify(action.appearance)===JSON.stringify(appearanceDraft)){appearanceSubmitting=false;closeModal();}
@@ -131,7 +195,7 @@ function react(action, actor) {
   clearTimeout(reactionTimer);
   reactionTimer = setTimeout(() => { $('#speech').textContent = state.sleeping ? 'Z z z … 做个好梦喵' : getInteractionHint(interactionMode, state); }, 3800);
   if (!state.sleeping) {
-    $('#particles').innerHTML = Array.from({ length:6 }, (_, i) => `<span style="--i:${i};--x:${18+i*12}%">${i%2 ? '✦' : '♥'}</span>`).join('');
+    $('#particles').innerHTML = Array.from({ length:6 }, (_, i) => `<span style="--i:${i};--x:${18+i*12}%">✦</span>`).join('');
     setTimeout(() => { $('#particles').innerHTML = ''; }, 1400);
   }
   chime(); if (mine && navigator.vibrate) navigator.vibrate(12);
@@ -146,7 +210,7 @@ function currentInteraction() {
 }
 function dispatch(action) {
   if (!roleEntered) { openModal('roles'); return false; }
-  if (actionLocked) return false;
+  if (actionLocked && action?.type !== 'claim-growth') return false;
   if (!action) {
     if (careSaving()) { careNotice('pending', '上一份陪伴正在保存，稍等一下 ♡'); return false; }
     const nearest = ['pet', 'sleep', ...(state.energy >= 8 ? ['play'] : [])].map(type => ({ type, info:careActionInfo(state, { type }, clientId) })).sort((a,b) => a.info.availableAt - b.info.availableAt)[0];
@@ -154,6 +218,10 @@ function dispatch(action) {
     return false;
   }
   const care = careActionInfo(state, action, clientId);
+  if (action.type === 'claim-growth') {
+    if (careSaving()) { careNotice('pending', '上一份心意正在保存，稍等一下 ♡'); return false; }
+    if (!(state.pendingGrowth || []).some(reward => reward.id === action.rewardId)) return false;
+  }
   if (care.dailyLimit !== null && careSaving()) { careNotice('pending', '上一份陪伴正在保存，稍等一下 ♡'); return false; }
   if (!care.allowed) {
     careNotice(`${action.type}:${care.reason}`, careBlockedMessage(action.type, care));
@@ -166,7 +234,7 @@ function dispatch(action) {
     actionLocked = true; setTimeout(() => actionLocked = false, 650); return true;
   }
   const actor = { id:clientId, name:profile.name };
-  const next = reduceAction(state, action, actor);
+  const next = reduceAction(state, action, actor, Date.now(), crypto.randomUUID());
   if (!next) { toast('这次互动暂时不能完成，请稍后再试'); updateCareControls(); return false; }
   state = next; render(); react(action, actor);
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
@@ -186,8 +254,20 @@ function startCloud() {
     onAction:react,
     onPresence(next) { members=next; renderConnection(); },
     onStatus(next) { status=next; renderConnection(); },
-    onSaveStatus(next) { saveStatus=next; if(next.phase==='error'){appearanceSubmitting=false;refreshAppearanceSheet();toast(next.message);} renderConnection(); },
-    onPending(queue) { pendingCloudActions=queue.length; save(pendingKey,queue); refreshFeedingSheet(); updateCareControls(); },
+    onSaveStatus(next) {
+      saveStatus=next;
+      if (next.phase==='error') {
+        // A rejected claim leaves its bubble in the last saved snapshot. Release
+        // the click lock so it remains usable; retrying writes stay queue-blocked.
+        if (claimingRewardId && pendingCloudActions === 0) {
+          claimOrigins.delete(claimingRewardId);
+          claimingRewardId = null;
+        }
+        appearanceSubmitting=false; refreshAppearanceSheet(); toast(next.message);
+      }
+      renderConnection();
+    },
+    onPending(queue) { pendingCloudActions=queue.length; save(pendingKey,queue); refreshFeedingSheet(); updateCareControls(); renderGrowth(); },
   });
   cloud.start();
 }
@@ -216,6 +296,7 @@ function openModal(view) {
   if (view === 'feeding') $('#speech').textContent = '一起喂养，升级更快 ♡';
   const header = (emoji, eyebrow, title, body='') => `<div class="modal-illustration">${emoji}</div><span class="eyebrow">${eyebrow}</span><h2>${title}</h2>${body ? `<p class="modal-description">${body}</p>` : ''}`;
   const templates = {
+    growth: () => growthTray(state.pendingGrowth || [], { blocked:careSaving(), claimingRewardId, page:growthPage }),
     appearance: () => appearanceSheet(),
     feeding: () => feedingSheet(feedingSheetOptions()),
     modes: () => `<div class="sheet-handle" aria-hidden="true"></div><span class="eyebrow">LITTLE MOMENTS, LOTS OF LOVE</span><h2>今天，怎么陪小猫？</h2><p class="modal-description">选好模式，点点小猫就能互动。<br/>小窝共享每日次数，冷却结束就能继续陪伴。</p><div class="mode-grid" role="group" aria-label="选择小猫互动模式">${INTERACTION_MODES.map(mode => `<button class="mode-card ${mode.id === interactionMode ? 'selected' : ''}" data-mode="${mode.id}" aria-pressed="${mode.id === interactionMode}"><span class="mode-card-icon ${mode.id}">${icon(mode.icon)}</span><strong>${mode.label}</strong><small>${mode.description}</small>${mode.id === 'random' ? '<small class="mode-care-status">遵循各项次数与冷却</small>' : `<small class="mode-care-status" data-care-status="${mode.id}"></small>`}<span class="mode-check">${icon('check')}</span></button>`).join('')}</div><button class="primary modal-primary mode-start" id="mode-start">${icon('paw-print')} 开始互动</button><button class="text-button" id="reset-cat-view">回到正面 ${icon('arrow-right')}</button>`,
@@ -223,7 +304,7 @@ function openModal(view) {
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
     settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row" data-open="appearance"><span>${icon('shirt')} 小猫装扮</span><b>换个小魔法 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${cloudConfigured ? '小猫的互动与成长会自动保存到 GitHub 私有云存档。下次打开网站，选择你的身份就能继续。请等页面显示「已保存」再离开。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
     diary: () => `${header('📔','OUR LITTLE MOMENTS','养猫日记','那些微小的陪伴，小猫都有好好记住。')}<div class="diary-list">${state.history.length ? state.history.map(item => `<article class="diary-item"><span>${icon('heart')}</span><div><b>${esc(item.actor)}</b><p>${esc(item.text)}</p></div><time>${new Date(item.at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</time></article>`).join('') : '<div class="empty-diary">还没有记录，摸摸小猫<br/>写下你们的第一个小瞬间吧 ♡</div>'}</div>`,
-    guide: () => `${header('✨','GROW WITH LOVE','每一点爱，都算数','照顾小猫可以积累成长值，每 120 点升一级。')}<div class="guide-list"><div><span>🐟 9 种美味食物<small>${careRuleText('feed')}</small></span><b>+5～50 成长</b></div><div><span>🤍 温柔摸摸<small>${careRuleText('pet')}</small></span><b>+3 成长 · +6 开心</b></div><div><span>🪄 陪它玩耍<small>${careRuleText('play')}</small></span><b>+8 成长 · +10 猫爪币</b></div><div><span>🌙 休息一下<small>${careRuleText('sleep')}</small></span><b>+4 成长 · +20 活力</b></div><div><span>🐾 本轮双人喂养<small>${careRuleText('pair')} · 每轮一次</small></span><b>额外 +10 亲密度和成长</b></div></div><p class="guide-limits-note">每日次数由两人共享，北京时间（UTC+8）0 点重置。喂食冷却按身份单独计算，摸摸、逗猫和休息共享冷却；跨日仍需等冷却结束。叫醒随时可用，不消耗次数，也不增加成长。</p><p class="fine-print">首次喂食开启 4 小时一轮的双人小任务，两位猫友在本轮各喂一次，即可结算本轮奖励。每日双人奖励用完后，喂食仍可在其次数和冷却内进行。猫爪币通过逗猫免费获得。</p>`,
+    guide: () => `${header('✨','GROW WITH LOVE','每一点爱，都算数','照顾小猫会产生成长气泡，点击领取才计入成长；每 120 点升一级。')}<div class="guide-list"><div><span>🐟 9 种美味食物<small>${careRuleText('feed')}</small></span><b>+5～50 成长</b></div><div><span>🤍 温柔摸摸<small>${careRuleText('pet')}</small></span><b>+3 成长 · +6 开心</b></div><div><span>🪄 陪它玩耍<small>${careRuleText('play')}</small></span><b>+8 成长 · +10 猫爪币</b></div><div><span>🌙 休息一下<small>${careRuleText('sleep')}</small></span><b>+4 成长 · +20 活力</b></div><div><span>🐾 本轮双人喂养<small>${careRuleText('pair')} · 每轮一次</small></span><b>额外 +10 亲密度和成长</b></div></div><p class="guide-limits-note">每日次数由两人共享，北京时间（UTC+8）0 点重置。喂食冷却按身份单独计算，摸摸、逗猫和休息共享冷却；跨日仍需等冷却结束。叫醒随时可用，不消耗次数，也不增加成长。</p><p class="fine-print">气泡不会自动消失，刷新或离开小窝也会保留，点击后小爱心会飞入成长条。首次喂食开启 4 小时一轮的双人小任务，两位猫友在本轮各喂一次，额外成长会加入本次喂食气泡。每日双人奖励用完后，喂食仍可在其次数和冷却内进行。猫爪币通过逗猫免费获得。</p>`,
     home: () => `${header('🏡','YOUR COZY CORNER','欢迎回到小窝',`这里是${esc(state.name)}的家，也是你每天可以放松一下的地方。`)}<div class="home-summary"><div><strong>${levelInfo(state.xp).level}</strong><span>小猫等级</span></div><div><strong>${state.love}</strong><span>积攒的爱</span></div><div><strong>${state.history.length}</strong><span>近期陪伴</span></div></div><button class="primary modal-primary" data-open="roles">${icon('users-round')} 查看或切换身份</button>`,
   };
   $('#modal-content').innerHTML = (templates[view] || templates.home)();
@@ -310,14 +391,14 @@ function updateCareControls(now = Date.now()) {
 const careClock = setInterval(() => {
   if (document.hidden) return;
   updateCareControls();
-  if (!$('#modal').open || $('#modal-content').dataset.view !== 'feeding') return;
+  renderFeedingHome();
   let expired = false;
   document.querySelectorAll('[data-feed-until]').forEach(element => {
     const remaining = Number(element.dataset.feedUntil) - Date.now();
     if (remaining <= 0) expired = true;
     else element.textContent = countdown(remaining);
   });
-  if (expired) refreshFeedingSheet();
+  if (expired && $('#modal').open && $('#modal-content').dataset.view === 'feeding') refreshFeedingSheet();
 }, 1000);
 function closeModal() { if (roleEntered && !appearanceSubmitting) $('#modal').close(); }
 function updateModelPause() { catModel?.setPaused(document.hidden || ($('#modal').open && !['feeding','appearance'].includes($('#modal-content').dataset.view)) || $('.nest').hidden); }
@@ -336,6 +417,15 @@ async function initializeCatModel() {
 }
 document.addEventListener('click', event => {
   const el = event.target.closest('button'); if (!el) return;
+  if (el.dataset.growthReward) {
+    const rewardId = el.dataset.growthReward;
+    if (careSaving() || claimingRewardId) { careNotice('pending', '上一份心意正在保存，稍等一下 ♡'); return; }
+    claimOrigins.set(rewardId, el.getBoundingClientRect());
+    claimingRewardId = rewardId;
+    if (!dispatch({ type:'claim-growth', rewardId })) { claimingRewardId=null; claimOrigins.delete(rewardId); }
+    renderGrowth(); return;
+  }
+  if (el.dataset.growthPage !== undefined) { growthPage=Number(el.dataset.growthPage); renderGrowth(); return; }
   if (el.id==='retry-cat-model'){initializeCatModel();return;}
   if (el.dataset.appearanceTab){appearanceTab=el.dataset.appearanceTab;refreshAppearanceSheet();return;}
   if (el.dataset.appearanceChoice!==undefined && !appearanceSubmitting){appearanceDraft={...appearanceDraft,[appearanceTab]:Number(el.dataset.appearanceChoice)};catModel?.setAppearance(appearanceDraft);refreshAppearanceSheet();return;}

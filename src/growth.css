@@ -1,0 +1,26 @@
+.growth-rewards{position:absolute;top:38px;left:15%;right:15%;z-index:6;text-align:center;pointer-events:none}
+.growth-bubble-row{display:flex;align-items:flex-start;justify-content:center;gap:8px}
+.growth-bubble,.growth-more{flex-shrink:0;padding:0;border:0;background:transparent;display:flex;align-items:center;flex-direction:column;pointer-events:auto;color:#916346;cursor:pointer}
+.growth-bubble{width:52px;animation:growth-bob 3.4s ease-in-out infinite;transform-origin:center}
+.growth-bubble:nth-child(2){animation-delay:-1.1s}.growth-bubble:nth-child(3){animation-delay:-2.2s}
+.growth-orb{position:relative;width:52px;height:58px;border:1px solid #fff8df;border-radius:50%;background:radial-gradient(ellipse at 24% 18%,#fffdf4f2 0%,#fff7ed4d 35%,#ffffff28 60%,#fffdf479 100%);box-shadow:inset -2px -3px 9px #fffaf18c,0 3px 14px #b4754220;display:flex;align-items:center;justify-content:center}
+.growth-orb::after{content:'';position:absolute;top:5px;left:8px;width:10px;height:6px;border-radius:50%;background:#fffaf4a6;transform:rotate(-35deg)}
+.growth-heart{position:absolute;top:0;font-size:46px;line-height:1.1;color:#ff9948;text-shadow:0 1px 0 #ffe49c,0 3px 7px #f6892740;filter:drop-shadow(0 -1px 1px #fff0af)}
+.growth-orb strong{position:absolute;bottom:4px;font-size:15px;line-height:1;font-weight:800;color:#fff;text-shadow:0 1px 4px #976039a6;font-variant-numeric:tabular-nums}
+.growth-label{max-width:66px;margin-top:4px;font-size:8px;line-height:1.4;font-weight:700;white-space:nowrap;color:#896144;text-shadow:0 1px 4px #fff8e8}
+.growth-bubble:disabled{cursor:wait}.growth-bubble:disabled .growth-orb{opacity:.65}.growth-bubble:active{transform:scale(.9)}
+.growth-tap-hint{display:inline-block;margin-top:7px;padding:3px 8px;border-radius:12px;background:#fff6e5b3;color:#a17a55;font-size:7px;line-height:1.4;pointer-events:none}
+.growth-more{width:30px;padding-top:13px;align-self:flex-start;font-size:8px;line-height:1.5}
+.growth-more strong{display:grid;place-items:center;min-width:30px;height:30px;border-radius:50%;border:1px solid #fff5da;background:#ffefccda;font-size:10px;color:#b58348}
+.growth-more span{margin-top:3px}
+.growth-tray-heading p{font-size:11px;line-height:1.9;color:#ac8969;margin:0 0 20px}
+.growth-tray-count{font-size:10px;font-weight:700;color:#ad825e;margin-bottom:18px}
+.growth-tray-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 10px;justify-items:center}
+.growth-bubble-detailed{width:100%;animation:none}.growth-bubble-detailed .growth-orb{width:62px;height:68px}.growth-bubble-detailed .growth-heart{font-size:54px}.growth-bubble-detailed .growth-label{font-size:10px;max-width:100%;white-space:normal}.growth-actor{font-size:8px;color:#b49a80;margin-top:4px}
+.growth-tray-pages{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px;font-size:10px;color:#a08063}.growth-tray-pages button{background:#f3e4ce;padding:8px 12px;border-radius:12px;font-size:10px}.growth-tray-pages button:disabled{opacity:.4;cursor:default}.growth-empty{font-size:12px;line-height:1.9;color:#ab8664;padding:20px 0}
+.growth-flight{position:fixed;z-index:30;pointer-events:none;font-size:27px;color:#ffa354;text-shadow:0 1px 3px #ffeabd;animation:growth-collect 900ms cubic-bezier(.22,.65,.3,1) forwards;animation-delay:calc(var(--i)*45ms);left:var(--from-x);top:var(--from-y)}
+.pet-card.growth-collected .xp-row{filter:drop-shadow(0 0 7px #ffcc54)}.pet-card.growth-collected #xp-bar{background:#ffd26a;box-shadow:0 0 10px #ffc55b}.pet-card.growth-collected #level{color:#e7a348}
+@keyframes growth-bob{0%,100%{translate:0 0}50%{translate:0 -4px}}
+@keyframes growth-collect{0%{opacity:1;transform:translate(0,0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(var(--to-x),var(--to-y)) scale(.3)}}
+@media(max-width:360px){.growth-rewards{left:12%;right:12%;top:32px}.growth-bubble-row{gap:5px}.growth-bubble{width:45px}.growth-orb{width:45px;height:51px}.growth-heart{font-size:40px}.growth-orb strong{font-size:13px}.growth-label{font-size:7px}.growth-tap-hint{font-size:6.5px}}
+@media(prefers-reduced-motion:reduce){.growth-bubble{animation:none}.growth-flight{animation:none;display:none}}

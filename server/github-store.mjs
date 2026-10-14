@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits } from '../src/state.js';
+import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth } from '../src/state.js';
 import { validAppearance } from '../src/mage-cat-config.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
@@ -20,6 +20,7 @@ export function sanitizeAction(value) {
   if (['pet', 'play', 'sleep'].includes(value.type) && keys.length === 1) return { type: value.type };
   if (value.type === 'dress' && keys.length === 2 && keys.includes('appearance') && validAppearance(value.appearance)) return { type:'dress', appearance:{...value.appearance} };
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) return { type: 'rename', name: value.name.trim() };
+  if (value.type === 'claim-growth' && keys.length === 2 && keys.includes('rewardId') && typeof value.rewardId === 'string' && OPERATION_ID.test(value.rewardId)) return { type: 'claim-growth', rewardId: value.rewardId };
   return null;
 }
 
@@ -38,8 +39,9 @@ function validStoredState(value) {
   if (!plain(value) || value.version !== 1 || !validText(value.name, 16) || typeof value.sleeping !== 'boolean' || !Number.isFinite(value.updatedAt)) return false;
   if (Object.hasOwn(value, 'appearance') && !validAppearance(value.appearance)) return false;
   if (Object.hasOwn(value, 'careLimits') && !validCareLimits(value.careLimits)) return false;
+  if (Object.hasOwn(value, 'pendingGrowth') && !validPendingGrowth(value.pendingGrowth)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
-    const max = ['coins', 'love', 'xp'].includes(key) ? 999999 : 100;
+    const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
     if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > max) return false;
   }
   return Array.isArray(value.history) && value.history.length <= 40 && value.history.every(item => plain(item) && typeof item.text === 'string' && item.text.length <= 200 && typeof item.actor === 'string' && item.actor.length <= 20 && Number.isFinite(item.at));
@@ -88,14 +90,15 @@ export function createGitHubStore({
     queues.set(id, current);
     return current.finally(() => { if (queues.get(id) === current) queues.delete(id); });
   }
-  async function request(id, method, body, etag) {
+  async function request(id, method, body, etag, blobSha) {
     assertConfigured();
     let response;
     try {
-      response = await fetchImpl(`${base}${id}.json${method === 'GET' ? `?${new URLSearchParams({ ref: branch })}` : ''}`, {
+      const url = blobSha ? `https://api.github.com/repos/${repository}/git/blobs/${encodeURIComponent(blobSha)}` : `${base}${id}.json${method === 'GET' ? `?${new URLSearchParams({ ref: branch })}` : ''}`;
+      response = await fetchImpl(url, {
         method,
         headers: {
-          Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`,
+          Accept: method === 'GET' && !blobSha ? 'application/vnd.github.object+json' : 'application/vnd.github+json', Authorization: `Bearer ${token}`,
           'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'cat-nest-cloud-save',
           'Cache-Control': 'no-cache', ...(body ? { 'Content-Type': 'application/json' } : {}),
           ...(etag ? { 'If-None-Match': etag } : {}),
@@ -123,9 +126,25 @@ export function createGitHubStore({
     if (!response.ok) throw new StorageError('STORAGE_UNAVAILABLE', '云端存档暂不可用，请稍后重试。');
     try {
       const data = await response.json();
-      if (data.encoding !== 'base64' || typeof data.content !== 'string' || data.content.length > 350_000 || typeof data.sha !== 'string') throw new Error();
-      const room = JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
+      if (typeof data.sha !== 'string' || typeof data.content !== 'string') throw new Error();
+      let encoded = data.content;
+      if (data.encoding === 'none' && data.content === '') {
+        // GitHub Contents omits inline content above 1 MB. The blob SHA pins
+        // this extra read to the same immutable content used for the CAS write.
+        const blobResponse = await request(id, 'GET', null, null, data.sha);
+        if (!blobResponse.ok) throw new StorageError('STORAGE_UNAVAILABLE', '云端存档暂不可用，请稍后重试。');
+        const blob = await blobResponse.json();
+        if (blob.sha !== data.sha || blob.encoding !== 'base64' || typeof blob.content !== 'string') throw new Error();
+        encoded = blob.content;
+      } else if (data.encoding !== 'base64') throw new Error();
+      const room = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
       if (room.version !== 1 || room.roomId !== id || !Number.isSafeInteger(room.revision) || room.revision < 0 || !validStoredState(room.state) || !Array.isArray(room.operations) || room.operations.length > 100) throw new Error();
+      // Unclaimed rewards are individually validated and cannot be discarded
+      // just because their separate ledger outgrows the capped diary. Preserve
+      // the existing size limit for every other stored field.
+      const withoutGrowth = { ...room, state: { ...room.state } };
+      delete withoutGrowth.state.pendingGrowth;
+      if (Buffer.byteLength(JSON.stringify(withoutGrowth), 'utf8') * 4 / 3 > 350_000) throw new Error();
       for (const operation of room.operations) {
         if (!plain(operation) || typeof operation.id !== 'string' || !OPERATION_ID.test(operation.id) || !plain(operation.event) || operation.event.operationId !== operation.id || !sanitizeAction(operation.event.action) || !sanitizeActor(operation.event.actor?.id, operation.event.actor?.name)) throw new Error();
       }
@@ -133,7 +152,10 @@ export function createGitHubStore({
       cache.set(id, { record, etag: response.headers.get('etag') });
       if (cache.size > 1000) cache.delete(cache.keys().next().value);
       return copy(record);
-    } catch { throw new StorageError('STORAGE_CORRUPT', '云端存档格式异常，请联系网站维护者。'); }
+    } catch (error) {
+      if (error instanceof StorageError) throw error;
+      throw new StorageError('STORAGE_CORRUPT', '云端存档格式异常，请联系网站维护者。');
+    }
   }
 
   async function write(room, sha) {
@@ -179,7 +201,9 @@ export function createGitHubStore({
           const actionAt = now();
           const info = careActionInfo(room.state, action, actor.id, actionAt);
           if (!info.allowed) throw careRejection(action, info, actionAt);
-          const reduced = reduceAction(copy(room.state), action, actor, actionAt);
+          if (action.type === 'claim-growth' && !room.state.pendingGrowth?.some(reward => reward.id === action.rewardId)) throw new StorageError('REWARD_ALREADY_CLAIMED', '这颗成长气泡已经被领取，或暂时无法找到。', 409);
+          const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
+          if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
           const event = { operationId, action, actor };
           const next = { ...room, revision: room.revision + 1, state: safeState(reduced, actionAt), updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
