@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGitHubStore, ROOM_ID, sanitizeActor, StorageError } from './github-store.mjs';
+import { COUPLE_ROLES } from '../src/couple-profile.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -20,6 +21,7 @@ export function createPetHandler({
   heartbeatMs = 15_000,
   pollMs = 15_000,
   maxBodyBytes = 32_768,
+  coupleRoomId = process.env.COUPLE_ROOM_ID || '0aed6937627c924a7497025ebd18fe5d',
 } = {}) {
   const origins = new Set((Array.isArray(corsOrigin) ? corsOrigin : corsOrigin.split(',')).map(value => value.trim()).filter(Boolean));
   const rooms = new Map();
@@ -41,6 +43,16 @@ export function createPetHandler({
     entry.count += 1;
     if (rates.size > 10_000) for (const [storedKey, value] of rates) if (value.until < now) rates.delete(storedKey);
     if (entry.count > count) throw new StorageError('TOO_MANY_REQUESTS', '互动太快啦，请稍等片刻再试。', 429);
+  }
+  function roomActor(id, clientId, name) {
+    if (id === coupleRoomId) {
+      const profile = COUPLE_ROLES.find(role => role.clientId === clientId);
+      if (!profile) throw new StorageError('INVALID_COUPLE_ROLE', '请选择男方或女方后再互动。', 400);
+      return { id: profile.clientId, name: profile.name };
+    }
+    const actor = sanitizeActor(clientId, name);
+    if (!actor) throw new StorageError('INVALID_ACTOR', '铲屎官信息无效。', 400);
+    return actor;
   }
   async function body(request) {
     if (!/^application\/json(?:\s*;|$)/i.test(request.headers['content-type'] || '')) throw new StorageError('INVALID_CONTENT_TYPE', '请求需要使用 JSON 格式。', 415);
@@ -94,7 +106,7 @@ export function createPetHandler({
   async function handle(request, response) {
     let url;
     try { url = new URL(request.url, 'http://localhost'); } catch { return false; }
-    const apiRoute = url.pathname === '/api/health' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
+    const apiRoute = url.pathname === '/api/health' || url.pathname === '/api/couple/home' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
     if (!apiRoute && !serveStatic) return false;
     if (closed) { json(response, 503, { error: { code: 'SHUTTING_DOWN', message: '服务正在重启，请稍后重试。' } }); return true; }
     try {
@@ -116,6 +128,14 @@ export function createPetHandler({
         if (url.pathname === '/api/health' && request.method === 'GET') {
           json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: 'github' }); return true;
         }
+        if (url.pathname === '/api/couple/home') {
+          if (request.method !== 'GET') {
+            json(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: '这个接口不支持当前请求方式。' } }, { Allow: 'GET' }); return true;
+          }
+          if (typeof coupleRoomId !== 'string' || !ROOM_ID.test(coupleRoomId)) throw new StorageError('INVALID_COUPLE_HOME', '共同小窝配置无效，请联系网站维护者。', 503);
+          // Read only: a missing or inaccessible save must never create a new home.
+          json(response, 200, { ...await store.getRoom(coupleRoomId), roles: COUPLE_ROLES }); return true;
+        }
         if (url.pathname === '/api/rooms' && request.method === 'POST') {
           rate(`create:${request.socket.remoteAddress}`, 10, 3_600_000);
           const input = await body(request);
@@ -129,19 +149,17 @@ export function createPetHandler({
         if (!route && request.method === 'GET') { json(response, 200, await store.getRoom(id)); return true; }
         if (route === 'actions' && request.method === 'POST') {
           const input = await body(request);
-          const actor = sanitizeActor(input.clientId, input.name);
-          if (!actor) throw new StorageError('INVALID_ACTOR', '铲屎官信息无效。', 400);
+          const actor = roomActor(id, input.clientId, input.name);
           const hub = rooms.get(id);
           if (hub?.members.size >= 2 && !hub.members.has(actor.id)) throw new StorageError('ROOM_FULL', '这个小窝已经有两位铲屎官啦。', 409);
           rate(`action:${id}:${actor.id}`, 90, 60_000);
-          const result = await store.applyAction(id, input);
+          const result = await store.applyAction(id, { ...input, clientId: actor.id, name: actor.name });
           // The GitHub commit has completed before any response or live event.
           if (hub && !result.duplicate) updateHub(hub, result, 'action');
           json(response, 200, result); return true;
         }
         if (route === 'events' && request.method === 'GET') {
-          const actor = sanitizeActor(url.searchParams.get('clientId'), url.searchParams.get('name'));
-          if (!actor) throw new StorageError('INVALID_ACTOR', '铲屎官信息无效。', 400);
+          const actor = roomActor(id, url.searchParams.get('clientId'), url.searchParams.get('name'));
           const result = await store.getRoom(id);
           if (request.destroyed || response.destroyed) return true;
           let hub = rooms.get(id);

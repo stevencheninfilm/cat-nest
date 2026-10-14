@@ -1,12 +1,17 @@
-/** GitHub-backed authoritative rooms. Browser sees only room access keys, never a GitHub token. */
-export function createCloudRoom({ apiBase, roomId, clientId, name, initialState, pending = [], onRoom, onState, onAction, onPresence, onStatus, onSaveStatus, onPending }) {
+import { getCoupleProfile } from './couple-profile.js';
+
+/** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
+export function createCloudRoom(options) {
+  const { apiBase, roomId, clientId, name, coupleRole, initialState, pending = [], onRoom, onState, onAction, onPresence, onStatus, onSaveStatus, onPending } = options;
   const base = apiBase.replace(/\/$/, '');
+  const coupleMode = Object.hasOwn(options, 'coupleRole');
+  const profile = getCoupleProfile(coupleRole);
   let room = /^[a-f0-9]{32}$/.test(roomId || '') ? roomId : null;
   let queue = [...pending];
   let revision = -1;
   let source, poll, retry, destroyed = false, draining = false, ready = false;
   const seen = new Set();
-  const me = { id: clientId, name };
+  const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
   async function request(path, options = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 95000);
@@ -64,11 +69,20 @@ export function createCloudRoom({ apiBase, roomId, clientId, name, initialState,
     clearInterval(poll); poll=setInterval(async () => { if (destroyed) return; try { apply(await request(`/api/rooms/${room}`)); } catch {} }, 20000);
   }
   async function start() {
+    if (coupleMode && !profile) {
+      ready=false;
+      onStatus({phase:'error',role:'cloud',message:'请选择男方或女方后进入小窝'});
+      onSaveStatus({phase:'error',message:'尚未选择身份，云端存档没有被修改'});
+      return;
+    }
     onStatus({phase:'connecting',role:'cloud',message:'正在唤醒云端小窝，首次连接可能需要约一分钟…'});
     onSaveStatus({phase:'loading',message:'正在读取云端存档…'});
     try {
-      const data = room ? await request(`/api/rooms/${room}`) : await request('/api/rooms', {method:'POST',body:JSON.stringify({name:me.name,initialState})});
+      const data = coupleMode ? await request('/api/couple/home') : room ? await request(`/api/rooms/${room}`) : await request('/api/rooms', {method:'POST',body:JSON.stringify({name:me.name,initialState})});
       if (destroyed) return;
+      if (coupleMode && (typeof data?.roomId !== 'string' || !/^[a-f0-9]{32}$/.test(data.roomId) || !data.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) {
+        throw new Error('共同小窝存档暂不可用，原存档没有被修改');
+      }
       room=data.roomId; onRoom(room); apply(data);
       onSaveStatus({phase:'saved',message:'已读取 GitHub 云端存档',at:Date.now()});
       ready=true; subscribe(); drain();
@@ -84,7 +98,7 @@ export function createCloudRoom({ apiBase, roomId, clientId, name, initialState,
       if (!ready || destroyed || queue.length >= 20) return false;
       queue.push({operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action}); saveQueue(); drain(); return true;
     },
-    updateName(next) { me.name=next; if(room&&ready) subscribe(); },
+    updateName(next) { if (coupleMode) return; me.name=next; if(room&&ready) subscribe(); },
     destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); },
   };
 }
