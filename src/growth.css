@@ -24,3 +24,37 @@
 @keyframes growth-collect{0%{opacity:1;transform:translate(0,0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(var(--to-x),var(--to-y)) scale(.3)}}
 @media(max-width:360px){.growth-rewards{left:12%;right:12%;top:32px}.growth-bubble-row{gap:5px}.growth-bubble{width:45px}.growth-orb{width:45px;height:51px}.growth-heart{font-size:40px}.growth-orb strong{font-size:13px}.growth-label{font-size:7px}.growth-tap-hint{font-size:6.5px}}
 @media(prefers-reduced-motion:reduce){.growth-bubble{animation:none}.growth-flight{animation:none;display:none}}
+
+/* Two reserved lanes leave the cat's face and speech area clear. */
+.scene{container-type:size;container-name:cat-care-scene}
+.scene .growth-rewards{inset:0;pointer-events:none}
+.growth-side{position:absolute;top:max(26%,76px);width:44px;display:grid;grid-template-rows:64px 64px 34px;gap:14px;justify-items:center;align-items:start;pointer-events:none}
+.growth-side-left{left:13.5%}.growth-side-right{right:13.5%}
+.growth-side-slot{width:44px;height:64px;display:flex;justify-content:center;align-items:flex-start}
+.growth-side .growth-bubble{width:44px;min-height:64px;animation:growth-side-bob 3.4s ease-in-out infinite}
+.growth-side-slot:nth-child(2) .growth-bubble{animation-delay:-1.1s}.growth-side-right .growth-bubble{animation-delay:-2.2s}
+.growth-side .growth-orb{width:44px;height:50px}
+.growth-side .growth-orb>.growth-heart{height:45px;inset:-3px 0 auto;font-size:38px;line-height:1.1}
+.growth-side .growth-heart-fallback{padding:3px}
+.growth-side .growth-orb strong{left:0;right:0;bottom:4px;font-size:13px}
+.growth-side .growth-label{max-width:50px;margin-top:3px;font-size:8px;line-height:1.35;overflow:hidden;text-overflow:ellipsis}
+.growth-side .growth-glint{width:10px;height:10px}.growth-side .growth-glint-b{width:7px;height:7px}
+.growth-side .growth-tap-hint{margin:0;padding:3px 0;width:44px;border:0;background:#fff6e5bf;border-radius:9px;font-size:7px;line-height:1.5;color:#8f6847}
+.growth-side .growth-more{width:44px;height:34px;min-height:34px;padding:3px 0;gap:0;align-items:center;justify-content:center;border:1px solid #fff8e8;border-radius:10px;background:#fff5dfed;box-shadow:0 2px 7px #9a63351a;font-size:7px;line-height:1.4}
+.growth-side .growth-more strong{display:block;min-width:0;max-width:40px;height:auto;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:#a36b29;font-size:10px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.growth-side .growth-more span{margin:1px 0 0}
+.growth-side .growth-bubble:focus-visible,.growth-side .growth-more:focus-visible{outline:2px solid #d79b44;outline-offset:3px;border-radius:12px}
+@keyframes growth-side-bob{0%,100%{translate:0 0}50%{translate:0 -2px}}
+@media(max-width:360px){.growth-side{width:36px;grid-template-rows:56px 56px 32px;gap:10px}.growth-side-left{left:16%}.growth-side-right{right:16%}.growth-side-slot{width:36px;height:56px}.growth-side .growth-bubble{width:44px;min-height:56px}.growth-side .growth-orb{width:36px;height:42px}.growth-side .growth-orb>.growth-heart{height:38px;font-size:32px}.growth-side .growth-orb strong{font-size:12px;bottom:3px}.growth-side .growth-label{max-width:42px;font-size:7px}.growth-side .growth-more,.growth-side .growth-tap-hint{width:36px}.growth-side .growth-more{height:32px;min-height:32px}.growth-side .growth-more strong{max-width:32px;font-size:9px}}
+@container cat-care-scene (max-height:249px){
+  .growth-side{grid-template-rows:46px 46px 20px;gap:6px}
+  .growth-side-slot{height:46px}.growth-side .growth-bubble{min-height:46px}
+  .growth-side .growth-orb{width:32px;height:35px}
+  .growth-side .growth-orb>.growth-heart{height:33px;inset:-2px 0 auto;font-size:28px}
+  .growth-side .growth-orb strong{bottom:2px;font-size:11px}
+  .growth-side .growth-label{margin-top:1px;font-size:7px;line-height:1.2}
+  .growth-side .growth-tap-hint{visibility:hidden}
+  .growth-side .growth-more{width:44px;height:20px;min-height:20px;padding:0;flex-direction:row;gap:2px;font-size:6.5px}
+  .growth-side .growth-more strong{max-width:18px;font-size:9px}.growth-side .growth-more span{margin:0}
+}
+@media(prefers-reduced-motion:reduce){.growth-side .growth-bubble{animation:none}}

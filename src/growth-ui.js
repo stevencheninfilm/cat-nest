@@ -13,9 +13,31 @@ function rewardButton(reward, { blocked = false, claimingRewardId = null, detail
   return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" data-growth-reward="${escape(reward.id)}" ${blocked ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长" title="点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true"><span class="growth-heart">♥</span><strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的陪伴</span>` : ''}</button>`;
 }
 
+/** Keep existing rewards in their own side slots when another bubble is collected. */
+export function growthSideSlots(rewards = [], previous = []) {
+  const used = new Set();
+  const slots = Array.from({ length:4 }, (_, index) => {
+    const reward = previous[index] && rewards.find(item => item.id === previous[index].id);
+    if (!reward || used.has(reward.id)) return null;
+    used.add(reward.id); return reward;
+  });
+  for (const reward of rewards) {
+    const slot = slots.indexOf(null);
+    if (slot < 0) break;
+    if (used.has(reward.id)) continue;
+    slots[slot] = reward; used.add(reward.id);
+  }
+  return slots;
+}
+
+let homeSlots = [];
 export function growthBubbles(rewards = [], options = {}) {
+  homeSlots = growthSideSlots(rewards, homeSlots);
   if (!rewards.length) return '';
-  return `<div class="growth-bubble-row">${rewards.slice(0, 3).map(reward => rewardButton(reward, options)).join('')}${rewards.length > 3 ? `<button class="growth-more" data-open="growth" aria-label="查看全部 ${rewards.length} 个待领取成长气泡"><strong>+${rewards.length - 3}</strong><span>更多</span></button>` : ''}</div><span class="growth-tap-hint">点击气泡，收下成长</span>`;
+  const side = (name, indices, footer) => `<div class="growth-side growth-side-${name}" role="group" aria-label="小猫${name === 'left' ? '左' : '右'}侧成长气泡">${indices.map(index => `<div class="growth-side-slot" data-growth-slot="${index}">${homeSlots[index] ? rewardButton(homeSlots[index], options) : ''}</div>`).join('')}${footer}</div>`;
+  const hint = '<span class="growth-tap-hint">点击气泡<br/>收下成长</span>';
+  const more = rewards.length > 4 ? `<button class="growth-more" data-open="growth" aria-label="查看全部 ${rewards.length} 个待领取成长气泡"><strong>+${rewards.length - 4}</strong><span>更多成长</span></button>` : '';
+  return `${side('left', [0, 2], hint)}${side('right', [1, 3], more)}`;
 }
 
 export function growthTray(rewards = [], options = {}) {

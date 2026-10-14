@@ -24,7 +24,6 @@
   transition: opacity 240ms ease, transform 240ms ease;
 }
 .speech-bubble[hidden] { display: none; }
-.scene .growth-rewards { top:70px; }
 .speech-bubble.is-speaking { opacity: 1; transform: translate(-50%, 0) scale(1); animation:cat-speech-appear 240ms ease both; }
 .speech-bubble::after {
   content: '';
