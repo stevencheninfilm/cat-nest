@@ -6,7 +6,7 @@ const response=bytes=>new Response(bytes,{status:200,headers:{'Content-Length':S
 function sink(){return{status:0,headers:{},body:null,setHeader(k,v){this.headers[k.toLowerCase()]=v;},writeHead(status,headers={}){this.status=status;for(const[k,v]of Object.entries(headers))this.setHeader(k,v);},end(body){this.body=body;}};}
 test('private model reads use fixed paths and bearer headers, cache identical results, and coalesce concurrent requests',async()=>{
  let calls=0,seen;let release;const gate=new Promise(r=>release=r);
- const store=createModelAssetStore({token:'test-private-token',fetchImpl:async(url,opts)=>{calls++;seen={url,opts};await gate;return response(glb());}});
+ const store=createModelAssetStore({token:'test-private-token',repository:'stevencheninfilm/cat-nest-data',branch:'main',fetchImpl:async(url,opts)=>{calls++;seen={url,opts};await gate;return response(glb());}});
  const a=store.get('model.glb'),b=store.get('model.glb');release();const [x,y]=await Promise.all([a,b]);
  assert.equal(calls,1);assert.equal(x,y);assert.equal((await store.get('model.glb')),x);assert.equal(x.type,'model/gltf-binary');assert.ok(seen.url.includes('/cat-nest-data/contents/assets/mage-cat-v1/model.glb?ref=main'));assert.equal(seen.opts.headers.Authorization,'Bearer test-private-token');assert.equal(seen.opts.redirect,'error');
 });
