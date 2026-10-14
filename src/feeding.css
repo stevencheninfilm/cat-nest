@@ -165,5 +165,11 @@
   .pantry-price { font-size: 9px; margin: 0; }
   .pantry-love { font-size: 8px; }
   .feeding-pair-summary { padding-block: 5px; }
+  .feeder-card { min-height: 112px; padding: 6px 4px; }
+  .feeding-sheet .feeder-avatar { width: 24px; height: 24px; font-size: 17px; margin-bottom: 3px; }
+  .feeder-food { width: 26px; height: 26px; }
+  .feeder-card > time { font-size: 13px; margin-top: 3px; }
+  .feeder-card > time:not([data-feed-until]) { font-size: 9px; }
+  .feeder-round-status { font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .feeding-sheet button { transition: none; } }
