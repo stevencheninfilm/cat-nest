@@ -245,6 +245,34 @@ test('a losing claim immediately restores the saved shared snapshot even when it
   assert.equal(h.requests.filter(req => req.method === 'POST').length,1,'a losing claim is not retried');
 });
 
+test('winning SSE can settle shared growth before the losing claim finishes its delayed reconciliation', async t => {
+  const reward = { id:'delayed-claim-reward', kind:'pet', amount:3, actorId:'partner-male', actor:'男方', at:1 };
+  const initial = { ...snapshot(5), state:{ name:'糯米', xp:86, pendingGrowth:[reward] } };
+  const winner = { operationId:'other-device-claim', action:{ type:'claim-growth', rewardId:reward.id }, actor:{ id:'partner-female', name:'女方' } };
+  const claimed = { ...snapshot(6), state:{ name:'糯米', xp:89, pendingGrowth:[] } };
+  const reconciliation = deferred();
+  let reads = 0;
+  const h = harness(t, req => req.method === 'GET'
+    ? ++reads === 1 ? response(initial) : reconciliation.promise
+    : response({ error:{ code:'REWARD_ALREADY_CLAIMED', message:'对方已领取这颗气泡。' } }, 409));
+  await h.room.start();
+  h.room.dispatch({ type:'claim-growth', rewardId:reward.id });
+  await flush();
+  assert.equal(reads, 2);
+  h.sources[0].emit('action', { ...claimed, event:winner });
+  assert.deepEqual(h.persisted.pending, [], 'the rejected operation was removed before reconciliation completed');
+  assert.deepEqual(h.observed.states.at(-1), claimed.state);
+  assert.equal(h.observed.actions.length, 1);
+  assert.equal(h.observed.saves.at(-1).phase, 'saving', 'an empty queue and synchronized growth do not prove both requests settled');
+  assert.equal(h.observed.saves.filter(save => save.phase === 'error').length, 0);
+  reconciliation.resolve(response(claimed));
+  await flush();
+  assert.equal(h.observed.saves.at(-1).phase, 'error');
+  assert.equal(h.observed.saves.filter(save => save.phase === 'error').length, 1);
+  assert.equal(h.observed.states.at(-1).xp, 89);
+  assert.equal(h.observed.actions.length, 1, 'the authoritative refresh cannot duplicate the winning animation or award');
+});
+
 test('a failed reconciliation preserves the last saved rewards until a live snapshot recovers', async t => {
   const reward = { id:'unconfirmed-growth', kind:'pet', amount:3, actorId:'partner-male', actor:'男方', at:1 };
   const initial = { ...snapshot(1), state:{ name:'糯米', xp:86, pendingGrowth:[reward] } };

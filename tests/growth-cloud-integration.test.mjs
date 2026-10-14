@@ -175,6 +175,7 @@ async function connect(...clients) {
   await until(() => clients.every(client => client.observed.statuses.at(-1)?.phase === 'online'), 'the real SSE connections to open');
 }
 const drained = client => client.observed.pending.at(-1)?.length === 0;
+const settled = client => drained(client) && ['saved', 'error'].includes(client.observed.saves.at(-1)?.phase);
 
 test('unclaimed growth survives a server restart and a year before a device with no local save restores it', { timeout: 10_000 }, async t => {
   const f = await fixture(t);
@@ -244,7 +245,9 @@ test('simultaneous claims by both clients persist and synchronize exactly one XP
   const action = { type: 'claim-growth', rewardId: before.pendingGrowth[0].id };
   assert.equal(male.cloud.dispatch(action), true);
   assert.equal(female.cloud.dispatch(action), true);
-  await until(() => drained(male) && drained(female) && male.state.pendingGrowth.length === 0 && female.state.pendingGrowth.length === 0, 'the competing claims to finish');
+  // A rejected claim clears its queue before awaiting the authoritative GET.
+  // Wait for both final save callbacks, even if SSE already removed the bubble.
+  await until(() => settled(male) && settled(female) && male.state.pendingGrowth.length === 0 && female.state.pendingGrowth.length === 0, 'both competing claims and their conflict reconciliation to finish');
   await until(() => [male, female].every(client => client.observed.actions.filter(event => event.action.type === 'claim-growth').length === 1), 'the single accepted claim to reach both SSE clients');
   assert.equal(f.saved.state.xp, before.xp + 50);
   assert.equal(male.state.xp, before.xp + 50);
