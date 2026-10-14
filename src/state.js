@@ -13,10 +13,76 @@ export const FOODS = {
 };
 export const FEEDING_WINDOW_MS = 4 * 60 * 60 * 1000;
 export const FEEDING_BONUS = 10;
+export const CARE_TIME_ZONE = 'Asia/Shanghai';
+export const CARE_LIMITS = Object.freeze({
+  feed: Object.freeze({ dailyLimit: 6, cooldownMs: FEEDING_WINDOW_MS }),
+  pet: Object.freeze({ dailyLimit: 20, cooldownMs: 5 * 60 * 1000 }),
+  play: Object.freeze({ dailyLimit: 10, cooldownMs: 30 * 60 * 1000 }),
+  sleep: Object.freeze({ dailyLimit: 3, cooldownMs: FEEDING_WINDOW_MS }),
+  pair: Object.freeze({ dailyLimit: 3, cooldownMs: 0 }),
+});
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_OFFSET_MS = 8 * 60 * 60 * 1000;
+const careDay = now => Math.floor((now + DAY_OFFSET_MS) / DAY_MS);
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
 const validTime = value => Number.isSafeInteger(value) && value >= 0;
 const cleanName = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 20) || '猫友' : '猫友';
 const validFood = key => typeof key === 'string' && Object.hasOwn(FOODS, key);
+function emptyCareLimits(now) {
+  return {
+    day: careDay(now),
+    counts: { feed: 0, pet: 0, play: 0, sleep: 0, pair: 0 },
+    lastActions: { feed: null, pet: null, play: null, sleep: null },
+    feedCooldowns: [],
+  };
+}
+/** Missing ledgers are allowed by the store for legacy saves; present ones must be valid. */
+export function validCareLimits(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !Number.isSafeInteger(value.day) || value.day < 0) return false;
+  if (!value.counts || typeof value.counts !== 'object' || Array.isArray(value.counts)) return false;
+  for (const [type, rule] of Object.entries(CARE_LIMITS)) {
+    if (!Number.isSafeInteger(value.counts[type]) || value.counts[type] < 0 || value.counts[type] > rule.dailyLimit) return false;
+  }
+  if (!value.lastActions || typeof value.lastActions !== 'object' || Array.isArray(value.lastActions)) return false;
+  for (const type of ['feed', 'pet', 'play', 'sleep']) {
+    if (value.lastActions[type] !== null && !validTime(value.lastActions[type])) return false;
+  }
+  if (!Array.isArray(value.feedCooldowns) || value.feedCooldowns.length > 12) return false;
+  const ids = new Set();
+  return value.feedCooldowns.every(record => {
+    if (!record || typeof record.actorId !== 'string' || !CLIENT_ID.test(record.actorId) || !validTime(record.at) || ids.has(record.actorId)) return false;
+    ids.add(record.actorId);
+    return true;
+  });
+}
+function normalizeCareLimits(value, now) {
+  const next = emptyCareLimits(now);
+  if (!value || typeof value !== 'object') return next;
+  // Only advance the day: clock rollback must not grant another daily allowance.
+  if (Number.isSafeInteger(value.day) && value.day >= next.day) {
+    next.day = value.day;
+    for (const [type, rule] of Object.entries(CARE_LIMITS)) {
+      const count = value.counts?.[type];
+      if (Number.isSafeInteger(count) && count >= 0) next.counts[type] = Math.min(rule.dailyLimit, count);
+    }
+  }
+  // Cooldowns continue across midnight; resetting counts never resets timers.
+  for (const type of Object.keys(next.lastActions)) {
+    const at = value.lastActions?.[type];
+    if (validTime(at)) next.lastActions[type] = at;
+  }
+  if (Array.isArray(value.feedCooldowns)) {
+    for (const item of value.feedCooldowns.slice(0, 100)) {
+      if (!item || typeof item.actorId !== 'string' || !CLIENT_ID.test(item.actorId) || !validTime(item.at) || item.at + CARE_LIMITS.feed.cooldownMs <= now) continue;
+      const previous = next.feedCooldowns.find(record => record.actorId === item.actorId);
+      if (previous) previous.at = Math.max(previous.at, item.at);
+      else next.feedCooldowns.push({ actorId: item.actorId, at: item.at });
+    }
+    next.feedCooldowns.sort((a, b) => b.at - a.at);
+    next.feedCooldowns = next.feedCooldowns.slice(0, 12);
+  }
+  return next;
+}
 function feedRecords(value, now) {
   if (!Array.isArray(value)) return [];
   const records = [];
@@ -30,7 +96,8 @@ function feedRecords(value, now) {
   return records.slice(0, 2);
 }
 export function initialState(now = Date.now()) {
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, appearance: normalizeAppearance(), updatedAt: validTime(now) ? now : 0 };
+  now = validTime(now) ? now : 0;
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -47,10 +114,48 @@ export function normalizeState(value, now = Date.now()) {
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
   next.feedRecords = feedRecords(value.feedRecords, now);
+  next.careLimits = normalizeCareLimits(value.careLimits, now);
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
     next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
   }
   return next;
+}
+function careInfo(current, action, actorId, now) {
+  const type = action?.type;
+  const rule = Object.hasOwn(CARE_LIMITS, type) ? CARE_LIMITS[type] : null;
+  if (!rule) return { allowed: true, reason: null, dailyLimit: null, used: 0, remaining: null, cooldownMs: 0, remainingMs: 0, availableAt: now, isWake: false };
+  const isWake = type === 'sleep' && current.sleeping;
+  const used = current.careLimits.counts[type];
+  let lastAt = current.careLimits.lastActions[type] ?? null;
+  if (type === 'feed' && typeof actorId === 'string' && CLIENT_ID.test(actorId)) {
+    lastAt = current.careLimits.feedCooldowns.find(record => record.actorId === actorId)?.at
+      ?? current.feedRecords.find(record => record.actorId === actorId)?.at ?? null;
+  }
+  const cooldownEndsAt = lastAt === null ? now : lastAt + rule.cooldownMs;
+  const remainingMs = isWake ? 0 : Math.max(0, cooldownEndsAt - now);
+  const remaining = Math.max(0, rule.dailyLimit - used);
+  const reason = isWake ? null : remaining === 0 ? 'daily_limit' : remainingMs > 0 ? 'cooldown' : null;
+  const resetAt = (current.careLimits.day + 1) * DAY_MS - DAY_OFFSET_MS;
+  return {
+    allowed: reason === null, reason, dailyLimit: rule.dailyLimit, used, remaining,
+    cooldownMs: rule.cooldownMs, remainingMs,
+    availableAt: isWake ? now : Math.max(now, cooldownEndsAt, remaining === 0 ? resetAt : now), isWake,
+  };
+}
+/** Read-only availability shared by the UI and the authoritative server reducer. */
+export function careActionInfo(state, action, actorId, now = Date.now()) {
+  now = validTime(now) ? now : 0;
+  return careInfo(normalizeState(state, now), action, actorId, now);
+}
+function recordCare(state, type, actorId, now) {
+  state.careLimits.counts[type] += 1;
+  if (type === 'pair') return;
+  state.careLimits.lastActions[type] = now;
+  if (type === 'feed' && typeof actorId === 'string' && CLIENT_ID.test(actorId)) {
+    const record = state.careLimits.feedCooldowns.find(item => item.actorId === actorId);
+    if (record) record.at = now;
+    else state.careLimits.feedCooldowns.push({ actorId, at: now });
+  }
 }
 /** Four-hour food timers are derived from saved timestamps, never ticking state.
  * The reward window is shared by the room and does not restart on repeat feeds.
@@ -99,7 +204,10 @@ function recordFeeding(state, food, actor, now) {
   if (index < 0) return false;
   state.feedRecords[index] = record;
   if (!feedingInfo(state, actor.id, now).bonusEligible) return false;
+  // The round is completed even after today's reward quota has been exhausted.
   state.feedingWindow.bonusClaimed = true;
+  if (!careInfo(state, { type: 'pair' }, actor.id, now).allowed) return false;
+  recordCare(state, 'pair', actor.id, now);
   state.love += FEEDING_BONUS;
   state.xp += FEEDING_BONUS;
   return true;
@@ -108,6 +216,8 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   now = validTime(now) ? now : 0;
   if (!action || typeof action !== 'object') return null;
   const current = normalizeState(state, now);
+  const care = careInfo(current, action, actor?.id, now);
+  if (!care.allowed) return null;
   const next = { ...current, history: [...current.history], feedRecords: [...current.feedRecords], feedingWindow: current.feedingWindow ? { ...current.feedingWindow } : null, updatedAt: now };
   let text;
   switch (action.type) {
@@ -138,6 +248,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       next.name = action.name.trim().slice(0, 16); text = `给小猫取名「${next.name}」`; break;
     default: return null;
   }
+  if (Object.hasOwn(CARE_LIMITS, action.type) && !care.isWake) recordCare(next, action.type, actor?.id, now);
   next.history.unshift({ text, actor: cleanName(actor?.name).slice(0, 16), at: next.updatedAt });
   next.history = next.history.slice(0, 40);
   return normalizeState(next, now);

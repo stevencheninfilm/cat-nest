@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { Readable } from 'node:stream';
 import { createPetServer, createPetHandler } from '../server/pet-server.mjs';
 import { createGitHubStore, StorageError } from '../server/github-store.mjs';
 import { initialState, reduceAction } from '../src/state.js';
@@ -144,3 +145,28 @@ test('malformed body and invalid membership information are rejected', async t =
   const oversized = await post(base, '/api/rooms', { name: 'x'.repeat(40_000) });
   assert.equal(oversized.status, 413);
 });
+
+for (const code of ['CARE_COOLDOWN', 'DAILY_CARE_LIMIT']) {
+  test(`${code} is exposed as HTTP 409 without acknowledging a saved action`, async () => {
+    const store = memoryStore();
+    const message = '摸摸暂不可用，请等待5分钟后再试。';
+    store.applyAction = async () => { throw new StorageError(code, message, 409); };
+    const handler = createPetHandler({ store, serveStatic: false });
+    const request = Readable.from([Buffer.from(JSON.stringify({ operationId: 'limited-action', clientId: 'client-one', name: '小鱼', action: { type: 'pet' } }))]);
+    request.method = 'POST';
+    request.url = `/api/rooms/${roomId}/actions`;
+    request.headers = { 'content-type': 'application/json' };
+    request.socket = { remoteAddress: '127.0.0.1' };
+    const response = {
+      headersSent: false, destroyed: false, status: null, data: null,
+      writeHead(status) { this.status = status; this.headersSent = true; },
+      end(data) { this.data = JSON.parse(data); },
+    };
+    try {
+      assert.equal(await handler(request, response), true);
+      assert.equal(response.status, 409);
+      assert.deepEqual(response.data, { error: { code, message } });
+      assert.equal((await store.getRoom(roomId)).revision, 0);
+    } finally { handler.close(); }
+  });
+}

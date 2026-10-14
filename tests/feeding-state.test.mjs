@@ -52,18 +52,18 @@ test('same-name caregivers have separate records and earn exactly one pair bonus
   const before = initialState(start);
   const first = feed(before, alice);
   const repeat = feed(first, alice, start + 1_000);
-  assert.equal(repeat.love, before.love + 2 * FOODS.meal.love);
-  assert.equal(repeat.feedRecords.length, 1);
-  assert.equal(feedingInfo(repeat, alice.id, start + 1_000).waitingForPartner, true);
-  const together = feed(repeat, bob, start + 2_000);
-  assert.equal(together.love, before.love + 3 * FOODS.meal.love + FEEDING_BONUS);
-  assert.equal(together.xp, before.xp + 3 * FOODS.meal.love + FEEDING_BONUS);
+  assert.equal(repeat, null, 'repeat feeding cannot buy growth during cooldown');
+  assert.equal(first.feedRecords.length, 1);
+  assert.equal(feedingInfo(first, alice.id, start + 1_000).waitingForPartner, true);
+  const together = feed(first, bob, start + 2_000);
+  assert.equal(together.love, before.love + 2 * FOODS.meal.love + FEEDING_BONUS);
+  assert.equal(together.xp, before.xp + 2 * FOODS.meal.love + FEEDING_BONUS);
   assert.deepEqual(together.feedRecords.map(record => record.actorId), [alice.id, bob.id]);
   assert.equal(together.feedingWindow.bonusClaimed, true);
   assert.match(together.history[0].text, /双人喂养/);
-  const after = feed(feed(together, alice, start + 3_000), bob, start + 4_000);
-  assert.equal(after.love, before.love + 5 * FOODS.meal.love + FEEDING_BONUS);
-  assert.equal(after.history.length, 5, 'one diary entry per accepted action');
+  assert.equal(feed(together, alice, start + 3_000), null);
+  assert.equal(feed(together, bob, start + 4_000), null);
+  assert.equal(together.history.length, 2, 'one diary entry per accepted action');
   assert.equal(before.feedRecords.length, 0, 'input state is never changed');
 });
 
@@ -81,11 +81,12 @@ test('serializing simultaneous feeds in either order produces the same one-time 
 test('the shared round does not extend when a caregiver feeds repeatedly', () => {
   const first = feed(initialState(start), alice);
   const repeat = feed(first, alice, start + FEEDING_WINDOW_MS - 1);
-  assert.equal(repeat.feedingWindow.startedAt, start);
-  const info = feedingInfo(repeat, alice.id, start + FEEDING_WINDOW_MS - 1);
+  assert.equal(repeat, null);
+  assert.equal(first.feedingWindow.startedAt, start);
+  const info = feedingInfo(first, alice.id, start + FEEDING_WINDOW_MS - 1);
   assert.equal(info.windowRemainingMs, 1);
-  assert.equal(info.mine.remainingMs, FEEDING_WINDOW_MS, 'individual food display reflects latest meal');
-  const nextRound = feed(repeat, bob, start + FEEDING_WINDOW_MS);
+  assert.equal(info.mine.remainingMs, 1, 'rejected feeds do not extend the meal timer');
+  const nextRound = feed(first, bob, start + FEEDING_WINDOW_MS);
   assert.equal(nextRound.feedingWindow.startedAt, start + FEEDING_WINDOW_MS);
   assert.equal(nextRound.feedingWindow.bonusClaimed, false, 'previous-round meal cannot complete the new round');
   const completed = feed(nextRound, alice, start + FEEDING_WINDOW_MS + 1);
@@ -98,9 +99,9 @@ test('each new four-hour round requires fresh feeds from both caregivers', () =>
   assert.equal(a.feedingWindow.bonusClaimed, false);
   assert.equal(a.love, together.love + FOODS.meal.love);
   const aAgain = feed(a, alice, start + FEEDING_WINDOW_MS + 1);
-  assert.equal(aAgain.love, a.love + FOODS.meal.love);
-  const b = feed(aAgain, bob, start + FEEDING_WINDOW_MS + 2);
-  assert.equal(b.love, aAgain.love + FOODS.meal.love + FEEDING_BONUS);
+  assert.equal(aAgain, null);
+  const b = feed(a, bob, start + FEEDING_WINDOW_MS + 2);
+  assert.equal(b.love, a.love + FOODS.meal.love + FEEDING_BONUS);
 });
 
 test('a third ID cannot replace active records or collect another pair bonus', () => {
@@ -109,7 +110,7 @@ test('a third ID cannot replace active records or collect another pair bonus', (
   assert.equal(untracked.love, together.love + FOODS.meal.love);
   assert.deepEqual(untracked.feedRecords, together.feedRecords);
   assert.equal(feedingInfo(untracked, third.id, start + 2).mine, null);
-  const expired = feed(untracked, third, start + FEEDING_WINDOW_MS);
+  const expired = feed(untracked, third, start + FEEDING_WINDOW_MS + 2);
   assert.equal(expired.feedRecords.length, 2);
   assert.deepEqual(expired.feedRecords.map(record => record.actorId), [third.id, bob.id]);
   assert.equal(expired.feedingWindow.bonusClaimed, false);
@@ -161,7 +162,8 @@ test('record normalization rejects invalid IDs, duplicate slots, unknown foods a
 test('missing actor identity cannot claim a teammate slot or earn a pair bonus', () => {
   const before = feed(initialState(start), alice);
   for (const actor of [undefined, null, { name: '小雨' }, { id: 'short', name: '小雨' }]) {
-    const after = feed(before, actor, start + 1);
+    assert.equal(feed(before, actor, start + 1), null, 'anonymous feeds share the room fallback cooldown');
+    const after = feed(before, actor, start + FEEDING_WINDOW_MS);
     assert.equal(after.love, before.love + FOODS.meal.love);
     assert.deepEqual(after.feedRecords, before.feedRecords);
     assert.equal(after.feedingWindow.bonusClaimed, false);

@@ -11,3 +11,5 @@
 /* Leave room for the pet above the plate on narrow phones. */
 .feeding-sheet{max-height:68svh}.feeding-sheet .modal-content{max-height:calc(68svh - 18px)}.feeding-open .scene{top:16%}.feeding-open .together{visibility:hidden;pointer-events:none}
 @media(max-height:780px){.feeding-sheet{max-height:69svh}.feeding-sheet .modal-content{max-height:calc(69svh - 15px)}.feeding-open .scene{top:16%}}
+
+.feeding-care-status{font-size:10px;font-weight:700;line-height:1.5;margin:0 0 6px;color:#fff2d3;font-variant-numeric:tabular-nums}.feeding-care-rule{font-size:8px;line-height:1.5;margin:6px 0 0;color:#e7efffbd}.pair-bonus>small{display:block;font-size:9px;line-height:1.6;margin-top:6px;color:#eff4ffba}.feeding-sheet .serve-food:disabled{cursor:default}

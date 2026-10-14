@@ -1,5 +1,8 @@
-import { FOODS, feedingInfo } from './state.js';
+import { FOODS, feedingInfo, careActionInfo } from './state.js';
 import { COUPLE_ROLES } from './couple-profile.js';
+import { countdown, careStatusText, careRuleText } from './care-ui.js';
+
+export { countdown } from './care-ui.js';
 
 const FOOD_DETAILS = {
   snack: { category: 'treats', note: '酥酥脆脆的小奖励', position: '0% 0%' },
@@ -19,10 +22,6 @@ export function foodPreview(id) {
   const food = FOODS[id] || FOODS.meal;
   return `${foodArt(id)}<span class="food-preview-copy"><small>猫咪小餐桌</small><strong>${food.name}</strong><span>♡ +${food.love} <i>·</i> ${food.cost} 猫爪币</span><em>${Object.keys(FOODS).length} 种食物，挑一份喜欢的 <b>›</b></em></span>`;
 }
-export function countdown(ms) {
-  const seconds = Math.max(0, Math.ceil(ms / 1000));
-  return `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-}
 function pairSlots(info, clientId, members = []) {
   return COUPLE_ROLES.map(role => {
     const record = info.records.find(item => item.actorId === role.clientId);
@@ -31,12 +30,21 @@ function pairSlots(info, clientId, members = []) {
     return `<article class="feeder-card ${record?.inCurrentWindow ? 'has-fed' : ''}"><span class="feeder-avatar ${mine ? 'mine' : ''} ${role.id}">${role.id === 'male' ? '👦🏻' : '👧🏻'}</span><strong>${role.name}${mine ? '<small>我</small>' : online ? '<small>在线</small>' : ''}</strong>${record ? `${foodArt(record.food, 'feeder-food')}<span class="feeder-food-name">${FOODS[record.food]?.name || '美味小餐'}</span><time ${record.active ? `data-feed-until="${record.expiresAt}"` : ''}>${record.active ? countdown(record.remainingMs) : '本次喂养已结束'}</time><small class="feeder-round-status">${record.inCurrentWindow ? '✓ 本轮已喂养' : '本轮还未喂养'}${record.active && !record.inCurrentWindow ? ' · 上一餐计时' : ''}</small>` : '<span class="empty-feeder">♡</span><span class="feeder-empty-label">本轮还未喂养</span>'}</article>`;
   }).join('');
 }
-export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'all', clientId, members = [], saving = false, connected = true }) {
+export function feedingButtonContent({ state, selectedFood, clientId, saving = false, connected = true, now = Date.now() }) {
   const food = FOODS[selectedFood] || FOODS.meal;
-  const info = feedingInfo(state, clientId);
+  const care = careActionInfo(state, { type:'feed' }, clientId, now);
+  const disabled = !connected || saving || !care.allowed || state.coins < food.cost;
+  const content = saving ? '正在保存这份心意…' : !connected ? '正在连接云端小窝…' : care.reason === 'daily_limit' ? '今日喂食次数已用完' : care.reason === 'cooldown' ? `${countdown(care.remainingMs)} 后可喂食` : state.coins < food.cost ? '猫爪币还不够啦' : `喂这个 <span>♡ +${food.love}</span>`;
+  return { disabled, content };
+}
+export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'all', clientId, members = [], saving = false, connected = true, now = Date.now() }) {
+  const food = FOODS[selectedFood] || FOODS.meal;
+  const info = feedingInfo(state, clientId, now);
+  const care = careActionInfo(state, { type:'feed' }, clientId, now);
+  const pairCare = careActionInfo(state, { type:'pair' }, clientId, now);
   const active = info.windowActive;
   const completed = active && info.bonusClaimed;
-  const canFeed = connected && !saving && state.coins >= food.cost;
+  const serve = feedingButtonContent({ state, selectedFood, clientId, saving, connected, now });
   const filters = [['all', '全部'], ['meals', '主食'], ['treats', '小零食'], ['drinks', '饮水']];
   return `<div class="feeding-handle" aria-hidden="true"></div>
     <header class="feeding-sheet-heading"><span>FEED WITH LOVE</span><h2>一起喂养，快乐加倍</h2></header>
@@ -49,8 +57,8 @@ export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'al
     <section id="food-pair-panel" role="tabpanel" aria-labelledby="food-pair-tab" ${tab === 'pair' ? '' : 'hidden'}>
       <div class="pair-intro"><strong>${completed ? '这一轮，你们的心意都到啦' : '一人一份，都是对小猫的偏爱'}</strong><span>${active ? `本轮剩余 <time data-feed-until="${info.windowEndsAt}">${countdown(info.windowRemainingMs)}</time>` : '首次喂养后，开启 4 小时双人小任务'}</span></div>
       <div class="feeders-grid">${pairSlots(info, clientId, members)}</div>
-      <p class="pair-bonus ${completed ? 'earned' : ''}">${completed ? '♥ 双人喂养奖励已获得 +10' : '♥ 本轮两人各喂一次，额外获得 10 亲密度'}</p>
+      <p class="pair-bonus ${completed ? 'earned' : ''}">${completed ? '♥ 本轮双人喂养已完成' : pairCare.allowed ? '♥ 本轮两人各喂一次，额外获得 10 亲密度和成长' : '♥ 今日双人奖励已达上限，本轮喂养仍可完成'}<small data-care-status="pair">${careStatusText('pair', pairCare)}</small></p>
       <button class="pair-invite" id="feeding-role">当前：${clientId === COUPLE_ROLES[0].clientId ? '男方' : '女方'} · 切换身份 <span>›</span></button>
     </section>
-    <footer class="feeding-footer"><button class="serve-food" id="serve-food" ${canFeed ? '' : 'disabled'}>${saving ? '正在保存这份心意…' : !connected ? '正在连接云端小窝…' : state.coins < food.cost ? '猫爪币还不够啦' : `喂这个 <span>♡ +${food.love}</span>`}</button><div class="feeding-balance"><span>✦ ${state.coins.toLocaleString('en-US')} 猫爪币可用</span><small id="feeding-save-status" aria-live="polite"></small></div></footer>`;
+    <footer class="feeding-footer"><p class="feeding-care-status" data-care-status="feed">${careStatusText('feed', care)}</p><button class="serve-food" id="serve-food" ${serve.disabled ? 'disabled' : ''}>${serve.content}</button><p class="feeding-care-rule">小窝共享${careRuleText('feed')} · 北京时间 0 点重置次数</p><div class="feeding-balance"><span>✦ ${state.coins.toLocaleString('en-US')} 猫爪币可用</span><small id="feeding-save-status" aria-live="polite"></small></div></footer>`;
 }

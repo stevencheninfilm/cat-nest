@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { FOODS, careActionInfo, initialState, normalizeState, reduceAction } from '../src/state.js';
+import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits } from '../src/state.js';
 import { validAppearance } from '../src/mage-cat-config.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
@@ -37,6 +37,7 @@ function safeState(value, now = Date.now()) {
 function validStoredState(value) {
   if (!plain(value) || value.version !== 1 || !validText(value.name, 16) || typeof value.sleeping !== 'boolean' || !Number.isFinite(value.updatedAt)) return false;
   if (Object.hasOwn(value, 'appearance') && !validAppearance(value.appearance)) return false;
+  if (Object.hasOwn(value, 'careLimits') && !validCareLimits(value.careLimits)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = ['coins', 'love', 'xp'].includes(key) ? 999999 : 100;
     if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > max) return false;
@@ -46,9 +47,9 @@ function validStoredState(value) {
 
 function publicRoom(room) { return { roomId: room.roomId, state: copy(room.state), revision: room.revision }; }
 
-function careRejection(action, info) {
+function careRejection(action, info, now) {
   const label = { feed: '喂食', pet: '摸摸', play: '玩耍', sleep: '休息' }[action.type];
-  const totalSeconds = Math.max(1, Math.ceil(info.remainingMs / 1000));
+  const totalSeconds = Math.max(1, Math.ceil((info.availableAt - now) / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor(totalSeconds % 3600 / 60);
   const seconds = totalSeconds % 60;
@@ -177,7 +178,7 @@ export function createGitHubStore({
           }
           const actionAt = now();
           const info = careActionInfo(room.state, action, actor.id, actionAt);
-          if (!info.allowed) throw careRejection(action, info);
+          if (!info.allowed) throw careRejection(action, info, actionAt);
           const reduced = reduceAction(copy(room.state), action, actor, actionAt);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
           const event = { operationId, action, actor };

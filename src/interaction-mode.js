@@ -14,16 +14,21 @@ export function normalizeInteractionMode(value) {
 
 // Resolve one deliberate tap into an existing action so the normal cloud,
 // multiplayer and diary paths remain responsible for saving the interaction.
-export function resolveInteraction(mode, state, rng = Math.random) {
+export function resolveInteraction(mode, state, rng = Math.random, canUse = null) {
   const currentMode = normalizeInteractionMode(mode);
   const energy = Number.isFinite(state?.energy) ? state.energy : 76;
   if (currentMode === 'random') {
-    if (state?.sleeping || energy < 24) return { type: 'sleep' };
+    const allowed = type => typeof canUse !== 'function' || canUse({ type });
+    if (state?.sleeping) return allowed('sleep') ? { type: 'sleep' } : null;
+    if (energy < 24 && allowed('sleep')) return { type: 'sleep' };
+    const available = randomActions.filter(type => (type !== 'play' || energy >= 8) && allowed(type));
+    if (!available.length) return null;
+    if (available.length === 1) return { type: available[0] };
     const sample = rng();
     const index = Number.isFinite(sample)
-      ? Math.max(0, Math.min(randomActions.length - 1, Math.floor(sample * randomActions.length)))
+      ? Math.max(0, Math.min(available.length - 1, Math.floor(sample * available.length)))
       : 0;
-    return { type: randomActions[index] };
+    return { type: available[index] };
   }
   if (currentMode === 'play' && energy < 8) return { type: 'sleep' };
   return { type: currentMode };

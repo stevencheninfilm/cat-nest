@@ -200,6 +200,43 @@ test('temporary API failure retains the exact pending operation, reports an erro
   assert.equal(h.observed.saves.at(-1).phase, 'saved');
 });
 
+for (const [code, message] of [
+  ['CARE_COOLDOWN', '摸摸还在冷却中，请等待4分钟后再试。'],
+  ['DAILY_CARE_LIMIT', '今天摸摸已达20次上限，2小时后可继续；每日北京时间00:00重置。'],
+]) {
+  test(`${code} is removed from pending work and shows the server reason without automatic retries`, async t => {
+    const h = harness(t, req => req.method === 'GET' ? response(snapshot()) : response({ error: { code, message } }, 409));
+    await h.room.start();
+    assert.equal(h.room.dispatch({ type: 'pet' }), true);
+    await flush();
+    assert.deepEqual(h.persisted.pending, []);
+    assert.equal(h.observed.saves.at(-1).phase, 'error');
+    assert.equal(h.observed.saves.at(-1).message, message);
+    assert.equal(h.observed.actions.length, 0);
+    assert.equal(h.observed.states.length, 1);
+    const requestCount = h.requests.length;
+    t.mock.timers.tick(8000);
+    await flush();
+    assert.equal(h.requests.length, requestCount, 'a care limit is a final refusal, not a retryable storage failure');
+  });
+}
+
+test('a care limit refusal does not block the next permitted pending action', async t => {
+  const h = harness(t, req => {
+    if (req.method === 'GET') return response(snapshot());
+    if (req.body.action.type === 'pet') return response({ error: { code: 'CARE_COOLDOWN', message: '摸摸还在冷却中，请等待5分钟后再试。' } }, 409);
+    return response(committed(req));
+  });
+  await h.room.start();
+  h.room.dispatch({ type: 'pet' });
+  h.room.dispatch({ type: 'rename', name: '布丁' });
+  await flush();
+  assert.deepEqual(h.persisted.pending, []);
+  assert.deepEqual(h.observed.actions.map(event => event.action), [{ type: 'rename', name: '布丁' }]);
+  assert.equal(h.observed.saves.some(save => save.phase === 'error' && /5分钟/.test(save.message)), true);
+  assert.equal(h.observed.saves.at(-1).phase, 'saved');
+});
+
 test('failure to load cloud data preserves stored pending work and never reports a successful save', async t => {
   const pending = [{ operationId: 'saved-on-device', clientId: 'qa-client', name: '小雨', action: { type: 'pet' } }];
   const h = harness(t, () => { throw new TypeError('network unavailable'); }, { pending });

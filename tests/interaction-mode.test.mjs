@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { INTERACTION_MODES, normalizeInteractionMode, resolveInteraction, getInteractionHint } from '../src/interaction-mode.js';
-import { initialState, reduceAction } from '../src/state.js';
+import { careActionInfo, initialState, reduceAction } from '../src/state.js';
 
 test('the mode picker defaults to random and accepts only known modes', () => {
   assert.deepEqual(INTERACTION_MODES.map(mode => mode.id), ['random', 'pet', 'play', 'sleep']);
@@ -51,4 +51,22 @@ test('random boundaries always produce a supported action', () => {
     assert.ok(['pet', 'play', 'sleep'].includes(action.type));
     assert.notEqual(reduceAction(initialState(), action), null);
   }
+});
+
+test('random taps only select interactions whose shared care limits allow them', () => {
+  const now = Date.UTC(2026, 9, 13, 0);
+  const actor = { id: 'partner-male', name: '男方' };
+  const petted = reduceAction(initialState(now), { type: 'pet' }, actor, now);
+  const allowed = action => careActionInfo(petted, action, actor.id, now + 1).allowed;
+  assert.deepEqual(resolveInteraction('random', petted, () => 0, allowed), { type: 'play' });
+  assert.deepEqual(resolveInteraction('random', petted, () => 1, allowed), { type: 'sleep' });
+  assert.deepEqual(resolveInteraction('pet', petted, () => 0, allowed), { type: 'pet' }, 'fixed selections retain their explanatory cooldown feedback');
+});
+
+test('tired random interactions can use an available alternative while rest is cooling down', () => {
+  const tired = { ...initialState(), energy: 7 };
+  const allowed = action => action.type !== 'sleep';
+  assert.deepEqual(resolveInteraction('random', tired, () => { throw new Error('one possible action needs no random roll'); }, allowed), { type: 'pet' });
+  assert.equal(resolveInteraction('random', tired, () => 0, () => false), null);
+  assert.deepEqual(resolveInteraction('random', { ...tired, sleeping: true }, () => 0, allowed), null);
 });
