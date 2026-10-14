@@ -1,5 +1,6 @@
 import './style.css';
 import './feeding.css';
+import './home-ui.css';
 import './growth.css';
 import './cat-speech.css';
 import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight, Shirt } from 'lucide';
