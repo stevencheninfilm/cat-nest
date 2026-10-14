@@ -12,7 +12,15 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.mjs"
   },
-  "dependencies": {"peerjs": "^1.5.5", "lucide": "^0.468.0"},
-  "devDependencies": {"vite": "^7.1.9"},
-  "engines": {"node": ">=20.19.0"}
+  "dependencies": {
+    "lucide": "^0.468.0",
+    "peerjs": "^1.5.5",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "vite": "^7.1.9"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
 }

@@ -3,6 +3,7 @@ import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSpa
 import { FOODS, initialState, normalizeState, reduceAction, levelInfo } from './state';
 import { createRoomSync } from './realtime';
 import { createCloudRoom } from './cloud';
+import { INTERACTION_MODES, normalizeInteractionMode, resolveInteraction, getInteractionHint } from './interaction-mode';
 
 const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Copy, Check, Link, ArrowRight };
 const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
@@ -21,6 +22,8 @@ let profile = read('catnest.profile', { name: '铲屎官' });
 if (!profile || typeof profile.name !== 'string') profile = { name: '铲屎官' };
 let state = normalizeState(read(`catnest.state.${roomId}`, initialState()));
 let selectedFood = 'meal';
+let interactionMode = normalizeInteractionMode(read('catnest.interactionMode', 'random'));
+let catModel = null;
 let sound = read('catnest.sound', false);
 let sync = null;
 let shared = Boolean(requestedRoom && validRoom(requestedRoom));
@@ -47,7 +50,7 @@ $('#app').innerHTML = `
   <div class="scene"><div class="speech-bubble" id="speech" role="status">今天也想和你贴贴喵～<span>♡</span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div></div>
   <div class="side-actions left-actions"><button data-action="pet" aria-label="摸摸小猫"><span>${icon('hand')}</span><small>摸摸</small></button><button data-action="play" aria-label="用逗猫棒陪小猫玩"><span>${icon('wand-sparkles')}</span><small>逗猫</small></button></div>
   <div class="side-actions right-actions"><button data-open="diary" aria-label="查看养猫日记"><span>${icon('notebook-pen')}</span><small>日记</small></button><button data-action="sleep" id="sleep-button" aria-label="让小猫休息"><span>${icon('moon')}</span><small>休息</small></button></div>
-  <section class="pet-card glass" aria-label="小猫状态"><div class="pet-title"><button class="pet-name" data-open="rename"><strong id="pet-name">糯米</strong>${icon('pencil')}</button><span class="pet-tag" id="pet-tag">被爱着的小猫</span><b id="level">Lv.1</b></div><div class="xp-row">${icon('heart')}<div class="progress-track"><div id="xp-bar"></div></div><span id="xp">86 / 120</span></div><div class="needs"><span><i class="need-dot hunger"></i>饱饱 <b id="hunger">68</b></span><span><i class="need-dot mood"></i>开心 <b id="mood">82</b></span><span><i class="need-dot energy"></i>活力 <b id="energy">76</b></span></div></section>
+  <section class="pet-card glass" aria-label="小猫状态"><div class="pet-title"><button class="pet-name" data-open="rename"><strong id="pet-name">糯米</strong>${icon('pencil')}</button><button class="mode-selector" data-open="modes" aria-label="选择互动模式">${icon('sparkles')}<span id="mode-label">随心互动</span>${icon('chevron-right')}</button><b id="level">Lv.1</b></div><div class="xp-row">${icon('heart')}<div class="progress-track"><div id="xp-bar"></div></div><span id="xp">86 / 120</span></div><div class="needs"><span><i class="need-dot hunger"></i>饱饱 <b id="hunger">68</b></span><span><i class="need-dot mood"></i>开心 <b id="mood">82</b></span><span><i class="need-dot energy"></i>活力 <b id="energy">76</b></span></div></section>
   <section class="feeding" aria-label="选择猫粮"><button class="food-card" data-food="snack" aria-pressed="false">${fishArt}<strong>冻干小鱼</strong><span>+10 ${icon('heart')}<em>10 ${icon('coins')}</em></span></button><button class="food-card selected" data-food="meal" aria-pressed="true"><span class="food-recommend">小猫最爱</span>${bowlArt}<strong>营养猫粮</strong><span>+25 ${icon('heart')}<em>20 ${icon('coins')}</em></span></button><button class="food-card" data-food="fish" aria-pressed="false">${canArt}<strong>鲜鱼罐罐</strong><span>+50 ${icon('heart')}<em>40 ${icon('coins')}</em></span></button></section>
   <button class="feed-button" id="feed-button">${icon('paw-print')}<span>喂食</span><span class="feed-love">+25 ${icon('heart')}</span><span class="button-sparkle">✦</span></button>
   <nav class="bottom-nav" aria-label="小窝导航"><button class="nav-entry judge" data-open="judge"><span class="nav-icon">${icon('gavel')}</span><span>猫猫判官<small>CAT JUDGE</small></span></button><span class="home-note">${icon('heart')}<span id="save-status" aria-live="polite">本机预览 · 云端待连接</span></span><button class="nav-entry home" data-open="home"><span class="nav-icon">${icon('house')}</span><span>我的小窝<small>MY HOME</small></span></button></nav>
@@ -66,14 +69,18 @@ function render() {
   $('#top-level').textContent = `Lv.${level.level}`;
   $('#level').textContent = `Lv.${level.level}`;
   $('#pet-name').textContent = state.name;
-  $('#cat').setAttribute('aria-label', `摸摸${state.name}`);
+  const currentMode = INTERACTION_MODES.find(mode => mode.id === interactionMode);
+  $('#cat').setAttribute('aria-label', `和${state.name}互动：${currentMode.label}`);
+  $('#mode-label').textContent = currentMode.label;
+  $('#cat').title = getInteractionHint(interactionMode, state);
   $('.kitten').alt = `坐在暖暖房间里的橘色小猫${state.name}`;
   $('#xp').textContent = `${level.progress} / ${level.target}`;
   $('#xp-bar').style.width = `${level.progress / level.target * 100}%`;
   for (const key of ['hunger', 'mood', 'energy']) $(`#${key}`).textContent = state[key];
-  $('#pet-tag').textContent = state.sleeping ? '正在做一个甜甜的梦' : state.mood >= 80 ? '被爱着的小猫' : '想要你的陪伴';
+  catModel?.setState({ sleeping: state.sleeping });
   $('.nest').classList.toggle('sleeping', state.sleeping);
   $('#sleep-button small').textContent = state.sleeping ? '叫醒' : '休息';
+  $('#sleep-button').setAttribute('aria-label', state.sleeping ? '轻轻叫醒小猫' : '让小猫休息');
   save(`catnest.state.${roomId}`, state);
 }
 function renderConnection() {
@@ -100,8 +107,9 @@ function react(action, actor) {
   $('.kitten').classList.remove('react-pet','react-feed','react-play');
   void $('.kitten').offsetWidth;
   $('.kitten').classList.add(`react-${action.type}`);
+  catModel?.react(action.type, { sleeping: state.sleeping });
   clearTimeout(reactionTimer);
-  reactionTimer = setTimeout(() => { $('#speech').textContent = state.sleeping ? 'Z z z … 做个好梦喵' : '有你在，就是最幸福的事 ♡'; }, 3800);
+  reactionTimer = setTimeout(() => { $('#speech').textContent = state.sleeping ? 'Z z z … 做个好梦喵' : getInteractionHint(interactionMode, state); }, 3800);
   if (!state.sleeping) {
     $('#particles').innerHTML = Array.from({ length:6 }, (_, i) => `<span style="--i:${i};--x:${18+i*12}%">${i%2 ? '✦' : '♥'}</span>`).join('');
     setTimeout(() => { $('#particles').innerHTML = ''; }, 1400);
@@ -157,8 +165,10 @@ function updateInviteStatus() {
 function openModal(view) {
   if (view === 'judge') { closeModal(); showCourt(); return; }
   $('#modal-content').dataset.view = view;
+  $('#modal').classList.toggle('interaction-sheet', view === 'modes');
   const header = (emoji, eyebrow, title, body='') => `<div class="modal-illustration">${emoji}</div><span class="eyebrow">${eyebrow}</span><h2>${title}</h2>${body ? `<p class="modal-description">${body}</p>` : ''}`;
   const templates = {
+    modes: () => `<div class="sheet-handle" aria-hidden="true"></div><span class="eyebrow">LITTLE MOMENTS, LOTS OF LOVE</span><h2>今天，怎么陪小猫？</h2><p class="modal-description">选好模式，点点小猫就能互动。<br/>左右滑动小猫，还能转着看它。</p><div class="mode-grid" role="group" aria-label="选择小猫互动模式">${INTERACTION_MODES.map(mode => `<button class="mode-card ${mode.id === interactionMode ? 'selected' : ''}" data-mode="${mode.id}" aria-pressed="${mode.id === interactionMode}"><span class="mode-card-icon ${mode.id}">${icon(mode.icon)}</span><strong>${mode.label}</strong><small>${mode.description}</small><span class="mode-check">${icon('check')}</span></button>`).join('')}</div><button class="primary modal-primary mode-start" id="mode-start">${icon('paw-print')} 开始互动</button><button class="text-button" id="reset-cat-view">回到正面 ${icon('arrow-right')}</button>`,
     together: () => `${header('🐾','A HOME FOR TWO','一起，把小猫养大','把邀请链接发给喜欢的人。进入同一个猫窝，就能实时看到彼此的喂食、摸摸和逗猫。')}<div class="room-code"><small>你们的猫窝暗号</small><strong>${roomId}</strong></div><div id="invite-status" class="invite-status"></div><button class="primary modal-primary" id="invite-copy">${icon('copy')} 复制邀请链接</button><button class="text-button" id="invite-share">用手机分享给对方 ${icon('arrow-right')}</button><details class="join-details"><summary>我有猫窝暗号</summary><form id="join-form"><label for="join-code">输入对方的猫窝暗号</label><div class="input-row"><input id="join-code" name="code" placeholder="粘贴猫窝暗号" pattern="[a-z0-9]{6,32}" minlength="6" maxlength="32" required autocomplete="off"/><button class="primary" type="submit">加入</button></div></form></details><p class="fine-print">${cloudConfigured ? '互动会自动保存到云端，关闭网页后存档仍然保留。请收藏猫窝链接，以便换设备找回。' : '当前为本机预览，云端服务还未连接。请保留此浏览器存档。'}链接请只分享给信任的人。</p>${shared && !cloudConfigured ? '<button class="text-button muted" id="go-solo">断开双人连接，继续单人养猫</button>' : ''}`,
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
     settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<form id="profile-form"><label for="your-name">你的昵称 · 猫友会看到</label><input id="your-name" name="name" value="${esc(profile.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">保存昵称</button></form><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${cloudConfigured ? '小猫的互动与成长会自动保存到 GitHub 私有云存档。关闭页面后，用同一猫窝链接即可回来。请等页面显示「已保存」再离开。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
@@ -169,14 +179,34 @@ function openModal(view) {
   $('#modal-content').innerHTML = (templates[view] || templates.home)();
   renderIcons(); updateInviteStatus();
   if (!$('#modal').open) $('#modal').showModal();
+  updateModelPause();
 }
 function closeModal() { $('#modal').close(); }
+function updateModelPause() { catModel?.setPaused(document.hidden || $('#modal').open || $('.nest').hidden); }
+async function initializeCatModel() {
+  try {
+    const { createCatModel } = await import('./cat-model.js');
+    catModel = createCatModel({ container: $('#cat'), reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      onReady() { queueMicrotask(() => { catModel?.setState({ sleeping: state.sleeping }); updateModelPause(); }); },
+      onError() { /* The illustrated cat remains interactive when WebGL is unavailable. */ },
+    });
+    catModel.setState({ sleeping: state.sleeping });
+    updateModelPause();
+  } catch { /* Keep the illustrated fallback if the 3D module cannot load. */ }
+}
 document.addEventListener('click', event => {
   const el = event.target.closest('button'); if (!el) return;
   if (el.dataset.open) { openModal(el.dataset.open); return; }
   if (el.dataset.close !== undefined || el.id === 'modal-close') { closeModal(); return; }
   if (el.dataset.action) { dispatch({ type: el.dataset.action }); return; }
-  if (el.id === 'cat') { dispatch({ type: 'pet' }); return; }
+  if (el.id === 'cat') { const dragged=catModel?.consumeTap(); if (event.detail === 0 || !dragged) dispatch(resolveInteraction(interactionMode, state)); return; }
+  if (el.dataset.mode) {
+    interactionMode=normalizeInteractionMode(el.dataset.mode); save('catnest.interactionMode',interactionMode); render();
+    document.querySelectorAll('[data-mode]').forEach(button => { const selected=button.dataset.mode===interactionMode; button.classList.toggle('selected',selected); button.setAttribute('aria-pressed',selected); });
+    return;
+  }
+  if (el.id === 'mode-start') { closeModal(); dispatch(resolveInteraction(interactionMode,state)); return; }
+  if (el.id === 'reset-cat-view') { catModel?.resetView(); closeModal(); return; }
   if (el.dataset.food) {
     selectedFood = el.dataset.food;
     document.querySelectorAll('[data-food]').forEach(button => { const selected = button.dataset.food === selectedFood; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', selected); });
@@ -211,6 +241,8 @@ document.addEventListener('submit', event => {
   if (form.id === 'join-form') { const code=new FormData(form).get('code')?.trim().toLowerCase(); if (validRoom(code)) { const url=new URL(location.href); url.searchParams.set('room',code); location.assign(url); } }
 });
 $('#modal').addEventListener('click', event => { if (event.target === $('#modal')) { const box=$('#modal').getBoundingClientRect(); if (event.clientX<box.left || event.clientX>box.right || event.clientY<box.top || event.clientY>box.bottom) closeModal(); } });
+$('#modal').addEventListener('close', updateModelPause);
+document.addEventListener('visibilitychange', updateModelPause);
 const courtContainer = document.createElement('section');
 courtContainer.id = 'court-root';
 courtContainer.hidden = true;
@@ -220,12 +252,14 @@ async function showCourt() {
   try {
     if (!court) {
       const { createCourt } = await import('./court.js');
-      court=createCourt({ container:courtContainer, profileName:profile.name, toast, onBack() { court.close(); $('.nest').hidden=false; document.body.classList.remove('court-mode'); } });
+      court=createCourt({ container:courtContainer, profileName:profile.name, toast, onBack() { court.close(); $('.nest').hidden=false; document.body.classList.remove('court-mode'); updateModelPause(); } });
     }
     $('.nest').hidden=true; document.body.classList.add('court-mode'); court.open();
+    updateModelPause();
   } catch { toast('猫猫判官正在准备中，稍后就能见面啦'); }
 }
 render(); renderConnection(); if (cloudConfigured) startCloud(); else if (shared) startSync();
+initializeCatModel();
 if (params.has('court') || params.get('mode') === 'judge') showCourt();
-window.addEventListener('pagehide', () => { sync?.destroy(); cloud?.destroy(); });
-window.addEventListener('pageshow', e => { if (e.persisted) { if (cloudConfigured) startCloud(); else if (shared) startSync(); } });
+window.addEventListener('pagehide', () => { sync?.destroy(); cloud?.destroy(); catModel?.setPaused(true); });
+window.addEventListener('pageshow', e => { if (e.persisted) { if (cloudConfigured) startCloud(); else if (shared) startSync(); updateModelPause(); } });
