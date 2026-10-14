@@ -1,0 +1,14 @@
+# Nekueda Mage Cat in Cat Nest
+
+Purchased listing: https://www.fab.com/listings/710bc3f3-6bfd-4942-9eea-c7af4901bf03
+Author: Nekueda. License: Fab Standard License. The original package includes a NoAI restriction. The model is used as an authored game asset, with deterministic format conversion and texture resizing. No generative image/model processing or training is involved.
+
+The private local sources are under `artifacts/licensed/mage-cat/`, which is ignored by Git. Source FBX, Unity package, texture archive, and documentation must not enter the public source repository. Only the curated optimized assets live in `stevencheninfilm/cat-nest-data/assets/mage-cat-v1/`. The backend serves a fixed allowlist for the game; it cannot fetch arbitrary files or expose source packages, room files, credentials, or upstream errors.
+
+`prepare-mage-cat.mjs` preserves all three authored LODs, the skeleton and the nine non-TPose animations. It merges identical vertices, normalizes FBX weights to the four-influence web renderer, and optimizes redundant animation keys. Textures are resized to 1024 pixels for the coat and 512 for the facial planes and wand; their authored artwork and transparent face layers are retained. The default model is the author's black cat, purple outfit, amber eyes and yellow wand. The exported geometry/animations are 4,611,856 bytes; all 43 game files total 5,871,920 bytes.
+
+The original body and clothing variants remain independently selectable, alongside three eye colors and three wand colors. The appearance is one validated cloud action (`dress`) and produces no currency or growth reward. Existing version-one saves receive the original default appearance while retaining progress and history. Canceling the editor restores the saved appearance. Successful edits become visible to both roles after a GitHub commit.
+
+Idle is the normal breathing/standing loop. Play uses the author's Special Attack as a wand magic flourish. Pet/feed use idle plus the authored happy/excited eye and mouth textures and a small additive head gesture. Rest uses slowed idle with closed eyes. Death and Hurt are preserved in the downloaded model but are not repurposed as sleeping or care animations. The renderer chooses a single LOD, caps resolution and runs at 30 fps, pausing while the page is hidden or covered by a noninteractive modal.
+
+To reproduce conversion, use `node scripts/prepare-mage-cat.mjs <private-source-dir> <private-output-dir>` with three and sharp available. `SHARP_MODULE_ROOT` may point to an installed bundled Node dependency directory. Do not execute scripts or editor extensions from downloaded packages.

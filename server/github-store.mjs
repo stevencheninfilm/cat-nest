@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { FOODS, initialState, normalizeState, reduceAction } from '../src/state.js';
+import { FOODS, careActionInfo, initialState, normalizeState, reduceAction } from '../src/state.js';
+import { validAppearance } from '../src/mage-cat-config.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -17,6 +18,7 @@ export function sanitizeAction(value) {
   const keys = Object.keys(value);
   if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && typeof value.food === 'string' && Object.hasOwn(FOODS, value.food)) return { type: 'feed', food: value.food };
   if (['pet', 'play', 'sleep'].includes(value.type) && keys.length === 1) return { type: value.type };
+  if (value.type === 'dress' && keys.length === 2 && keys.includes('appearance') && validAppearance(value.appearance)) return { type:'dress', appearance:{...value.appearance} };
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) return { type: 'rename', name: value.name.trim() };
   return null;
 }
@@ -25,8 +27,8 @@ export function sanitizeActor(clientId, name) {
   return typeof clientId === 'string' && CLIENT_ID.test(clientId) && validText(name, 20) ? { id: clientId, name: name.trim() } : null;
 }
 
-function safeState(value) {
-  const next = normalizeState(value);
+function safeState(value, now = Date.now()) {
+  const next = normalizeState(value, now);
   if (!validText(next.name, 16)) next.name = '糯米';
   next.history = next.history.map(item => ({ text: item.text.slice(0, 200), actor: item.actor.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 20) || '猫友', at: item.at }));
   return next;
@@ -34,6 +36,7 @@ function safeState(value) {
 
 function validStoredState(value) {
   if (!plain(value) || value.version !== 1 || !validText(value.name, 16) || typeof value.sleeping !== 'boolean' || !Number.isFinite(value.updatedAt)) return false;
+  if (Object.hasOwn(value, 'appearance') && !validAppearance(value.appearance)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = ['coins', 'love', 'xp'].includes(key) ? 999999 : 100;
     if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > max) return false;
@@ -42,6 +45,17 @@ function validStoredState(value) {
 }
 
 function publicRoom(room) { return { roomId: room.roomId, state: copy(room.state), revision: room.revision }; }
+
+function careRejection(action, info) {
+  const label = { feed: '喂食', pet: '摸摸', play: '玩耍', sleep: '休息' }[action.type];
+  const totalSeconds = Math.max(1, Math.ceil(info.remainingMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  const wait = [hours && `${hours}小时`, minutes && `${minutes}分钟`, seconds && `${seconds}秒`].filter(Boolean).join('');
+  if (info.reason === 'daily_limit') return new StorageError('DAILY_CARE_LIMIT', `今天${label}已达${info.dailyLimit}次上限，${wait}后可继续；每日北京时间00:00重置。`, 409);
+  return new StorageError('CARE_COOLDOWN', `${label}还在冷却中，请等待${wait}后再试。`, 409);
+}
 
 /** GitHub Contents API is the source of truth; no successful write is simulated.
  * Each operation is stored with its state in one Git commit before acknowledgment.
@@ -56,6 +70,7 @@ export function createGitHubStore({
   fetchImpl = globalThis.fetch,
   timeoutMs = 15_000,
   maxRetries = 4,
+  now = Date.now,
 } = {}) {
   const configured = typeof token === 'string' && token.trim().length > 0 && /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository);
   const queues = new Map();
@@ -139,8 +154,8 @@ export function createGitHubStore({
       assertConfigured();
       let id = randomBytes(16).toString('hex');
       for (let attempt = 0; attempt < maxRetries; attempt += 1) {
-        const now = Date.now();
-        const room = { version: 1, roomId: id, revision: 0, createdAt: now, updatedAt: now, state: safeState(suppliedState || initialState()), operations: [] };
+        const createdAt = now();
+        const room = { version: 1, roomId: id, revision: 0, createdAt, updatedAt: createdAt, state: safeState(suppliedState || initialState(createdAt), createdAt), operations: [] };
         if (await write(room)) return publicRoom(room);
         if (await read(id, { missing: true })) id = randomBytes(16).toString('hex');
       }
@@ -160,10 +175,13 @@ export function createGitHubStore({
             if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event: copy(duplicate.event), duplicate: true };
           }
-          const reduced = reduceAction(copy(room.state), action, actor);
+          const actionAt = now();
+          const info = careActionInfo(room.state, action, actor.id, actionAt);
+          if (!info.allowed) throw careRejection(action, info);
+          const reduced = reduceAction(copy(room.state), action, actor, actionAt);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
           const event = { operationId, action, actor };
-          const next = { ...room, revision: room.revision + 1, state: safeState(reduced), updatedAt: Date.now(), operations: [...room.operations, { id: operationId, event }].slice(-100) };
+          const next = { ...room, revision: room.revision + 1, state: safeState(reduced, actionAt), updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
           if (await write(next, sha)) return { ...publicRoom(next), event, duplicate: false };
           cache.delete(id);
         }

@@ -1,3 +1,5 @@
+import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
+
 export const FOODS = {
   snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10 },
   meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22 },
@@ -28,7 +30,7 @@ function feedRecords(value, now) {
   return records.slice(0, 2);
 }
 export function initialState(now = Date.now()) {
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, updatedAt: validTime(now) ? now : 0 };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, appearance: normalizeAppearance(), updatedAt: validTime(now) ? now : 0 };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -41,6 +43,7 @@ export function normalizeState(value, now = Date.now()) {
   }
   next.name = typeof value.name === 'string' ? value.name.trim().slice(0, 16) || fallback.name : fallback.name;
   next.sleeping = value.sleeping === true;
+  next.appearance = normalizeAppearance(value.appearance);
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
   next.feedRecords = feedRecords(value.feedRecords, now);
@@ -127,6 +130,9 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     case 'sleep':
       next.sleeping = !next.sleeping; next.energy = cap(next.energy + (next.sleeping ? 20 : 0)); next.xp += next.sleeping ? 4 : 0;
       text = next.sleeping ? '陪小猫打了个盹' : '轻轻叫醒了小猫'; break;
+    case 'dress':
+      if (!validAppearance(action.appearance)) return null;
+      next.appearance = normalizeAppearance(action.appearance); text = '给小猫换上了新的魔法装扮'; break;
     case 'rename':
       if (typeof action.name !== 'string' || !action.name.trim()) return null;
       next.name = action.name.trim().slice(0, 16); text = `给小猫取名「${next.name}」`; break;

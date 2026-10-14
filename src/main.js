@@ -1,13 +1,14 @@
 import './style.css';
 import './feeding.css';
-import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight } from 'lucide';
+import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight, Shirt } from 'lucide';
 import { FOODS, initialState, normalizeState, reduceAction, levelInfo } from './state';
 import { COUPLE_ROLES, normalizeCoupleRole, getCoupleProfile } from './couple-profile.js';
 import { createCloudRoom } from './cloud';
 import { INTERACTION_MODES, normalizeInteractionMode, resolveInteraction, getInteractionHint } from './interaction-mode';
 import { foodPreview, feedingSheet, countdown } from './feeding-ui';
+import { APPEARANCE_OPTIONS, normalizeAppearance, MAGE_CAT_VERSION, MAGE_CAT_AUTHOR } from './mage-cat-config.js';
 
-const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight };
+const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, Check, ArrowRight, Shirt };
 const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const $ = s => document.querySelector(s);
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -30,10 +31,12 @@ if (!Object.hasOwn(FOODS, selectedFood)) selectedFood = 'meal';
 let feedingTab = 'menu', foodCategory = 'all';
 let interactionMode = normalizeInteractionMode(read('catnest.interactionMode', 'random'));
 let catModel = null;
+let appearanceDraft=normalizeAppearance(state.appearance),appearanceTab='body',appearanceSubmitting=false;
 let sound = read('catnest.sound', false);
 let cloud = null;
 const apiBase = import.meta.env.VITE_API_URL || (location.hostname.endsWith('.onrender.com') ? location.origin : '');
 let cloudConfigured = Boolean(apiBase);
+const modelAssetBase=import.meta.env.VITE_MODEL_URL || `${apiBase || location.origin}/api/pet-model/${MAGE_CAT_VERSION}`;
 let saveStatus = { phase:'local', message:'本机预览 · 云端待连接' };
 let status = { phase:'solo', message:'选择身份，回到你们的小窝' };
 let members = [];
@@ -48,9 +51,9 @@ $('#app').innerHTML = `
   <header class="topbar"><a class="brand" href="./" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small>A LITTLE HOME, A LOT OF LOVE</small></span></a><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></header>
   <div class="wallet" aria-label="养成资源"><div class="currency"><span class="coin-icon">${icon('paw-print')}</span><strong id="coins">1,200</strong><span class="currency-label">猫爪币</span></div><div class="currency"><span class="heart-icon">${icon('heart')}</span><strong id="love">86</strong><span class="currency-label">亲密度</span></div><button class="currency level-currency" data-open="guide" aria-label="查看成长指南"><span class="star-icon">${icon('sparkles')}</span><strong id="top-level">Lv.1</strong><span class="currency-label">成长</span></button></div>
   <button class="together" data-open="roles" aria-label="查看或切换男方女方身份"><span class="together-avatars"><span class="male-avatar">男</span><span class="female-avatar">女</span></span><span id="together-label">一只小猫，两个人的家</span><span class="together-link" id="together-cta">选择身份 ›</span></button>
-  <div class="scene"><div class="speech-bubble" id="speech" role="status">今天也想和你贴贴喵～<span>♡</span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div></div>
+  <div class="scene"><div class="speech-bubble" id="speech" role="status">今天也想和你贴贴喵～<span>♡</span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><button class="model-status" id="retry-cat-model" disabled aria-live="polite">小猫正在回家…</button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div></div>
   <div class="side-actions left-actions"><button data-action="pet" aria-label="摸摸小猫"><span>${icon('hand')}</span><small>摸摸</small></button><button data-action="play" aria-label="用逗猫棒陪小猫玩"><span>${icon('wand-sparkles')}</span><small>逗猫</small></button></div>
-  <div class="side-actions right-actions"><button data-open="diary" aria-label="查看养猫日记"><span>${icon('notebook-pen')}</span><small>日记</small></button><button data-action="sleep" id="sleep-button" aria-label="让小猫休息"><span>${icon('moon')}</span><small>休息</small></button></div>
+  <div class="side-actions right-actions"><button data-open="diary" aria-label="查看养猫日记"><span>${icon('notebook-pen')}</span><small>日记</small></button><button data-action="sleep" id="sleep-button" aria-label="让小猫休息"><span>${icon('moon')}</span><small>休息</small></button><button data-open="appearance" aria-label="给小猫换装扮"><span>${icon('shirt')}</span><small>装扮</small></button></div>
   <section class="pet-card glass" aria-label="小猫状态"><div class="pet-title"><button class="pet-name" data-open="rename"><strong id="pet-name">糯米</strong>${icon('pencil')}</button><button class="mode-selector" data-open="modes" aria-label="选择互动模式">${icon('sparkles')}<span id="mode-label">随心互动</span>${icon('chevron-right')}</button><b id="level">Lv.1</b></div><div class="xp-row">${icon('heart')}<div class="progress-track"><div id="xp-bar"></div></div><span id="xp">86 / 120</span></div><div class="needs"><span><i class="need-dot hunger"></i>饱饱 <b id="hunger">68</b></span><span><i class="need-dot mood"></i>开心 <b id="mood">82</b></span><span><i class="need-dot energy"></i>活力 <b id="energy">76</b></span></div></section>
   <button class="feeding-preview glass" data-open="feeding" aria-label="打开食物菜单，选择猫粮">${foodPreview(selectedFood)}</button>
   <button class="feed-button" id="feed-button">${icon('paw-print')}<span>喂食</span><span class="feed-love">+25 ${icon('heart')}</span><span class="button-sparkle">✦</span></button>
@@ -76,7 +79,7 @@ function render() {
   $('#xp').textContent = `${level.progress} / ${level.target}`;
   $('#xp-bar').style.width = `${level.progress / level.target * 100}%`;
   for (const key of ['hunger', 'mood', 'energy']) $(`#${key}`).textContent = state[key];
-  catModel?.setState({ sleeping: state.sleeping });
+  catModel?.setState({ sleeping:state.sleeping, appearance:$('#modal').open && $('#modal-content').dataset.view==='appearance' ? appearanceDraft : state.appearance });
   $('.nest').classList.toggle('sleeping', state.sleeping);
   $('#sleep-button small').textContent = state.sleeping ? '叫醒' : '休息';
   $('#sleep-button').setAttribute('aria-label', state.sleeping ? '轻轻叫醒小猫' : '让小猫休息');
@@ -110,7 +113,11 @@ function chime() {
 function react(action, actor) {
   const mine = actor.id === clientId;
   if (mine && action.type === 'feed') toast(`${state.name}吃到${FOODS[action.food]?.name || '美味小餐'}啦 · 已${cloudConfigured ? '保存到云端' : '记录在小窝'}`);
-  const messages = { feed: `好好吃！谢谢${mine ? '你' : actor.name}喵～`, pet: '呼噜呼噜…最喜欢摸摸啦 ♡', play: '抓到啦！再陪我玩一会儿嘛～', sleep: state.sleeping ? '晚安，梦里也要有你喵…' : '睡饱啦！又可以一起玩了～', rename: `以后我就叫${state.name}啦，喵！` };
+  if (mine && action.type==='dress') {
+    if(appearanceSubmitting && JSON.stringify(action.appearance)===JSON.stringify(appearanceDraft)){appearanceSubmitting=false;closeModal();}
+    toast(`小猫换好新装扮啦 · ${cloudConfigured?'已保存到云端':'已留在小窝'}`);
+  }
+  const messages = { dress:'换个小魔法，心情也亮晶晶 ♡', feed: `好好吃！谢谢${mine ? '你' : actor.name}喵～`, pet: '呼噜呼噜…最喜欢摸摸啦 ♡', play: '抓到啦！再陪我玩一会儿嘛～', sleep: state.sleeping ? '晚安，梦里也要有你喵…' : '睡饱啦！又可以一起玩了～', rename: `以后我就叫${state.name}啦，喵！` };
   $('#speech').textContent = !mine ? `${actor.name}来${action.type === 'feed' ? '喂我' : action.type === 'play' ? '陪我玩' : action.type === 'pet' ? '摸摸我' : '照顾我'}啦 ♡` : messages[action.type] || '喵～';
   $('.kitten').classList.remove('react-pet','react-feed','react-play');
   void $('.kitten').offsetWidth;
@@ -150,7 +157,7 @@ function startCloud() {
     onAction:react,
     onPresence(next) { members=next; renderConnection(); },
     onStatus(next) { status=next; renderConnection(); },
-    onSaveStatus(next) { saveStatus=next; renderConnection(); },
+    onSaveStatus(next) { saveStatus=next; if(next.phase==='error'){appearanceSubmitting=false;refreshAppearanceSheet();} renderConnection(); },
     onPending(queue) { save(pendingKey,queue); },
   });
   cloud.start();
@@ -169,7 +176,9 @@ function enterRole(role) {
 function openModal(view) {
   if (!roleEntered && view !== 'roles') view='roles';
   if (view === 'judge') { closeModal(); showCourt(); return; }
+  if(view==='appearance' && (!$('#modal').open || $('#modal-content').dataset.view!=='appearance')){appearanceDraft=normalizeAppearance(state.appearance);appearanceSubmitting=false;}
   $('#modal-content').dataset.view = view;
+  $('#modal').classList.toggle('appearance-sheet',view==='appearance');
   $('#modal-close').hidden = view === 'roles' && !roleEntered;
   $('#modal').classList.toggle('role-dialog', view === 'roles');
   $('#modal').classList.toggle('interaction-sheet', view === 'modes');
@@ -178,11 +187,12 @@ function openModal(view) {
   if (view === 'feeding') $('#speech').textContent = '一起喂养，升级更快 ♡';
   const header = (emoji, eyebrow, title, body='') => `<div class="modal-illustration">${emoji}</div><span class="eyebrow">${eyebrow}</span><h2>${title}</h2>${body ? `<p class="modal-description">${body}</p>` : ''}`;
   const templates = {
+    appearance: () => appearanceSheet(),
     feeding: () => feedingSheet(feedingSheetOptions()),
     modes: () => `<div class="sheet-handle" aria-hidden="true"></div><span class="eyebrow">LITTLE MOMENTS, LOTS OF LOVE</span><h2>今天，怎么陪小猫？</h2><p class="modal-description">选好模式，点点小猫就能互动。<br/>左右滑动小猫，还能转着看它。</p><div class="mode-grid" role="group" aria-label="选择小猫互动模式">${INTERACTION_MODES.map(mode => `<button class="mode-card ${mode.id === interactionMode ? 'selected' : ''}" data-mode="${mode.id}" aria-pressed="${mode.id === interactionMode}"><span class="mode-card-icon ${mode.id}">${icon(mode.icon)}</span><strong>${mode.label}</strong><small>${mode.description}</small><span class="mode-check">${icon('check')}</span></button>`).join('')}</div><button class="primary modal-primary mode-start" id="mode-start">${icon('paw-print')} 开始互动</button><button class="text-button" id="reset-cat-view">回到正面 ${icon('arrow-right')}</button>`,
     roles: () => `${header('🐾','OUR HOME, JUST US TWO','今天是谁来陪小猫？','选好你的身份，就回到你们共同的小窝。')}<div class="role-choices" role="group" aria-label="选择男方或女方">${COUPLE_ROLES.map(role => `<button class="role-choice ${role.id} ${coupleRole === role.id ? 'remembered' : ''}" data-couple-role="${role.id}"><span class="role-portrait" aria-hidden="true">${role.id === 'male' ? '👦🏻' : '👧🏻'}<i>♡</i></span><strong>我是${role.name}</strong><small>${role.id === 'male' ? '带一点温柔，回家陪它' : '带一点心意，回家抱它'}</small><span class="role-enter">进入小窝 ${icon('arrow-right')}</span></button>`).join('')}</div><p class="role-note">你们的每一次陪伴，都留在同一只小猫身边。</p>${roleEntered && cloudConfigured ? '<button class="text-button" id="retry-cloud">重新连接云端小窝</button><p id="role-save-status" class="fine-print"></p>' : ''}`,
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
-    settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${cloudConfigured ? '小猫的互动与成长会自动保存到 GitHub 私有云存档。下次打开网站，选择你的身份就能继续。请等页面显示「已保存」再离开。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
+    settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row" data-open="appearance"><span>${icon('shirt')} 小猫装扮</span><b>换个小魔法 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${cloudConfigured ? '小猫的互动与成长会自动保存到 GitHub 私有云存档。下次打开网站，选择你的身份就能继续。请等页面显示「已保存」再离开。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
     diary: () => `${header('📔','OUR LITTLE MOMENTS','养猫日记','那些微小的陪伴，小猫都有好好记住。')}<div class="diary-list">${state.history.length ? state.history.map(item => `<article class="diary-item"><span>${icon('heart')}</span><div><b>${esc(item.actor)}</b><p>${esc(item.text)}</p></div><time>${new Date(item.at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</time></article>`).join('') : '<div class="empty-diary">还没有记录，摸摸小猫<br/>写下你们的第一个小瞬间吧 ♡</div>'}</div>`,
     guide: () => `${header('✨','GROW WITH LOVE','每一点爱，都算数','照顾小猫可以积累成长值，每 120 点升一级。')}<div class="guide-list"><div>🐟 9 种美味食物 <b>+5～50 成长</b></div><div>🤍 温柔摸摸 <b>+3 成长 · +6 开心</b></div><div>🪄 陪它玩耍 <b>+8 成长 · +10 猫爪币</b></div><div>🌙 休息一下 <b>+4 成长 · +20 活力</b></div><div>🐾 本轮双人喂养 <b>额外 +10 亲密度和成长</b></div></div><p class="fine-print">首次喂食开启 4 小时一轮的双人小任务，两位猫友在本轮各喂一次，即可获得一次奖励。猫爪币通过逗猫免费获得。</p>`,
     home: () => `${header('🏡','YOUR COZY CORNER','欢迎回到小窝',`这里是${esc(state.name)}的家，也是你每天可以放松一下的地方。`)}<div class="home-summary"><div><strong>${levelInfo(state.xp).level}</strong><span>小猫等级</span></div><div><strong>${state.love}</strong><span>积攒的爱</span></div><div><strong>${state.history.length}</strong><span>近期陪伴</span></div></div><button class="primary modal-primary" data-open="roles">${icon('users-round')} 查看或切换身份</button>`,
@@ -192,6 +202,16 @@ function openModal(view) {
   if (!$('#modal').open) $('#modal').showModal();
   updateFeedingSaveStatus();
   updateModelPause();
+}
+function appearanceSheet() {
+  const labels={body:'毛色',clothes:'衣服',eyes:'眼睛',wand:'魔杖'};
+  return `<div class="sheet-handle" aria-hidden="true"></div><span class="eyebrow">A LITTLE MAGIC, JUST FOR YOU</span><h2>给小猫换个小魔法</h2><div class="appearance-tabs" role="tablist" aria-label="装扮部位">${Object.entries(labels).map(([key,label])=>`<button role="tab" id="appearance-tab-${key}" data-appearance-tab="${key}" aria-controls="appearance-choices" aria-selected="${key===appearanceTab}">${label}</button>`).join('')}</div><div id="appearance-choices" class="appearance-choices" role="tabpanel" aria-labelledby="appearance-tab-${appearanceTab}">${APPEARANCE_OPTIONS[appearanceTab].map((option,index)=>`<button class="appearance-choice ${appearanceDraft[appearanceTab]===index?'selected':''}" data-appearance-choice="${index}" aria-label="${labels[appearanceTab]}：${option.name}" aria-pressed="${appearanceDraft[appearanceTab]===index}" ${appearanceSubmitting?'disabled':''}><span style="--swatch:${option.color}">${appearanceDraft[appearanceTab]===index?'✓':''}</span><small>${option.name}</small></button>`).join('')}</div><button class="primary modal-primary" id="apply-appearance" ${appearanceSubmitting?'disabled':''}>${appearanceSubmitting?'正在保存这身装扮…':'就穿这一套 ♡'}</button><p class="appearance-note">装扮免费 · 两个人都会看见同一只小猫</p><a class="model-credit" href="${MAGE_CAT_AUTHOR.url}" target="_blank" rel="noopener noreferrer">魔法小猫来自 ${MAGE_CAT_AUTHOR.name}</a>`;
+}
+function refreshAppearanceSheet() {
+  if(!$('#modal').open || $('#modal-content').dataset.view!=='appearance')return;
+  const focus=document.activeElement?.dataset.appearanceChoice;
+  $('#modal-content').innerHTML=appearanceSheet();
+  if(focus!==undefined)$(`[data-appearance-choice="${focus}"]`)?.focus({preventScroll:true});
 }
 function feedingSheetOptions() {
   return { state, selectedFood, tab:feedingTab, category:foodCategory, clientId, profileName:profile.name, members,
@@ -226,21 +246,27 @@ const feedingClock = setInterval(() => {
   });
   if (expired) refreshFeedingSheet();
 }, 1000);
-function closeModal() { if (roleEntered) $('#modal').close(); }
-function updateModelPause() { catModel?.setPaused(document.hidden || ($('#modal').open && $('#modal-content').dataset.view !== 'feeding') || $('.nest').hidden); }
+function closeModal() { if (roleEntered && !appearanceSubmitting) $('#modal').close(); }
+function updateModelPause() { catModel?.setPaused(document.hidden || ($('#modal').open && !['feeding','appearance'].includes($('#modal-content').dataset.view)) || $('.nest').hidden); }
 async function initializeCatModel() {
+  catModel?.destroy();
+  $('#retry-cat-model').textContent='小猫正在回家…';$('#retry-cat-model').disabled=true;
   try {
     const { createCatModel } = await import('./cat-model.js');
-    catModel = createCatModel({ container: $('#cat'), reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      onReady() { queueMicrotask(() => { catModel?.setState({ sleeping: state.sleeping }); updateModelPause(); }); },
-      onError() { /* The illustrated cat remains interactive when WebGL is unavailable. */ },
+    catModel = createCatModel({ container: $('#cat'), assetBase:modelAssetBase, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      onReady() { $('#retry-cat-model').hidden=true; queueMicrotask(() => { catModel?.setState(state); updateModelPause(); }); },
+      onError() { $('#retry-cat-model').hidden=false;$('#retry-cat-model').disabled=false;$('#retry-cat-model').textContent='小猫还没加载好，点这里重试'; },
     });
-    catModel.setState({ sleeping: state.sleeping });
+    catModel.setState(state);
     updateModelPause();
   } catch { /* Keep the illustrated fallback if the 3D module cannot load. */ }
 }
 document.addEventListener('click', event => {
   const el = event.target.closest('button'); if (!el) return;
+  if (el.id==='retry-cat-model'){initializeCatModel();return;}
+  if (el.dataset.appearanceTab){appearanceTab=el.dataset.appearanceTab;refreshAppearanceSheet();return;}
+  if (el.dataset.appearanceChoice!==undefined && !appearanceSubmitting){appearanceDraft={...appearanceDraft,[appearanceTab]:Number(el.dataset.appearanceChoice)};catModel?.setAppearance(appearanceDraft);refreshAppearanceSheet();return;}
+  if (el.id==='apply-appearance' && !appearanceSubmitting){if(JSON.stringify(appearanceDraft)===JSON.stringify(state.appearance)){closeModal();return;}appearanceSubmitting=true;if(!dispatch({type:'dress',appearance:{...appearanceDraft}}))appearanceSubmitting=false;refreshAppearanceSheet();return;}
   if (el.dataset.coupleRole) { enterRole(el.dataset.coupleRole); return; }
   if (el.id === 'retry-cloud') { startCloud(); return; }
   if (el.dataset.open) { openModal(el.dataset.open); return; }
@@ -272,10 +298,10 @@ document.addEventListener('submit', event => {
   if (form.id === 'rename-form') { if (name && dispatch({ type:'rename', name })) closeModal(); }
 });
 $('#modal').addEventListener('click', event => { if (event.target === $('#modal')) { const box=$('#modal').getBoundingClientRect(); if (event.clientX<box.left || event.clientX>box.right || event.clientY<box.top || event.clientY>box.bottom) closeModal(); } });
-$('#modal').addEventListener('cancel', event => { if (!roleEntered) event.preventDefault(); });
+$('#modal').addEventListener('cancel', event => { if (!roleEntered || appearanceSubmitting) event.preventDefault(); });
 $('#modal').addEventListener('close', () => {
   if (!roleEntered) { queueMicrotask(() => { if (!roleEntered && !$('#modal').open) $('#modal').showModal(); }); return; }
-  $('.nest').classList.remove('feeding-open'); updateModelPause();
+  $('.nest').classList.remove('feeding-open'); catModel?.setState(state); updateModelPause();
 });
 document.addEventListener('visibilitychange', updateModelPause);
 const courtContainer = document.createElement('section');
