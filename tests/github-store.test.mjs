@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
-import { CARE_LIMITS, initialState, reduceAction } from '../src/state.js';
+import { CARE_LIMITS, FOODS, initialState, reduceAction } from '../src/state.js';
 
 function mockGitHub() {
   const files = new Map();
@@ -45,6 +45,20 @@ const pendingXp = state => state.pendingGrowth.reduce((total, reward) => total +
 const claim = (rewardId, operationId = 'claim-operation-one', clientId = 'client-one') => ({ operationId, clientId, name: '猫友', action: { type: 'claim-growth', rewardId } });
 
 const invite = (catId, operationId='collection-invite-operation', clientId='client-one') => ({ operationId, clientId, name:'猫友', action:{type:'invite-cat',catId} });
+test('the server requires starter care and both increased food-achievement conditions before writing', async()=>{
+  const mock=mockGitHub(), store=makeStore(mock,{now:()=>CARE_START}), room=await store.createRoom();
+  const file=mock.files.get(room.roomId), writes=mock.calls.filter(call=>call.method==='PUT').length;
+  await assert.rejects(store.applyAction(room.roomId,invite('bandit')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
+  file.room.state.collection.stats.feed=53;file.room.state.collection.foods=Object.keys(FOODS);file.sha='food-count-below-sha';
+  await assert.rejects(store.applyAction(room.roomId,invite('gozer')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
+  file.room.state.collection.stats.feed=54;file.room.state.collection.foods=Object.keys(FOODS).slice(0,8);file.sha='food-variety-below-sha';
+  await assert.rejects(store.applyAction(room.roomId,invite('gozer')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length,writes);
+  file.room.state.collection.foods=Object.keys(FOODS);file.sha='food-all-conditions-sha';
+  const saved=await store.applyAction(room.roomId,invite('gozer'));
+  assert.equal(saved.state.collection.invited[0].id,'gozer');
+  assert.equal(saved.state.collection.stats.feed,54);
+});
 test('food-specific cooldowns survive store restart and cannot be bypassed by a menu change', async () => {
   const mock = mockGitHub();
   let clock = CARE_START;
@@ -83,10 +97,14 @@ test('cat invitations migrate legacy care, enforce achievements, and persist bef
   const writes=mock.calls.filter(call=>call.method==='PUT').length;
   await assert.rejects(store.applyAction(room.roomId,invite('bolt')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
   assert.equal(mock.calls.filter(call=>call.method==='PUT').length,writes,'one old feed must not unlock the harder achievement');
-  file.room.state.history=Array.from({length:6},(_,index)=>({text:'喂了一份鲜鱼罐罐，生成50点成长气泡待领取',actor:'猫友',at:CARE_START-index*86400_000}));
-  file.sha='legacy-catbook-six-feeds-sha';
+  file.room.state.history=Array.from({length:29},(_,index)=>({text:'喂了一份鲜鱼罐罐，生成50点成长气泡待领取',actor:'猫友',at:CARE_START-index*86400_000}));
+  file.sha='legacy-catbook-29-feeds-sha';
+  await assert.rejects(store.applyAction(room.roomId,invite('bolt')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length,writes);
+  file.room.state.history.push({text:'喂了一份鲜鱼罐罐，生成50点成长气泡待领取',actor:'猫友',at:CARE_START-29*86400_000});
+  file.sha='legacy-catbook-30-feeds-sha';
   const saved=await store.applyAction(room.roomId,invite('bolt'));
-  assert.equal(saved.state.collection.stats.feed,6);
+  assert.equal(saved.state.collection.stats.feed,30);
   assert.equal(saved.state.collection.invited[0].id,'bolt');
   assert.equal(mock.files.get(room.roomId).room.state.collection.invited[0].id,'bolt');
   const reloaded=await makeStore(mock,{now:()=>CARE_START+86400_000}).getRoom(room.roomId);
@@ -98,6 +116,8 @@ test('invitation receipts prevent replay after a lost acknowledgment and operati
   const mock=mockGitHub();
   const store=makeStore(mock,{now:()=>CARE_START});
   const room=await store.createRoom();
+  mock.files.get(room.roomId).room.state.collection.stats.pet=5;
+  mock.files.get(room.roomId).sha='starter-care-qualified-sha';
   mock.controls.loseAcknowledgment=true;
   await assert.rejects(store.applyAction(room.roomId,invite('bandit')),error=>error.code==='STORAGE_UNAVAILABLE');
   const file=mock.files.get(room.roomId);
@@ -119,6 +139,8 @@ test('concurrent invitations from two store instances keep one cat and one diary
   const first=makeStore(mock,{now:()=>CARE_START});
   const second=makeStore(mock,{now:()=>CARE_START});
   const room=await first.createRoom();
+  mock.files.get(room.roomId).room.state.collection.stats.pet=5;
+  mock.files.get(room.roomId).sha='concurrent-starter-qualified-sha';
   const results=await Promise.allSettled([
     first.applyAction(room.roomId,invite('bandit','first-catbook-invite')),
     second.applyAction(room.roomId,invite('bandit','second-catbook-invite','client-two')),

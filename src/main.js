@@ -351,6 +351,7 @@ function dispatch(action) {
   }
   if (action.type === 'feed' && (!Object.hasOwn(FOODS, action.food) || state.coins < FOODS[action.food].cost)) { toast('猫爪币不够啦，陪小猫玩一会儿赚 10 币吧'); return false; }
   if (action.type === 'play' && petNeeds(state).energy < 8) { toast('小猫有点累，先让它休息一下吧'); return false; }
+  initializeCatbook();
   if (cloudConfigured) {
     if (!cloud || status.phase !== 'online' || !cloud.dispatch(action)) { toast('正在连接云端小窝，连上后就可以继续照顾小猫'); return false; }
     actionLocked = true; setTimeout(() => actionLocked = false, 650); return true;
@@ -603,11 +604,10 @@ catbookContainer.id = 'catbook-root';
 catbookContainer.hidden = true;
 $('#app').append(catbookContainer);
 let homeScroll = 0;
-function showCatbook() {
-  companion.exit();
+function initializeCatbook() {
   if (!catbook) catbook = createCatbook({
     container:catbookContainer,
-    getState:() => state,
+    getState:() => cloudConfigured ? confirmedState : state,
     getAvailability:() => ({ saving:careSaving(), connected:!cloudConfigured || status.phase === 'online' }),
     onAction:dispatch,
     initialScene:read('catnest.catbook.scene', 'garden'),
@@ -618,6 +618,10 @@ function showCatbook() {
       $('[data-open="collection"]').focus({ preventScroll:true });
     },
   });
+}
+function showCatbook() {
+  companion.exit();
+  initializeCatbook();
   homeScroll = window.scrollY;
   $('.nest').hidden=true; document.body.classList.add('catbook-mode');
   catbook.open(); window.scrollTo(0,0); updateModelPause();

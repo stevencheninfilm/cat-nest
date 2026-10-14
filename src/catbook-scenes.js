@@ -1,3 +1,4 @@
+import { COLLECTION_CATS, collectionCatProgress } from './cat-collection.js';
 // Scene sprites use rounded reference poses; the collection keeps its pixel portraits.
 // Tight source rectangles avoid neighbouring sprites bleeding across generated atlas cells.
 const atlasWidth = 1448, atlasHeight = 1086, padding = 4;
@@ -34,7 +35,7 @@ export const CAT_SCENES = Object.freeze([
     spot(43,79,18,'木廊上',{ toy:true }), spot(44.6,44.7,15,'左侧台面上'),
     spot(73.5,49,18,'右侧圆台上'), spot(83.5,67,16,'骰子猫窝顶上'),
   ] },
-  { id:'western', asset:'western-portrait', name:'西部露台', subtitle:'八位猫友的小聚会', min:8, icon:'sun', ratio:'863 / 1822', slots:[
+  { id:'western', asset:'western-portrait', name:'西部露台', subtitle:'四位猫友的小聚会', min:4, icon:'sun', ratio:'863 / 1822', slots:[
     spot(52,34.5,18,'骰子猫窝顶上'), spot(66.8,49.3,18,'圆形小台上'),
     spot(76.7,25.3,20,'高处的台面上'), spot(78,60.8,11.5,'抓柱旁'),
     spot(74,35.1,10,'高处猫窝里'), spot(22,52.5,20,'露台上',{ toy:true }),
@@ -42,7 +43,7 @@ export const CAT_SCENES = Object.freeze([
     spot(33,60,20,'逗猫棒旁',{ toy:true }), spot(90,44.8,14,'右侧猫窝顶上'),
     spot(92,55.4,14,'右侧圆台上'), spot(16,69,19,'软软的猫床里'),
   ] },
-  { id:'snow', asset:'snow-portrait', name:'暖暖雪庭', subtitle:'集齐猫友，一场暖雪', min:12, icon:'snow', ratio:'863 / 1823', slots:[
+  { id:'snow', asset:'snow-portrait', name:'暖暖雪庭', subtitle:'八位猫友，一场暖雪', min:8, icon:'snow', ratio:'863 / 1823', slots:[
     spot(58,60,21,'小伞下面'), spot(38,59,16,'小伞下面'),
     spot(70,29.5,19,'雪庭高台上'), spot(44.5,44,13,'窗边',{ motion:'stretch', name:'背对着伸个懒腰' }),
     spot(14.5,56.4,9.5,'橙色猫窝里'), spot(28,71.4,22,'红色软垫上',{ toy:true }),
@@ -51,8 +52,14 @@ export const CAT_SCENES = Object.freeze([
     spot(14.5,50.2,18,'猫窝顶上'), spot(59,36.2,13,'栏杆台面上'),
   ] },
 ].map(scene => Object.freeze({ ...scene, slots:Object.freeze(scene.slots) })));
-export function collectionScene(id, count) {
-  return CAT_SCENES.find(scene => scene.id === id && count >= scene.min) || CAT_SCENES[0];
+export function collectionSceneProgress(scene, collection, level) {
+  // Old invitations stay owned, but new yards require the increased care achievements.
+  const current = COLLECTION_CATS.filter(cat => collection.invited.some(record => record.id === cat.id)
+    && collectionCatProgress(cat, collection, level).achieved).length;
+  return { current, target:scene.min, complete:current >= scene.min };
+}
+export function collectionScene(id, collection, level) {
+  return CAT_SCENES.find(scene => scene.id === id && collectionSceneProgress(scene, collection, level).complete) || CAT_SCENES[0];
 }
 export function sceneCatPlacement(scene, cat) {
   const sprite = SCENE_CAT_POSES[cat.index];

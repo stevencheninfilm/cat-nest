@@ -194,3 +194,40 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 @keyframes book-sheet-in{from{transform:translateY(24px);opacity:.7}to{transform:translateY(0);opacity:1}}
 @media(max-width:360px){.book-game-menu{gap:10px;left:14px;right:14px}.book-game-menu>button{min-height:71px}.book-game-topbar{left:12px;right:12px}.book-location{padding-inline:10px;font-size:10px}.book-sheet .book-scene-choice{grid-template-columns:65px minmax(0,1fr) 20px;gap:10px}.book-scene-choice>.book-scene-preview{width:65px}}
 @media(prefers-reduced-motion:reduce){dialog.book-sheet{animation:none}}
+
+/* Confirmed new visitors walk in, then settle into their reference furniture pose. */
+.book-arrivals{position:absolute;inset:0;z-index:3;pointer-events:none}
+.book-arrival{position:absolute;left:0;top:0;will-change:transform;pointer-events:none}
+.book-arrival-facing{width:100%;transform:translate(-50%,calc(-1 * var(--walking-baseline))) scaleX(var(--walk-direction));transform-origin:50% var(--walking-baseline)}
+.book-walking-cat{display:block;width:100%;background-image:url('../public/assets/catbook/walking-cats.png');background-repeat:no-repeat;background-position:var(--walk-a);animation:book-walk-frames .34s steps(1,end) infinite,book-walk-bob .34s ease-in-out infinite;filter:drop-shadow(0 2px 1px #40372a30)}
+.book-yard-cat.is-arriving{visibility:hidden}
+.book-yard-cat.is-new-arrival>.book-scene-cat{animation:book-cat-settle .7s ease-out both;animation-delay:var(--arrival-age)}
+.book-yard-cat.is-new-arrival .book-visitor-name{opacity:1}
+.book-yard-background.is-scene-revealing{animation:book-scene-reveal .9s ease-out both}
+.book-reward-layer{position:absolute;inset:78px 14px auto;z-index:7;pointer-events:none}
+.book-reward-layer.in-sheet{position:static;flex-shrink:0;margin:0 0 12px}
+.book-reward{position:relative;display:grid;grid-template-columns:60px minmax(0,1fr);gap:10px;align-items:center;padding:12px 33px 12px 11px;border:2px solid #fffcef;border-radius:22px;background:#fff8e9f5;box-shadow:0 4px 0 #7a67452b,0 5px 18px #42392928;color:#7d7754;backdrop-filter:blur(7px);pointer-events:auto;animation:book-reward-in .45s cubic-bezier(.2,.8,.2,1.2) both;animation-delay:var(--reward-age)}
+.book-reward-art{position:relative;width:60px;height:60px;border-radius:18px;background:#eaf0d5;display:grid;place-items:center;isolation:isolate}
+.book-reward-art>.book-cat-sprite{width:62px}
+.book-reward-art.is-scene{background:#ede5d4;overflow:visible}
+.book-reward-art>img{position:absolute;inset:0;min-height:0;width:100%;height:100%;object-fit:cover;border:2px solid #fffaf0;border-radius:16px}
+.book-reward-copy{min-width:0}
+.book-reward-copy small{display:block;font-size:8px;font-weight:800;letter-spacing:1px;color:#a5ad75;margin-bottom:4px}
+.book-reward-copy strong{display:block;font-size:13px;font-weight:800;line-height:1.5;color:#747e4f}
+.book-reward-copy p{font-size:10px;line-height:1.65;margin:5px 0 0;color:#a2987c}
+.book-reward-copy>button{display:flex;align-items:center;gap:7px;min-height:36px;background:#a3b778;border:1px solid #fffbe9;border-radius:13px;padding:7px 11px;color:#fffcec;font-size:10px;font-weight:800;margin-top:8px;box-shadow:0 2px 0 #81975933}
+.book-reward-copy>button svg{width:13px;height:13px}
+.book-reward-close{position:absolute;right:0;top:0;width:36px;height:40px;background:transparent;color:#b4a78d;display:grid;place-items:center;border-radius:17px}
+.book-reward-close svg{width:14px;height:14px}
+.book-reward-sparkles{position:absolute;inset:0;pointer-events:none;z-index:2}
+.book-reward-sparkles>i{position:absolute;left:45%;top:45%;font-style:normal;font-size:15px;color:#ccad5f;opacity:0;--angle:calc(var(--spark) * 60deg);animation:book-reward-spark .95s ease-out both;animation-delay:var(--reward-age)}
+.book-scene-choice.is-unlocked,.book-game-menu>button.is-unlocked,.book-location.is-unlocked{animation:book-scene-unlock 1.3s ease-out both;animation-delay:var(--reward-age)}
+@keyframes book-walk-frames{0%,49.99%{background-position:var(--walk-a)}50%,100%{background-position:var(--walk-b)}}
+@keyframes book-walk-bob{0%,100%{transform:none}50%{transform:translateY(-3px) rotate(1deg)}}
+@keyframes book-cat-settle{0%{transform:translateY(-9%) scale(.94,1.05)}40%{transform:scale(1.08,.9)}70%{transform:scale(.98,1.04)}100%{transform:none}}
+@keyframes book-reward-in{from{opacity:0;transform:translateY(-16px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes book-reward-spark{0%{opacity:0;transform:rotate(var(--angle)) translateX(12px) rotate(calc(-1 * var(--angle))) scale(.2)}25%{opacity:1}100%{opacity:0;transform:rotate(var(--angle)) translateX(48px) rotate(calc(-1 * var(--angle))) scale(.8)}}
+@keyframes book-scene-unlock{0%,100%{box-shadow:none}35%{box-shadow:0 0 0 5px #f8edb57d,0 0 24px #fff4c2a3}65%{box-shadow:0 0 0 2px #f8edb543}}
+@keyframes book-scene-reveal{from{opacity:.45;filter:brightness(1.15)}to{opacity:1;filter:none}}
+@media(max-width:360px){.book-reward{grid-template-columns:52px minmax(0,1fr);gap:8px}.book-reward-art{width:52px;height:52px}.book-reward-art>.book-cat-sprite{width:54px}.book-reward-copy strong{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.book-walking-cat,.book-reward,.book-reward-sparkles>i,.book-yard-cat.is-new-arrival>.book-scene-cat,.book-yard-background.is-scene-revealing,.book-scene-choice.is-unlocked,.book-game-menu>button.is-unlocked,.book-location.is-unlocked{animation:none}}
