@@ -13,7 +13,7 @@ cp .env.example .env
 npm run dev
 ```
 
-打开终端显示的 `http://localhost:5173`。此命令同时启动前端和 8787 端口的审理服务，Vite 自动转发 `/api/court` 请求。手机与电脑在同一 Wi-Fi 时，可以使用终端显示的 Network 地址。
+打开终端显示的 `http://localhost:5173`。此命令同时启动前端和 8787 端口的审理服务，Vite 自动转发 `/api` 请求。手机与电脑在同一 Wi-Fi 时，可以使用终端显示的 Network 地址。
 
 不填 API 密钥也可以创建案件、邀请对方、选择角色、上传截图和提交陈词；双方提交后会明确显示「判官尚未连接」，不会生成假判词。配置密钥并重启服务后，可在原案件重试。
 
@@ -39,7 +39,7 @@ npm start
 
 ## 存档和同步
 
-- **养猫进度**保存在浏览器，双人养猫使用 PeerJS/WebRTC。邀请链接相当于小窝钥匙，请分享给信任的人。双方需要保持页面打开；手机锁屏或网络限制可能打断连接，部分网络需要 TURN 服务。第一位进入者提供猫窝存档，没有离线进度合并。
+- **养猫云存档**由 Render 服务写入私有 `stevencheninfilm/cat-nest-data` 仓库，每次成功互动先提交 GitHub，再确认保存并用 SSE 同步给两位猫友。关闭网页后，使用同一猫窝链接会恢复云端进度；请收藏链接以便跨设备找回。失败的待保存操作保留在本机并自动重试，界面明确显示保存状态。未配置 `VITE_API_URL` 的本机预览保留浏览器存档与 PeerJS 演示，不能宣称已云端保存。完整配置见 [宠物云存档说明](README-pet-cloud.md)。
 - **审理案件**由服务器保存到 `COURT_DATA_FILE`（默认 `.cat-court/rooms.json`），包括已提交证词、图片、角色凭据和判词。部署时应使用持久化磁盘，并保护该目录及备份。当前版本面向单服务进程，多个实例不能共同写同一个 JSON 文件。
 - **角色凭据**保存在当前浏览器标签页的 sessionStorage。刷新可继续使用原角色；请勿清除此案件的浏览器会话数据，清除后不能仅凭昵称重新领取已占用角色。
 - **输入状态**经服务器同步；双方无需同时在线提交。提交后的陈词和证据不可直接覆盖，补充内容进入下一轮，便于核对审理依据。
@@ -49,7 +49,7 @@ npm start
 
 ### 前端和 API 一起部署
 
-适合支持 Node.js 22 的服务器或容器平台。设置服务端 `OPENAI_API_KEY`，运行 `npm ci && npm run build`，启动命令 `npm start`。平台应提供 HTTPS，端口由 `PORT` 指定；为 `COURT_DATA_FILE` 挂载持久化磁盘。
+适合支持 Node.js 22 的服务器或容器平台。设置服务端 `OPENAI_API_KEY`，运行 `npm ci --include=dev && npm run build`，启动命令 `npm start`。平台应提供 HTTPS，端口由 `PORT` 指定；为 `COURT_DATA_FILE` 挂载持久化磁盘。
 
 项目也包含 Dockerfile：
 
@@ -62,15 +62,15 @@ API 密钥只通过服务器环境变量传入。不要使用 `VITE_OPENAI_API_K
 
 ### 保留 GitHub Pages
 
-现有仓库目标为 `stevencheninfilm/cat-nest`，`.github/workflows/deploy.yml` 会测试、构建并部署 `dist/`。GitHub Pages 只能运行静态前端，不能运行判官 API。
+现有仓库目标为 `stevencheninfilm/cat-nest`，`.github/workflows/deploy.yml` 会测试、构建并部署 `dist/`。GitHub Pages 运行静态前端，Render 的 `https://cat-nest-api.onrender.com` 提供宠物云存档与判官 API。GitHub 写入凭证只保存在 Render 的服务器环境变量。
 
-1. 另外部署本项目的 Node 服务，设置密钥、持久化磁盘和 HTTPS。
-2. 在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 设置 `VITE_COURT_API_URL` 为 API 的 HTTPS origin，例如 `https://court.example.com`。
-3. 在 API 服务器设置 `COURT_ALLOWED_ORIGINS` 为前端的确切 origin，例如 `https://stevencheninfilm.github.io`；多个 origin 用逗号分隔，不包含路径、不使用通配符。
+1. Render 运行 `node server/index.mjs`，设置 `GITHUB_TOKEN`（仅私有数据仓库 Contents 读写）、`GITHUB_REPOSITORY`。宠物进度保存在 GitHub，不依赖 Render 的临时磁盘。
+2. 在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 设置 `VITE_API_URL` 与 `VITE_COURT_API_URL` 为 `https://cat-nest-api.onrender.com`。
+3. 在 API 服务器设置 `CORS_ORIGIN` 与 `COURT_ALLOWED_ORIGINS` 为前端的确切 origin，例如 `https://stevencheninfilm.github.io`；多个 origin 用逗号分隔，不包含路径、不使用通配符。
 4. 重新运行 Pages 工作流。前端会连接此 API；同源部署无需上述两项配置。
 
 没有配置可访问的判官服务时，已部署的静态网站会保留养猫功能，并明确提示判官服务未连接。
 
 ## 验证范围
 
-`npm test` 包括养猫状态、PeerJS 双人同步、判官角色权限、双方提交门槛、截图输入、并发审理、复审上下文和存档恢复。判官接口测试使用隔离的模拟 OpenAI 响应验证调用协议，不替代配置真实 API 密钥后的端到端验收。
+`npm test` 包括养猫状态、GitHub 存档并发合并/失败恢复、SSE 双人同步、客户端确认保存队列、PeerJS 演示同步、判官角色权限、双方提交门槛、截图输入、并发审理、复审上下文和存档恢复。判官接口测试使用隔离的模拟 OpenAI 响应验证调用协议，不替代配置真实 API 密钥后的端到端验收。

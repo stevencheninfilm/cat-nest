@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, rename, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createCourtServer } from '../server/court.mjs';
@@ -198,6 +198,83 @@ test('revision polling and presence omit evidence until the persisted case chang
   assert.equal(changed.body.room.rounds[0].status, 'judged');
   const disk = JSON.parse(await readFile(f.dataFile, 'utf8'));
   assert.equal(disk.rooms[room.id].revision, changed.body.room.revision);
+});
+
+test('judgment reads and presence wait until the new revision is durably committed', async (t) => {
+  let releaseCommit;
+  let enteredCommit;
+  const commitGate = new Promise((resolve) => { releaseCommit = resolve; });
+  const commitEntered = new Promise((resolve) => { enteredCommit = resolve; });
+  const f = await fixture(t, { beforePersist: async (candidate) => {
+    if (Object.values(candidate.rooms).some((room) => room.rounds.at(-1).status === 'judged')) {
+      enteredCommit();
+      await commitGate;
+    }
+  } });
+  const { room, a, b } = await f.pair();
+  await f.call(`/rooms/${room.id}/submit`, { statement: '甲陈词' }, a.token);
+  const submitted = await f.call(`/rooms/${room.id}/submit`, { statement: '乙陈词' }, b.token);
+  await commitEntered;
+  const before = JSON.parse(await readFile(f.dataFile, 'utf8')).rooms[room.id];
+  assert.equal(before.rounds[0].status, 'judging');
+  assert.equal(before.revision, submitted.body.room.revision);
+  const reads = Promise.all([
+    f.call(`/rooms/${room.id}`, undefined, a.token),
+    f.call(`/rooms/${room.id}`),
+    f.call(`/rooms/${room.id}/presence`, { typing: false }, b.token),
+  ]);
+  try {
+    const observed = await Promise.race([reads.then(() => 'published'), delay(30).then(() => 'waiting')]);
+    assert.equal(observed, 'waiting', 'neither private/public GET nor presence may publish an in-flight revision');
+  } finally {
+    releaseCommit();
+  }
+  const results = await reads;
+  const committed = JSON.parse(await readFile(f.dataFile, 'utf8')).rooms[room.id];
+  assert.equal(committed.rounds[0].status, 'judged');
+  assert.equal(committed.revision, before.revision + 1);
+  for (const result of results) assert.equal(result.body.room.revision, committed.revision);
+  assert.equal(results[0].body.room.rounds[0].status, 'judged');
+  assert.equal(results[1].body.room.rounds[0].status, 'judged');
+});
+
+test('failed durable claims and submissions leave the committed room unchanged and remain retryable', async (t) => {
+  const f = await fixture(t);
+  const room = await f.create();
+  const directory = path.dirname(f.dataFile);
+  const backup = `${directory}-backup`;
+  const blockWrites = async () => { await rename(directory, backup); await writeFile(directory, 'filesystem write failure'); };
+  const restoreWrites = async () => { await rm(directory, { force: true }); await rename(backup, directory); };
+  await blockWrites();
+  try {
+    const failed = await f.call(`/rooms/${room.id}/claim`, { role: 'a', name: '甲方' });
+    assert.equal(failed.status, 500);
+    const unchanged = await f.get(room);
+    assert.equal(unchanged.revision, room.revision);
+    assert.equal(unchanged.parties.a.claimed, false);
+    assert.equal(unchanged.parties.a.online, false);
+  } finally {
+    await restoreWrites();
+  }
+  const a = await f.claim(room, 'a');
+  assert.equal(a.role, 'a', 'failed claim must not consume the seat');
+  const diskBefore = JSON.parse(await readFile(f.dataFile, 'utf8')).rooms[room.id];
+  await blockWrites();
+  try {
+    const failed = await f.call(`/rooms/${room.id}/submit`, { statement: '保存失败后重试' }, a.token);
+    assert.equal(failed.status, 500);
+    const unchanged = await f.get(room, a.token);
+    assert.equal(unchanged.revision, diskBefore.revision);
+    assert.equal(unchanged.rounds[0].submissions.a, null);
+  } finally {
+    await restoreWrites();
+  }
+  const retry = await f.call(`/rooms/${room.id}/submit`, { statement: '保存失败后重试' }, a.token);
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.room.rounds[0].submissions.a.statement, '保存失败后重试');
+  const diskAfter = JSON.parse(await readFile(f.dataFile, 'utf8')).rooms[room.id];
+  assert.equal(diskAfter.revision, retry.body.room.revision);
+  assert.equal(diskAfter.rounds[0].submissions.a.statement, '保存失败后重试');
 });
 
 test('malformed testimony and image evidence cannot mutate a round', async (t) => {

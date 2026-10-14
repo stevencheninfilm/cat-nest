@@ -107,7 +107,7 @@ function publicRoom(room, authorized, presence, includeRounds = true) {
   const parties = Object.fromEntries(['a', 'b'].map((role) => {
     const member = room.parties[role];
     const live = presence.get(`${room.id}:${role}`);
-    return [role, { name: member.name, claimed: Boolean(member.tokenHash), online: Boolean(live && now - live.seenAt < ONLINE_MS), typing: Boolean(live && live.typing && now - live.seenAt < ONLINE_MS && now - live.typedAt < TYPING_MS) }];
+    return [role, { name: member.name, claimed: Boolean(member.tokenHash), online: Boolean(member.tokenHash && live && now - live.seenAt < ONLINE_MS), typing: Boolean(member.tokenHash && live && live.typing && now - live.seenAt < ONLINE_MS && now - live.typedAt < TYPING_MS) }];
   }));
   const metadata = { id: room.id, title: room.title, createdAt: room.createdAt, revision: room.revision, parties, requiresAuth: !authorized };
   if (!includeRounds) return metadata;
@@ -187,11 +187,25 @@ export async function createCourtServer(options = {}) {
     queue = result.catch(() => {});
     return result;
   };
-  const persist = async () => {
+  const persist = async (candidate = state) => {
+    // Tests may pause before the real filesystem commit; no candidate is public yet.
+    await options.beforePersist?.(candidate);
     await mkdir(path.dirname(dataFile), { recursive: true, mode: 0o700 });
     const temp = `${dataFile}.${process.pid}.${id()}.tmp`;
-    await writeFile(temp, JSON.stringify(state), { mode: 0o600 });
+    await writeFile(temp, JSON.stringify(candidate), { mode: 0o600 });
     await rename(temp, dataFile);
+  };
+  const requireRoom = (roomId) => {
+    const room = state.rooms[roomId];
+    if (!room) fail(404, 'ROOM_NOT_FOUND', '没有找到这个小法庭，请检查邀请链接。');
+    return room;
+  };
+  // Call only within serialize. Publishing after rename prevents failed writes
+  // from consuming a role, changing testimony, or advertising a new revision.
+  const commitRoom = async (room) => {
+    const candidate = { ...state, rooms: { ...state.rooms, [room.id]: room } };
+    await persist(candidate);
+    state = candidate;
   };
   let recovered = false;
   for (const room of Object.values(state.rooms)) {
@@ -250,12 +264,13 @@ export async function createCourtServer(options = {}) {
       verdict = { text: output.trim(), model, reasoning: 'high', createdAt: new Date().toISOString() };
     } catch (error) { failure = errorInfo(error); }
     await serialize(async () => {
-      const room = state.rooms[roomId];
+      const committedRoom = state.rooms[roomId];
+      const room = committedRoom && structuredClone(committedRoom);
       const round = room?.rounds.find((entry) => entry.id === roundId);
       if (!round || round.status !== 'judging' || round.attemptId !== attemptId) return;
       round.status = failure ? 'error' : 'judged'; round.error = failure || null; round.verdict = verdict || null; delete round.attemptId;
       room.revision += 1;
-      await persist();
+      await commitRoom(room);
     });
   }
 
@@ -297,33 +312,42 @@ export async function createCourtServer(options = {}) {
           if (Object.keys(state.rooms).length >= (options.maxRooms || 1000)) fail(503, 'ROOM_CAPACITY', '小法庭暂时满座了，请稍后再来。');
           let roomId; do { roomId = id(); } while (state.rooms[roomId]);
           const room = { id: roomId, title, createdAt: new Date().toISOString(), revision: 1, parties: { a: { name: '甲方', tokenHash: null }, b: { name: '乙方', tokenHash: null } }, rounds: [newRound(1)] };
-          state.rooms[roomId] = room; await persist(); return publicRoom(room, false, presence);
+          await commitRoom(room); return publicRoom(room, false, presence);
         });
         return reply(res, 201, { room: result });
       }
       const route = /^\/api\/court\/rooms\/([a-f0-9]{12})(?:\/(claim|presence|submit|judge|appeal))?$/.exec(url.pathname);
       if (!route) fail(404, 'NOT_FOUND', '没有找到这个小法庭。');
       const [, roomId, action] = route;
-      const room = state.rooms[roomId];
-      if (!room) fail(404, 'ROOM_NOT_FOUND', '没有找到这个小法庭，请检查邀请链接。');
       if (req.method === 'GET' && !action) {
-        const role = authorize(req, room, false);
-        const unchanged = Boolean(role) && url.searchParams.get('since') === String(room.revision);
-        return reply(res, 200, { ...(unchanged ? { unchanged: true } : {}), room: publicRoom(room, Boolean(role), presence, !unchanged) });
+        const result = await serialize(() => {
+          const room = requireRoom(roomId);
+          const role = authorize(req, room, false);
+          const unchanged = Boolean(role) && url.searchParams.get('since') === String(room.revision);
+          return { ...(unchanged ? { unchanged: true } : {}), room: publicRoom(room, Boolean(role), presence, !unchanged) };
+        });
+        return reply(res, 200, result);
       }
       if (req.method !== 'POST' || !action) fail(405, 'METHOD_NOT_ALLOWED', '此操作不支持当前请求方式。');
       const body = await readJson(req);
-      let role = action === 'claim' ? null : authorize(req, room);
+      let role;
       if (action === 'presence') {
         if (typeof body.typing !== 'boolean') fail(400, 'INVALID_INPUT', '输入状态格式不正确。');
-        presence.set(`${roomId}:${role}`, { seenAt: Date.now(), typedAt: Date.now(), typing: body.typing });
-        return reply(res, 200, { unchanged: true, room: publicRoom(room, true, presence, false) });
+        const result = await serialize(() => {
+          const room = requireRoom(roomId);
+          role = authorize(req, room);
+          presence.set(`${roomId}:${role}`, { seenAt: Date.now(), typedAt: Date.now(), typing: body.typing });
+          return { unchanged: true, room: publicRoom(room, true, presence, false) };
+        });
+        return reply(res, 200, result);
       }
       rateLimit(req, action === 'claim' ? 'claim' : 'write', action === 'claim' ? 30 : 80, 60000);
       let job;
       let token;
       let status = 200;
       const result = await serialize(async () => {
+        const room = structuredClone(requireRoom(roomId));
+        role = action === 'claim' ? null : authorize(req, room);
         if (action === 'claim') {
           if (!['a', 'b'].includes(body.role)) fail(400, 'INVALID_ROLE', '请选择甲方或乙方。');
           role = body.role;
@@ -355,7 +379,7 @@ export async function createCourtServer(options = {}) {
           if (round.submissions.a && round.submissions.b) { job = prepareJudgment(room); if (job) status = 202; }
         }
         room.revision += 1;
-        await persist();
+        await commitRoom(room);
         return publicRoom(room, true, presence);
       });
       if (job) void runJudgment(job.roomId, job.roundId, job.attemptId, job.input).catch((error) => { options.onError?.(error); });

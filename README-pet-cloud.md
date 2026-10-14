@@ -71,3 +71,5 @@ node server/pet-server.mjs
 ## 当前整合部署
 
 同一个 Render 服务运行 `node server/index.mjs`，同时提供宠物 `/api/rooms`、`/api/health` 与判官 `/api/court`；构建命令为 `npm ci && npm run build`。独立宠物服务仍可使用 `node server/pet-server.mjs`。判官真实分析需要另行配置服务器端 `OPENAI_API_KEY`，不影响宠物 GitHub 存档。
+
+Render 的 `NODE_ENV=production` 会让 npm 默认省略构建工具。共享网站服务的构建命令必须使用 `npm ci --include=dev && npm run build`。
