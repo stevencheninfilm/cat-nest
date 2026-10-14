@@ -44,6 +44,70 @@ const HOUR = 60 * MINUTE;
 const pendingXp = state => state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0);
 const claim = (rewardId, operationId = 'claim-operation-one', clientId = 'client-one') => ({ operationId, clientId, name: '猫友', action: { type: 'claim-growth', rewardId } });
 
+const invite = (catId, operationId='collection-invite-operation', clientId='client-one') => ({ operationId, clientId, name:'猫友', action:{type:'invite-cat',catId} });
+test('cat invitations migrate legacy care, enforce achievements, and persist before confirmation', async () => {
+  const mock=mockGitHub();
+  const store=makeStore(mock,{now:()=>CARE_START});
+  const room=await store.createRoom();
+  await assert.rejects(store.applyAction(room.roomId,invite('bolt')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
+  const file=mock.files.get(room.roomId);
+  delete file.room.state.collection;
+  file.room.state.history=[{text:'喂了一份鲜鱼罐罐，生成50点成长气泡待领取',actor:'猫友',at:CARE_START}];
+  file.sha='legacy-catbook-sha';
+  const saved=await store.applyAction(room.roomId,invite('bolt'));
+  assert.equal(saved.state.collection.stats.feed,1);
+  assert.equal(saved.state.collection.invited[0].id,'bolt');
+  assert.equal(mock.files.get(room.roomId).room.state.collection.invited[0].id,'bolt');
+  const reloaded=await makeStore(mock,{now:()=>CARE_START+86400_000}).getRoom(room.roomId);
+  assert.deepEqual(reloaded.state.collection,saved.state.collection);
+  await assert.rejects(store.applyAction(room.roomId,invite('bolt','another-invite-operation')),error=>error.code==='CAT_ALREADY_INVITED');
+});
+
+test('invitation receipts prevent replay after a lost acknowledgment and operation journal rollover', async () => {
+  const mock=mockGitHub();
+  const store=makeStore(mock,{now:()=>CARE_START});
+  const room=await store.createRoom();
+  mock.controls.loseAcknowledgment=true;
+  await assert.rejects(store.applyAction(room.roomId,invite('bandit')),error=>error.code==='STORAGE_UNAVAILABLE');
+  const file=mock.files.get(room.roomId);
+  assert.equal(file.room.state.collection.invited.length,1);
+  file.room.operations=[];
+  file.room.revision=105;
+  file.sha='catbook-rollover-sha';
+  const writes=mock.calls.filter(call=>call.method==='PUT').length;
+  const replay=await store.applyAction(room.roomId,invite('bandit'));
+  assert.equal(replay.duplicate,true);
+  assert.equal(replay.revision,105);
+  assert.equal(replay.state.collection.invited.length,1);
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length,writes);
+  await assert.rejects(store.applyAction(room.roomId,invite('bandit','collection-invite-operation','client-two')),error=>error.code==='OPERATION_CONFLICT');
+});
+
+test('concurrent invitations from two store instances keep one cat and one diary entry', async () => {
+  const mock=mockGitHub();
+  const first=makeStore(mock,{now:()=>CARE_START});
+  const second=makeStore(mock,{now:()=>CARE_START});
+  const room=await first.createRoom();
+  const results=await Promise.allSettled([
+    first.applyAction(room.roomId,invite('bandit','first-catbook-invite')),
+    second.applyAction(room.roomId,invite('bandit','second-catbook-invite','client-two')),
+  ]);
+  assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
+  assert.equal(results.find(result=>result.status==='rejected').reason.code,'CAT_ALREADY_INVITED');
+  const saved=await makeStore(mock).getRoom(room.roomId);
+  assert.equal(saved.state.collection.invited.length,1);
+  assert.equal(saved.state.history.filter(item=>item.text==='邀请斑斑加入猫猫庭院').length,1);
+});
+
+test('a corrupt persisted collection ledger fails closed before any save can erase it', async () => {
+  const mock=mockGitHub();
+  const store=makeStore(mock,{now:()=>CARE_START});
+  const room=await store.createRoom();
+  mock.files.get(room.roomId).room.state.collection.stats.feed=-1;
+  await assert.rejects(store.getRoom(room.roomId),error=>error.code==='STORAGE_CORRUPT');
+  await assert.rejects(store.applyAction(room.roomId,invite('bandit')),error=>error.code==='STORAGE_CORRUPT');
+});
+
 test('room creation and interactions persist in private GitHub files before resolving', async () => {
   const mock = mockGitHub();
   const store = makeStore(mock);

@@ -49,7 +49,7 @@ export function createCloudRoom(options) {
           // Another device may have collected the same saved reward while our
           // live stream was interrupted. Reconcile from the cloud immediately;
           // never award XP or remove a bubble based only on the rejection.
-          if (item.action?.type === 'claim-growth' && error.status === 409) {
+          if (['claim-growth','invite-cat'].includes(item.action?.type) && error.status === 409) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* The next live snapshot or poll can still reconcile it. */ }
             if (destroyed) break;
           }

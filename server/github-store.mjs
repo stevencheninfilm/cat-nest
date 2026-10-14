@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
-import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth } from '../src/state.js';
+import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth, levelInfo } from '../src/state.js';
 import { validAppearance } from '../src/mage-cat-config.js';
+import { validCollection, validCollectionCatId, canInviteCat } from '../src/cat-collection.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -21,6 +22,7 @@ export function sanitizeAction(value) {
   if (value.type === 'dress' && keys.length === 2 && keys.includes('appearance') && validAppearance(value.appearance)) return { type:'dress', appearance:{...value.appearance} };
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) return { type: 'rename', name: value.name.trim() };
   if (value.type === 'claim-growth' && keys.length === 2 && keys.includes('rewardId') && typeof value.rewardId === 'string' && OPERATION_ID.test(value.rewardId)) return { type: 'claim-growth', rewardId: value.rewardId };
+  if (value.type === 'invite-cat' && keys.length === 2 && keys.includes('catId') && validCollectionCatId(value.catId)) return { type:'invite-cat', catId:value.catId };
   return null;
 }
 
@@ -40,6 +42,7 @@ function validStoredState(value) {
   if (Object.hasOwn(value, 'appearance') && !validAppearance(value.appearance)) return false;
   if (Object.hasOwn(value, 'careLimits') && !validCareLimits(value.careLimits)) return false;
   if (Object.hasOwn(value, 'pendingGrowth') && !validPendingGrowth(value.pendingGrowth)) return false;
+  if (Object.hasOwn(value, 'collection') && !validCollection(value.collection, Object.keys(FOODS))) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
     if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > max) return false;
@@ -152,6 +155,8 @@ export function createGitHubStore({
       for (const operation of room.operations) {
         if (!plain(operation) || typeof operation.id !== 'string' || !OPERATION_ID.test(operation.id) || !plain(operation.event) || operation.event.operationId !== operation.id || !sanitizeAction(operation.event.action) || !sanitizeActor(operation.event.actor?.id, operation.event.actor?.name)) throw new Error();
       }
+      // Migrate only the new optional ledger; preserve the original save fields.
+      room.state.collection ??= normalizeState(room.state, now()).collection;
       const record = { room, sha: data.sha };
       cache.set(id, { record, etag: response.headers.get('etag') });
       if (cache.size > 1000) cache.delete(cache.keys().next().value);
@@ -202,6 +207,11 @@ export function createGitHubStore({
             if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event: copy(duplicate.event), duplicate: true };
           }
+          const invitation = room.state.collection?.invited.find(record => record.operationId === operationId);
+          if (invitation) {
+            if (invitation.actorId !== actor.id || action.type !== 'invite-cat' || action.catId !== invitation.id) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+            return { ...publicRoom(room), event:{ operationId, action, actor }, duplicate:true };
+          }
           // The short operation journal may roll over while a device is away.
           // A saved reward or permanent receipt still identifies its original
           // care operation, so replay can never regenerate a collected bubble.
@@ -215,6 +225,10 @@ export function createGitHubStore({
           const info = careActionInfo(room.state, action, actor.id, actionAt);
           if (!info.allowed) throw careRejection(action, info, actionAt);
           if (action.type === 'claim-growth' && !room.state.pendingGrowth?.some(reward => reward.id === action.rewardId)) throw new StorageError('REWARD_ALREADY_CLAIMED', '这颗成长气泡已经被领取，或暂时无法找到。', 409);
+          if (action.type === 'invite-cat') {
+            if (room.state.collection.invited.some(record => record.id === action.catId)) throw new StorageError('CAT_ALREADY_INVITED', '这位猫猫已经加入庭院啦。', 409);
+            if (!canInviteCat(action.catId, room.state.collection, levelInfo(room.state.xp).level)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
+          }
           const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
           if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);

@@ -1,4 +1,5 @@
 import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
+import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare } from './cat-collection.js';
 
 export const FOODS = {
   snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10 },
@@ -130,7 +131,7 @@ function feedRecords(value, now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), updatedAt: now };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -150,6 +151,7 @@ export function normalizeState(value, now = Date.now()) {
   next.feedRecords = feedRecords(value.feedRecords, now);
   next.pendingGrowth = normalizePendingGrowth(value.pendingGrowth);
   next.careLimits = normalizeCareLimits(value.careLimits, now);
+  next.collection = normalizeCollection(value.collection, { ...next, careLimits:validCareLimits(value.careLimits) ? value.careLimits : next.careLimits }, FOODS);
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
     next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
   }
@@ -257,7 +259,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   const next = { ...current, history: [...current.history], feedRecords: [...current.feedRecords], pendingGrowth: [...current.pendingGrowth], feedingWindow: current.feedingWindow ? { ...current.feedingWindow } : null, updatedAt: now };
   const createsGrowth = ['feed', 'pet', 'play', 'sleep'].includes(action.type) && !care.isWake;
   const rewardActorId = typeof actor?.id === 'string' && CLIENT_ID.test(actor.id) ? actor.id : 'local-care';
-  const rewardId = operationId ?? `${action.type}:${rewardActorId}:${now}`;
+  const rewardId = operationId ?? `${action.type}:${rewardActorId}:${now}${action.type === 'invite-cat' ? `:${action.catId}` : ''}`;
   if (createsGrowth && (typeof rewardId !== 'string' || !GROWTH_ID.test(rewardId) || next.pendingGrowth.some(reward => reward.id === rewardId))) return null;
   let growth = 0;
   let text;
@@ -271,6 +273,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       text = `喂了一份${food.name}`;
       if (recordFeeding(next, action.food, actor, now)) {
         growth += FEEDING_BONUS;
+        recordCollectionCare(next.collection, 'pair');
         text += '，双人喂养额外获得10点亲密度';
       }
       break;
@@ -297,12 +300,21 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     case 'dress':
       if (!validAppearance(action.appearance)) return null;
       next.appearance = normalizeAppearance(action.appearance); text = '给小猫换上了新的魔法装扮'; break;
+    case 'invite-cat': {
+      if (!canInviteCat(action.catId, next.collection, levelInfo(next.xp).level)) return null;
+      if (next.collection.invited.some(record => record.operationId === rewardId)) return null;
+      if (typeof rewardId !== 'string' || !GROWTH_ID.test(rewardId)) return null;
+      next.collection.invited.push({ id:action.catId, at:now, operationId:rewardId, actorId:rewardActorId });
+      text = `邀请${getCollectionCat(action.catId).name}加入猫猫庭院`;
+      break;
+    }
     case 'rename':
       if (typeof action.name !== 'string' || !action.name.trim()) return null;
       next.name = action.name.trim().slice(0, 16); text = `给小猫取名「${next.name}」`; break;
     default: return null;
   }
   if (growth > 0) {
+    recordCollectionCare(next.collection, action.type, action.food);
     next.pendingGrowth.push({ id: rewardId, kind: action.type, amount: growth, actorId: rewardActorId, actor: cleanName(actor?.name), ...(action.type === 'feed' ? { food: action.food } : {}), at: now });
     text += `，生成${growth}点成长气泡待领取`;
   }
