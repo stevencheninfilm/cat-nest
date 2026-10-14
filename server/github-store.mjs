@@ -139,11 +139,15 @@ export function createGitHubStore({
       } else if (data.encoding !== 'base64') throw new Error();
       const room = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
       if (room.version !== 1 || room.roomId !== id || !Number.isSafeInteger(room.revision) || room.revision < 0 || !validStoredState(room.state) || !Array.isArray(room.operations) || room.operations.length > 100) throw new Error();
-      // Unclaimed rewards are individually validated and cannot be discarded
-      // just because their separate ledger outgrows the capped diary. Preserve
-      // the existing size limit for every other stored field.
+      if (Object.hasOwn(room, 'claimedGrowth') && !validPendingGrowth(room.claimedGrowth)) throw new Error();
+      room.claimedGrowth ??= [];
+      const claimedIds = new Set(room.claimedGrowth.map(reward => reward.id));
+      if (room.state.pendingGrowth?.some(reward => claimedIds.has(reward.id))) throw new Error();
+      // Both pending rewards and permanent claim receipts have separate,
+      // validated ledgers. Keep the original size limit for other room fields.
       const withoutGrowth = { ...room, state: { ...room.state } };
       delete withoutGrowth.state.pendingGrowth;
+      delete withoutGrowth.claimedGrowth;
       if (Buffer.byteLength(JSON.stringify(withoutGrowth), 'utf8') * 4 / 3 > 350_000) throw new Error();
       for (const operation of room.operations) {
         if (!plain(operation) || typeof operation.id !== 'string' || !OPERATION_ID.test(operation.id) || !plain(operation.event) || operation.event.operationId !== operation.id || !sanitizeAction(operation.event.action) || !sanitizeActor(operation.event.actor?.id, operation.event.actor?.name)) throw new Error();
@@ -178,7 +182,7 @@ export function createGitHubStore({
       let id = randomBytes(16).toString('hex');
       for (let attempt = 0; attempt < maxRetries; attempt += 1) {
         const createdAt = now();
-        const room = { version: 1, roomId: id, revision: 0, createdAt, updatedAt: createdAt, state: safeState(suppliedState || initialState(createdAt), createdAt), operations: [] };
+        const room = { version: 1, roomId: id, revision: 0, createdAt, updatedAt: createdAt, state: safeState(suppliedState || initialState(createdAt), createdAt), operations: [], claimedGrowth: [] };
         if (await write(room)) return publicRoom(room);
         if (await read(id, { missing: true })) id = randomBytes(16).toString('hex');
       }
@@ -198,6 +202,15 @@ export function createGitHubStore({
             if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event: copy(duplicate.event), duplicate: true };
           }
+          // The short operation journal may roll over while a device is away.
+          // A saved reward or permanent receipt still identifies its original
+          // care operation, so replay can never regenerate a collected bubble.
+          const produced = room.state.pendingGrowth?.find(reward => reward.id === operationId)
+            || room.claimedGrowth.find(reward => reward.id === operationId);
+          if (produced) {
+            if (produced.actorId !== actor.id || produced.kind !== action.type || (action.type === 'feed' && produced.food !== action.food)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+            return { ...publicRoom(room), event: { operationId, action, actor }, duplicate: true };
+          }
           const actionAt = now();
           const info = careActionInfo(room.state, action, actor.id, actionAt);
           if (!info.allowed) throw careRejection(action, info, actionAt);
@@ -206,7 +219,10 @@ export function createGitHubStore({
           if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
           const event = { operationId, action, actor };
-          const next = { ...room, revision: room.revision + 1, state: safeState(reduced, actionAt), updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
+          const claimedGrowth = action.type === 'claim-growth'
+            ? [...room.claimedGrowth, copy(room.state.pendingGrowth.find(reward => reward.id === action.rewardId))]
+            : room.claimedGrowth;
+          const next = { ...room, revision: room.revision + 1, state: safeState(reduced, actionAt), claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
           if (await write(next, sha)) return { ...publicRoom(next), event, duplicate: false };
           cache.delete(id);
         }
