@@ -5,7 +5,6 @@ import { createCourtServer } from '../server/court.mjs';
 import { structuredVerdict } from './court-verdict-fixtures.mjs';
 
 // Opt in only with a separate test database. Never use production env defaults.
-// This file is prepared for the agreed combined test run; it has not been run.
 const databaseUrl = process.env.COURT_TEST_DATABASE_URL;
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aYKsAAAAASUVORK5CYII=';
 const hash = value => createHash('sha256').update(value).digest('hex');

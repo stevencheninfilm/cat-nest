@@ -16,6 +16,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 COPY --from=build /app/scripts/court-archive.mjs ./scripts/court-archive.mjs
 COPY --from=build /app/src/state.js ./src/state.js
+COPY --from=build /app/src/pet-needs.js ./src/pet-needs.js
 COPY --from=build /app/src/couple-profile.js ./src/couple-profile.js
 COPY --from=build /app/src/mage-cat-config.js ./src/mage-cat-config.js
 COPY --from=build /app/src/cat-collection.js ./src/cat-collection.js

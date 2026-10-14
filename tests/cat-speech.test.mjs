@@ -164,6 +164,6 @@ test('speech expiry and idle chatter never change resources or expire unclaimed 
   f.speech.start(); f.speech.say('pet'); f.tick(10 * 60000);
   assert.deepEqual(state, snapshot);
   assert.equal(state.pendingGrowth.length, 1);
-  assert.equal(state.pendingGrowth[0].amount, 3);
+  assert.equal(state.pendingGrowth[0].amount, 3.3);
   f.speech.stop();
 });

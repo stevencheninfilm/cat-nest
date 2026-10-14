@@ -126,17 +126,17 @@ test('growth bubbles synchronize before collection and a guest claim awards XP o
   const cared = guest.observed.states.at(-1);
   assert.equal(cared.xp, initial.xp);
   assert.equal(cared.pendingGrowth.length, 1);
-  assert.equal(cared.pendingGrowth[0].amount, 3);
+  assert.equal(cared.pendingGrowth[0].amount, 3.3);
   assert.deepEqual(cared.pendingGrowth, host.observed.states.at(-1).pendingGrowth);
   const rewardId = cared.pendingGrowth[0].id;
   assert.equal(guest.sync.dispatch({ type: 'claim-growth', rewardId }), true);
   await flush();
   const claimed = guest.observed.states.at(-1);
-  assert.equal(claimed.xp, initial.xp + 3);
+  assert.equal(claimed.xp, initial.xp + 3.3);
   assert.deepEqual(claimed.pendingGrowth, []);
   assert.deepEqual(claimed.careLimits, cared.careLimits);
   assert.equal(host.sync.dispatch({ type: 'claim-growth', rewardId }), false);
-  assert.equal(host.observed.states.at(-1).xp, initial.xp + 3);
+  assert.equal(host.observed.states.at(-1).xp, initial.xp + 3.3);
 });
 
 test('a large persistent growth backlog synchronizes and keeps unrelated packet bounds intact', async t => {

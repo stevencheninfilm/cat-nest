@@ -3,17 +3,17 @@ export const COLLECTION_STATS = Object.freeze(['feed', 'pet', 'play', 'sleep', '
 const cat = (id, name, english, index, personality, achievement, metric, target) => Object.freeze({ id, name, english, index, personality, achievement, metric, target });
 export const COLLECTION_CATS = Object.freeze([
   cat('bandit', '斑斑', 'Bandit', 0, '慢热的小玳瑁，最喜欢在木台上晒太阳。', '初次见面', 'welcome', 0),
-  cat('bolt', '闪电', 'Bolt', 1, '一听见开饭就竖起耳朵的金色虎斑。', '第一顿好饭', 'feed', 1),
-  cat('breezy', '微风', 'Breezy', 2, '喜欢温柔的摸摸，也喜欢静静待在你身边。', '温柔初相遇', 'pet', 1),
-  cat('callie', '花花', 'Callie', 3, '总在寻找新玩具的好奇三花小猫。', '一起玩一次', 'play', 1),
-  cat('cocoa', '可可', 'Cocoa', 4, '午后会找一个舒服角落，陪你慢慢打盹。', '安心好梦', 'sleep', 1),
-  cat('dottie', '小雪', 'Dottie', 5, '把每一点成长都记在心里的白色小猫。', '慢慢长大', 'level', 3),
-  cat('fred', '奶糖', 'Fred', 6, '认得你开饭的声音，六顿好饭就会成为老朋友。', '认真开饭', 'feed', 6),
-  cat('gabriel', '芝麻', 'Gabriel', 7, '穿着小礼服的黑白猫，摸摸十次就愿意靠近。', '摸摸收藏家', 'pet', 10),
-  cat('ginger', '姜姜', 'Ginger', 8, '橘红色的小运动员，每次玩耍都精神满满。', '玩耍好搭档', 'play', 5),
-  cat('gozer', '布丁', 'Gozer', 9, '喜欢尝鲜，三种不同食物就是最好的见面礼。', '尝鲜小食客', 'foods', 3),
-  cat('lexy', '银杏', 'Lexy', 10, '看见你们一起照顾小猫，就想加入这个家。', '双人的心意', 'pair', 1),
-  cat('mack', '云朵', 'Mack', 11, '在成长路上等着你，五级时会带来新的陪伴。', '小窝新伙伴', 'level', 5),
+  cat('bolt', '闪电', 'Bolt', 1, '一听见开饭就竖起耳朵的金色虎斑。', '好饭日常', 'feed', 6),
+  cat('breezy', '微风', 'Breezy', 2, '喜欢温柔的摸摸，也喜欢静静待在你身边。', '温柔的习惯', 'pet', 20),
+  cat('callie', '花花', 'Callie', 3, '总在寻找新玩具的好奇三花小猫。', '玩耍小伙伴', 'play', 10),
+  cat('cocoa', '可可', 'Cocoa', 4, '午后会找一个舒服角落，陪你慢慢打盹。', '安心好梦', 'sleep', 6),
+  cat('dottie', '小雪', 'Dottie', 5, '把每一点成长都记在心里的白色小猫。', '慢慢长大', 'level', 8),
+  cat('fred', '奶糖', 'Fred', 6, '认得你开饭的声音，三十顿好饭就会成为老朋友。', '认真开饭', 'feed', 30),
+  cat('gabriel', '芝麻', 'Gabriel', 7, '穿着小礼服的黑白猫，记得你每一次温柔的摸摸。', '摸摸收藏家', 'pet', 100),
+  cat('ginger', '姜姜', 'Ginger', 8, '橘红色的小运动员，每次玩耍都精神满满。', '玩耍好搭档', 'play', 50),
+  cat('gozer', '布丁', 'Gozer', 9, '喜欢尝鲜，九种不同食物就是最好的见面礼。', '尝鲜小食客', 'foods', 9),
+  cat('lexy', '银杏', 'Lexy', 10, '看见你们一直一起照顾小猫，就想加入这个家。', '双人的心意', 'pair', 12),
+  cat('mack', '云朵', 'Mack', 11, '在成长路上等着你，十五级时会带来新的陪伴。', '小窝新伙伴', 'level', 15),
 ]);
 const byId = new Map(COLLECTION_CATS.map(cat => [cat.id, cat]));
 const STABLE_ID = /^[a-zA-Z0-9_.:-]{8,180}$/;
@@ -62,7 +62,8 @@ export function collectionCatProgress(cat, collection, level) {
   const current = cat.metric === 'welcome' ? 1 : cat.metric === 'level' ? level : cat.metric === 'foods' ? collection.foods.length : collection.stats[cat.metric];
   const target = cat.target || 1;
   const invited = collection.invited.find(record => record.id === cat.id) || null;
-  return { current, target, complete:current >= target, invited, fraction:Math.min(1, current / target) };
+  // Previously invited cats remain collected when achievement thresholds increase.
+  return { current, target, complete:!!invited || current >= target, invited, fraction:invited ? 1 : Math.min(1, current / target) };
 }
 export function canInviteCat(id, collection, level) {
   const cat = getCollectionCat(id);

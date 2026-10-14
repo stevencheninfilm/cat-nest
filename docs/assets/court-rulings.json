@@ -1,0 +1,37 @@
+{
+  "createdAt": "2026-10-14",
+  "generator": "Built-in imagegen",
+  "format": "Lossless WebP; 2172 × 724; original PNGs retained in Codex generated_images",
+  "inspiration": "Original courtroom visual-novel artwork inspired by dramatic verdict presentation; no copied game characters, logos or assets",
+  "assets": [
+    {
+      "state": "primary-a",
+      "file": "public/assets/court-rulings/primary-a-v1.webp",
+      "meaning": "甲方承担较多行为责任"
+    },
+    {
+      "state": "primary-b",
+      "file": "public/assets/court-rulings/primary-b-v1.webp",
+      "meaning": "乙方承担较多行为责任"
+    },
+    {
+      "state": "shared",
+      "file": "public/assets/court-rulings/shared-v1.webp",
+      "meaning": "双方具体行为责任相近"
+    },
+    {
+      "state": "undetermined",
+      "file": "public/assets/court-rulings/undetermined-v1.webp",
+      "meaning": "证据不足或历史文字无法可靠分类"
+    },
+    {
+      "state": "boundaries",
+      "file": "public/assets/court-rulings/boundaries-v1.webp",
+      "meaning": "安全与自主边界优先"
+    }
+  ],
+  "text": "All verdict labels and party names are rendered by HTML, never baked into the texture. Round metadata and captions sit outside the image; the large ruling label uses each artwork's safe parchment area at its original 3:1 aspect ratio.",
+  "history": "Presentation uses saved verdict responsibility fields; older plain-text decisions use only explicit wording in the first ruling paragraph, otherwise retain a neutral archive label. Full verdict and evidence stay unchanged.",
+  "model": "Same createCatModel renderer, licensed Mage Cat assets and current appearance as home; procedural 3D gavel and bench are court-only scene decoration.",
+  "testing": "Read-only historical preview inspected at 320 and 390 viewport widths. Full flow, lifecycle and deployment checks await combined acceptance. Built-in imagegen was used for the artwork; no new court case or real OpenAI verdict inference was submitted for this change."
+}

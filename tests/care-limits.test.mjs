@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CARE_LIMITS, CARE_TIME_ZONE, FEEDING_BONUS, FOODS, initialState, normalizeState, validCareLimits, careActionInfo, reduceAction } from '../src/state.js';
+import { CARE_LIMITS, CARE_TIME_ZONE, FEEDING_BONUS, FOODS, foodCooldownMs, initialState, normalizeState, validCareLimits, careActionInfo, reduceAction } from '../src/state.js';
 
 const start = Date.UTC(2026, 9, 13, 0); // 08:00 in the shared daily reset timezone.
 const alice = { id: 'partner-male', name: '男方' };
@@ -28,7 +28,7 @@ test('each care action rejects repeats and permits the exact cooldown boundary',
     const first = reduceAction(initialState(start), action(type), alice, start);
     const sleeping = type === 'sleep' ? reduceAction(first, action('sleep'), bob, start + 1) : first;
     const snapshot = structuredClone(sleeping);
-    const until = start + CARE_LIMITS[type].cooldownMs;
+    const until = start + (type === 'feed' ? foodCooldownMs('meal') : CARE_LIMITS[type].cooldownMs);
     const info = careActionInfo(sleeping, action(type), alice.id, until - 1);
     assert.equal(info.reason, 'cooldown', type);
     assert.equal(info.remainingMs, 1, type);
@@ -91,9 +91,9 @@ test('three complete pair rounds receive exactly three bonuses and then no more 
     assert.equal(state.feedingWindow.bonusClaimed, true);
   }
   assert.equal(state.xp, before.xp);
-  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 6 * FOODS.meal.love + 3 * FEEDING_BONUS);
+  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 213.5);
   const claimed = state.pendingGrowth.reduce((current, reward) => reduceAction(current, { type: 'claim-growth', rewardId: reward.id }, bob, start + 12 * 3600_000), state);
-  assert.equal(claimed.xp, before.xp + 6 * FOODS.meal.love + 3 * FEEDING_BONUS);
+  assert.equal(claimed.xp, before.xp + 213.5);
   assert.deepEqual(claimed.careLimits.counts, state.careLimits.counts);
   assert.equal(careActionInfo(state, { type: 'pair' }, alice.id, start + 12 * 3600_000).reason, 'daily_limit');
   assert.equal(reduceAction(state, action('feed'), alice, start + 12 * 3600_000), null);
@@ -125,7 +125,7 @@ test('Shanghai midnight resets daily counts, preserves cross-day cooldowns and s
   const next = reduceAction(reloaded, action('pet'), bob, midnight + 4 * 60_000);
   assert.equal(next.careLimits.counts.pet, 1);
   assert.equal(next.xp, first.xp);
-  assert.deepEqual(next.pendingGrowth.map(reward => reward.amount), [3, 3]);
+  assert.deepEqual(next.pendingGrowth.map(reward => reward.amount), [3.3, 3.3]);
   const previousDay = normalizeState(next, midnight - 1);
   assert.equal(previousDay.careLimits.counts.pet, 1, 'clock rollback cannot reset the same quota again');
 });

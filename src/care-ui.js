@@ -1,4 +1,4 @@
-import { CARE_LIMITS } from './state.js';
+import { CARE_LIMITS, FOOD_COOLDOWN_MS, foodCooldownMs } from './state.js';
 
 const LABELS = { feed:'喂食', pet:'摸摸', play:'逗猫', sleep:'休息', pair:'双人奖励' };
 
@@ -6,6 +6,12 @@ export function countdown(ms) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
   return `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
+
+function durationText(ms) {
+  const minutes = ms / 60_000;
+  return minutes < 60 ? `${minutes}分钟` : `${minutes / 60}小时`;
+}
+export const foodDurationText = food => durationText(foodCooldownMs(food));
 
 export function careQuotaText(action, info, compact = false) {
   if (info.dailyLimit === null) return '';
@@ -28,6 +34,10 @@ export function careBlockedMessage(action, info) {
 export function careRuleText(action) {
   const rule = CARE_LIMITS[action];
   if (!rule) return '';
+  if (action === 'feed') {
+    const durations = Object.values(FOOD_COOLDOWN_MS);
+    return `每日 ${rule.dailyLimit} 次 · 每人按上一份食物冷却 ${durationText(Math.min(...durations))}～${durationText(Math.max(...durations))}`;
+  }
   const cooldownMinutes = rule.cooldownMs / 60_000;
   const interval = cooldownMinutes >= 60 ? `${cooldownMinutes / 60} 小时` : `${cooldownMinutes} 分钟`;
   return `每日 ${rule.dailyLimit} 次${rule.cooldownMs ? ` · ${action === 'feed' ? '每人间隔' : '间隔'} ${interval}` : ''}`;

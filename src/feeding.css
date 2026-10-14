@@ -1,4 +1,8 @@
 .food-sprite{display:block;width:100px;height:100px;flex-shrink:0;background-image:url('../public/assets/food-atlas.webp');background-size:300% 300%;background-position:var(--food-position);background-repeat:no-repeat;filter:drop-shadow(0 5px 4px #3e344522)}
+.food-sprite[data-food-portion="75"]{background-image:url('../public/assets/food-remaining-v1/food-atlas-75.webp')}
+.food-sprite[data-food-portion="50"]{background-image:url('../public/assets/food-remaining-v1/food-atlas-50.webp')}
+.food-sprite[data-food-portion="25"]{background-image:url('../public/assets/food-remaining-v1/food-atlas-25.webp')}
+.food-sprite[data-food-portion="0"]{visibility:hidden}
 /* The small home plate represents the last served meal, not a menu selection. */
 .feeding-preview{position:absolute;left:8%;right:8%;bottom:16.5%;height:13%;min-height:104px;padding:8px 7px 8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-radius:24px;text-align:left}
 .food-preview-copy{display:flex;flex-direction:column;min-width:0;gap:4px}.food-preview-copy>small{font-size:8px;letter-spacing:.5px;color:#a78059}.food-preview-copy>strong{font-size:18px;color:#855335;font-weight:900}.food-preview-copy>span{font-size:10px;color:#a87654;font-weight:700}.food-preview-copy i{font-style:normal}.food-preview-copy em{font-size:8px;font-style:normal;color:#a48465;margin-top:1px}.food-preview-copy b{font-weight:800}.food-preview-copy em>b{font-size:13px;margin-left:3px}
@@ -63,12 +67,13 @@
 .pantry-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 2px 2px 3px; }
 .pantry-item { position: relative; min-height: 80px; padding: 12px 3px 4px; border: 1px solid #d5e8ff12; border-radius: 13px; background: #354c7526; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
 .pantry-item.selected { background: #d7e6fa26; border-color: #f0f5ffb5; box-shadow: inset 0 0 0 1px #eff5ff3d; }
-.pantry-love { position: absolute; top: 4px; left: 6px; font-size: 9px; line-height: 1.2; color: #f3f7ffdf; }
+.pantry-love { position: absolute; top: 4px; left: 6px; right: 6px; display: flex; align-items: center; justify-content: space-between; gap: 3px; font-size: 8px; line-height: 1.2; color: #f3f7ffdf; white-space: nowrap; }
+.pantry-duration { font-size: 8px; font-weight: 600; color: #fff0cb; }
 .pantry-item > .food-sprite { width: 33px; height: 33px; margin-bottom: 1px; }
 .pantry-item > strong { font-size: 11px; line-height: 1.25; font-weight: 700; white-space: nowrap; }
 .pantry-price { font-size: 10px; font-weight: 800; line-height: 1.2; color: #ffe7aa; margin-top: 1px; }
 .pantry-price > span { font-size: 8px; font-weight: 500; color: #edf3ffbd; margin-left: 3px; }
-.pantry-selected { display: none; position: absolute; top: 4px; right: 5px; font-size: 10px; color: #ffbfca; }
+.pantry-selected { display: none; position: absolute; bottom: 4px; right: 5px; font-size: 10px; color: #ffbfca; }
 .pantry-item.selected .pantry-selected { display: block; }
 .feeding-footer { margin-top: 7px; flex-shrink: 0; }
 .feeding-care-status { margin: 0 0 5px; color: #fff0cd; font-size: 10px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; }

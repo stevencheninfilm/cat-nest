@@ -33,13 +33,14 @@ export function growthStageProgress(xp, stage = growthStageForXp(xp)) {
   const start = levelStartXp(stage.min);
   const next = GROWTH_STAGES[GROWTH_STAGES.indexOf(stage) + 1] || null;
   const target = next ? levelStartXp(next.min) - start : null;
-  const earned = target === null ? Math.max(0, totalXp - start) : Math.min(target, Math.max(0, totalXp - start));
+  const rawEarned = target === null ? Math.max(0, totalXp - start) : Math.min(target, Math.max(0, totalXp - start));
+  const earned = Number.isInteger(rawEarned) ? rawEarned : Math.round(rawEarned * 10) / 10;
   const locked = totalXp < start;
   // The final skin has no further unlock target; show its unlocked state in full.
   const ratio = target === null ? (locked ? 0 : 1) : earned / target;
   return { stage, next, earned, target, ratio, locked,
-    remaining:target === null ? 0 : target - earned,
-    unlockRemaining:Math.max(0, start - totalXp),
+    remaining:target === null ? 0 : Math.round((target - earned) * 10) / 10,
+    unlockRemaining:Math.max(0, Math.round((start - totalXp) * 10) / 10),
   };
 }
 

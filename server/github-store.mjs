@@ -43,6 +43,7 @@ function validStoredState(value) {
   if (Object.hasOwn(value, 'careLimits') && !validCareLimits(value.careLimits)) return false;
   if (Object.hasOwn(value, 'pendingGrowth') && !validPendingGrowth(value.pendingGrowth)) return false;
   if (Object.hasOwn(value, 'collection') && !validCollection(value.collection, Object.keys(FOODS))) return false;
+  if (Object.hasOwn(value, 'needsUpdatedAt') && (!Number.isSafeInteger(value.needsUpdatedAt) || value.needsUpdatedAt < 0)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
     if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > max) return false;

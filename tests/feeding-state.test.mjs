@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FOODS, FEEDING_WINDOW_MS, FEEDING_BONUS, initialState, normalizeState, reduceAction, feedingInfo } from '../src/state.js';
+import { FOODS, foodCooldownMs, FEEDING_WINDOW_MS, FEEDING_BONUS, initialState, normalizeState, reduceAction, feedingInfo } from '../src/state.js';
 
 const start = 1_800_000_000_000;
 const alice = { id: 'client-alice', name: '小雨' };
@@ -59,9 +59,9 @@ test('same-name caregivers have separate records and earn exactly one pair bonus
   const together = feed(first, bob, start + 2_000);
   assert.equal(together.love, before.love + 2 * FOODS.meal.love + FEEDING_BONUS);
   assert.equal(together.xp, before.xp);
-  assert.deepEqual(together.pendingGrowth.map(reward => reward.amount), [FOODS.meal.love, FOODS.meal.love + FEEDING_BONUS]);
+  assert.deepEqual(together.pendingGrowth.map(reward => reward.amount), [27.5, 42]);
   const claimed = together.pendingGrowth.reduce((state, reward) => reduceAction(state, { type: 'claim-growth', rewardId: reward.id }, alice, start + 2_001), together);
-  assert.equal(claimed.xp, before.xp + 2 * FOODS.meal.love + FEEDING_BONUS);
+  assert.equal(claimed.xp, before.xp + 69.5);
   assert.deepEqual(claimed.pendingGrowth, []);
   assert.deepEqual(together.feedRecords.map(record => record.actorId), [alice.id, bob.id]);
   assert.equal(together.feedingWindow.bonusClaimed, true);
@@ -85,12 +85,15 @@ test('serializing simultaneous feeds in either order produces the same one-time 
 
 test('the shared round does not extend when a caregiver feeds repeatedly', () => {
   const first = feed(initialState(start), alice);
-  const repeat = feed(first, alice, start + FEEDING_WINDOW_MS - 1);
+  const repeat = feed(first, alice, start + foodCooldownMs('meal') - 1);
   assert.equal(repeat, null);
   assert.equal(first.feedingWindow.startedAt, start);
+  const accepted = feed(first, alice, start + foodCooldownMs('meal'));
+  assert.ok(accepted);
+  assert.equal(accepted.feedingWindow.startedAt, start, 'a shorter food cooldown does not restart the reward window');
   const info = feedingInfo(first, alice.id, start + FEEDING_WINDOW_MS - 1);
   assert.equal(info.windowRemainingMs, 1);
-  assert.equal(info.mine.remainingMs, 1, 'rejected feeds do not extend the meal timer');
+  assert.equal(info.mine.remainingMs, 0, 'an eaten meal does not stay visible until the reward window ends');
   const nextRound = feed(first, bob, start + FEEDING_WINDOW_MS);
   assert.equal(nextRound.feedingWindow.startedAt, start + FEEDING_WINDOW_MS);
   assert.equal(nextRound.feedingWindow.bonusClaimed, false, 'previous-round meal cannot complete the new round');
@@ -140,15 +143,15 @@ test('feedingInfo is deterministic, read-only and returns exact countdown bounda
   const snapshot = JSON.stringify(state);
   const info = feedingInfo(state, alice.id, start + 1_234);
   assert.deepEqual(feedingInfo(state, alice.id, start + 1_234), info);
-  assert.equal(info.mine.remainingMs, FEEDING_WINDOW_MS - 1_234);
+  assert.equal(info.mine.remainingMs, foodCooldownMs('meal') - 1_234);
   assert.equal(info.windowEndsAt, start + FEEDING_WINDOW_MS);
   assert.equal(info.windowRemainingMs, FEEDING_WINDOW_MS - 1_234);
   assert.equal(info.records[0].isMine, true);
   assert.equal(info.partner, null);
   info.records[0].name = 'changed';
   assert.equal(JSON.stringify(state), snapshot);
-  assert.equal(feedingInfo(state, alice.id, start + FEEDING_WINDOW_MS - 1).mine.active, true);
-  assert.equal(feedingInfo(state, alice.id, start + FEEDING_WINDOW_MS).mine.active, false);
+  assert.equal(feedingInfo(state, alice.id, start + foodCooldownMs('meal') - 1).mine.active, true);
+  assert.equal(feedingInfo(state, alice.id, start + foodCooldownMs('meal')).mine.active, false);
 });
 
 test('record normalization rejects invalid IDs, duplicate slots, unknown foods and future timestamps', () => {

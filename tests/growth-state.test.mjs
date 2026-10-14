@@ -8,13 +8,13 @@ const bob = { id: 'partner-female', name: '女方' };
 const care = (state, type, now = start, operationId = `growth-${type}-operation`) => reduceAction(state, { type, ...(type === 'feed' ? { food: 'fish' } : {}) }, alice, now, operationId);
 
 test('each accepted care creates one persistent bubble without counting its growth yet', () => {
-  for (const [kind, amount] of Object.entries({ feed: 50, pet: 3, play: 8, sleep: 4 })) {
+  for (const [kind, amount] of Object.entries({ feed: 55, pet: 3.3, play: 8.8, sleep: 4.4 })) {
     const before = initialState(start);
     const after = care(before, kind);
     assert.equal(after.xp, before.xp, kind);
     assert.deepEqual(after.pendingGrowth, [{
       id: `growth-${kind}-operation`, kind, amount, actorId: alice.id, actor: alice.name,
-      ...(kind === 'feed' ? { food: 'fish' } : {}), at: start,
+      ...(kind === 'feed' ? { food: 'fish' } : {}), boosted:true, boostCount:1, at: start,
     }]);
     assert.equal(validPendingGrowth(after.pendingGrowth), true);
     assert.equal(after.careLimits.counts[kind], 1, 'the action uses its allowance immediately');
@@ -45,7 +45,7 @@ test('no timer, reload, midnight reset, rename, dress or wake can discard an unc
   assert.equal(state.xp, asleep.xp);
   assert.equal(state.careLimits.counts.sleep, 0, 'waking after midnight has no new reward or charge');
   const claimed = reduceAction(state, { type: 'claim-growth', rewardId: state.pendingGrowth[0].id }, alice, later);
-  assert.equal(claimed.xp, asleep.xp + 4);
+  assert.equal(claimed.xp, asleep.xp + 4.4);
 });
 
 test('more than one hundred unclaimed rewards remain separate and can each still be claimed', () => {
@@ -60,7 +60,7 @@ test('more than one hundred unclaimed rewards remain separate and can each still
   assert.deepEqual(reloaded.pendingGrowth, state.pendingGrowth);
   for (const reward of state.pendingGrowth) state = reduceAction(state, { type: 'claim-growth', rewardId: reward.id }, bob, start + 1_000 * 24 * 3600_000);
   assert.deepEqual(state.pendingGrowth, []);
-  assert.equal(state.xp, initialState(start).xp + 120 * 3);
+  assert.equal(state.xp, initialState(start).xp + 3.3 + 119 * 3);
 });
 
 test('legacy saves never reinterpret awarded XP or old history as new bubbles', () => {
@@ -88,7 +88,7 @@ test('invalid or duplicate rewards are rejected by validation while normalizatio
   const normalized = normalizeState(state, start);
   assert.equal(normalized.pendingGrowth.length, 2, 'rollback and future timestamps do not expire already-earned rewards');
   normalized.pendingGrowth[0].amount = 10;
-  assert.equal(reward.amount, 50, 'normalization copies reward objects');
+  assert.equal(reward.amount, 55, 'normalization copies reward objects');
 });
 
 test('rejected care, invalid claims and duplicate reward IDs preserve all resources and pending growth', () => {
@@ -109,13 +109,13 @@ test('rejected care, invalid claims and duplicate reward IDs preserve all resour
 
 test('anonymous care uses a stable local actor and deterministic fallback ID', () => {
   const first = reduceAction(initialState(start), { type: 'pet' }, { name: ' 小\u0000雨 ' }, start);
-  assert.deepEqual(first.pendingGrowth[0], { id: `pet:local-care:${start}`, kind: 'pet', amount: 3, actorId: 'local-care', actor: '小雨', at: start });
+  assert.deepEqual(first.pendingGrowth[0], { id: `pet:local-care:${start}`, kind: 'pet', amount: 3.3, actorId: 'local-care', actor: '小雨', boosted:true, boostCount:1, at: start });
 });
 
 test('claiming growth never discards reward value at the former XP ceiling', () => {
   const before = care({ ...initialState(start), xp: 999998 }, 'feed');
   const after = reduceAction(before, { type: 'claim-growth', rewardId: before.pendingGrowth[0].id }, alice, start + 1);
-  assert.equal(after.xp, 1_000_048);
+  assert.equal(after.xp, 1_000_053);
   assert.equal(normalizeState(JSON.parse(JSON.stringify(after)), start + 2).xp, after.xp);
   const overflow = { ...before, xp: Number.MAX_SAFE_INTEGER - 1 };
   const snapshot = structuredClone(overflow);

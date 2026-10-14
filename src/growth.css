@@ -31,7 +31,7 @@
 .growth-tray-pages{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px;font-size:10px;color:#a08063}.growth-tray-pages button{background:#f3e4ce;padding:8px 12px;border-radius:12px;font-size:10px}.growth-tray-pages button:disabled{opacity:.4;cursor:default}.growth-empty{font-size:12px;line-height:1.9;color:#ab8664;padding:20px 0}
 .growth-flight{position:fixed;width:49px;height:49px;z-index:30;pointer-events:none;animation:growth-collect 1050ms cubic-bezier(.22,.65,.3,1) both;animation-delay:calc(var(--i)*55ms);left:var(--from-x);top:var(--from-y);filter:drop-shadow(0 0 5px #ffce4777)}
 .growth-flight .growth-glint{width:13px;height:13px}.growth-flight .growth-glint-b{width:9px;height:9px}
-.pet-card.growth-collected .xp-row{filter:drop-shadow(0 0 7px var(--growth-glow))}.pet-card.growth-collected #xp-bar{box-shadow:0 0 10px var(--growth-glow)}
+.pet-card.growth-collected #xp-bar{box-shadow:0 0 10px var(--growth-glow)}
 @keyframes growth-bob{0%,100%{translate:0 0}50%{translate:0 -5px}}
 @keyframes growth-shimmer{0%,100%{opacity:.75;transform:scale(.8) rotate(-8deg)}50%{opacity:1;transform:scale(1.12) rotate(8deg)}}
 @keyframes growth-collect{0%{opacity:0;transform:translate(-12px,-12px) scale(.7) rotate(-12deg)}20%{opacity:1}42%{transform:translate(var(--arc-x),var(--arc-y)) scale(1.07) rotate(8deg);opacity:1}83%{opacity:1}100%{opacity:0;transform:translate(calc(var(--to-x) - 12px),calc(var(--to-y) - 12px)) scale(.35) rotate(-10deg)}}

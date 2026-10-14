@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FOODS, initialState, normalizeState, reduceAction, levelInfo, CARE_LIMITS } from '../src/state.js';
+import { FOODS, initialState, normalizeState, reduceAction, levelInfo, levelStartXp, CARE_LIMITS } from '../src/state.js';
 import { COLLECTION_CATS, emptyCollection, canInviteCat, validCollection, collectionCatProgress, getCollectionCat } from '../src/cat-collection.js';
 import { catbookMarkup, collectionScene } from '../src/catbook-ui.js';
 import { sanitizeAction } from '../server/github-store.mjs';
@@ -37,41 +37,101 @@ test('lifetime counters and distinct foods survive midnight, more than forty dia
   assert.equal(restored.collection.stats.pet,50);
   assert.equal(restored.collection.stats.feed,4);
   assert.deepEqual(restored.collection.foods,['meal','fish','water']);
-  assert.equal(canInviteCat('gozer',restored.collection,levelInfo(restored.xp).level),true);
+  assert.equal(canInviteCat('gozer',restored.collection,levelInfo(restored.xp).level),false);
+  for(const [index,food] of Object.keys(FOODS).filter(food=>!state.collection.foods.includes(food)).entries()) state=act(state,{type:'feed',food},start+(101+index)*86400_000,`collection-new-food-${index}`);
+  const allFoods=normalizeState(JSON.parse(JSON.stringify(state)),start+120*86400_000);
+  assert.equal(allFoods.collection.foods.length,9);
+  assert.equal(canInviteCat('gozer',allFoods.collection,levelInfo(allFoods.xp).level),true);
 });
 
 test('the pair achievement requires an actual shared feeding reward and never repeats within the same round', () => {
   const first=act(initialState(start),{type:'feed',food:'meal'});
-  const paired=reduceAction(first,{type:'feed',food:'fish'},{id:'partner-female',name:'女方'},start+1,'collection-paired-feed');
+  let paired=reduceAction(first,{type:'feed',food:'fish'},{id:'partner-female',name:'女方'},start+1,'collection-paired-feed');
   assert.equal(first.collection.stats.pair,0);
   assert.equal(paired.collection.stats.pair,1);
-  assert.equal(canInviteCat('lexy',paired.collection,1),true);
+  assert.equal(canInviteCat('lexy',paired.collection,1),false);
   const next=act(paired,{type:'feed',food:'meal'},start+CARE_LIMITS.feed.cooldownMs,'collection-later-feed');
   assert.equal(next.collection.stats.pair,1);
+  paired=next;
+  for(let round=1;round<12;round++) {
+    const now=start+round*86400_000;
+    paired=act(paired,{type:'feed',food:'meal'},now,`collection-pair-male-${round}`);
+    paired=reduceAction(paired,{type:'feed',food:'fish'},{id:'partner-female',name:'女方'},now+1,`collection-pair-female-${round}`);
+  }
+  assert.equal(paired.collection.stats.pair,12);
+  assert.equal(canInviteCat('lexy',paired.collection,1),true);
 });
 
 test('invitation requires its achievement, preserves all resources, and stays collected after reload', () => {
   const before=initialState(start);
   assert.equal(act(before,{type:'invite-cat',catId:'bolt'}),null);
   assert.equal(act(before,{type:'invite-cat',catId:'unknown-cat'}),null);
-  const met=act(before,{type:'feed',food:'meal'});
-  const invited=act(met,{type:'invite-cat',catId:'bolt'},start+1,'collection-bolt-invite');
-  assert.deepEqual(invited.collection.invited,[{id:'bolt',at:start+1,operationId:'collection-bolt-invite',actorId:actor.id}]);
+  let met=before;
+  for(let day=0;day<6;day++) met=act(met,{type:'feed',food:'meal'},start+day*86400_000,`collection-bolt-feed-${day}`);
+  const metAt=start+5*86400_000;
+  const invited=act(met,{type:'invite-cat',catId:'bolt'},metAt+1,'collection-bolt-invite');
+  assert.deepEqual(invited.collection.invited,[{id:'bolt',at:metAt+1,operationId:'collection-bolt-invite',actorId:actor.id}]);
   for(const key of ['coins','love','xp','hunger','mood','energy','careLimits','pendingGrowth']) assert.deepEqual(invited[key],met[key],key);
   assert.equal(met.collection.invited.length,0);
-  assert.equal(act(invited,{type:'invite-cat',catId:'bolt'},start+2),null);
-  assert.deepEqual(normalizeState(JSON.parse(JSON.stringify(invited)),start+20*86400_000).collection,invited.collection);
-  const welcome=act(invited,{type:'invite-cat',catId:'bandit'},start+3);
+  assert.equal(act(invited,{type:'invite-cat',catId:'bolt'},metAt+2),null);
+  assert.deepEqual(normalizeState(JSON.parse(JSON.stringify(invited)),metAt+20*86400_000).collection,invited.collection);
+  const welcome=act(invited,{type:'invite-cat',catId:'bandit'},metAt+3);
   assert.equal(welcome.collection.invited.length,2);
 });
 
 test('level invitations require claimed growth, not pending rewards or the pet affection count', () => {
-  const before={...initialState(start),xp:269,love:99999};
+  const before={...initialState(start),xp:levelStartXp(8)-1,love:99999};
   const fed=act(before,{type:'feed',food:'meal'});
   assert.equal(act(fed,{type:'invite-cat',catId:'dottie'},start+1),null);
   const claimed=act(fed,{type:'claim-growth',rewardId:fed.pendingGrowth[0].id},start+2);
-  assert.equal(levelInfo(claimed.xp).level,3);
+  assert.equal(levelInfo(claimed.xp).level,8);
   assert.ok(act(claimed,{type:'invite-cat',catId:'dottie'},start+3));
+});
+
+test('every later cat rejects an invitation below its threshold and accepts it at the exact boundary', () => {
+  for(const cat of COLLECTION_CATS.filter(cat=>cat.metric !== 'welcome')) {
+    const state=initialState(start);
+    if(cat.metric === 'level') state.xp=levelStartXp(cat.target)-1;
+    else if(cat.metric === 'foods') state.collection.foods=Object.keys(FOODS).slice(0,cat.target-1);
+    else state.collection.stats[cat.metric]=cat.target-1;
+    assert.equal(act(state,{type:'invite-cat',catId:cat.id}),null,`${cat.id} below threshold`);
+    if(cat.metric === 'level') state.xp=levelStartXp(cat.target);
+    else if(cat.metric === 'foods') state.collection.foods=Object.keys(FOODS).slice(0,cat.target);
+    else state.collection.stats[cat.metric]=cat.target;
+    const invited=act(state,{type:'invite-cat',catId:cat.id});
+    assert.equal(invited?.collection.invited[0].id,cat.id,`${cat.id} at threshold`);
+    assert.equal(state.collection.invited.length,0);
+  }
+});
+
+test('existing invitations remain collected after harder requirements and reload', () => {
+  const state=initialState(start);
+  state.collection.invited=[{id:'bolt',at:start,operationId:'legacy-bolt-invitation',actorId:actor.id}];
+  state.collection.stats.feed=1;
+  const restored=normalizeState(JSON.parse(JSON.stringify(state)),start+86400_000);
+  assert.deepEqual(restored.collection,state.collection);
+  const progress=collectionCatProgress(getCollectionCat('bolt'),restored.collection,1);
+  assert.equal(progress.complete,true);
+  assert.equal(progress.fraction,1);
+  assert.equal(canInviteCat('bolt',restored.collection,1),false);
+  const html=catbookMarkup(restored,{tab:'achievements'});
+  assert.match(html,/已收集，陪伴记录保留 · 闪电已入住/);
+  assert.match(html,/<button class="book-achievement-row complete" data-book-cat="bolt"[^>]*><span class="book-achievement-art"><span class="book-cat-sprite "/);
+});
+
+test('uninvited portraits stay gray in the catalog, achievements and details, even when ready', () => {
+  let state=act(initialState(start),{type:'invite-cat',catId:'bandit'});
+  state.collection.stats.feed=6;
+  const card=(html,id)=>html.match(new RegExp(`<button[^>]*data-book-cat="${id}"[^>]*>.*?</button>`))[0];
+  for(const tab of ['book','achievements']) {
+    const html=catbookMarkup(state,{tab,catId:'bolt'});
+    assert.match(card(html,'bolt'),/book-cat-sprite undiscovered/,'ready but not invited');
+    assert.match(card(html,'breezy'),/book-cat-sprite undiscovered/,'locked');
+    assert.doesNotMatch(card(html,'bandit'),/undiscovered/,'collected');
+    assert.match(html,/book-detail-art"><span class="book-cat-sprite undiscovered/);
+  }
+  state=act(state,{type:'invite-cat',catId:'bolt'},start+1);
+  for(const tab of ['book','achievements']) assert.doesNotMatch(card(catbookMarkup(state,{tab}),'bolt'),/undiscovered/);
 });
 
 test('legacy migration uses known records as lower bounds and never duplicates them on repeated normalization', () => {
@@ -119,17 +179,20 @@ test('the scene contains exactly the invited cats and unlocks extra yards only a
   assert.equal((empty.match(/class="book-yard-cat\b/g)||[]).length,0);
   assert.match(empty,/data-book-scene="western"[^>]*disabled/);
   assert.match(empty,/data-book-scene="snow"[^>]*disabled/);
-  state.collection.stats={feed:6,pet:10,play:5,sleep:1,pair:1};
-  state.collection.foods=['meal','fish','water'];
-  state.xp=660;
+  state.collection.stats={feed:30,pet:100,play:50,sleep:6,pair:12};
+  state.collection.foods=Object.keys(FOODS);
+  state.xp=levelStartXp(15);
   for(const cat of COLLECTION_CATS) state=act(state,{type:'invite-cat',catId:cat.id},start,`collection-invite-${cat.id}`);
   const full=catbookMarkup(state,{sceneId:'snow'});
   assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,12);
-  assert.match(full,/snow\.png/);
+  assert.match(full,/data-scene-id="snow"/);
   assert.doesNotMatch(full,/data-book-scene="(?:western|snow)"[^>]*disabled/);
-  assert.equal(collectionScene('snow',5).id,'garden');
-  assert.equal(collectionScene('snow',6).id,'snow');
-  assert.equal(collectionScene('western',3).id,'western');
+  assert.equal(collectionScene('western',6).id,'garden');
+  assert.equal(collectionScene('western',7).id,'garden');
+  assert.equal(collectionScene('western',8).id,'western');
+  assert.equal(collectionScene('snow',6).id,'garden');
+  assert.equal(collectionScene('snow',11).id,'garden');
+  assert.equal(collectionScene('snow',12).id,'snow');
   assert.equal(collectionScene('fake',12).id,'garden');
 });
 
@@ -144,4 +207,16 @@ test('locked invitations, saving and disconnected states disable inviting, and n
   catbookMarkup(state,{tab:'achievements'});
   assert.deepEqual(state,snapshot,'previewing cats and scenes never writes a save');
   assert.equal(collectionCatProgress(getCollectionCat('bandit'),state.collection,1).complete,true);
+});
+
+test('the default screen is the yard and information is only available through closed drawers', () => {
+  const html=catbookMarkup(initialState(start));
+  const yard=html.split('<dialog')[0];
+  assert.match(yard,/aria-label="猫猫沉浸式庭院"/);
+  assert.match(yard,/data-book-open="about"/);
+  assert.match(yard,/data-book-page="book"/);
+  assert.match(yard,/data-book-page="achievements"/);
+  assert.doesNotMatch(yard,/把陪伴，变成新的相遇|class="book-detail"|class="book-catalog"/);
+  for (const id of ['about','catalog','detail','scenes']) assert.match(html,new RegExp(`<dialog[^>]*data-book-sheet="${id}"`));
+  assert.doesNotMatch(html,/<dialog[^>]*\sopen(?:\s|=|>)/);
 });

@@ -6,7 +6,7 @@ test('feeding charges currency and caps needs while growth waits for a bubble cl
   assert.equal(after.coins,1160); assert.equal(after.love,136); assert.equal(after.hunger,100);
   assert.equal(before.coins,1200); assert.equal(after.history[0].actor,'小雨'); assert.equal(after.xp,before.xp);
   const claimed=reduceAction(after,{type:'claim-growth',rewardId:after.pendingGrowth[0].id});
-  assert.equal(claimed.xp,before.xp+50); assert.equal(levelInfo(claimed.xp).level,2);
+  assert.equal(claimed.xp,before.xp+55); assert.equal(levelInfo(claimed.xp).level,2);
 });
 test('insufficient currency and energy cannot create an accepted action', () => {
   const poor={...initialState(),coins:0}; assert.equal(reduceAction(poor,{type:'feed',food:'meal'}),null);
@@ -34,8 +34,8 @@ test('claiming a reward crosses the new upgrade boundary without losing excess e
   const before = { ...initialState(), xp: 430 };
   const fed = reduceAction(before, { type: 'feed', food: 'fish' });
   const claimed = reduceAction(fed, { type: 'claim-growth', rewardId: fed.pendingGrowth[0].id });
-  assert.equal(claimed.xp, 480);
-  assert.deepEqual(levelInfo(claimed.xp), { level: 4, progress: 30, target: 210 });
+  assert.equal(claimed.xp, 485);
+  assert.deepEqual(levelInfo(claimed.xp), { level: 4, progress: 35, target: 210 });
   const restored = normalizeState(JSON.parse(JSON.stringify(claimed)));
   assert.equal(restored.xp, claimed.xp);
   assert.deepEqual(levelInfo(restored.xp), levelInfo(claimed.xp));

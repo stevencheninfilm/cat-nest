@@ -1,0 +1,48 @@
+.diary-dialog .modal-illustration { font-size: 30px; margin: 0 auto 9px; }
+.diary-dialog h2 { font-size: 21px; margin: 7px 0 8px; }
+.diary-dialog .modal-description { font-size: 10px; margin-bottom: 16px; }
+.diary-dialog .diary-timeline { max-height: 54svh; padding-right: 5px; }
+.diary-day + .diary-day { margin-top: 16px; }
+.diary-day-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  position: sticky; top: 0; z-index: 1; padding: 9px 0 11px;
+  background: #fff4e6; border-bottom: 1px solid #eadbc7;
+}
+.diary-day-heading h3 { font-size: 13px; margin: 0 0 2px; color: #80573d; }
+.diary-day-heading span, .diary-day-heading small { font-size: 9px; color: #a2886e; }
+.diary-day-heading small { white-space: nowrap; }
+.diary-day-events { position: relative; padding-top: 4px; }
+.diary-day-events::before {
+  content: ''; position: absolute; width: 2px; left: 48px; top: 24px; bottom: 23px;
+  background: #e7d5c0; border-radius: 2px;
+}
+.diary-event {
+  --diary-role-color: #987b61;
+  --diary-role-background: #f1e6d9;
+  display: grid; grid-template-columns: 39px minmax(0, 1fr); gap: 22px;
+  position: relative; padding: 12px 0;
+}
+.diary-event[data-diary-role="male"] {
+  --diary-role-color: #3e718c;
+  --diary-role-background: #e8f2f8;
+}
+.diary-event[data-diary-role="female"] {
+  --diary-role-color: #aa536f;
+  --diary-role-background: #fbe8ee;
+}
+.diary-time { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: #9b7d62; padding-top: 4px; white-space: nowrap; }
+.diary-marker {
+  position: absolute; left: 43px; top: 16px; width: 12px; height: 12px;
+  border: 3px solid var(--diary-role-background); border-radius: 50%;
+  background: var(--diary-role-color);
+}
+.diary-actor {
+  display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 7px;
+  line-height: 1.35; color: var(--diary-role-color); background: var(--diary-role-background);
+}
+.diary-event-content p { font-size: 11px; line-height: 1.8; margin: 5px 0 0; color: #987a5e; overflow-wrap: anywhere; }
+
+@media (max-width: 360px) {
+  .diary-dialog { padding: 25px 18px 20px; }
+  .diary-event-content p { font-size: 10px; }
+}

@@ -4,9 +4,9 @@ import { normalizeAppearance, MAGE_CAT_VERSION } from './mage-cat-config.js';
 import { clipKey, chooseMageClip, mageExpression, MAGE_REACTION_SECONDS, advanceMagePose } from './mage-cat-animation.js';
 
 /** Nekueda's licensed Mage Cat, with its original skeleton, LODs, motions and textures. */
-export function createCatModel({container,assetBase,onReady,onError,reducedMotion=false}={}) {
+export function createCatModel({container,assetBase,onReady,onError,reducedMotion=false,decorateScene}={}) {
   const base=(assetBase || `${import.meta.env.BASE_URL}api/pet-model/${MAGE_CAT_VERSION}`).replace(/\/$/,'');
-  let renderer,scene,camera,pivot,model,mixer;
+  let renderer,scene,camera,pivot,model,mixer,decoration;
   let frame=0,lastFrame=0,destroyed=false,paused=false,ready=false,failed=false;
   let sleeping=false,reaction='',reactionTime=100,elapsed=0,yaw=0,targetYaw=0;
   let pointer=null,didDrag=false,observer,currentClip,currentExpression='',textureRevision=0;
@@ -38,7 +38,8 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     setPaused(value){paused=Boolean(value);lastFrame=0;if(paused){cancelAnimationFrame(frame);frame=0;}else startFrame();},
     consumeTap(){const result=didDrag;didDrag=false;return result;},
     resetView(){targetYaw=0;startFrame();},
-    destroy(){destroyed=true;cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
+    stageAction(action){decoration?.act?.(action);startFrame();},
+    destroy(){destroyed=true;cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();decoration?.destroy?.();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
   };
   function fail(error){if(destroyed || failed)return;failed=true;cancelAnimationFrame(frame);frame=0;container?.classList.remove('has-cat-model');container?.setAttribute('aria-busy','false');if(container)container.dataset.modelPhase='error';onError?.(error);}
   function texture(file,color=true){
@@ -89,6 +90,7 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     baseHalfHeight=Math.max(1.72,1.65/Math.max(.65,aspect));viewHalfHeight=baseHalfHeight;
     camera.left=-viewHalfHeight*aspect;camera.right=viewHalfHeight*aspect;camera.top=viewHalfHeight;camera.bottom=-viewHalfHeight;camera.updateProjectionMatrix();renderer.setSize(width,height,false);
     if(model){const lod=width<275?1:0;model.traverse(n=>{if(n.isMesh){const match=n.name.match(/_LOD([0-2])$/);if(match)n.visible=Number(match[1])===lod;}});}
+    decoration?.resize?.({width,height});
     if(ready)renderer.render(scene,camera);
     startFrame();
   }
@@ -108,6 +110,7 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     camera.left=-viewHalfHeight*aspect;camera.right=viewHalfHeight*aspect;camera.top=viewHalfHeight;camera.bottom=-viewHalfHeight;camera.updateProjectionMatrix();camera.position.y=viewCenter+.15;camera.lookAt(0,viewCenter,0);
     yaw+=(targetYaw-yaw)*(1-Math.exp(-delta*8));
     advanceMagePose(mixer,pivot,delta,{sleeping,reaction,reactionTime,elapsed,yaw,reducedMotion});
+    decoration?.update?.(delta,{elapsed,reducedMotion});
     void updateExpression();
     try{renderer.render(scene,camera);}catch(error){fail(error);return;}
     frame=requestAnimationFrame(animate);
@@ -149,6 +152,7 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       for(const name of ['Mage_Cat','Mage_Cat_Clothes']){const m=materials.get(name);m.normalMap=normal;m.normalScale.set(.45,.45);m.aoMap=ao;m.aoMapIntensity=.35;}
       await applyAppearance();
       if(destroyed)return;
+      decoration=decorateScene?.({scene,model,pivot,camera,renderer,reducedMotion});
       ready=true;container.classList.add('has-cat-model');container.dataset.modelPhase='ready';container.setAttribute('aria-busy','false');
       observer=new ResizeObserver(resize);observer.observe(container);resize();renderer.render(scene,camera);
       listen(renderer.domElement,'webglcontextlost',event=>{event.preventDefault();fail(new Error('Graphics context lost'));});
@@ -156,7 +160,7 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       listen(container,'pointermove',event=>{
         if(pointer?.id!==event.pointerId)return;
         const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;
-        if(!pointer.horizontal && Math.abs(dx)>8 && Math.abs(dx)>Math.abs(dy)*1.15){pointer.horizontal=true;didDrag=true;try{container.setPointerCapture(event.pointerId);}catch{}}
+        if(!pointer.horizontal && Math.abs(dx)>8 && Math.abs(dx)>Math.abs(dy)*1.15){pointer.horizontal=true;didDrag=true;container.classList.add('cat-view-hint-dismissed');try{container.setPointerCapture(event.pointerId);}catch{}}
         if(pointer.horizontal){event.preventDefault();targetYaw+=(event.clientX-pointer.lastX)*.012;}
         pointer.lastX=event.clientX;
       },{passive:false});

@@ -12,7 +12,7 @@ test('care shows the correct claimable bubble while confirmed XP remains unchang
   const html = growthBubbles(fed.pendingGrowth);
   assert.equal(fed.xp, before.xp);
   assert.match(html, /data-growth-reward="growth-ui-feed"/);
-  assert.match(html, /领取鸡胸肉的 35 点成长/);
+  assert.match(html, /领取鸡胸肉的 38.5 点成长/);
   assert.match(html, /点击气泡<br\/>收下成长/);
   assert.doesNotMatch(html, /disabled/);
   assert.match(growthBubbles(fed.pendingGrowth, { blocked:true, claimingRewardId:'growth-ui-feed' }), /disabled[^]*领取中/);
@@ -21,9 +21,9 @@ test('care shows the correct claimable bubble while confirmed XP remains unchang
 test('unclaimed reward remains visible after normalization months later and disappears only after a claim', () => {
   const fed = reduceAction(initialState(now), { type:'pet' }, actor, now, 'growth-ui-pet');
   const claimed = reduceAction(fed, { type:'claim-growth', rewardId:'growth-ui-pet' }, actor, now + 90 * 86400_000);
-  assert.match(growthBubbles(fed.pendingGrowth), /领取摸摸的 3 点成长/);
+  assert.match(growthBubbles(fed.pendingGrowth), /领取摸摸的 3.3 点成长/);
   assert.equal(growthBubbles(claimed.pendingGrowth), '');
-  assert.equal(claimed.xp, fed.xp + 3);
+  assert.equal(claimed.xp, fed.xp + 3.3);
 });
 
 test('large reward backlogs have an accessible paginated tray and retain the entire total', () => {
@@ -34,7 +34,7 @@ test('large reward backlogs have an accessible paginated tray and retain the ent
   assert.match(home, /查看全部 25 个待领取成长气泡/);
   assert.match(home, /<strong>\+21<\/strong>/);
   const last = growthTray(rewards, { page:2 });
-  assert.match(last, /25 个气泡 · 共 75 点待领取/);
+  assert.match(last, /25 个气泡 · 共 82.5 点待领取/);
   assert.match(last, /data-growth-reward="growth-ui-24"/);
   assert.match(last, /3 \/ 3/);
   assert.equal(rewards.length, 25);

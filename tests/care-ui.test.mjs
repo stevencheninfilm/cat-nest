@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, reduceAction, CARE_LIMITS, careActionInfo } from '../src/state.js';
+import { initialState, reduceAction, CARE_LIMITS, foodCooldownMs, careActionInfo } from '../src/state.js';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { feedingSheet, feedingButtonContent } from '../src/feeding-ui.js';
 import { careStatusText, careBlockedMessage, careRuleText } from '../src/care-ui.js';
@@ -11,10 +11,10 @@ const actor = { id:COUPLE_ROLES[0].clientId, name:COUPLE_ROLES[0].name };
 test('a fed caregiver sees the countdown and shared quota, while the partner can feed', () => {
   const state = reduceAction(initialState(now), { type:'feed', food:'meal' }, actor, now);
   const options = { state, selectedFood:'meal', clientId:actor.id, now:now + 1000 };
-  assert.deepEqual(feedingButtonContent(options), { disabled:true, content:'03:59:59 后可喂食' });
+  assert.deepEqual(feedingButtonContent(options), { disabled:true, content:'01:29:59 后可喂食' });
   const html = feedingSheet(options);
-  assert.match(html, /今日喂食剩余 5\/6 · 03:59:59 后可用/);
-  assert.match(html, /小窝共享每日 6 次 · 每人间隔 4 小时/);
+  assert.match(html, /今日喂食剩余 5\/6 · 01:29:59 后可用/);
+  assert.match(html, /小窝共享每日 6 次 · 每人按上一份食物冷却 30分钟～4小时/);
   assert.match(html, /id="serve-food" disabled/);
   const partner = feedingButtonContent({ ...options, clientId:COUPLE_ROLES[1].clientId });
   assert.equal(partner.disabled, false);
@@ -23,8 +23,8 @@ test('a fed caregiver sees the countdown and shared quota, while the partner can
 test('the serve button becomes available at cooldown expiry without changing saved state', () => {
   const state = reduceAction(initialState(now), { type:'feed', food:'water' }, actor, now);
   const options = { state, selectedFood:'water', clientId:actor.id };
-  assert.equal(feedingButtonContent({ ...options, now:now + CARE_LIMITS.feed.cooldownMs - 1 }).disabled, true);
-  assert.deepEqual(feedingButtonContent({ ...options, now:now + CARE_LIMITS.feed.cooldownMs }), { disabled:false, content:'喂这个 <span>成长气泡 +5</span>' });
+  assert.equal(feedingButtonContent({ ...options, now:now + foodCooldownMs('water') - 1 }).disabled, true);
+  assert.deepEqual(feedingButtonContent({ ...options, now:now + foodCooldownMs('water') }), { disabled:false, content:'喂这个 <span>成长气泡 +5.5</span>' });
   assert.equal(state.careLimits.counts.feed, 1);
 });
 
@@ -36,7 +36,7 @@ test('daily cap and cross-midnight cooldown are shown independently', () => {
   assert.match(before, /今日喂食剩余 0\/6 · 次数北京时间 0 点重置/);
   assert.match(before, /今日喂食次数已用完/);
   const after = feedingSheet({ state, selectedFood:'meal', clientId:actor.id, now:late + 60_000 });
-  assert.match(after, /今日喂食剩余 6\/6 · 03:59:00 后可用/);
+  assert.match(after, /今日喂食剩余 6\/6 · 01:29:00 后可用/);
   assert.match(after, /id="serve-food" disabled/);
 });
 

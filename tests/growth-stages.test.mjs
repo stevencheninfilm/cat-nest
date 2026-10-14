@@ -102,8 +102,8 @@ test('unclaimed bubbles do not advance stage growth, and a confirmed claim prese
   assert.doesNotMatch(growthStagesPanel(pending.xp),/>100%/);
   const after=reduceAction(pending,{type:'claim-growth',rewardId:'stage-progress-reward'},actor,now+1);
   assert.equal(growthStageProgress(after.xp).stage.id,'candy');
-  assert.equal(growthStageProgress(after.xp).earned,1);
-  assert.equal(growthStageProgress(after.xp).remaining,5549);
+  assert.equal(growthStageProgress(after.xp).earned,1.3);
+  assert.equal(growthStageProgress(after.xp).remaining,5548.7);
   for(const value of [NaN,-1,Infinity]) assert.equal(growthStageProgress(value).earned,0);
 });
 
@@ -121,7 +121,7 @@ test('only a confirmed claim across a material boundary celebrates, and repeats 
     assert.match(growthUpgradePanel(upgrade,after.xp),new RegExp(upgrade.to.name));
     const repeated=reduceAction(after,{type:'claim-growth',rewardId:`stage-${next}`},actor,now+2);
     assert.equal(repeated,null);
-    assert.equal(after.xp,before.xp+3);
+    assert.equal(after.xp,before.xp+3.3);
     assert.equal(growthUpgrade(after.xp,after.xp),null);
   }
   assert.equal(growthUpgrade(xpAt(11),xpAt(10)),null);

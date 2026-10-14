@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-10-14",
+  "generator": "Built-in imagegen",
+  "format": "Lossless WebP with original generated alpha, no semantic pixel edits",
+  "purpose": "Decorative headers for evidence, responsibility and appeal explanations; all case text stays in accessible HTML",
+  "assets": [
+    {
+      "key": "evidence",
+      "file": "public/assets/court-explainers/evidence-v1.webp",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13870-e73c-7e53-9896-dc1c9dbf266b/exec-56487222-6e11-4dd8-a2a6-0154bc1f3812.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent cutout illustration for a mobile Chinese cat-judge website evidence-analysis card. Primary request: a single compact, beautifully painted miniature still life of a gold magnifying glass resting over two cream parchment evidence slips, with one small teal wax paw-print seal. Style: original polished cozy courtroom visual-novel game illustration, warm ivory paper fibers, antique gold trim, soft dimensional shading and clean crisp silhouette. Composition: centered square icon-sized cluster, large clear shapes readable at 72 pixels, generous transparent padding, all objects fully visible; no scene backdrop, no frame. Text: none. Constraints: genuinely transparent background, no letters, numerals, pseudo-writing, labels, verdict claims, human/cat characters, logos, watermark. The evidence papers are completely blank. This asset is only a decorative reading aid, not a screenshot of evidence."
+    },
+    {
+      "key": "accounts",
+      "file": "public/assets/court-explainers/accounts-v1.webp",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13870-e73c-7e53-9896-dc1c9dbf266b/exec-a5b3e65f-7598-4c48-ab1c-76069ad35c0b.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent cutout illustration for a mobile Chinese cat-judge website side-by-side testimony explanation card. Primary request: a compact miniature still life of two blank parchment speech-bubble cards, one trimmed dusty blue and one trimmed muted rose, with a small elegant balanced gold courtroom scale between them and a tiny neutral paw-print medallion below. Style: original polished cozy courtroom visual-novel game illustration, warm cream parchment fibers, antique gold, soft dimensional painted shading, clear crisp silhouette. Composition: centered square cluster, both speech cards equally prominent, no tilt implying blame, large shapes readable at 72 pixels, generous transparent padding, fully visible objects; no backdrop or outer frame. Text: none. Constraints: genuinely transparent background, absolutely no letters, numerals, pseudo-writing, percentages, labels, verdict claims, human/cat characters, logos or watermark. Blank cards only."
+    },
+    {
+      "key": "appeal",
+      "file": "public/assets/court-explainers/appeal-v1.webp",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13870-e73c-7e53-9896-dc1c9dbf266b/exec-a2cbb276-c311-4c0d-be40-d2122f21ee88.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent cutout illustration for a mobile Chinese cat-judge website appeal-changes explanation card. Primary request: a compact miniature still life of an open cream parchment casebook showing two completely blank pages, with a golden page-turn ribbon forming a gentle curved return arrow, and a small jade-green paw-print wax seal on one lower corner. Style: original polished cozy courtroom visual-novel game illustration, warm ivory paper fibers, antique gold and jade accents, soft dimensional painted shading and crisp clean silhouette. Composition: centered square cluster, pages clearly distinct and fully visible, large simple shapes readable at 72 pixels, generous transparent padding; no backdrop, no outer frame. Text: none. Constraints: genuinely transparent background, no letters, numerals, pseudo-writing, labels, responsibility claims, human/cat characters, logos or watermark. Both pages are entirely blank; decorative aid only."
+    }
+  ]
+}

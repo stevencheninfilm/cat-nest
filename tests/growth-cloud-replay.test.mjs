@@ -70,7 +70,7 @@ test('claimed source operations remain idempotent after eviction, one year and a
   const fed = await store.applyAction(room.roomId, original);
   const reward = clone(fed.state.pendingGrowth[0]);
   const collected = await store.applyAction(room.roomId, claim(reward.id));
-  assert.equal(collected.state.xp, room.state.xp + 50);
+  assert.equal(collected.state.xp, room.state.xp + 55);
   assert.deepEqual(h.saved(room.roomId).claimedGrowth, [reward], 'the same commit saves the full immutable reward receipt');
   assert.equal(validPendingGrowth(h.saved(room.roomId).claimedGrowth), true);
   privateReceipts(room);
@@ -126,7 +126,7 @@ test('an unclaimed reward permanently deduplicates its source request independen
   assert.equal(h.commits.length, commitsBefore);
   await assert.rejects(restarted.applyAction(room.roomId, { ...original, clientId: 'client-two' }), error => error.code === 'OPERATION_CONFLICT');
   const collected = await restarted.applyAction(room.roomId, claim(fed.state.pendingGrowth[0].id));
-  assert.equal(collected.state.xp, room.state.xp + 50);
+  assert.equal(collected.state.xp, room.state.xp + 55);
   assert.deepEqual(h.saved(room.roomId).claimedGrowth, fed.state.pendingGrowth);
 });
 
@@ -148,7 +148,7 @@ test('more than one hundred receipt records retain their full reward value witho
   h.at(START + 515 * DAY);
   const restarted = h.store();
   const before = await restarted.getRoom(room.roomId);
-  assert.equal(before.state.xp, room.state.xp + 150 * 3);
+  assert.equal(before.state.xp, room.state.xp + 3.3 + 149 * 3);
   assert.deepEqual(before.state.pendingGrowth, []);
   assert.equal((await restarted.applyAction(room.roomId, input('permanent-pet-0', { type: 'pet' }))).duplicate, true);
   assert.deepEqual(h.saved(room.roomId).claimedGrowth, receipts);

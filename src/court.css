@@ -450,3 +450,175 @@
   .court-formal-heading > img { width: 53px; height: 75px; }
   .court-case-heading h2 { font-size: 24px; }
 }
+
+/* Original courtroom presentation: saved verdicts choose their own artwork. */
+body:has(.cat-court:not([hidden])) { min-width: 0; }
+.cat-court { --court-stage-gold: #c19b55; background: linear-gradient(#f0e8dc,#fcf9f1 620px); }
+.court-hero, .has-case .court-hero { display: flex; flex-direction: column; padding: 18px 20px 25px; min-height: 0; gap: 14px; }
+.court-hero-copy { order: 2; text-align: center; }
+.has-verdict .court-hero-copy { display: none; }
+.court-hero h1, .has-case .court-hero h1 { margin: 8px 0; font-size: 27px; line-height: 1.55; }
+.court-hero h1 br { display: none; }
+.court-hero-copy > p, .has-case .court-hero-copy > p { display: block; font-size: 13px; }
+.court-hero-note { justify-content: center; margin-top: 9px; }
+.court-bench-stage { position: relative; isolation: isolate; width: min(100%,650px); overflow: hidden; border: 1px solid #c7ad79; border-bottom: 3px solid #86613b; border-radius: 20px; background: #fff8e9; box-shadow: 0 8px 24px #62452e13; --court-ruling-ink: #785231; --court-title-left: 13%; --court-title-right: 13%; }
+.court-bench-meta { padding: 8px 15px; text-align: center; background: #fff8e9; border-bottom: 1px solid #dac6a3; }
+.court-bench-art { position: relative; aspect-ratio: 3 / 1; background: radial-gradient(ellipse at 50% 40%,#fff5da,#e9d5b0); text-align: center; }
+.has-ruling .court-bench-art { background-image: var(--court-ruling-art); background-size: 100% 100%; background-position: center; }
+.court-bench-kicker { font-size: 12px; color: #84613a; letter-spacing: 1.2px; line-height: 1.5; text-shadow: 0 1px #fff8e7; }
+.court-bench-art h2 { position: absolute; top: 50%; left: var(--court-title-left); right: var(--court-title-right); transform: translateY(-50%); margin: 0; font-family: var(--court-serif); font-size: 42px; font-weight: 900; letter-spacing: 4px; line-height: 1.25; color: var(--court-ruling-ink); text-shadow: 0 2px #fff5df; }
+.court-bench-stage[data-ruling="primary-a"] { --court-ruling-ink: #872e27; --court-title-left: 29%; --court-title-right: 8%; }
+.court-bench-stage[data-ruling="primary-b"] { --court-ruling-ink: #274d7e; --court-title-left: 11%; --court-title-right: 27%; }
+.court-bench-stage[data-ruling="shared"] { --court-ruling-ink: #775225; }
+.court-bench-stage[data-ruling="undetermined"] { --court-ruling-ink: #4d4c74; }
+.court-bench-stage[data-ruling="boundaries"] { --court-ruling-ink: #285e49; --court-title-left: 25%; --court-title-right: 12%; }
+.court-bench-caption { margin: 0; padding: 10px 18px; font-size: 15px; font-weight: 700; line-height: 1.65; color: #5d4031; background: #fff9ed; border-top: 1px solid #cfb47e; overflow-wrap: anywhere; text-align: center; }
+.court-bench-dock { min-height: 104px; padding: 0 22px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid #cfb47e; background: linear-gradient(100deg,#fffaf0,#f6ecd8); }
+.court-bench-dock-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 8px 0; }
+.court-bench-plaque { color: #886637; font-size: 13px; font-weight: 700; line-height: 1.6; }
+.cat-court .court-bench-replay { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 13px; color: #fff3d3; background: #69432e; border: 1px solid #8f6338; border-radius: 11px; font-size: 14px; box-shadow: inset 0 1px #fff8e326; }
+.court-bench-replay svg { width: 18px; height: 18px; }
+.court-bench-welcome { font-size: 13px; line-height: 1.7; color: #907b66; }
+.court-judge-model { flex: 0 0 128px; position: relative; width: 128px; height: 108px; align-self: flex-end; touch-action: pan-y; }
+.court-judge-model .cat-model-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.court-model-fallback { position: absolute; inset: 8px 0; display: grid; align-content: center; justify-items: center; gap: 5px; color: #9f7c4a; }
+.court-model-fallback > svg { width: 30px; height: 30px; }
+.court-model-fallback small { font-size: 11px; line-height: 1.5; text-align: center; }
+.court-judge-model.has-cat-model .court-model-fallback { display: none; }
+.court-judge-model.is-striking { animation: court-gavel-impact 1.15s ease-out; }
+@keyframes court-gavel-impact { 0%,52%,75%,100% { filter: none; } 58% { filter: drop-shadow(0 0 12px #f8d577); } }
+.court-formal-emblem { flex-shrink: 0; display: grid; place-items: center; width: 61px; height: 67px; color: #a57535; background: linear-gradient(#f8e9c5,#e8d2a2); border: 3px double #c19b55; border-radius: 16px; }
+.court-formal-emblem svg { width: 30px; height: 30px; }
+.court-ruling-banner { position: relative; margin: 22px 0 8px; min-height: 166px; display: grid; place-items: center; overflow: hidden; border-radius: 13px; border: 1px solid #c19b55; background-color: #f0dfbd; background-image: var(--court-ruling-art); background-size: 100% 100%; background-position: center; }
+.court-ruling-copy { width: 64%; padding: 24px 0 30px; text-align: center; color: #3b2622; text-shadow: 0 1px 0 #fff7e8; }
+.court-ruling-copy > span { font-size: 10px; letter-spacing: 2px; color: #947244; }
+.court-ruling-copy h4 { font-family: var(--court-serif); font-style: italic; letter-spacing: 5px; font-size: 38px; font-weight: 900; line-height: 1.2; margin: 7px 0; color: #872e27; text-shadow: 1px 2px 0 #fff5d9; }
+.court-ruling-banner.cobalt h4 { color: #274d7e; }.court-ruling-banner.indigo h4 { color: #4d4c74; }.court-ruling-banner.amber h4 { color: #775225; }.court-ruling-banner.jade h4 { color: #285e49; }
+.court-ruling-copy p { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.7; overflow-wrap: anywhere; }
+.court-ruling-replay { position: absolute; right: 7px; bottom: 7px; display: flex; align-items: center; gap: 5px; padding: 7px 10px; min-height: 34px; border-radius: 7px; background: #4a302be6; color: #fce4ab; font-size: 10px; box-shadow: 0 1px 2px #34201150; }
+.court-ruling-replay svg { width: 14px; height: 14px; }
+.court-ruling-history-note { position: absolute; bottom: 9px; left: 13px; max-width: 66%; font-size: 9px; color: #6d655f; }
+@media(max-width:600px) {
+  .court-hero, .has-case .court-hero { padding: 12px 0 16px; gap: 10px; }
+  .court-hero h1, .has-case .court-hero h1 { font-size: 20px; letter-spacing: .3px; }
+  .court-hero-copy > p, .has-case .court-hero-copy > p { font-size: 12px; }
+  .cat-court { padding: 0 16px 20px; }
+  .court-topbar { min-height: 66px; padding: 9px 0; gap: 5px 10px; }
+  .court-brand { font-size: 18px; }
+  .court-back { font-size: 13px; }
+  .court-connection { font-size: 10px; margin-top: 0; }
+  .court-bench-stage { border-radius: 16px; }
+  .court-bench-meta { padding: 7px 12px; }
+  .court-bench-art h2 { font-size: 30px; letter-spacing: 2px; }
+  .court-bench-kicker { font-size: 11px; letter-spacing: .5px; }
+  .court-bench-caption { padding: 8px 14px; font-size: 14px; line-height: 1.6; }
+  .court-bench-dock { min-height: 92px; padding: 0 15px; gap: 4px; }
+  .court-bench-plaque { font-size: 12px; }
+  .cat-court .court-bench-replay { font-size: 14px; padding: 8px 12px; }
+  .court-judge-model { flex-basis: 108px; width: 108px; height: 92px; }
+  .court-case-heading { gap: 9px; }
+  .court-case-heading h2 { font-size: 23px; line-height: 1.5; margin: 6px 0 0; }
+  .court-case-heading .court-section-kicker { font-size: 11px; }
+  .court-steps { margin-top: 13px; padding: 13px 0; }
+  .court-parties { gap: 9px; margin-bottom: 18px; }
+  .court-party { padding: 10px 8px; }
+  .court-party strong { font-size: 14px; }
+  .court-formal-verdict, .court-repair-plan { padding: 21px 17px; }
+  .court-formal-heading { gap: 10px; padding-bottom: 15px; }
+  .court-formal-heading h3 { font-size: 23px; line-height: 1.5; }
+  .court-legacy-verdict .court-verdict-body { line-height: 1.95; }
+  .court-formal-emblem { width: 44px; height: 51px; border-radius: 12px; }
+  .court-formal-emblem svg { width: 24px; height: 24px; }
+  .court-ruling-banner { min-height: 155px; background-size: cover; }
+  .court-ruling-copy { width: 73%; padding: 24px 0 48px; }
+  .court-ruling-copy h4 { font-size: 33px; letter-spacing: 3px; }
+  .court-ruling-copy p { font-size: 12px; }
+  .court-ruling-replay { min-height: 44px; font-size: 12px; padding: 8px 10px; }
+  .court-ruling-history-note { bottom: 48px; font-size: 8px; }
+}
+@media(max-width:360px) {
+  .cat-court { padding-left: 12px; padding-right: 12px; }
+  .court-bench-art h2 { font-size: 27px; }
+  .court-bench-dock { padding-left: 12px; padding-right: 10px; }
+  .court-judge-model { flex-basis: 96px; width: 96px; height: 88px; }
+  .court-case-heading h2 { font-size: 21px; }
+}
+@media(prefers-reduced-motion:reduce) { .court-judge-model.is-striking { animation: none; } }
+
+/* Generated illustrations label saved explanations; text has its own surface. */
+.court-explainer-content { display: grid; gap: 20px; margin-top: 22px; }
+.court-ruling-banner { display: block; min-height: 0; background: #fff8e9; --court-title-left: 13%; --court-title-right: 13%; }
+.court-ruling-round { display: block; padding: 8px 12px; font-size: 11px; color: #84613a; text-align: center; }
+.court-ruling-image { position: relative; aspect-ratio: 3 / 1; background-image: var(--court-ruling-art); background-size: 100% 100%; background-position: center; }
+.court-ruling-image h4 { position: absolute; left: var(--court-title-left); right: var(--court-title-right); top: 50%; transform: translateY(-50%); margin: 0; font-family: var(--court-serif); font-size: 34px; font-weight: 900; letter-spacing: 3px; text-align: center; color: #872e27; line-height: 1.25; }
+.court-ruling-banner[data-ruling="primary-a"] { --court-title-left: 29%; --court-title-right: 8%; }
+.court-ruling-banner[data-ruling="primary-b"] { --court-title-left: 11%; --court-title-right: 27%; }
+.court-ruling-banner[data-ruling="boundaries"] { --court-title-left: 25%; --court-title-right: 12%; }
+.court-ruling-banner.cobalt h4 { color: #274d7e; }.court-ruling-banner.indigo h4 { color: #4d4c74; }.court-ruling-banner.amber h4 { color: #775225; }.court-ruling-banner.jade h4 { color: #285e49; }
+.court-ruling-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid #d2ba92; }
+.court-ruling-footer > p { margin: 0; font-size: 13px; line-height: 1.7; font-weight: 600; min-width: 0; color: #6c4933; overflow-wrap: anywhere; }
+.court-ruling-footer .court-ruling-replay { position: static; min-height: 44px; flex-shrink: 0; font-size: 12px; }
+.court-ruling-history-note { position: static; display: block; max-width: none; padding: 0 12px 11px; font-size: 11px; line-height: 1.7; }
+.court-verdict-summary { padding: 19px 21px; background: #fbf1da; border: 1px solid #e8d1a6; border-left: 4px solid #b88a46; border-radius: 15px; }
+.court-verdict-summary > p { font-size: 17px; line-height: 1.85; font-weight: 600; color: #64452e; margin: 11px 0 0; }
+.court-explainer-card { padding: 20px; background: #fffdfa; border: 1px solid #e9ddca; border-radius: 19px; min-width: 0; }
+.court-explainer-card.evidence { background: linear-gradient(145deg,#f1f8f5,#fffdfa 45%); border-color: #d5e6df; }
+.court-explainer-card.appeal { background: linear-gradient(145deg,#eff7ee,#fffdf8 45%); border-color: #d5e0c8; }
+.court-explainer-heading { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 13px; align-items: center; margin-bottom: 16px; }
+.court-explainer-heading > img { display: block; width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 3px 4px #57361f14); }
+.court-explainer-heading h4 { margin: 0; font-size: 22px; font-family: var(--court-serif); color: #6c4933; line-height: 1.5; }
+.court-explainer-heading p { margin: 4px 0 0; font-size: 12px; color: #93806d; line-height: 1.7; }
+.court-explainer-card > p, .court-explainer-list p, .court-explainer-person > p { margin: 10px 0; font-size: 16px; line-height: 1.85; color: #6c5140; overflow-wrap: anywhere; }
+.court-explainer-parties { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.court-explainer-person { min-width: 0; padding: 17px; background: #f0f5fa; border: 1px solid #dce6ef; border-radius: 14px; }
+.court-explainer-person.b { background: #fdf1ee; border-color: #f0ded5; }
+.court-explainer-person > header { display: flex; justify-content: space-between; gap: 9px; align-items: center; }
+.court-explainer-person header span { font-size: 11px; color: #8e9baa; }
+.court-explainer-person.b header span { color: #b49188; }
+.court-explainer-person h5 { font-size: 18px; color: #5f7790; line-height: 1.6; margin: 1px 0 0; overflow-wrap: anywhere; }
+.court-explainer-person.b h5 { color: #a76f63; }
+.court-explainer-person header b { flex-shrink: 0; font-size: 11px; padding: 5px 7px; border-radius: 7px; background: #ffffffa8; color: #79664c; }
+.court-explainer-list { list-style: none; margin: 0; padding: 0; }
+.court-explainer-list > li { padding: 10px 0; border-bottom: 1px dashed #ded8cd; }
+.court-explainer-list > li:first-child { padding-top: 0; }
+.court-explainer-list > li:last-child { border-bottom: 0; padding-bottom: 0; }
+.court-evidence-source { display: block; color: #939077; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.court-text-expansion { margin-top: 9px; padding-top: 3px; border-top: 1px solid #ded4c677; }
+.court-text-expansion > summary { min-height: 44px; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; cursor: pointer; font-size: 13px; color: #947440; list-style: none; }
+.court-text-expansion > summary::-webkit-details-marker { display: none; }
+.court-text-expansion > summary > span { font-size: 11px; white-space: nowrap; }
+.court-text-expansion[open] > summary { color: #66472c; }
+.court-text-expansion p { font-size: 16px; font-weight: 400; line-height: 1.85; color: #705742; overflow-wrap: anywhere; }
+.court-dispute-notes, .court-appeal-changes, .court-appeal-retained { margin-top: 16px; padding: 13px 15px; border-radius: 12px; background: #fbf2df; }
+.court-appeal-changes { background: #edf5e8; }.court-appeal-retained { background: #f8f0df; }
+.court-dispute-notes h5, .court-appeal-changes h5, .court-appeal-retained h5 { font-size: 13px; margin: 0 0 8px; color: #7f6a42; }
+.court-next-agreement { padding: 21px; border: 1px dashed #d3bd82; background: #fff7df; border-radius: 16px; }
+.court-next-agreement h4 { margin: 5px 0 13px; font-family: var(--court-serif); font-size: 23px; color: #826035; }
+.court-explainer-content .court-root-analysis { margin: 0; }
+.court-explainer-content .court-root-analysis h4 { margin-top: 0; }
+.court-explainer-content .court-root-analysis > p { font-size: 16px; line-height: 1.85; }
+.court-explainer-content .court-verdict-details { margin: 0; }
+.court-archive-hint { font-size: 15px; color: #9a826b; line-height: 1.8; }
+.court-original { margin-top: 22px; }
+@media(max-width:600px) {
+  .has-verdict .court-steps { display: none; }
+  .has-verdict .court-parties { margin-top: 16px; }
+  .has-verdict .court-party-state { display: none; }
+  .court-ruling-image h4 { font-size: 27px; letter-spacing: 1px; }
+  .court-ruling-footer { align-items: flex-start; flex-wrap: wrap; }
+  .court-ruling-footer > p { font-size: 12px; }
+  .court-ruling-footer .court-ruling-replay { margin-left: auto; }
+  .court-explainer-content { gap: 16px; margin-top: 18px; }
+  .court-verdict-summary { padding: 16px; }
+  .court-verdict-summary > p { font-size: 16px; line-height: 1.9; }
+  .court-explainer-card { padding: 16px 14px; border-radius: 15px; }
+  .court-explainer-heading { grid-template-columns: 58px minmax(0,1fr); gap: 9px; margin-bottom: 13px; }
+  .court-explainer-heading > img { width: 58px; height: 58px; }
+  .court-explainer-heading h4 { font-size: 21px; }
+  .court-explainer-heading p { font-size: 11px; }
+  .court-explainer-parties { grid-template-columns: minmax(0,1fr); gap: 11px; }
+  .court-explainer-person { padding: 15px; }
+  .court-explainer-person h5 { font-size: 17px; }
+  .court-text-expansion > summary { font-size: 13px; }
+  .court-next-agreement { padding: 17px 15px; }
+}

@@ -23,3 +23,5 @@ dialog{width:calc(100% - 36px);max-width:390px;max-height:88svh;overflow:auto;bo
 @media(max-width:360px){.appearance-sheet{padding-left:16px;padding-right:16px}.appearance-choices{gap:8px}.appearance-choice{min-width:38px}.appearance-choice>span{height:38px;width:38px}}
 
 @media(max-width:360px){.care-badge{width:66px;font-size:9px}.feed-care-badge{font-size:6.5px}}
+
+.cat-button.has-cat-model.cat-view-hint-dismissed::after{display:none}

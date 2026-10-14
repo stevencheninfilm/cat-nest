@@ -2,7 +2,7 @@
 .nest {
   --home-status-bottom: 29.5%;
   --home-status-height: 66px;
-  --home-food-height: 68px;
+  --home-food-height: 100px;
 }
 .nest:not(.is-companion) .pet-card {
   top: auto; bottom: var(--home-status-bottom); left: 20%; right: 20%;
@@ -11,9 +11,9 @@
   backdrop-filter: none; text-align: center;
 }
 .nest .pet-card .pet-title { justify-content: center; height: 21px; gap: 0; }
-.nest .pet-card .pet-name { max-width: calc(100% - 56px); min-height: 24px; gap: 4px; }
-.nest .pet-card .pet-name strong { font-size: 16px; line-height: 21px; max-width: 130px; text-shadow: 0 1px 2px #fff9ed; }
-.nest .pet-card .pet-name svg { width: 10px; height: 10px; opacity: .6; }
+.nest .pet-card .pet-name { position: relative; justify-content: center; max-width: calc(100% - 56px); min-height: 24px; gap: 0; padding-inline: 14px; }
+.nest .pet-card .pet-name strong { min-width: 0; font-size: 16px; line-height: 21px; max-width: 130px; text-shadow: 0 1px 2px #fff9ed; }
+.nest .pet-card .pet-name svg { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; opacity: .6; }
 .nest .pet-card .level-badge { display: contents; }
 .nest .pet-card .level-badge-heart { display: none; }
 .nest .pet-card #level {
@@ -57,31 +57,37 @@
 }
 .nest.feeding-open .scene { top: 17%; height: 17%; }
 
-/* The home meal is one compact row; full records remain in the feeding drawer. */
+/* One plate holds each person's own serving and independent meal timer. */
 .nest .feeding-preview {
-  left: 12%; right: 12%; bottom: 18%; height: var(--home-food-height); min-height: 0;
-  padding: 5px 9px; gap: 8px; border-radius: 18px;
-  background: #fff5e5b5; border: 1px solid #fff9edba;
-  box-shadow: 0 3px 10px #9c613514; backdrop-filter: blur(9px);
+  left: 8%; right: 8%; bottom: 16.8%; height: var(--home-food-height); min-height: 0;
+  display: flex; align-items: stretch; justify-content: center;
+  padding: 3px 8px; gap: 0; border-radius: 0;
+  background: none; border: 0; box-shadow: none; backdrop-filter: none;
 }
-.nest .feeding-preview .home-meal-copy { gap: 3px; }
-.nest .feeding-preview .home-meal-copy > strong { font-size: 13px; line-height: 1.2; font-weight: 800; }
-.nest .feeding-preview .home-meal-status { font-size: 9px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; }
-.nest .feeding-preview .home-food-dish { order: -1; width: 52px; height: 54px; flex-basis: 52px; }
-.nest .feeding-preview .home-food-dish .food-dish { width: 54px; height: 18px; bottom: 4px; box-shadow: 0 2px 0 #dadcce, 0 4px 5px #754d3515, inset 0 1px 1px #fff; }
-.nest .feeding-preview .home-dish-food { width: 47px; height: 47px; }
-.nest .feeding-preview .empty-dish-heart { top: 6px; font-size: 28px; }
-.nest .feeding-preview .feeding-pair-chips { gap: 4px; flex-wrap: nowrap; margin: 0; }
-.nest .feeding-preview .feeding-status-chip { padding: 2px 4px; gap: 2px; font-size: 8px; border: 0; border-radius: 6px; }
-.nest .feeding-preview .feeding-status-chip b { font-size: 8px; }
-.home-meal-open { flex-shrink: 0; font-size: 18px; color: #b59370; }
+.home-shared-dish { position: relative; display: block; width: 92%; max-width: 320px; height: 100%; min-height: 0; }
+.nest .feeding-preview .home-shared-dish > .food-dish {
+  width: 48%; min-width: 108px; max-width: 150px; height: 30px; bottom: 24px;
+  background: radial-gradient(ellipse at center, #f0f1ec 42%, #fffdf8 58%, #d9ddd8 65%, #fffefa 73%);
+  box-shadow: 0 3px 0 #d1d8ce, 0 7px 8px #754d3526, inset 0 2px 2px #fff;
+}
+.nest .feeding-preview .home-shared-dish > .food-dish::before { border: 4px dotted #fffdf7; inset: 1px 2px; }
+.home-meal-slot { position: absolute; top: 0; left: 0; width: 50%; height: 100%; }
+.home-meal-slot.female { left: 50%; }
+.home-serving-food { position: absolute; top: -4px; width: 72px; height: 72px; z-index: 1; }
+.home-meal-slot.male .home-serving-food { right: 0; }
+.home-meal-slot.female .home-serving-food { left: 0; }
+.home-meal-meta { position: absolute; bottom: 0; display: flex; align-items: center; justify-content: center; width: 72px; height: 22px; }
+.home-meal-slot.male .home-meal-meta { right: 0; }
+.home-meal-slot.female .home-meal-meta { left: 0; }
+.home-meal-timer { display: inline-flex; align-items: center; gap: 2px; padding: 3px 4px; border: 1px solid #fff9eb66; border-radius: 10px; background: #fff7e855; color: #865b3d; font-size: 10px; line-height: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.home-meal-timer i { font-style: normal; font-size: 12px; }
 
 @media (max-width: 600px) {
   #app { height: 100svh; min-height: 0; }
   .nest { height: 100svh; min-height: 0; }
 }
 @media (max-height: 680px) {
-  .nest { --home-status-bottom: 29.8%; --home-status-height: 56px; --home-food-height: 62px; }
+  .nest { --home-status-bottom: 29.8%; --home-status-height: 56px; --home-food-height: 70px; }
   .nest .topbar { top: 11px; }
   .nest .wallet { top: 53px; height: 34px; }
   .nest .currency { height: 34px; }
@@ -100,12 +106,13 @@
   .nest .pet-card .xp-stage-heart { top: 9px; }
   .nest .pet-card .mode-selector { top: -4px; }
   .nest .pet-card .needs { margin-top: 3px; height: 10px; line-height: 10px; }
-  .nest .feeding-preview { bottom: 17.1%; }
+  .nest .feeding-preview .home-shared-dish > .food-dish { height: 22px; bottom: 20px; }
+  .home-serving-food { top: -4px; width: 48px; height: 48px; }
+  .home-meal-meta { width: 48px; height: 18px; }
+  .home-meal-timer { padding: 2px 3px; font-size: 9px; line-height: 12px; }
+  .home-meal-timer i { display: none; }
 }
 @media (max-width: 360px) {
   .nest .pet-card { left: 19%; right: 19%; }
-  .nest .feeding-preview { left: 10%; right: 10%; padding-inline: 7px; gap: 5px; }
-  .nest .feeding-preview .home-food-dish { width: 44px; flex-basis: 44px; }
-  .nest .feeding-preview .home-food-dish .food-dish { width: 46px; height: 16px; }
-  .nest .feeding-preview .home-dish-food { width: 40px; height: 40px; top: 4px; }
+  .nest .feeding-preview { left: 7%; right: 7%; padding-inline: 6px; }
 }

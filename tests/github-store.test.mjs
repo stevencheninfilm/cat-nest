@@ -41,10 +41,36 @@ const makeStore = (mock, options = {}) => createGitHubStore({ token: 'test-secre
 const CARE_START = Date.parse('2026-10-13T00:00:00Z');
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-const pendingXp = state => state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0);
+const pendingXp = state => state.pendingGrowth.reduce((total, reward) => total + Math.round(reward.amount * 10), 0) / 10;
 const claim = (rewardId, operationId = 'claim-operation-one', clientId = 'client-one') => ({ operationId, clientId, name: '猫友', action: { type: 'claim-growth', rewardId } });
 
 const invite = (catId, operationId='collection-invite-operation', clientId='client-one') => ({ operationId, clientId, name:'猫友', action:{type:'invite-cat',catId} });
+test('food-specific cooldowns survive store restart and cannot be bypassed by a menu change', async () => {
+  const mock = mockGitHub();
+  let clock = CARE_START;
+  const store = makeStore(mock, { now:()=>clock });
+  const room = await store.createRoom();
+  const feed = (food, operationId, clientId='client-one') => ({ operationId, clientId, name:'猫友', action:{ type:'feed', food } });
+  const water = await store.applyAction(room.roomId, feed('water', 'food-duration-water'));
+  assert.equal(water.state.careLimits.feedCooldowns[0].food, 'water');
+  const restarted = makeStore(mock, { now:()=>clock });
+  clock += 30 * MINUTE - 1;
+  const writes = mock.calls.filter(call=>call.method==='PUT').length;
+  await assert.rejects(restarted.applyAction(room.roomId, feed('fish', 'food-duration-too-early')), error=>error.code==='CARE_COOLDOWN');
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length, writes);
+  clock += 1;
+  const fish = await restarted.applyAction(room.roomId, feed('fish', 'food-duration-fish'));
+  assert.equal(fish.state.careLimits.counts.feed, 2);
+  assert.equal(fish.state.careLimits.feedCooldowns[0].food, 'fish');
+  clock += MINUTE;
+  await assert.rejects(makeStore(mock, { now:()=>clock }).applyAction(room.roomId, feed('water', 'food-duration-switch-back')), error=>error.code==='CARE_COOLDOWN');
+  const partner = await restarted.applyAction(room.roomId, feed('mousse', 'food-duration-partner', 'client-two'));
+  assert.equal(partner.state.careLimits.counts.feed, 3);
+  const saved = mock.files.get(room.roomId).room.state;
+  assert.equal(saved.careLimits.feedCooldowns.find(record=>record.actorId==='client-one').food, 'fish');
+  assert.equal(saved.careLimits.feedCooldowns.find(record=>record.actorId==='client-two').food, 'mousse');
+});
+
 test('cat invitations migrate legacy care, enforce achievements, and persist before confirmation', async () => {
   const mock=mockGitHub();
   const store=makeStore(mock,{now:()=>CARE_START});
@@ -54,8 +80,13 @@ test('cat invitations migrate legacy care, enforce achievements, and persist bef
   delete file.room.state.collection;
   file.room.state.history=[{text:'喂了一份鲜鱼罐罐，生成50点成长气泡待领取',actor:'猫友',at:CARE_START}];
   file.sha='legacy-catbook-sha';
+  const writes=mock.calls.filter(call=>call.method==='PUT').length;
+  await assert.rejects(store.applyAction(room.roomId,invite('bolt')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length,writes,'one old feed must not unlock the harder achievement');
+  file.room.state.history=Array.from({length:6},(_,index)=>({text:'喂了一份鲜鱼罐罐，生成50点成长气泡待领取',actor:'猫友',at:CARE_START-index*86400_000}));
+  file.sha='legacy-catbook-six-feeds-sha';
   const saved=await store.applyAction(room.roomId,invite('bolt'));
-  assert.equal(saved.state.collection.stats.feed,1);
+  assert.equal(saved.state.collection.stats.feed,6);
   assert.equal(saved.state.collection.invited[0].id,'bolt');
   assert.equal(mock.files.get(room.roomId).room.state.collection.invited[0].id,'bolt');
   const reloaded=await makeStore(mock,{now:()=>CARE_START+86400_000}).getRoom(room.roomId);
@@ -119,7 +150,7 @@ test('room creation and interactions persist in private GitHub files before reso
   assert.equal(saved.revision, 1);
   assert.equal(saved.state.love, room.state.love + 3);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.equal(pendingXp(saved.state), 3);
+  assert.equal(pendingXp(saved.state), 3.3);
   assert.equal(saved.state.pendingGrowth[0].id, 'operation-001');
   assert.equal(mock.files.get(room.roomId).room.operations[0].id, 'operation-001');
   assert.deepEqual((await store.getRoom(room.roomId)).state, saved.state);
@@ -241,7 +272,7 @@ test('care cooldown is authoritative across restarts and rejects new IDs without
   time = CARE_START + 5 * MINUTE;
   const afterWait = await restarted.applyAction(room.roomId, operation('pet-after-wait'));
   assert.equal(afterWait.state.xp, room.state.xp);
-  assert.equal(pendingXp(afterWait.state), 6);
+  assert.equal(pendingXp(afterWait.state), 6.6);
 });
 
 test('concurrent caregivers cannot both earn a globally limited care reward after SHA retry', async () => {
@@ -260,7 +291,7 @@ test('concurrent caregivers cannot both earn a globally limited care reward afte
   const saved = await first.getRoom(room.roomId);
   assert.equal(saved.revision, 1);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.equal(pendingXp(saved.state), 3);
+  assert.equal(pendingXp(saved.state), 3.3);
   assert.equal(saved.state.love, room.state.love + 3);
   assert.equal(mock.files.get(room.roomId).room.operations.length, 1);
 });
@@ -272,10 +303,10 @@ test('feeding cooldown belongs to each caregiver but daily quota and pair reward
   const room = await store.createRoom();
   const feed = (index, actor = 'client-one') => ({ operationId: `feed-quota-${index}`, clientId: actor, name: '猫友', action: { type: 'feed', food: 'water' } });
   const first = await store.applyAction(room.roomId, feed(0));
-  await assert.rejects(store.applyAction(room.roomId, feed('duplicate')), error => error.code === 'CARE_COOLDOWN' && /4小时/.test(error.message));
+  await assert.rejects(store.applyAction(room.roomId, feed('duplicate')), error => error.code === 'CARE_COOLDOWN' && /30分钟/.test(error.message));
   const paired = await store.applyAction(room.roomId, feed(1, 'client-two'));
   assert.equal(paired.state.xp, room.state.xp);
-  assert.equal(pendingXp(paired.state), pendingXp(first.state) + 5 + 10);
+  assert.equal(pendingXp(paired.state), pendingXp(first.state) + 16.5);
   for (let round = 1; round < 3; round += 1) {
     time = CARE_START + round * 4 * HOUR;
     await store.applyAction(room.roomId, feed(round * 2));
@@ -283,7 +314,7 @@ test('feeding cooldown belongs to each caregiver but daily quota and pair reward
   }
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.equal(pendingXp(saved.state), 6 * 5 + 3 * 10);
+  assert.equal(pendingXp(saved.state), 66);
   assert.equal(saved.state.coins, room.state.coins - 6 * 5);
   assert.equal(saved.state.careLimits.counts.feed, 6);
   assert.equal(saved.state.careLimits.counts.pair, 3);
@@ -308,7 +339,7 @@ test('daily play cap prevents added growth and currency, while sleep toggles can
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.coins, room.state.coins + 100);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.equal(pendingXp(saved.state), 80);
+  assert.equal(pendingXp(saved.state), 90.4);
   time += 30 * MINUTE;
   await assert.rejects(store.applyAction(room.roomId, operation('play-quota-excess', 'play')), error => error.code === 'DAILY_CARE_LIMIT');
   assert.deepEqual((await store.getRoom(room.roomId)).state, saved.state);
@@ -387,7 +418,7 @@ test('unclaimed growth survives days and a store restart, then a claim awards XP
   const fed = await store.applyAction(room.roomId, { ...operation('persistent-feed'), action: { type: 'feed', food: 'fish' } });
   const reward = fed.state.pendingGrowth[0];
   assert.equal(reward.id, 'persistent-feed');
-  assert.equal(reward.amount, 50);
+  assert.equal(reward.amount, 55);
   assert.equal(fed.state.xp, room.state.xp);
   time += 90 * 24 * HOUR;
   const restarted = makeStore(mock, { now: () => time });
@@ -396,7 +427,7 @@ test('unclaimed growth survives days and a store restart, then a claim awards XP
   const before = structuredClone(loaded.state);
   const input = claim(reward.id);
   const claimed = await restarted.applyAction(room.roomId, input);
-  assert.equal(claimed.state.xp, room.state.xp + 50);
+  assert.equal(claimed.state.xp, room.state.xp + 55);
   assert.deepEqual(claimed.state.pendingGrowth, []);
   assert.equal(claimed.state.coins, before.coins);
   assert.equal(claimed.state.love, before.love);
@@ -426,7 +457,7 @@ test('two store instances claiming one bubble award it only once after a SHA con
   assert.equal(results.find(result => result.status === 'rejected').reason.code, 'REWARD_ALREADY_CLAIMED');
   const saved = await first.getRoom(room.roomId);
   assert.equal(saved.revision, 2);
-  assert.equal(saved.state.xp, room.state.xp + 3);
+  assert.equal(saved.state.xp, room.state.xp + 3.3);
   assert.deepEqual(saved.state.pendingGrowth, []);
   assert.deepEqual(saved.state.careLimits, cared.state.careLimits, 'claiming spends no care allowance or cooldown');
   assert.equal(mock.files.get(room.roomId).room.operations.length, 2);
@@ -447,7 +478,7 @@ test('a failed claim write leaves the reward and XP intact and lost acknowledgme
   await assert.rejects(store.applyAction(room.roomId, input), error => error.code === 'STORAGE_UNAVAILABLE');
   const retry = await store.applyAction(room.roomId, input);
   assert.equal(retry.duplicate, true);
-  assert.equal(retry.state.xp, room.state.xp + 3);
+  assert.equal(retry.state.xp, room.state.xp + 3.3);
   assert.deepEqual(retry.state.pendingGrowth, []);
   assert.equal(retry.revision, 2);
 });
@@ -492,8 +523,8 @@ test('collected XP persists above the old growth ceiling and overflow refuses wi
   const room = await store.createRoom({ initialState: { ...initialState(CARE_START), xp: 999_999 } });
   const cared = await store.applyAction(room.roomId, operation('pet-beyond-old-ceiling'));
   const claimed = await store.applyAction(room.roomId, claim(cared.state.pendingGrowth[0].id, 'claim-beyond-old-ceiling'));
-  assert.equal(claimed.state.xp, 1_000_002);
-  assert.equal((await makeStore(mock, { now: () => CARE_START }).getRoom(room.roomId)).state.xp, 1_000_002);
+  assert.equal(claimed.state.xp, 1_000_002.3);
+  assert.equal((await makeStore(mock, { now: () => CARE_START }).getRoom(room.roomId)).state.xp, 1_000_002.3);
   const maximum = await store.createRoom({ initialState: { ...initialState(CARE_START), xp: Number.MAX_SAFE_INTEGER } });
   const pending = await store.applyAction(maximum.roomId, operation('pet-at-safe-ceiling'));
   const stored = structuredClone(mock.files.get(maximum.roomId).room);
@@ -520,4 +551,51 @@ test('large GitHub saves load immutable blobs when Contents omits inline content
   mock.controls.failBlobRead = true;
   await assert.rejects(makeStore(mock).getRoom(room.roomId), error => error.code === 'STORAGE_UNAVAILABLE');
   assert.equal(mock.files.get(room.roomId).room.revision, 1);
+});
+
+test('boosted decimal growth is persisted before acknowledgment and concurrent claims count it once after decay', async () => {
+  const mock=mockGitHub();
+  let time=CARE_START;
+  const first=makeStore(mock,{now:()=>time});
+  const room=await first.createRoom({initialState:{...initialState(time),hunger:100,mood:100,energy:100}});
+  const source=operation('boosted-pet-cloud-source');
+  const pending=await first.applyAction(room.roomId,source);
+  assert.equal(pending.state.pendingGrowth[0].amount,3.9);
+  assert.equal(pending.state.pendingGrowth[0].boosted,true);
+  time += 24 * HOUR;
+  const second=makeStore(mock,{now:()=>time});
+  assert.equal((await second.getRoom(room.roomId)).state.pendingGrowth[0].amount,3.9);
+  const results=await Promise.allSettled([
+    first.applyAction(room.roomId,claim(source.operationId,'boost-claim-by-one','client-one')),
+    second.applyAction(room.roomId,claim(source.operationId,'boost-claim-by-two','client-two')),
+  ]);
+  assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
+  assert.equal(results.find(result=>result.status==='rejected').reason.code,'REWARD_ALREADY_CLAIMED');
+  const saved=await second.getRoom(room.roomId);
+  assert.equal(saved.state.xp,89.9);
+  assert.deepEqual(saved.state.pendingGrowth,[]);
+  assert.equal(mock.files.get(room.roomId).room.claimedGrowth[0].amount,3.9);
+  assert.equal(saved.state.energy,52,'the independent saved clock includes a full day offline');
+  const replay=await makeStore(mock,{now:()=>time}).applyAction(room.roomId,source);
+  assert.equal(replay.duplicate,true);
+  assert.equal(replay.state.xp,89.9);
+});
+
+test('server time removes expired boosts and clients cannot supply a multiplier or freeze the needs clock', async () => {
+  const mock=mockGitHub();
+  let time=CARE_START;
+  const store=makeStore(mock,{now:()=>time});
+  const room=await store.createRoom({initialState:{...initialState(time),hunger:81,mood:81,energy:81}});
+  time+=30*MINUTE;
+  for(const fields of [{boosted:true},{multiplier:1.1},{needsUpdatedAt:time}]) {
+    await assert.rejects(store.applyAction(room.roomId,{...operation('client-cannot-set-boost'),action:{type:'pet',...fields}}),error=>error.code==='INVALID_ACTION');
+  }
+  const next=await store.applyAction(room.roomId,operation('decayed-cloud-reward'));
+  assert.equal(next.state.pendingGrowth[0].amount,3);
+  assert.equal(next.state.pendingGrowth[0].boosted,undefined);
+  assert.equal(next.state.hunger,80);
+  const file=mock.files.get(room.roomId);
+  file.room.state.needsUpdatedAt=-1;
+  await assert.rejects(makeStore(mock,{now:()=>time}).getRoom(room.roomId),error=>error.code==='STORAGE_CORRUPT');
+  assert.equal(file.room.revision,1);
 });

@@ -26,29 +26,29 @@ export const SCENE_CAT_POSES = Object.freeze([
 ]);
 const spot = (x, y, size, surface, options = {}) => Object.freeze({ x, y, size, surface, ...options });
 export const CAT_SCENES = Object.freeze([
-  { id:'garden', name:'日式庭院', subtitle:'把小日子过成花园', min:0, icon:'leaf', ratio:'1483 / 1061', slots:[
-    spot(65,88,19,'树桩上'), spot(23,33,16,'左侧高台上'),
-    spot(78,14,14,'最高的猫爬架上'), spot(22.5,67,13,'抓柱旁'),
-    spot(92.2,48.4,7.8,'右侧猫窝里'), spot(34,82,15,'木廊上',{ toy:true }),
-    spot(61,61,16,'食盆旁'), spot(61,42,12,'蓝色猫屋顶上'),
-    spot(47,83,15,'木廊上',{ toy:true }), spot(38,43,13,'左侧台面上'),
-    spot(77,47,15,'右侧圆台上'), spot(88,71,14,'骰子猫窝顶上'),
+  { id:'garden', asset:'garden-portrait', name:'日式庭院', subtitle:'把小日子过成花园', min:0, icon:'leaf', ratio:'863 / 1823', slots:[
+    spot(65.5,78,24,'树桩上'), spot(29,35.7,20,'左侧高台上'),
+    spot(78,28.7,20,'最高的猫爬架上'), spot(32.5,57,12,'抓柱旁'),
+    spot(75.2,39.4,10,'右侧猫窝里'), spot(23,75.8,20,'红色软台上',{ toy:true }),
+    spot(56.5,68.8,20,'食盆旁'), spot(62,60.5,14,'蓝色猫屋顶上'),
+    spot(43,79,18,'木廊上',{ toy:true }), spot(44.6,44.7,15,'左侧台面上'),
+    spot(73.5,49,18,'右侧圆台上'), spot(83.5,67,16,'骰子猫窝顶上'),
   ] },
-  { id:'western', name:'西部露台', subtitle:'三位猫友的小聚会', min:3, icon:'sun', ratio:'1539 / 1022', slots:[
-    spot(52,36,15,'骰子猫窝顶上'), spot(69,66,15,'圆形小台上'),
-    spot(77,29,15,'高处的台面上'), spot(73.3,84,10,'抓柱旁'),
-    spot(73.5,46.5,7.3,'高处猫窝里'), spot(18,68,16,'露台上',{ toy:true }),
-    spot(31,37,16,'食盆旁'), spot(64,85,10,'阶梯旁'),
-    spot(31,75,17,'逗猫棒旁',{ toy:true }), spot(91,57,12,'右侧猫窝顶上'),
-    spot(83,68,14,'右侧圆台上'), spot(22,91,15,'软软的猫床里'),
+  { id:'western', asset:'western-portrait', name:'西部露台', subtitle:'八位猫友的小聚会', min:8, icon:'sun', ratio:'863 / 1822', slots:[
+    spot(52,34.5,18,'骰子猫窝顶上'), spot(66.8,49.3,18,'圆形小台上'),
+    spot(76.7,25.3,20,'高处的台面上'), spot(78,60.8,11.5,'抓柱旁'),
+    spot(74,35.1,10,'高处猫窝里'), spot(22,52.5,20,'露台上',{ toy:true }),
+    spot(35,35.2,17,'食盆旁'), spot(61,71,12,'阶梯旁'),
+    spot(33,60,20,'逗猫棒旁',{ toy:true }), spot(90,44.8,14,'右侧猫窝顶上'),
+    spot(92,55.4,14,'右侧圆台上'), spot(16,69,19,'软软的猫床里'),
   ] },
-  { id:'snow', name:'暖暖雪庭', subtitle:'六份陪伴，一场暖雪', min:6, icon:'snow', ratio:'1402 / 1122', slots:[
-    spot(52,76,18,'小伞下面'), spot(39,76,14,'小伞下面'),
-    spot(70,34,16,'雪庭高台上'), spot(37,55,12,'窗边',{ motion:'stretch', name:'背对着伸个懒腰' }),
-    spot(17,82,8.7,'橙色猫窝里'), spot(28,92,16,'红色软垫上',{ toy:true }),
-    spot(74,91,17,'食盆旁'), spot(10,61,10,'室内木地板上'),
-    spot(82,84,16,'雪庭小路旁',{ toy:true }), spot(88,47,12,'铃铛小台上'),
-    spot(23,71,15,'猫窝顶上'), spot(54,46,14,'栏杆台面上'),
+  { id:'snow', asset:'snow-portrait', name:'暖暖雪庭', subtitle:'集齐猫友，一场暖雪', min:12, icon:'snow', ratio:'863 / 1823', slots:[
+    spot(58,60,21,'小伞下面'), spot(38,59,16,'小伞下面'),
+    spot(70,29.5,19,'雪庭高台上'), spot(44.5,44,13,'窗边',{ motion:'stretch', name:'背对着伸个懒腰' }),
+    spot(14.5,56.4,9.5,'橙色猫窝里'), spot(28,71.4,22,'红色软垫上',{ toy:true }),
+    spot(85,76.7,19,'食盆旁'), spot(8,44,11,'室内木地板上'),
+    spot(84,64.5,20,'雪庭小路旁',{ toy:true }), spot(82.5,39.3,12.5,'铃铛小台上'),
+    spot(14.5,50.2,18,'猫窝顶上'), spot(59,36.2,13,'栏杆台面上'),
   ] },
 ].map(scene => Object.freeze({ ...scene, slots:Object.freeze(scene.slots) })));
 export function collectionScene(id, count) {

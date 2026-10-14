@@ -185,7 +185,7 @@ test('unclaimed growth survives a server restart and a year before a device with
   assert.equal(original.cloud.dispatch({ type: 'feed', food: 'fish' }), true);
   await until(() => drained(original) && original.state.pendingGrowth.length === 1, 'the generated bubble to be committed');
   const rewards = clone(original.state.pendingGrowth);
-  assert.equal(rewards[0].amount, 50);
+  assert.equal(rewards[0].amount, 55);
   assert.equal(original.state.xp, xp, 'generating a bubble does not immediately count its XP');
   assert.deepEqual(f.saved.state.pendingGrowth, rewards, 'the reward is persisted in GitHub rather than a device cache');
 
@@ -219,11 +219,11 @@ test('either caregiver can collect the other caregiver’s bubble and both clien
   assert.equal(male.state.xp, xp);
 
   assert.equal(male.cloud.dispatch({ type: 'claim-growth', rewardId: play.id }), true);
-  await until(() => drained(male) && female.state.pendingGrowth.length === 1 && female.state.xp === xp + 8, 'the other caregiver’s play reward to be collected');
+  await until(() => drained(male) && female.state.pendingGrowth.length === 1 && female.state.xp === xp + 9.6, 'the other caregiver’s play reward to be collected');
   assert.equal(female.cloud.dispatch({ type: 'claim-growth', rewardId: feed.id }), true);
   await until(() => drained(female) && male.state.pendingGrowth.length === 0 && female.state.pendingGrowth.length === 0, 'both clients to remove the claimed bubbles');
-  assert.equal(male.state.xp, xp + 58);
-  assert.equal(female.state.xp, xp + 58);
+  assert.equal(male.state.xp, xp + 64.6);
+  assert.equal(female.state.xp, xp + 64.6);
   assert.equal(f.saved.revision, 4);
   assert.deepEqual(f.saved.state.pendingGrowth, []);
   assert.equal(f.saved.state.careLimits.counts.feed, 1);
@@ -249,9 +249,9 @@ test('simultaneous claims by both clients persist and synchronize exactly one XP
   // Wait for both final save callbacks, even if SSE already removed the bubble.
   await until(() => settled(male) && settled(female) && male.state.pendingGrowth.length === 0 && female.state.pendingGrowth.length === 0, 'both competing claims and their conflict reconciliation to finish');
   await until(() => [male, female].every(client => client.observed.actions.filter(event => event.action.type === 'claim-growth').length === 1), 'the single accepted claim to reach both SSE clients');
-  assert.equal(f.saved.state.xp, before.xp + 50);
-  assert.equal(male.state.xp, before.xp + 50);
-  assert.equal(female.state.xp, before.xp + 50);
+  assert.equal(f.saved.state.xp, before.xp + 55);
+  assert.equal(male.state.xp, before.xp + 55);
+  assert.equal(female.state.xp, before.xp + 55);
   assert.equal(f.saved.revision, 1);
   assert.equal(f.saved.operations.length, 1);
   assert.deepEqual(f.saved.state.pendingGrowth, []);
@@ -278,8 +278,8 @@ test('a stale client immediately reloads cloud state after a claim conflict when
   assert.equal(female.cloud.dispatch(action), true);
   await until(() => drained(female) && female.state.pendingGrowth.length === 0, 'an immediate authoritative reload after HTTP 409');
   assert.equal(f.requests.filter(request => request.method === 'GET' && request.path === `/api/rooms/${HOME}`).length, readsBefore + 1, 'conflict recovery does not wait for the 20-second poll');
-  assert.equal(female.state.xp, before.xp + 50);
-  assert.equal(f.saved.state.xp, before.xp + 50);
+  assert.equal(female.state.xp, before.xp + 55);
+  assert.equal(f.saved.state.xp, before.xp + 55);
   assert.equal(f.saved.revision, 1);
   assert.equal(female.observed.actions.length, 0, 'reloading state does not invent a second committed claim event');
   assert.equal(female.observed.saves.at(-1).phase, 'error');

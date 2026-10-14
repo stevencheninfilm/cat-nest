@@ -7,10 +7,13 @@
 | 文件 | 输出尺寸 | 用途 | 输入 |
 | --- | --- | --- | --- |
 | `garden.png` | 1483 × 1061 | 默认日式庭院，已清除固定猫咪 | 用户图 8 |
-| `western.png` | 1539 × 1022 | 邀请 3 位猫友后的西部露台 | 用户图 3 |
-| `snow.png` | 1402 × 1122 | 邀请 6 位猫友后的雪庭 | 用户图 4 |
+| `western.png` | 1539 × 1022 | 收集 8 位猫友后的西部露台 | 用户图 3 |
+| `snow.png` | 1402 × 1122 | 集齐 12 位猫友后的雪庭 | 用户图 4 |
 | `cats.png` | 1448 × 1086 | 透明猫猫图集，4 列 × 3 行 | 用户图 2 的前 12 只猫 |
 | `scene-poses.png` | 1448 × 1086 | 场景专用的 12 种透明姿势，圆润手绘风格 | 原猫猫图集 + 用户图 8 和图 3 |
+| `garden-portrait.png` | 863 × 1823 | 沉浸式手机日式庭院 | 现有空白 `garden.png` |
+| `western-portrait.png` | 863 × 1822 | 沉浸式手机西部露台 | 现有空白 `western.png` |
+| `snow-portrait.png` | 863 × 1823 | 沉浸式手机雪庭 | 现有空白 `snow.png` |
 
 图 1 和图 6 用作整体猫猫收集场景参考，图 5 和图 7 用作家具、猫爬架和猫猫摆放参考。猫咪图集的顺序为 Bandit、Bolt、Breezy、Callie、Cocoa、Dottie、Fred、Gabriel、Ginger、Gozer、Lexy、Mack。中文名称、性格和邀请成就定义在 `src/cat-collection.js`。
 
@@ -18,7 +21,9 @@
 
 场景姿势包括蜷睡、揣爪打盹、枕爪趴卧、背对抓柱、猫窝探头、伸爪玩球、低头吃饭、安静坐着、翻肚皮玩球、翘尾看风景和伸懒腰。三种场景分别设置家具位置和尺寸；雪庭没有抓柱，花花在窗边伸懒腰。探头的可可只有头和前爪，放在猫窝洞口，不会露出穿过家具的完整身体。玩耍猫的毛线球单独绘制并轻微滚动。
 
-姿势图集的透明边界已逐只测量，`src/catbook-scenes.js` 用独立矩形取图并保留透明边距，避免生成图的单元格偏差把相邻猫切进来。脚底锚点按每只姿势的实际高度校准，访客按场景纵向位置控制前后层次。呼吸、挠爪、探头、拨球、进食和伸懒腰各有轻微动画，系统减少动态效果设置会停用所有场景猫和玩具动画。图鉴在手机和宽屏上统一使用 460 像素以内的手机单列布局。
+姿势图集的透明边界已逐只测量，`src/catbook-scenes.js` 用独立矩形取图并保留透明边距，避免生成图的单元格偏差把相邻猫切进来。脚底锚点按每只姿势的实际高度校准，访客按场景纵向位置控制前后层次。呼吸、挠爪、探头、拨球、进食和伸懒腰各有轻微动画，系统减少动态效果设置会停用所有场景猫和玩具动画。庭院默认铺满手机画面，宽屏也保持手机宽度居中；介绍、图鉴、成就、场景选择和猫猫详情都在点按后打开手机底部抽屉。图鉴为三列，成就为单列。原横向场景保留作素材来源，实际游戏使用重新构图的竖屏背景，所有猫猫落点已重新校准。
+
+场景按屏幕高度放大为可横向移动的画布，手机原生横向滑动和鼠标拖动均可浏览画面两侧，悬浮菜单保持固定。鼠标从猫猫身上拖动超过阈值后会捕获拖动并阻止点击详情；轻点会立即播放约 0.6 秒的姿势回应，再打开档案；睡卧猫伸身、坐姿猫轻跳、探头猫晃头，玩球猫和毛线球一起摆动。重复点按重新播放，点其他猫、拖动、打开菜单、返回或存档重绘会取消上一次待打开的档案。减少动态效果时直接显示档案，不延迟。窗口内维护各庭院的位置、抽屉滚动与返回焦点，存档刷新和邀请确认不会丢失当前打开的抽屉。Esc 先关闭抽屉，再次按下才返回小窝。
 
 ## 实际处理提示词
 
@@ -63,6 +68,61 @@ Row 3 col 3 Lexy, silver-gray and white cat: curled compactly sleeping sideways,
 Row 3 col 4 Mack, white with gray patches and stripes: front legs stretched forward, rear raised, a long relaxed stretching pose with closed eyes.
 Constraints: ONLY these twelve cats, no backgrounds, no furniture, no toys, no ground, no text, no watermark, no decorative elements. Every identity and every specified pose must be clearly recognizable. Each sprite must stay wholly within its cell with generous transparent margins. Preserve the 4x3 equal square-cell layout exactly.
 ```
+
+## 沉浸式竖屏背景提示词
+
+本轮仍使用内置 imagegen 工具，不使用 API 密钥。三个背景作为独立的新文件保存，没有覆盖原始场景。各提示词的输入为对应的现有空白场景，`transparent_background: false`。
+
+### garden-portrait.png
+
+```text
+Use case: precise-object-edit. Asset type: portrait mobile cat-collecting game background.
+Edit target: this existing EMPTY cat garden image. Recompose its familiar environment into a tall PORTRAIT 9:19 mobile game background, intended to fill an entire phone screen. Preserve the hand-drawn flat illustration, bold black outlines, original furniture designs, colors, materials and cozy mood. Rearrange the furniture into vertical layers with clear empty places for separate cat sprites. This must be a NEW PORTRAIT composition, not a landscape screenshot with padding. Every pixel of the full tall canvas is illustrated scenery. No borders.
+Scene and furniture layout: Japanese garden. Keep bamboo fence, pond, shrubs, bridge, wooden porch/walkways, orange cube house, blue cube house, white dice cube house, round stump, and two scratching towers. Arrange objects vertically, not horizontally. Upper 0-20%: bamboo fence and calm garden foliage, with no furniture at extreme top. Pond and small bridge around 20-30%, a striped cube house beside bridge around x38% y25%. Main cat tower on left: top platform centered x24% y38%, lower platform centered x34% y56%, scratching post x25% spanning y40-60%. Taller right tower: top platform x76% y27%, cubby with dark round FRONT opening x76% y42%, middle round platform x78% y55%. Orange cube house on stone x16% y53%. Blue cube house x69% y62%, clear flat roof. Wooden walkway at y64-87%, a yellow food bowl x41% y71%. White dice house centered x84% y78%, clear flat roof. Large round stump x54% y83%, broad visible flat top. Lower-left walkway at x25% y77% and x29% y85% has clear empty space for two playing cats. Bottom 90-100% contains only quiet foreground grass and little plants; leave furniture and cat resting locations above 88%.
+Use the reference's gentle slightly elevated three-quarter perspective. Cat platforms, beds, house tops and openings need clearly visible landing surfaces. Leave uncluttered scenery at the extreme top and bottom for small floating game buttons added later in code. Do not draw buttons or UI into the art.
+Constraints: Empty environment only, NO CATS or other animals ANYWHERE, including inside houses or on platforms. All cubby holes are empty dark holes. No people. No text, numbers, logos, labels, watermark, phone frame or interface. No photographic detail, no gradients, no blur. Rounded hand-drawn game artwork, uniform outline thickness. Tall portrait 9:19 proportions.
+```
+
+### western-portrait.png
+
+```text
+Use case: precise-object-edit. Asset type: portrait mobile cat-collecting game background.
+Edit target: this existing EMPTY cat garden image. Recompose its familiar environment into a tall PORTRAIT 9:19 mobile game background, intended to fill an entire phone screen. Preserve the hand-drawn flat illustration, bold black outlines, original furniture designs, colors, materials and cozy mood. Rearrange the furniture into vertical layers with clear empty places for separate cat sprites. This must be a NEW PORTRAIT composition, not a landscape screenshot with padding. Every pixel of the full tall canvas is illustrated scenery. No borders.
+Scene and furniture layout: Western wooden porch. Keep warm mustard plank wall, cacti, railing, green arched door, wagon wheel, dice cube house, cardboard box, fabric cat bed, scratching towers and food bowls. Arrange as a tall vertical porch. Top 0-20% has warm wall, hanging lamp and wagon-wheel decoration with no interactive resting location at extreme top. Main left porch at x12-59%, y27-73% with a white dice house centered x43% y36% and a food bowl on a crate x24% y42%. Right cat tower: top platform x76% y29%, dark front cubby opening x75% y44%, middle round platform x70% y59%, another cubby at x87% y61%, with a small flat top at y55%. Front scratching post at x73% y68-81%; base at x73% y82%. Short steps from porch into warm sandy ground around x51% y72%. Empty fabric cat bed x20% y80%. Empty floor at x25% y64% and x32% y71% for two playful cats. Small food bowl x57% y83%. Bottom 90-100% quiet foreground cactus/sand texture only. No animals anywhere.
+Use the reference's gentle slightly elevated three-quarter perspective. Cat platforms, beds, house tops and openings need clearly visible landing surfaces. Leave uncluttered scenery at the extreme top and bottom for small floating game buttons added later in code. Do not draw buttons or UI into the art.
+Constraints: Empty environment only, NO CATS or other animals ANYWHERE, including inside houses or on platforms. All cubby holes are empty dark holes. No people. No text, numbers, logos, labels, watermark, phone frame or interface. No photographic detail, no gradients, no blur. Rounded hand-drawn game artwork, uniform outline thickness. Tall portrait 9:19 proportions.
+```
+
+### snow-portrait.png
+
+```text
+Use case: precise-object-edit. Asset type: portrait mobile cat-collecting game background.
+Edit target: this existing EMPTY cat garden image. Recompose its familiar environment into a tall PORTRAIT 9:19 mobile game background, intended to fill an entire phone screen. Preserve the hand-drawn flat illustration, bold black outlines, original furniture designs, colors, materials and cozy mood. Rearrange the furniture into vertical layers with clear empty places for separate cat sprites. This must be a NEW PORTRAIT composition, not a landscape screenshot with padding. Every pixel of the full tall canvas is illustrated scenery. No borders.
+Scene and furniture layout: Cozy snowy Japanese porch. Keep warm wooden interior on left, cabinet, plants, fish bowl, orange cube cat house on round green mat, red cushion, tricolor parasol, wooden deck, snowy shrubs, white elevated platforms, little bell, play track and bowls. Arrange vertically. Top 0-22%: cream wall, green leaves and snowy shrub silhouettes. Interior on upper left at x0-42% and y22-55%; fish bowl x25% y49%, clear wooden floor x12% y53% and by the window x37% y49%. Snowy garden right. Higher white platform with empty green bowl x70% y30%; lower white platform with tiny bell x85% y43%. Snow-topped wood railing across x46-66% at y43%. Orange cube house at x18% y62% with visible dark front round opening at x18% y64%, flat clear roof at y58%. Tricolor parasol around x49% y60%, lower deck in its shade at y72%, space for TWO separate resting cats at x38% and x57%. Red cushion on lower-left wooden deck at x26% y82%. Empty wooden deck at x52% y83%. Play track on right at x83% y77%. Food bowl on grass at x74% y85%. Bottom 91-100% peaceful snow, grass and wood foreground, no furniture resting spots. No cats.
+Use the reference's gentle slightly elevated three-quarter perspective. Cat platforms, beds, house tops and openings need clearly visible landing surfaces. Leave uncluttered scenery at the extreme top and bottom for small floating game buttons added later in code. Do not draw buttons or UI into the art.
+Constraints: Empty environment only, NO CATS or other animals ANYWHERE, including inside houses or on platforms. All cubby holes are empty dark holes. No people. No text, numbers, logos, labels, watermark, phone frame or interface. No photographic detail, no gradients, no blur. Rounded hand-drawn game artwork, uniform outline thickness. Tall portrait 9:19 proportions.
+```
+
+## 收集难度与场景解锁
+
+| 猫友 | 邀请条件 |
+| --- | --- |
+| 斑斑 | 初次见面 |
+| 闪电 | 累计喂食 6 次 |
+| 微风 | 累计摸摸 20 次 |
+| 花花 | 累计玩耍 10 次 |
+| 可可 | 累计陪小猫入睡 6 次 |
+| 小雪 | 小猫成长到 Lv.8 |
+| 奶糖 | 累计喂食 30 次 |
+| 芝麻 | 累计摸摸 100 次 |
+| 姜姜 | 累计玩耍 50 次 |
+| 布丁 | 喂过 9 种不同食物 |
+| 银杏 | 累计完成双人喂养 12 轮 |
+| 云朵 | 小猫成长到 Lv.15 |
+
+默认开放日式庭院；西部露台需要收集 8 位猫友，暖暖雪庭需要集齐 12 位。未解锁场景使用灰色预览、锁图标、明确条件和当前收集进度，并禁止切换；旧场景偏好若不满足新条件，回到日式庭院。达成成就但尚未邀请的猫友不计入场景解锁数量。
+
+所有尚未邀请的猫猫在图鉴、陪伴成就和详情使用同一个灰色头像样式，包括达成条件等待邀请的猫。邀请成功后点亮头像并进入庭院。新门槛使用已有累计记录，不清空进度；旧存档已入住的猫猫继续保留、保持成就完成状态，无需重新达成。其实际累计记录低于新门槛时显示“已收集，陪伴记录保留”。
 
 ## 存档和校验
 

@@ -1,0 +1,6 @@
+{
+  "generator": "built-in image_gen",
+  "input": "exec-25976a35-866a-46c5-801d-17a29074183e.png",
+  "selectedOutput": "/Users/stevenchen/.codex/generated_images/01a13862-8e7d-7471-8d4e-5fd735f57faf/exec-7cb8d0b8-8006-4bc7-8dcd-88c53ff986e0.png",
+  "prompt": "Use case: precise-object-edit.\nEdit target: the attached 25%-remaining food sprite atlas.\nMake ONE tightly localized correction ONLY to row 2, column 1 (the chicken-cubes icon in the middle-left cell). Replace its current two substantial chicken cubes with ONE small original-style ivory chicken cube with a small bite missing, representing a tiny quarter portion. It must be visibly less food than the two cubes in the half-portion state. Keep the one cube near the original cell bottom-center, at the original individual cube scale; do not enlarge it to fill the cell.\nKeep all other eight icons unchanged in subject, positions, sizes, contents, colors, lighting and grid placement. Do not change the full-size rigid bowls, tin, mousse container or water glass. Preserve the square 3-by-3 equal cell layout and the transparent alpha background. No labels, percentages, text, watermarks, grid, backdrop, extra pieces, plates or shadows outside icons. Preserve transparency and clean antialiased edges."
+}
