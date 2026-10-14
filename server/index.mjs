@@ -14,6 +14,8 @@ server.listen(port, process.env.HOST || '0.0.0.0', () => {
 
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
   petHandler.close();
-  server.close(() => process.exit(0));
+  server.close(async () => {
+    try { await server.closeCourtStore(); } finally { process.exit(0); }
+  });
   setTimeout(() => process.exit(0), 10000).unref();
 });

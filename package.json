@@ -15,6 +15,7 @@
   "dependencies": {
     "lucide": "^0.468.0",
     "peerjs": "^1.5.5",
+    "pg": "^8.23.1",
     "three": "^0.186.1"
   },
   "devDependencies": {

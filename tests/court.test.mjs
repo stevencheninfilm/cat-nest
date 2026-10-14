@@ -20,7 +20,10 @@ async function fixture(t, options = {}) {
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${server.address().port}`;
   };
-  const stop = () => new Promise((resolve) => { server.close(resolve); server.closeIdleConnections(); });
+  const stop = () => new Promise((resolve, reject) => {
+    server.close(() => { server.closeCourtStore().then(resolve, reject); });
+    server.closeIdleConnections();
+  });
   await start();
   t.after(async () => { await stop(); await rm(directory, { recursive: true, force: true }); });
   const call = async (endpoint, body, token, headers = {}) => {
@@ -248,7 +251,7 @@ test('failed durable claims and submissions leave the committed room unchanged a
   await blockWrites();
   try {
     const failed = await f.call(`/rooms/${room.id}/claim`, { role: 'a', name: '甲方' });
-    assert.equal(failed.status, 500);
+    assert.equal(failed.status, 503);
     const unchanged = await f.get(room);
     assert.equal(unchanged.revision, room.revision);
     assert.equal(unchanged.parties.a.claimed, false);
@@ -262,7 +265,7 @@ test('failed durable claims and submissions leave the committed room unchanged a
   await blockWrites();
   try {
     const failed = await f.call(`/rooms/${room.id}/submit`, { statement: '保存失败后重试' }, a.token);
-    assert.equal(failed.status, 500);
+    assert.equal(failed.status, 503);
     const unchanged = await f.get(room, a.token);
     assert.equal(unchanged.revision, diskBefore.revision);
     assert.equal(unchanged.rounds[0].submissions.a, null);

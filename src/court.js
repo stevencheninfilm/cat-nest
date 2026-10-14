@@ -30,13 +30,22 @@ function verdictMarkup(value) {
     return line.trim() ? `<p>${content}</p>` : '<div class="court-paragraph-gap"></div>';
   }).join('');
 }
+const textValue = value => typeof value === 'string' ? value : '';
+const textItems = value => Array.isArray(value) ? value.filter(item => typeof item === 'string' && item.trim()) : textValue(value).trim() ? [value] : [];
+const paragraphMarkup = value => textItems(value).map(item => `<p>${esc(item).replace(/\n/g, '<br>')}</p>`).join('');
+const listMarkup = value => `<ul>${textItems(value).map(item => `<li>${esc(item)}</li>`).join('')}</ul>`;
+const responsibilityLevels = { primary: '主要责任', contributing: '有一定责任', limited: '责任有限', unclear: '暂难判断' };
+const confidenceLabels = { high: '判断把握较高', medium: '判断把握中等', low: '判断把握较低' };
 
 export function createCourt({ container, onBack, toast = () => {}, profileName = '铲屎官' }) {
   let active = false, room = null, session = null, config = null, configFailed = false;
   let polling = false, busy = false, uploading = false, selectedRole = 'a', appealMode = false;
   let images = [], pollTimer, presenceTimer, typingTimer, lastTypedAt = 0;
+  let evidenceTrigger = null;
   let lastHistory = '', lastParty = '', draftRound = '', selectedRoom = '';
   const drafts = new Map();
+  const resultViews = new Map();
+  const repairBusy = new Set();
   const $ = selector => container.querySelector(selector);
   container.classList.add('cat-court');
   container.hidden = true;
@@ -48,8 +57,8 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
         <span class="court-connection" id="court-connection" role="status"><i></i>连接中</span>
       </header>
       <section class="court-hero" aria-labelledby="court-title">
-        <div class="court-hero-copy"><span class="court-eyebrow">温柔开庭 · 好好相爱</span><h1 id="court-title">把委屈说清楚，<br>把彼此抱回来<span>。</span></h1><p>公正一点，温柔一点。<br class="court-mobile-break">让猫猫陪你们找到问题，也找到和好的办法。</p><span class="court-hero-note">${icon('heart')} 裁的是分歧，守的是你们</span></div>
-        <div class="court-judge" aria-label="温柔的小猫判官"><span class="court-judge-orbit"></span><span class="court-judge-star one">✦</span><span class="court-judge-star two">✧</span><span class="court-judge-bubble">两边的话，猫猫都会认真听喵。</span><img src="./assets/kitten.webp" alt="橘色小猫判官" draggable="false"><div class="court-judge-medal">${icon('heart')}</div><div class="court-judge-desk"><span>糯米大人</span>${icon('gavel')}</div></div>
+        <div class="court-hero-copy"><span class="court-eyebrow">温柔开庭 · 好好说话</span><h1 id="court-title">把事情说清楚，<br>把约定留下来<span>。</span></h1><p>公正一点，温柔一点。<br class="court-mobile-break">让猫猫陪你们找到问题，也找到下一步的办法。</p><span class="court-hero-note">${icon('heart')} 每个人的感受与边界，都值得被认真听见</span></div>
+        <div class="court-judge" aria-label="温柔的小猫判官"><span class="court-judge-orbit"></span><span class="court-judge-star one">✦</span><span class="court-judge-star two">✧</span><span class="court-judge-bubble">两边的话，猫猫都会认真听喵。</span><img src="./assets/cat-judge.svg" alt="穿着棕色法袍、坐在法槌旁的原创橘猫判官" draggable="false"></div>
       </section>
       <div class="court-notice" id="court-notice" hidden role="alert"></div>
       <section class="court-lobby" id="court-lobby" aria-label="发起或加入小法庭">
@@ -72,7 +81,7 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
             <section class="court-paper court-stage" id="court-stage" hidden aria-live="polite"></section>
             <section class="court-transcript" id="court-transcript" hidden><div class="court-transcript-heading"><h3>${icon('chat')} 本案陈词与记录</h3><span>每一轮，都会好好保留</span></div><div id="court-history"></div></section>
           </div>
-          <aside class="court-bench-note"><span class="court-note-icon">${icon('heart')}</span><h3>开庭之前，先深呼吸一下</h3><p>可以表达委屈，也请尽量描述具体的行为。猫猫不会因为谁声音大，就偏向谁。</p><div></div><strong>我们一起找的答案</strong><ul><li>哪些事实已经明确？</li><li>各自需要承担什么责任？</li><li>怎样让同样的分歧少发生？</li></ul><span class="court-note-sign">不求赢过你，只想靠近你。♡</span></aside>
+          <aside class="court-bench-note"><span class="court-note-icon">${icon('heart')}</span><h3>开庭之前，先深呼吸一下</h3><p>可以表达委屈，也请尽量描述具体的行为。猫猫不会因为谁声音大，就偏向谁。</p><div></div><strong>我们一起找的答案</strong><ul><li>哪些事实已经明确？</li><li>各自需要承担什么责任？</li><li>怎样让同样的分歧少发生？</li></ul><span class="court-note-sign">愿每句话被听见，每条边界被尊重。♡</span></aside>
         </div>
       </section>
       <footer class="court-footer"><span>${icon('paw')} 心平气和，喵喵有理</span><details><summary>关于小法庭与隐私</summary><p>猫猫会根据双方提供的信息分析，不把推测当成事实；信息不足时会说明不确定性。陈词与截图会保存在本网站服务端，审理时发送给 OpenAI。请遮挡无关隐私，只邀请你信任的人。</p><p id="court-config-note">正在检查判官连接…</p></details></footer>
@@ -93,6 +102,7 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     $('#court-submit').innerHTML = busy ? `${icon('clock')} 正在提交…` : uploading ? `${icon('image')} 正在整理截图…` : `${icon('check')} ${appealMode ? '提交补充证词，申请复议' : '提交我的陈词'}`;
     $('#court-evidence').disabled = busy || uploading;
     $('#court-statement').readOnly = busy;
+    updateRepairControls();
   }
   async function request(path, options = {}) {
     const abort = new AbortController();
@@ -198,7 +208,7 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
       const partner = personName(otherRole(session.role));
       markup = `<span class="court-stage-symbol">${icon('check')}</span><span class="court-section-kicker">你的陈词已收到</span><h3>等${esc(partner)}也说说吧</h3><p>双方提交后，猫猫会自动开庭。<br>这段时间可以回看你的陈词，也给彼此一点空间。</p><button class="court-link" type="button" data-court="share">${icon('copy')} 把入席邀请发给对方</button>`;
     } else if (session && round?.status === 'judged' && !appealMode) {
-      markup = `<span class="court-stage-symbol">${icon('heart')}</span><h3>判词已到，慢慢一起看</h3><p>如果有遗漏的事实或新的证据，<br>可以提交补充证词。双方提交后，猫猫会结合前文复议。</p><button class="court-secondary" type="button" data-court="appeal">${icon('chat')} 我想补充，申请复议</button>`;
+      markup = '';
     }
     stage.hidden = !markup;
     if (stage.innerHTML !== markup) stage.innerHTML = markup;
@@ -245,22 +255,112 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     }
     renderStage(round); renderHistory(); updateControls();
   }
+  function formalVerdict(round) {
+    const verdict = round.verdict;
+    const details = verdict.details && typeof verdict.details === 'object' && !Array.isArray(verdict.details) ? verdict.details : null;
+    const responsibility = details?.responsibility;
+    const confidence = confidenceLabels[details?.confidence];
+    const date = verdict.createdAt && Number.isFinite(Date.parse(verdict.createdAt)) ? new Date(verdict.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+    const latest = current()?.id === round.id;
+    const summaryLabels = { a_more: `${personName('a')}需承担更多责任`, b_more: `${personName('b')}需承担更多责任`, similar: '双方责任相近', undetermined: '现有信息不足以比较责任大小' };
+    const facts = Array.isArray(details?.facts) ? details.facts.filter(item => item && textValue(item.text)) : [];
+    const changed = textItems(details?.appeal?.changed);
+    const unchanged = textItems(details?.appeal?.unchanged);
+    const canRepair = Boolean(round.repair);
+    const boundary = round.repair?.mode === 'boundaries_first' || details?.repairMode === 'boundaries_first';
+    return `<section class="court-formal-verdict" aria-label="第 ${round.index} 轮正式判词">
+      <header class="court-formal-heading"><img src="./assets/cat-judge.svg" alt="橘猫判官" width="95" height="100"><div><span class="court-section-kicker">猫猫正式判词 · 第 ${round.index} 轮${round.kind === 'appeal' ? '复议' : '审理'}</span><h3>${esc(details?.headline || '每一份委屈，都值得认真听见')}</h3><div class="court-formal-meta">${date ? `<time>${esc(date)}</time><span>·</span>` : ''}<span>${esc(verdict.model || config?.model || 'ChatGPT')} · 高思考</span></div></div><span class="court-formal-stamp">${icon('paw')}已审理</span></header>
+      ${details ? `<div class="court-formal-content">
+        ${textValue(details.conclusion) ? `<section class="court-conclusion"><span class="court-mini-label">本轮结论</span>${paragraphMarkup(details.conclusion)}${confidence ? `<span class="court-confidence">${icon('shield')}${confidence}</span>` : ''}</section>` : ''}
+        ${textValue(details.rootAnalysis) ? `<section class="court-root-analysis"><h4>${icon('chat')} 问题的根源</h4>${paragraphMarkup(details.rootAnalysis)}</section>` : ''}
+        ${responsibility && typeof responsibility === 'object' ? `<section class="court-responsibility"><div class="court-section-heading"><h4>双方责任，分别说清</h4>${summaryLabels[responsibility.assessment] ? `<span>${esc(summaryLabels[responsibility.assessment])}</span>` : ''}</div>${textValue(responsibility.summary) ? `<p class="court-responsibility-summary">${esc(responsibility.summary)}</p>` : ''}<div class="court-responsibility-cards">${['a', 'b'].map(role => `<article class="court-responsibility-card ${role}"><div class="court-responsibility-name"><span>${role === 'a' ? icon('paw') : '◈'}</span><div><small>${roleLabel(role)}</small><h5>${esc(personName(role))}</h5></div>${responsibilityLevels[responsibility[role]?.level] ? `<b>${responsibilityLevels[responsibility[role].level]}</b>` : ''}</div>${paragraphMarkup(responsibility[role]?.reason)}</article>`).join('')}</div></section>` : ''}
+        ${textValue(details.decree) ? `<section class="court-decree"><div><span class="court-decree-icon">${icon('gavel')}</span><h4>猫猫判令</h4><span>为下一次，留下一份约定</span></div>${paragraphMarkup(details.decree)}</section>` : ''}
+        ${facts.length || textItems(details.disputes).length ? `<details class="court-verdict-details" data-history="facts-${esc(round.id)}"><summary><span>${icon('shield')} 事实、证据与尚未明确的分歧</span><span class="court-detail-chevron">⌄</span></summary>${facts.length ? `<h4>判官采用的事实</h4><ul class="court-facts">${facts.map(fact => `<li><p>${esc(fact.text)}</p>${textValue(fact.source) ? `<span>依据：${esc(fact.source)}</span>` : ''}</li>`).join('')}</ul>` : ''}${textItems(details.disputes).length ? `<h4>仍需说明的部分</h4>${listMarkup(details.disputes)}` : ''}</details>` : ''}
+        ${round.kind === 'appeal' && (changed.length || unchanged.length) ? `<details class="court-verdict-details" data-history="appeal-${esc(round.id)}"><summary><span>${icon('refresh')} 本轮复议，哪些判断改变了？</span><span class="court-detail-chevron">⌄</span></summary>${changed.length ? `<h4>本轮调整</h4>${listMarkup(changed)}` : ''}${unchanged.length ? `<h4>维持的判断</h4>${listMarkup(unchanged)}` : ''}</details>` : ''}
+        ${textItems(details.followUpQuestions).length ? `<section class="court-follow-up"><h4>猫猫还想听听</h4>${listMarkup(details.followUpQuestions)}</section>` : ''}
+        ${textValue(verdict.text) ? `<details class="court-verdict-details court-original" data-history="original-${esc(round.id)}"><summary><span>阅读完整判词原文</span><span class="court-detail-chevron">⌄</span></summary><div class="court-verdict-body">${verdictMarkup(verdict.text)}</div></details>` : ''}
+      </div>` : `<div class="court-legacy-verdict"><span class="court-mini-label">本轮完整判词</span><div class="court-verdict-body">${verdictMarkup(verdict.text)}</div></div>`}
+      <div class="court-formal-sign"><span>愿事实被说清楚，愿彼此的感受和边界被尊重。</span><span>猫猫判官 ${icon('paw')}</span></div>
+      ${canRepair || latest && session ? `<div class="court-result-actions">${canRepair ? `<button class="court-primary" type="button" data-court-view="repair" data-result-round="${esc(round.id)}">${icon(boundary ? 'shield' : 'heart')} ${boundary ? '查看边界建议' : '一起看看修复计划'} ${icon('next')}</button>` : ''}${latest && session ? `<button class="court-secondary" type="button" data-court="appeal">${icon('chat')} 补充证词，申请复议</button>` : ''}</div>` : ''}
+    </section>`;
+  }
+  function repairPlan(round) {
+    const plan = round.repair;
+    if (!plan) return '';
+    const details = round.verdict?.details;
+    const tasks = Array.isArray(plan.tasks) ? plan.tasks : [];
+    const boundary = plan.mode === 'boundaries_first' || details?.repairMode === 'boundaries_first';
+    const complete = tasks.filter(task => task.confirmations?.a && task.confirmations?.b).length;
+    const percentage = tasks.length ? Math.round(complete / tasks.length * 100) : 0;
+    const latest = current()?.id === round.id && current()?.status === 'judged';
+    const editable = Boolean(latest && session && !boundary);
+    const communication = details?.communication;
+    return `<section class="court-repair-plan ${boundary ? 'boundaries-first' : ''}" aria-label="第 ${round.index} 轮${boundary ? '边界建议' : '修复计划'}">
+      <header class="court-repair-heading"><div><span class="court-section-kicker">判词之后，下一步怎么走</span><h3>${boundary ? '先把自己的边界照顾好' : '把修复，落在一件件小事上'}</h3><p>${boundary ? '尊重意愿、保持安全。无需通过共同确认来证明和好。' : '不用急着解决所有问题。读懂任务，再按自己的实际完成情况确认。'}</p></div><img src="./assets/cat-judge.svg" alt="温柔守护边界的小猫判官" width="90" height="95"></header>
+      ${boundary ? `<div class="court-boundary-note">${icon('shield')}<p>本轮先以安全与边界为重点。以下是判官给出的建议，供各自阅读参考。</p></div>` : tasks.length ? `<section class="court-repair-progress" aria-label="修复任务共同确认进度"><div><strong>${complete === tasks.length ? '这些约定，双方都已确认' : '每一项确认，都来自你们自己'}</strong><span>共同确认 <b>${complete}</b> / ${tasks.length} 项 <em>${percentage}%</em></span></div><div class="court-repair-progress-track" role="progressbar" aria-label="双方共同确认的任务比例" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentage}" aria-valuetext="${tasks.length} 项任务中 ${complete} 项得到双方确认"><span style="width:${percentage}%"></span></div><p>${complete === tasks.length ? `双方已共同确认这 ${tasks.length} 件事。之后的感受，可以继续慢慢沟通。` : '进度记录的是双方确认，不代表感情评分。未完成的部分，可以按你们自己的节奏来。'}</p></section>` : ''}
+      ${!latest ? '<p class="court-repair-archive">这是此前一轮的计划，记录已保留。本轮任务以最新判词为准。</p>' : ''}
+      <div class="court-repair-tasks">${tasks.map((task, index) => {
+        const jointlyConfirmed = Boolean(task.confirmations?.a && task.confirmations?.b);
+        const ownConfirmed = Boolean(session && task.confirmations?.[session.role]);
+        const key = `${round.id}:${task.id}`;
+        return `<article class="court-repair-task ${!boundary && jointlyConfirmed ? 'is-complete' : ''}"><div class="court-task-top"><span class="court-task-number">${String(index + 1).padStart(2, '0')}</span><div><span class="court-mini-label">${boundary ? '边界建议' : `修复任务 ${index + 1}`}</span><h4>${esc(task.title)}</h4></div>${!boundary && jointlyConfirmed ? `<span class="court-task-complete">${icon('check')}双方已确认</span>` : ''}</div>${paragraphMarkup(task.description)}${boundary ? '' : `<div class="court-task-confirmations">${['a', 'b'].map(role => `<span class="court-task-person ${role} ${task.confirmations?.[role] ? 'confirmed' : ''}"><i>${task.confirmations?.[role] ? icon('check') : icon('clock')}</i><strong>${esc(personName(role))}${session?.role === role ? '<em>我</em>' : ''}</strong><span>${task.confirmations?.[role] ? '已确认' : '尚未确认'}</span></span>`).join('')}</div>${editable ? `<button class="${ownConfirmed ? 'court-secondary' : 'court-primary'} court-task-confirm" type="button" data-repair-round="${esc(round.id)}" data-repair-task="${esc(task.id)}" data-repair-confirmed="${ownConfirmed ? 'false' : 'true'}" ${repairBusy.has(key) ? 'disabled' : ''}>${repairBusy.has(key) ? icon('clock') : ownConfirmed ? icon('refresh') : icon('check')}<span>${repairBusy.has(key) ? '正在保存确认…' : ownConfirmed ? '我已确认 · 撤回我的确认' : '这项我已完成，确认一下'}</span></button>` : ''}`}</article>`;
+      }).join('')}</div>
+      ${communication && (textValue(communication.a) || textValue(communication.b)) ? `<section class="court-repair-communication"><div class="court-section-heading"><h4>${boundary ? '表达边界，可以这样说' : '好好沟通，可以从这句话开始'}</h4><span>判官提供的表达建议</span></div><div>${['a', 'b'].filter(role => textValue(communication[role])).map(role => `<article class="${role}"><span>${esc(personName(role))} · ${roleLabel(role)}</span><p>“${esc(communication[role])}”</p></article>`).join('')}</div></section>` : ''}
+      ${!boundary && editable ? '<p class="court-repair-explainer">只能确认或撤回自己这一方的记录。每项任务需双方分别确认，才计入共同完成进度。</p>' : ''}
+      <button class="court-secondary court-return-verdict" type="button" data-court-view="verdict" data-result-round="${esc(round.id)}">${icon('arrow')} 返回这轮判词</button>
+    </section>`;
+  }
+  function updateRepairControls() {
+    container.querySelectorAll('[data-repair-task]').forEach(button => {
+      const pending = repairBusy.has(`${button.dataset.repairRound}:${button.dataset.repairTask}`);
+      const round = room?.rounds?.find(item => item.id === button.dataset.repairRound);
+      const safe = round?.repair?.mode === 'together' && round?.verdict?.details?.repairMode !== 'boundaries_first';
+      button.disabled = pending || !session || current()?.id !== round?.id || round?.status !== 'judged' || !safe;
+      const label = button.querySelector('span');
+      if (label) label.textContent = pending ? '正在保存确认…' : button.dataset.repairConfirmed === 'false' ? '我已确认 · 撤回我的确认' : '这项我已完成，确认一下';
+    });
+  }
+  function repairFocusTarget(roundId, taskId) {
+    return [...container.querySelectorAll('[data-repair-task]')].find(button => button.dataset.repairRound === roundId && button.dataset.repairTask === taskId)
+      || [...container.querySelectorAll('.court-result-tabs [data-court-view]')].find(button => button.dataset.resultRound === roundId && button.dataset.courtView === 'repair');
+  }
   function renderHistory() {
     const readable = room?.rounds?.filter(round => Object.values(round.submissions || {}).some(Boolean) || round.verdict) || [];
     $('#court-transcript').hidden = !readable.length;
-    const signature = JSON.stringify(readable);
+    $('.court-transcript-heading h3').innerHTML = `${icon('chat')} ${readable.some(round => round.verdict) ? '本案判词、约定与证据' : '本案陈词与记录'}`;
+    const signature = JSON.stringify([readable, session?.role, [...resultViews]]);
     if (lastHistory === signature) return;
     lastHistory = signature;
     const openDetails = new Set([...container.querySelectorAll('#court-history details[open]')].map(el => el.dataset.history));
+    const focus = document.activeElement;
+    let focusKey = null;
+    if ($('#court-history').contains(focus)) {
+      if (focus?.dataset?.repairTask) focusKey = { type: 'repair', round: focus.dataset.repairRound, task: focus.dataset.repairTask };
+      else if (focus?.dataset?.courtView) focusKey = { type: 'view', round: focus.dataset.resultRound, view: focus.dataset.courtView };
+      else if (focus?.dataset?.evidenceRound) focusKey = { type: 'evidence', round: focus.dataset.evidenceRound, role: focus.dataset.evidenceRole, index: focus.dataset.evidenceIndex };
+      else if (focus?.tagName === 'SUMMARY' && focus.parentElement?.dataset?.history) focusKey = { type: 'summary', history: focus.parentElement.dataset.history };
+    }
     $('#court-history').innerHTML = [...readable].reverse().map(round => {
       const verdict = round.verdict;
-      return `<article class="court-record"><div class="court-record-heading"><span>第 ${round.index} 轮${round.kind === 'appeal' ? ' · 复议' : ' · 初次审理'}</span><span>${verdict ? '已出判词' : round.status === 'judging' ? '正在审理' : round.status === 'error' ? '等待重试' : '陈词收集中'}</span></div>${verdict ? `<section class="court-verdict"><div class="court-verdict-heading"><span class="court-verdict-seal">${icon('paw')}</span><div><span class="court-section-kicker">公正有据，温柔有度</span><h3>猫猫的判词</h3></div><span class="court-verdict-model">${esc(verdict.model || config?.model || 'ChatGPT')}</span></div><div class="court-verdict-body">${verdictMarkup(verdict.text)}</div><div class="court-verdict-sign">愿你们被听见，也愿你们靠近一点。<span>猫猫判官 ${icon('paw')}</span></div></section>` : ''}<div class="court-statements">${['a', 'b'].map(role => {
+      const view = resultViews.get(round.id) === 'repair' && round.repair ? 'repair' : 'verdict';
+      const boundary = round.repair?.mode === 'boundaries_first' || verdict?.details?.repairMode === 'boundaries_first';
+      return `<article class="court-record" data-result-id="${esc(round.id)}"><div class="court-record-heading"><span>第 ${round.index} 轮${round.kind === 'appeal' ? ' · 复议' : ' · 初次审理'}</span><span>${verdict ? '已出判词' : round.status === 'judging' ? '正在审理' : round.status === 'error' ? '等待重试' : '陈词收集中'}</span></div>${verdict ? `${round.repair ? `<nav class="court-result-tabs" aria-label="本轮判词与${boundary ? '边界建议' : '修复计划'}"><button type="button" data-court-view="verdict" data-result-round="${esc(round.id)}" aria-pressed="${view === 'verdict'}">${icon('gavel')} 正式判词</button><button type="button" data-court-view="repair" data-result-round="${esc(round.id)}" aria-pressed="${view === 'repair'}">${icon(boundary ? 'shield' : 'heart')} ${boundary ? '边界建议' : '一起修复'}</button></nav>` : ''}${view === 'repair' ? repairPlan(round) : formalVerdict(round)}` : ''}<div class="court-statements"><h4 class="court-evidence-record-title">${icon('image')} 本轮陈词与截图证据</h4>${['a', 'b'].map(role => {
         const submission = round.submissions?.[role];
         if (!submission) return `<div class="court-missing-statement">${esc(personName(role))}的陈词还在路上 ${icon('clock')}</div>`;
         const key = `${round.id || round.index}-${role}`;
         return `<details class="court-statement-record ${role}" data-history="${esc(key)}" ${openDetails.has(key) ? 'open' : ''}><summary><span>${role === 'a' ? icon('paw') : '<b>◈</b>'}<strong>${esc(personName(role))}的陈词</strong><em>${submission.images?.length ? `${submission.images.length} 张截图` : '文字陈词'}</em></span><span class="court-detail-chevron">⌄</span></summary><p>${esc(submission.statement)}</p>${submission.images?.length ? `<div class="court-source-images">${submission.images.map((file, index) => `<button type="button" data-evidence-round="${esc(round.id || round.index)}" data-evidence-role="${role}" data-evidence-index="${index}" aria-label="查看证据 ${esc(file.name)}"><img src="${esc(safeImage(file.dataUrl))}" alt="${esc(file.name)}" loading="lazy"><span>${esc(file.name)}</span></button>`).join('')}</div>` : ''}<time>${submission.submittedAt ? esc(new Date(submission.submittedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })) : ''} 已提交</time></details>`;
       }).join('')}</div></article>`;
     }).join('');
+    for (const details of container.querySelectorAll('#court-history details')) if (openDetails.has(details.dataset.history)) details.open = true;
+    updateRepairControls();
+    if (focusKey) {
+      let nextFocus;
+      if (focusKey.type === 'repair') nextFocus = repairFocusTarget(focusKey.round, focusKey.task);
+      if (focusKey.type === 'view') nextFocus = [...container.querySelectorAll('.court-result-tabs [data-court-view]')].find(button => button.dataset.resultRound === focusKey.round && button.dataset.courtView === focusKey.view);
+      if (focusKey.type === 'evidence') nextFocus = [...container.querySelectorAll('[data-evidence-round]')].find(button => button.dataset.evidenceRound === focusKey.round && button.dataset.evidenceRole === focusKey.role && button.dataset.evidenceIndex === focusKey.index);
+      if (focusKey.type === 'summary') nextFocus = [...container.querySelectorAll('#court-history details')].find(details => details.dataset.history === focusKey.history)?.querySelector('summary');
+      nextFocus?.focus({ preventScroll: true });
+    }
   }
   function renderUploads() {
     $('#court-upload-previews').innerHTML = images.map((file, index) => `<div class="court-upload-preview"><img src="${esc(safeImage(file.dataUrl))}" alt="${esc(file.name)}"><button type="button" data-court-remove="${index}" aria-label="移除截图 ${esc(file.name)}">${icon('close')}</button><span>${esc(file.name)}</span></div>`).join('');
@@ -352,11 +452,51 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     } finally { setBusy(false); }
   }
   async function handleClick(event) {
+    const resultView = event.target.closest('[data-court-view]');
+    if (resultView) {
+      const round = room?.rounds?.find(item => item.id === resultView.dataset.resultRound);
+      if (!round?.verdict || resultView.dataset.courtView === 'repair' && !round.repair) return;
+      resultViews.set(round.id, resultView.dataset.courtView === 'repair' ? 'repair' : 'verdict');
+      renderHistory();
+      [...container.querySelectorAll('.court-result-tabs [data-court-view]')].find(button => button.dataset.resultRound === round.id && button.dataset.courtView === resultViews.get(round.id))?.focus({ preventScroll: true });
+      return;
+    }
+    const confirmation = event.target.closest('[data-repair-task]');
+    if (confirmation) {
+      const roundId = confirmation.dataset.repairRound, taskId = confirmation.dataset.repairTask;
+      const round = room?.rounds?.find(item => item.id === roundId);
+      const key = `${roundId}:${taskId}`;
+      if (!session || repairBusy.has(key) || current()?.id !== roundId || round?.status !== 'judged' || round?.repair?.mode !== 'together' || round?.verdict?.details?.repairMode === 'boundaries_first') return;
+      const actorRole = session.role;
+      const priorRevision = room.revision;
+      const priorConfirmed = Boolean(round.repair.tasks.find(task => task.id === taskId)?.confirmations?.[actorRole]);
+      const desiredConfirmation = confirmation.dataset.repairConfirmed === 'true';
+      const restoreFocus = document.activeElement === confirmation;
+      repairBusy.add(key); updateRepairControls(); notice();
+      try {
+        await request(`/rooms/${room.id}/repair`, { method: 'POST', body: { roundId, taskId, confirmed: desiredConfirmation } });
+        const savedPlan = room?.rounds?.find(item => item.id === roundId)?.repair;
+        const savedTask = savedPlan?.tasks?.find(task => task.id === taskId);
+        const savedConfirmation = Boolean(savedTask?.confirmations?.[actorRole]);
+        if (savedTask && savedConfirmation === desiredConfirmation && savedConfirmation !== priorConfirmed && room.revision > priorRevision) {
+          const completed = savedPlan.tasks.filter(task => task.confirmations?.a && task.confirmations?.b).length;
+          toast(`${savedConfirmation ? '你的确认已保存' : '已撤回你的确认'} · 双方共同确认 ${completed} / ${savedPlan.tasks.length} 项`);
+        }
+      } catch (error) { notice(error.message); }
+      finally {
+        repairBusy.delete(key); updateRepairControls();
+        if (restoreFocus && (document.activeElement === document.body || document.activeElement === confirmation)) repairFocusTarget(roundId, taskId)?.focus({ preventScroll: true });
+      }
+      return;
+    }
     const evidence = event.target.closest('[data-evidence-round]');
     if (evidence) {
       const round = room.rounds.find(value => String(value.id || value.index) === evidence.dataset.evidenceRound);
       const file = round?.submissions?.[evidence.dataset.evidenceRole]?.images?.[Number(evidence.dataset.evidenceIndex)];
-      if (file && safeImage(file.dataUrl)) { $('#court-full-image').src = file.dataUrl; $('#court-full-image-name').textContent = file.name; $('#court-evidence-dialog').showModal(); }
+      if (file && safeImage(file.dataUrl)) {
+        evidenceTrigger = { round: evidence.dataset.evidenceRound, role: evidence.dataset.evidenceRole, index: evidence.dataset.evidenceIndex };
+        $('#court-full-image').src = file.dataUrl; $('#court-full-image-name').textContent = file.name; $('#court-evidence-dialog').showModal();
+      }
       return;
     }
     const remove = event.target.closest('[data-court-remove]');
@@ -405,6 +545,12 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
   container.addEventListener('input', handleInput);
   container.addEventListener('change', handleUpload);
   $('#court-evidence-dialog').addEventListener('click', event => { if (event.target === $('#court-evidence-dialog')) $('#court-evidence-dialog').close(); });
+  function restoreEvidenceFocus() {
+    if (!active || container.hidden || !evidenceTrigger) return;
+    [...container.querySelectorAll('[data-evidence-round]')].find(button => button.dataset.evidenceRound === evidenceTrigger.round && button.dataset.evidenceRole === evidenceTrigger.role && button.dataset.evidenceIndex === evidenceTrigger.index)?.focus({ preventScroll: true });
+    evidenceTrigger = null;
+  }
+  $('#court-evidence-dialog').addEventListener('close', restoreEvidenceFocus);
   async function open() {
     active = true; container.hidden = false; loadConfig();
     const requested = new URLSearchParams(location.search).get('court');
@@ -420,6 +566,6 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     if ($('#court-evidence-dialog').open) $('#court-evidence-dialog').close();
     const url = new URL(location.href); url.searchParams.delete('court'); history.replaceState(null, '', url);
   }
-  function destroy() { close(); container.removeEventListener('click', handleClick); container.removeEventListener('submit', handleSubmit); container.removeEventListener('input', handleInput); container.removeEventListener('change', handleUpload); container.innerHTML = ''; }
+  function destroy() { close(); container.removeEventListener('click', handleClick); container.removeEventListener('submit', handleSubmit); container.removeEventListener('input', handleInput); container.removeEventListener('change', handleUpload); $('#court-evidence-dialog').removeEventListener('close', restoreEvidenceFocus); container.innerHTML = ''; }
   return { open, close, destroy };
 }
