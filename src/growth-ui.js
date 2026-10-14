@@ -1,16 +1,27 @@
 import { FOODS } from './state.js';
+import { GROWTH_STAGES, stageStyle } from './growth-stages.js';
 
 const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
 const LABELS = { feed:'喂食', pet:'摸摸', play:'玩耍', sleep:'休息' };
+let artworkId = 0;
+
+/** Reference-matched, pre-rendered 3D artwork is shared by every growth surface.
+ * The SVG and mesh canvas remain available if an image cannot be loaded.
+ */
+export function jellyHeartMarkup(stage = GROWTH_STAGES[0]) {
+  const id = `jelly-heart-${++artworkId}`;
+  const gem = ['crystal','ruby','sapphire','diamond'].includes(stage.material);
+  return `<span class="growth-heart" data-heart-stage="${stage.id}" style="${stageStyle(stage)}" aria-hidden="true"><img class="growth-heart-art" src="./assets/growth-hearts/v1/${stage.id}.webp" width="512" height="512" alt="" decoding="async" loading="lazy" draggable="false"/><canvas class="growth-heart-canvas" data-heart-stage="${stage.id}" width="192" height="192"></canvas><svg class="growth-heart-fallback" viewBox="0 0 100 100"><defs><radialGradient id="${id}-body" cx=".3" cy=".24" r=".8"><stop stop-color="${stage.light}"/><stop offset=".38" stop-color="${stage.color}"/><stop offset=".75" stop-color="${stage.color}"/><stop offset="1" stop-color="${stage.deep}"/></radialGradient><linearGradient id="${id}-shine" x2=".5" y2="1"><stop stop-color="#fffce0" stop-opacity=".98"/><stop offset="1" stop-color="#fffce0" stop-opacity="0"/></linearGradient></defs><path fill="${stage.edge}" d="M51 25C36 5 8 13 8 37C8 60 28 78 52 91C77 80 96 57 96 35C96 11 67 7 51 25Z"/><path fill="url(#${id}-body)" d="M48 20C34 2 5 9 5 33C5 58 23 75 48 87C72 76 92 56 92 31C92 8 63 3 48 20Z"/>${gem ? '<path d="M48 20L24 28L18 49L48 75L78 47L73 24L48 20L48 75M18 49L78 47M24 28L48 43L73 24" fill="none" stroke="#fff" stroke-opacity=".4" stroke-width="1.4"/>' : ''}<ellipse fill="url(#${id}-shine)" cx="23" cy="27" rx="9" ry="15" transform="rotate(28 23 27)"/><path fill="none" stroke="${stage.light}" stroke-opacity=".7" stroke-width="2.5" stroke-linecap="round" d="M73 16Q85 21 85 34"/></svg><span class="growth-glint growth-glint-a"></span><span class="growth-glint growth-glint-b"></span></span>`;
+}
 
 export function growthLabel(reward) {
   return reward.kind === 'feed' ? FOODS[reward.food]?.name || '喂食' : LABELS[reward.kind] || '陪伴';
 }
 
-function rewardButton(reward, { blocked = false, claimingRewardId = null, detailed = false } = {}) {
+function rewardButton(reward, { blocked = false, claimingRewardId = null, detailed = false, stage = GROWTH_STAGES[0] } = {}) {
   const claiming = reward.id === claimingRewardId;
   const label = growthLabel(reward);
-  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" data-growth-reward="${escape(reward.id)}" ${blocked ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长" title="点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true"><span class="growth-heart">♥</span><strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的陪伴</span>` : ''}</button>`;
+  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长" title="点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${jellyHeartMarkup(stage)}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的陪伴</span>` : ''}</button>`;
 }
 
 /** Keep existing rewards in their own side slots when another bubble is collected. */

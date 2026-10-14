@@ -17,16 +17,16 @@
 .nest .pet-card .level-badge { display: contents; }
 .nest .pet-card .level-badge-heart { display: none; }
 .nest .pet-card #level {
-  position: absolute; top: 22px; left: 0; z-index: 3;
-  width: 34px; height: 34px; margin: 0; display: grid; place-items: center;
-  background: none; color: #fffaf2; font-size: 10px; font-weight: 900;
+  position: absolute; top: 13px; left: -5px; z-index: 3;
+  width: 44px; height: 44px; margin: 0; display: grid; place-items: center;
+  background: none; color: #fffaf2; font-size: 12px; font-weight: 900;
   text-shadow: 0 1px 2px #a76b3d44; pointer-events: none;
 }
 .nest .pet-card .xp-row { position: static; height: 24px; gap: 0; margin-top: 5px; }
 .nest .pet-card .xp-row > svg,
 .nest .pet-card .xp-stage-heart {
-  position: absolute; top: 22px; left: 0; z-index: 2;
-  width: 34px; height: 34px; margin: 0;
+  position: absolute; top: 13px; left: -5px; z-index: 2;
+  width: 44px; height: 44px; margin: 0;
   fill: #ffb95e; color: #ffdc9a; filter: drop-shadow(0 2px 3px #b878342e);
 }
 .nest .pet-card .progress-track {
@@ -97,7 +97,7 @@
   .nest .pet-card #xp { top: 20px; height: 22px; }
   .nest .pet-card #level,
   .nest .pet-card .xp-row > svg,
-  .nest .pet-card .xp-stage-heart { top: 18px; }
+  .nest .pet-card .xp-stage-heart { top: 9px; }
   .nest .pet-card .mode-selector { top: -4px; }
   .nest .pet-card .needs { margin-top: 3px; height: 10px; line-height: 10px; }
   .nest .feeding-preview { bottom: 17.1%; }

@@ -311,7 +311,20 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   next.history = next.history.slice(0, 40);
   return normalizeState(next, now);
 }
+/** Cumulative growth required to reach a level, shared with stage progress. */
+export function levelStartXp(level) {
+  const completed = Number.isFinite(level) ? Math.max(0, Math.floor(level) - 1) : 0;
+  return 15 * completed * (completed + 7);
+}
+
 export function levelInfo(xp) {
-  const level = Math.floor(xp / 120) + 1;
-  return { level, progress: xp % 120, target: 120 };
+  const total = Number.isFinite(xp) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(xp))) : 0;
+  // Each upgrade costs 120 + 30 * (level - 1). Completing n levels therefore
+  // costs 15 * n * (n + 7); invert the sum instead of iterating over every level.
+  const threshold = completed => levelStartXp(completed + 1);
+  let completed = Math.floor((Math.sqrt(49 + 4 * total / 15) - 7) / 2);
+  // Correct floating-point rounding at exact boundaries, including large saves.
+  while (threshold(completed) > total) completed -= 1;
+  while (threshold(completed + 1) <= total) completed += 1;
+  return { level: completed + 1, progress: total - threshold(completed), target: 120 + 30 * completed };
 }
