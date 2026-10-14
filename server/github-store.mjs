@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { initialState, normalizeState, reduceAction } from '../src/state.js';
+import { FOODS, initialState, normalizeState, reduceAction } from '../src/state.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -15,7 +15,7 @@ export class StorageError extends Error {
 export function sanitizeAction(value) {
   if (!plain(value)) return null;
   const keys = Object.keys(value);
-  if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && ['snack', 'meal', 'fish'].includes(value.food)) return { type: 'feed', food: value.food };
+  if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && typeof value.food === 'string' && Object.hasOwn(FOODS, value.food)) return { type: 'feed', food: value.food };
   if (['pet', 'play', 'sleep'].includes(value.type) && keys.length === 1) return { type: value.type };
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) return { type: 'rename', name: value.name.trim() };
   return null;

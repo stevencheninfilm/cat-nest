@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRoomSync, validateAction } from '../src/realtime.js';
+import { FOODS } from '../src/state.js';
 
 class Emitter {
   listeners = new Map();
@@ -99,6 +100,8 @@ function makeClient(network, id, options = {}) {
 test('strict action validation rejects unknown fields and malformed names', () => {
   assert.deepEqual(validateAction({ type: 'feed', food: 'meal' }), { type: 'feed', food: 'meal' });
   assert.deepEqual(validateAction({ type: 'rename', name: '  糯米  ' }), { type: 'rename', name: '糯米' });
+  for (const food of Object.keys(FOODS)) assert.deepEqual(validateAction({ type:'feed', food }), { type:'feed', food });
+  assert.equal(validateAction({ type:'feed', food:'__proto__' }), null);
   for (const action of [null, [], { type: 'feed', food: 'steak' }, { type: 'pet', coins: 99 }, { type: 'rename', name: '\n坏名字' }, { type: 'rename', name: 'a'.repeat(17) }]) {
     assert.equal(validateAction(action), null);
   }

@@ -73,6 +73,26 @@ test('parallel operations across store instances retry SHA conflicts without los
   assert.equal(mock.files.get(room.roomId).room.operations.length, 2);
 });
 
+test('new food choices and both caregivers persist with one pair reward under conflicting writes', async () => {
+  const mock = mockGitHub();
+  const first = makeStore(mock);
+  const second = makeStore(mock);
+  const room = await first.createRoom();
+  const feedOne = { operationId:'feeding-one', clientId:'client-one', name:'猫友', action:{type:'feed', food:'chicken'} };
+  const feedTwo = { operationId:'feeding-two', clientId:'client-two', name:'猫友', action:{type:'feed', food:'salmon'} };
+  await Promise.all([first.applyAction(room.roomId, feedOne), second.applyAction(room.roomId, feedTwo)]);
+  const saved = await first.getRoom(room.roomId);
+  assert.equal(saved.revision, 2);
+  assert.equal(saved.state.coins, room.state.coins - 30 - 45);
+  assert.equal(saved.state.love, room.state.love + 35 + 45 + 10);
+  assert.equal(saved.state.feedRecords.length, 2);
+  assert.equal(saved.state.feedingWindow.bonusClaimed, true);
+  const replay = await second.applyAction(room.roomId, feedTwo);
+  assert.equal(replay.duplicate, true);
+  assert.equal(replay.state.love, saved.state.love);
+  assert.equal(mock.files.get(room.roomId).room.state.feedRecords.length, 2);
+});
+
 test('failed writes do not produce successful state or erase previous progress', async () => {
   const mock = mockGitHub();
   const store = makeStore(mock);

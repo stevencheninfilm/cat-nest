@@ -1,4 +1,5 @@
 import Peer from 'peerjs';
+import { FOODS } from './state.js';
 
 /**
  * Two-person, host-authoritative rooms over PeerJS/WebRTC.
@@ -32,7 +33,7 @@ const cleanName = (value) => validText(value, 20) ? value.trim() : '铲屎官';
 export function validateAction(value) {
   if (!plain(value)) return null;
   const keys = Object.keys(value);
-  if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && ['snack', 'meal', 'fish'].includes(value.food)) {
+  if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && typeof value.food === 'string' && Object.hasOwn(FOODS, value.food)) {
     return { type: 'feed', food: value.food };
   }
   if (['pet', 'play', 'sleep'].includes(value.type) && keys.length === 1) return { type: value.type };
