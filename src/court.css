@@ -622,3 +622,6 @@ body:has(.cat-court:not([hidden])) { min-width: 0; }
   .court-text-expansion > summary { font-size: 13px; }
   .court-next-agreement { padding: 17px 15px; }
 }
+
+/* Court pages grow with their content instead of inheriting the fixed home height. */
+body.court-mode #app { display: block; height: auto; min-height: 100svh; }
