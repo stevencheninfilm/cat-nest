@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { normalizeAppearance, MAGE_CAT_VERSION } from './mage-cat-config.js';
-import { clipKey, chooseMageClip, mageExpression, MAGE_REACTION_SECONDS } from './mage-cat-animation.js';
+import { clipKey, chooseMageClip, mageExpression, MAGE_REACTION_SECONDS, advanceMagePose } from './mage-cat-animation.js';
 
 /** Nekueda's licensed Mage Cat, with its original skeleton, LODs, motions and textures. */
 export function createCatModel({container,assetBase,onReady,onError,reducedMotion=false}={}) {
   const base=(assetBase || `${import.meta.env.BASE_URL}api/pet-model/${MAGE_CAT_VERSION}`).replace(/\/$/,'');
-  let renderer,scene,camera,pivot,model,mixer,head;
+  let renderer,scene,camera,pivot,model,mixer;
   let frame=0,lastFrame=0,destroyed=false,paused=false,ready=false,failed=false;
   let sleeping=false,reaction='',reactionTime=100,elapsed=0,yaw=0,targetYaw=0;
   let pointer=null,didDrag=false,observer,currentClip,currentExpression='',textureRevision=0;
@@ -100,23 +100,14 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     const duration=MAGE_REACTION_SECONDS[reaction]||0;
     if(reaction && reactionTime>=duration){reaction='';playClip('idle');}
     if(currentClip==='idle')mixer.clipAction(clips.get('idle')).setEffectiveTimeScale(sleeping?.25:reducedMotion?.45:1);
-    mixer.update(delta);
     const magic=reaction==='play' && !reducedMotion;
     const ease=1-Math.exp(-delta*10);
     viewHalfHeight+=((magic?baseHalfHeight*1.32:baseHalfHeight)-viewHalfHeight)*ease;
     viewCenter+=((magic?1.85:1.5)-viewCenter)*ease;
     const aspect=Math.max(1,container.clientWidth)/Math.max(1,container.clientHeight);
     camera.left=-viewHalfHeight*aspect;camera.right=viewHalfHeight*aspect;camera.top=viewHalfHeight;camera.bottom=-viewHalfHeight;camera.updateProjectionMatrix();camera.position.y=viewCenter+.15;camera.lookAt(0,viewCenter,0);
-    yaw+=(targetYaw-yaw)*(1-Math.exp(-delta*8));pivot.rotation.y=yaw;
-    pivot.rotation.z=sleeping?Math.sin(elapsed*1.2)*.008:0;
-    if(head){
-      const strength=duration && reactionTime<duration?Math.sin(Math.PI*reactionTime/duration):0;
-      const nod=reaction==='feed'?(.10+Math.sin(reactionTime*9)*.055)*strength:0;
-      const tilt=reaction==='pet'?Math.sin(reactionTime*4)*.10*strength:0;
-      const gain=reducedMotion?.25:1;
-      const supplement=new THREE.Quaternion().setFromEuler(new THREE.Euler((sleeping?.08:nod)*gain,0,tilt*gain));
-      head.quaternion.multiply(supplement);
-    }
+    yaw+=(targetYaw-yaw)*(1-Math.exp(-delta*8));
+    advanceMagePose(mixer,pivot,delta,{sleeping,reaction,reactionTime,elapsed,yaw,reducedMotion});
     void updateExpression();
     try{renderer.render(scene,camera);}catch(error){fail(error);return;}
     frame=requestAnimationFrame(animate);
@@ -154,7 +145,6 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       const box=new THREE.Box3().setFromObject(model);const height=box.max.y-box.min.y;const scale=3/height;
       model.scale.multiplyScalar(scale);model.position.x-=((box.min.x+box.max.x)/2)*scale;model.position.y-=box.min.y*scale;
       model.position.z-=((box.min.z+box.max.z)/2)*scale;
-      head=model.getObjectByName('Head');
       const [normal,ao]=await Promise.all([texture('body-normal.webp',false),texture('body-ao.webp',false)]);
       for(const name of ['Mage_Cat','Mage_Cat_Clothes']){const m=materials.get(name);m.normalMap=normal;m.normalScale.set(.45,.45);m.aoMap=ao;m.aoMapIntensity=.35;}
       await applyAppearance();
