@@ -44,6 +44,7 @@ let clientId = profile.clientId || '';
 const cachedRoom = read('catnest.couple.room', null) || read('catnest.room', null);
 let roomId = /^[a-f0-9]{32}$/.test(cachedRoom || '') ? cachedRoom : 'couple-local';
 let state = normalizeState(read(`catnest.state.${roomId}`, initialState()));
+let confirmedState = state;
 const cleanUrl = new URL(location.href);
 cleanUrl.searchParams.delete('room');
 history.replaceState(null, '', cleanUrl);
@@ -63,6 +64,7 @@ let status = { phase:'solo', message:'选择身份，回到你们的小窝' };
 let members = [];
 let actionLocked = false;
 let pendingCloudActions = 0;
+let pendingGrowthClaims = new Set();
 let toastTimer;
 let careFeedbackKey = '', careFeedbackAt = 0;
 let growthPage = 0, claimingRewardId = null, growthGlowTimer;
@@ -135,7 +137,7 @@ function render() {
   $('.nest').classList.toggle('sleeping', state.sleeping);
   $('#sleep-button small').textContent = state.sleeping ? '叫醒' : '休息';
   $('#sleep-button').setAttribute('aria-label', state.sleeping ? '轻轻叫醒小猫' : '让小猫休息');
-  save(`catnest.state.${roomId}`, state);
+  save(`catnest.state.${roomId}`, cloudConfigured ? confirmedState : state);
   renderFeedingHome();
   renderGrowth();
   refreshStagesPanel();
@@ -200,7 +202,7 @@ function renderGrowth() {
   const rewards = state.pendingGrowth || [];
   for (const reward of rewards) rewardVisuals.set(reward.id, { ...reward, visualXp:state.xp });
   if (claimingRewardId && !rewards.some(reward => reward.id === claimingRewardId)) claimingRewardId = null;
-  const options = { blocked:careSaving(), claimingRewardId, page:growthPage, stage:growthStageForXp(state.xp) };
+  const options = { blocked:cloudConfigured && status.phase !== 'online', claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(state.xp) };
   $('#growth-rewards').innerHTML = growthBubbles(rewards, options);
   if ($('#modal').open && $('#modal-content').dataset.view === 'growth') {
     const focusedId = document.activeElement?.dataset.growthReward;
@@ -211,7 +213,7 @@ function renderGrowth() {
   }
   while (rewardVisuals.size > rewards.length + 100) rewardVisuals.delete(rewardVisuals.keys().next().value);
 }
-function animateGrowthCollection(rewardId, stage) {
+function animateGrowthCollection(rewardId, stage, operationId) {
   const target = $('#xp-bar').getBoundingClientRect();
   const origin = claimOrigins.get(rewardId) || $('#growth-rewards').getBoundingClientRect();
   const startX = origin.left + origin.width / 2, startY = origin.top + origin.height / 2;
@@ -219,6 +221,7 @@ function animateGrowthCollection(rewardId, stage) {
   for (let index = 0; index < 4; index += 1) {
     const heart = document.createElement('span');
     heart.className = 'growth-flight'; heart.style.cssText=stageStyle(stage); heart.innerHTML = jellyHeartMarkup(stage);
+    if (operationId) heart.dataset.operationId = operationId;
     heart.style.setProperty('--i', index);
     heart.style.setProperty('--from-x', `${startX - 12}px`);
     heart.style.setProperty('--from-y', `${startY - 12}px`);
@@ -257,7 +260,7 @@ function chime() {
   if (!sound) return;
   try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const gain = ctx.createGain(); gain.connect(ctx.destination); gain.gain.setValueAtTime(.04, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .35); const osc = ctx.createOscillator(); osc.connect(gain); osc.type = 'sine'; osc.frequency.setValueAtTime(660, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + .1); osc.start(); osc.stop(ctx.currentTime + .35); osc.onended = () => ctx.close(); } catch {}
 }
-function react(action, actor) {
+function react(action, actor, { optimistic = false, previewed = false, operationId, previousXp, confirmedXp } = {}) {
   const mine = actor.id === clientId;
   if (action.type === 'invite-cat') {
     toast(`${getCollectionCat(action.catId)?.name || '新猫猫'}已加入猫猫庭院，快去看看它吧 ♡`);
@@ -267,27 +270,32 @@ function react(action, actor) {
   if (action.type === 'claim-growth') {
     const reward = rewardVisuals.get(action.rewardId);
     if (reward) {
-      if (mine && $('#modal').open && $('#modal-content').dataset.view === 'growth') closeModal();
-      animateGrowthCollection(action.rewardId, growthStageForXp(reward.visualXp));
-      const upgrade=growthUpgrade(reward.visualXp, state.xp);
-      if (upgrade && upgrade.to.min>lastCelebratedStage && (!pendingUpgrade || upgrade.to.min>=pendingUpgrade.to.min)) {
-        pendingUpgrade=upgrade; scheduleUpgrade();
+      if (!previewed) {
+        if (mine && $('#modal').open && $('#modal-content').dataset.view === 'growth') closeModal();
+        animateGrowthCollection(action.rewardId, growthStageForXp(reward.visualXp), operationId);
       }
-      if (mine) toast(`已收下 ${reward.amount} 点成长 ♡`);
-      else toast(`${actor.name}收下了 ${reward.amount} 点成长 ♡`);
-      rewardVisuals.delete(action.rewardId);
-      catSpeech.say('collect');
+      if (!optimistic) {
+        const upgrade=growthUpgrade(previousXp ?? reward.visualXp, confirmedXp ?? state.xp);
+        if (upgrade && upgrade.to.min>lastCelebratedStage && (!pendingUpgrade || upgrade.to.min>=pendingUpgrade.to.min)) {
+          pendingUpgrade=upgrade; scheduleUpgrade();
+        }
+        if (mine) toast(`已收下 ${reward.amount} 点成长 ♡`);
+        else toast(`${actor.name}收下了 ${reward.amount} 点成长 ♡`);
+        rewardVisuals.delete(action.rewardId);
+      }
+      if (!previewed) catSpeech.say('collect');
     }
     claimingRewardId = null;
     renderGrowth();
-    chime();
+    if (!previewed) chime();
     return;
   }
-  if (mine && action.type === 'feed') toast(`${state.name}吃到${FOODS[action.food]?.name || '美味小餐'}啦 · 已${cloudConfigured ? '保存到云端' : '记录在小窝'}`);
+  if (mine && action.type === 'feed') toast(`${state.name}吃到${FOODS[action.food]?.name || '美味小餐'}啦 · ${optimistic ? '正在保存这份心意' : cloudConfigured ? '已保存到云端' : '已记录在小窝'}`);
   if (mine && action.type==='dress') {
     if(appearanceSubmitting && JSON.stringify(action.appearance)===JSON.stringify(appearanceDraft)){appearanceSubmitting=false;closeModal();}
-    toast(`小猫换好新装扮啦 · ${cloudConfigured?'已保存到云端':'已留在小窝'}`);
+    toast(`小猫换好新装扮啦 · ${optimistic ? '正在保存' : cloudConfigured?'已保存到云端':'已留在小窝'}`);
   }
+  if (previewed) return;
   // Let a successful local form submission close its dialog before the cat replies.
   queueMicrotask(() => catSpeech.say(action.type, action, { ...actor, mine }));
   $('.kitten').classList.remove('react-pet','react-feed','react-play');
@@ -299,6 +307,19 @@ function react(action, actor) {
     setTimeout(() => { $('#particles').innerHTML = ''; }, 1400);
   }
   chime(); if (mine && navigator.vibrate) navigator.vibrate(12);
+}
+function rollbackReaction(action, actor, { operationId }) {
+  for (const flight of document.querySelectorAll('.growth-flight')) {
+    if (flight.dataset.operationId === operationId) flight.remove();
+  }
+  clearTimeout(growthGlowTimer); $('.pet-card').classList.remove('growth-collected');
+  $('.kitten').classList.remove('react-pet', 'react-feed', 'react-play');
+  $('#particles').innerHTML = '';
+  catModel?.cancelReaction({ sleeping:state.sleeping });
+  catSpeech.say('idle');
+  claimingRewardId = null;
+  if (action.type === 'claim-growth') claimOrigins.delete(action.rewardId);
+  if (action.type === 'dress') appearanceDraft = normalizeAppearance(state.appearance);
 }
 function careSaving() { return cloudConfigured && (pendingCloudActions > 0 || saveStatus.phase === 'saving'); }
 function careNotice(key, message) {
@@ -320,7 +341,7 @@ function dispatch(action) {
   const care = careActionInfo(state, action, clientId);
   if (action.type === 'invite-cat' && careSaving()) { careNotice('pending', '正在保存上一份陪伴，稍等一下再邀请 ♡'); return false; }
   if (action.type === 'claim-growth') {
-    if (careSaving()) { careNotice('pending', '上一份心意正在保存，稍等一下 ♡'); return false; }
+    if (pendingGrowthClaims.has(action.rewardId)) return false;
     if (!(state.pendingGrowth || []).some(reward => reward.id === action.rewardId)) return false;
   }
   if (care.dailyLimit !== null && careSaving()) { careNotice('pending', '上一份陪伴正在保存，稍等一下 ♡'); return false; }
@@ -348,10 +369,11 @@ function startCloud() {
   const pendingKey = `catnest.pending.couple.${chosenRole}`;
   const pending = read(pendingKey, []);
   pendingCloudActions = pending.length;
+  pendingGrowthClaims = new Set(pending.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId));
   cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, initialState:state,
-    pending,
+    pending, optimisticReducer:reduceAction, onRollback:rollbackReaction,
     onRoom(id) { roomId=id; save('catnest.couple.room',id); save('catnest.room',id); },
-    onState(next) { state=normalizeState(next); render(); },
+    onState(next, metadata) { confirmedState=normalizeState(metadata?.confirmedState || next); state=normalizeState(next); render(); },
     onAction:react,
     onPresence(next) { members=next; renderConnection(); },
     onStatus(next) { status=next; renderConnection(); },
@@ -368,7 +390,7 @@ function startCloud() {
       }
       renderConnection();
     },
-    onPending(queue) { pendingCloudActions=queue.length; save(pendingKey,queue); refreshFeedingSheet(); updateCareControls(); renderGrowth(); catbook?.render(); },
+    onPending(queue) { pendingCloudActions=queue.length; pendingGrowthClaims=new Set(queue.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId)); save(pendingKey,queue); refreshFeedingSheet(); updateCareControls(); renderGrowth(); catbook?.render(); },
   });
   cloud.start();
 }
@@ -403,7 +425,7 @@ function openModal(view) {
   const templates = {
     'growth-bonus': () => growthBonusDetails(state),
     ...Object.fromEntries(NEED_KEYS.map(key => [`need-${key}`, () => needDetails(state, key, { clientId })])),
-    growth: () => growthTray(state.pendingGrowth || [], { blocked:careSaving(), claimingRewardId, page:growthPage, stage:growthStageForXp(state.xp) }),
+    growth: () => growthTray(state.pendingGrowth || [], { blocked:cloudConfigured && status.phase !== 'online', claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(state.xp) }),
     stages: () => growthStagesPanel(state.xp, stagePreviewId),
     'stage-upgrade': () => pendingUpgrade ? growthUpgradePanel(pendingUpgrade,state.xp) : growthStagesPanel(state.xp),
     appearance: () => appearanceSheet(),
@@ -525,7 +547,7 @@ document.addEventListener('click', event => {
   }
   if (el.dataset.growthReward) {
     const rewardId = el.dataset.growthReward;
-    if (careSaving() || claimingRewardId) { careNotice('pending', '上一份心意正在保存，稍等一下 ♡'); return; }
+    if (pendingGrowthClaims.has(rewardId) || claimingRewardId === rewardId) return;
     claimOrigins.set(rewardId, el.getBoundingClientRect());
     claimingRewardId = rewardId;
     if (!dispatch({ type:'claim-growth', rewardId })) { claimingRewardId=null; claimOrigins.delete(rewardId); }
@@ -555,7 +577,7 @@ document.addEventListener('click', event => {
     save('catnest.food', selectedFood); render(); return;
   }
   if (el.id === 'feed-button') { feedingTab='menu'; openModal('feeding'); return; }
-  if (el.id === 'serve-food') { if (dispatch({ type:'feed', food:selectedFood })) { closeModal(); if (cloudConfigured) toast('正在送上这份心意，保存后小猫就开饭啦…'); } return; }
+  if (el.id === 'serve-food') { if (dispatch({ type:'feed', food:selectedFood })) closeModal(); return; }
   if (el.id === 'feeding-role') { openModal('roles'); return; }
   if (el.id === 'toggle-sound') { sound = !sound; save('catnest.sound',sound); openModal('settings'); chime(); return; }
 });

@@ -2,7 +2,7 @@ import { getCoupleProfile } from './couple-profile.js';
 
 /** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
 export function createCloudRoom(options) {
-  const { apiBase, roomId, clientId, name, coupleRole, initialState, pending = [], onRoom, onState, onAction, onPresence, onStatus, onSaveStatus, onPending } = options;
+  const { apiBase, roomId, clientId, name, coupleRole, initialState, pending = [], onRoom, onState, onAction, onPresence, onStatus, onSaveStatus, onPending, optimisticReducer, onRollback = () => {} } = options;
   const base = apiBase.replace(/\/$/, '');
   const coupleMode = Object.hasOwn(options, 'coupleRole');
   const profile = getCoupleProfile(coupleRole);
@@ -11,10 +11,13 @@ export function createCloudRoom(options) {
   let revision = -1;
   let source, poll, retry, destroyed = false, draining = false, ready = false;
   const seen = new Set();
+  const previews = new Map();
+  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename']);
+  let authoritativeState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
   async function request(path, options = {}) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 95000);
+    const timeout = setTimeout(() => controller.abort(), optimisticReducer && options.method === 'POST' && path.endsWith('/actions') ? 15000 : 95000);
     try {
       const res = await fetch(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
       const data = await res.json();
@@ -22,12 +25,43 @@ export function createCloudRoom(options) {
       return data;
     } finally { clearTimeout(timeout); }
   }
-  function apply(data) {
+  function publishState() {
+    if (!authoritativeState) return;
+    if (!optimisticReducer) { onState(authoritativeState); return; }
+    let display = authoritativeState, optimistic = false;
+    const withdrawn = [];
+    for (const item of queue) {
+      const preview = previews.get(item.operationId);
+      if (!preview?.active) continue;
+      // A state-only live snapshot can already contain this care operation.
+      if (authoritativeState.pendingGrowth?.some(reward => reward.id === item.operationId)) continue;
+      const next = optimisticReducer(display, item.action, me, preview.at, item.operationId);
+      if (next) { display = next; optimistic = true; }
+      else { preview.active = false; withdrawn.push(item); }
+    }
+    onState(display, { confirmedState: authoritativeState, optimistic });
+    for (const item of withdrawn) onRollback(item.action, me, { operationId:item.operationId, reason:'conflict' });
+  }
+  function rollback(item, error) {
+    const preview = previews.get(item.operationId);
+    if (!preview?.active) return;
+    preview.active = false;
+    publishState();
+    onRollback(item.action, me, { operationId:item.operationId, reason:'rejected', code:error.code });
+  }
+  function apply(data, acknowledgement) {
     if (destroyed || !data?.state || !Number.isFinite(data.revision)) return;
-    if (data.revision >= revision) { revision=data.revision; onState(data.state); }
-    if (data.event && !seen.has(data.event.operationId)) {
-      seen.add(data.event.operationId); if (seen.size > 200) seen.delete(seen.values().next().value);
-      onAction(data.event.action, data.event.actor);
+    const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
+    const preview = previews.get(event?.operationId || acknowledgement?.operationId);
+    const previousXp = authoritativeState?.xp;
+    if (event) previews.delete(event.operationId);
+    if (acknowledgement) previews.delete(acknowledgement.operationId);
+    const changed = data.revision >= revision;
+    if (changed) { revision=data.revision; authoritativeState=data.state; }
+    if (changed || preview) publishState();
+    if (event && !seen.has(event.operationId)) {
+      seen.add(event.operationId); if (seen.size > 200) seen.delete(seen.values().next().value);
+      onAction(event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp });
     }
   }
   function saveQueue() { onPending(queue.map(item => ({ ...item }))); }
@@ -40,23 +74,32 @@ export function createCloudRoom(options) {
       try {
         const data=await request(`/api/rooms/${room}/actions`, { method:'POST', body:JSON.stringify(item) });
         if (destroyed) break;
-        apply(data); queue.shift(); saveQueue();
+        if (optimisticReducer && (!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
+        apply(data, item); queue.shift(); saveQueue();
         onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':'已保存到 GitHub 云端', at:Date.now() });
       } catch (error) {
         if (destroyed) break;
+        // A confirmed live receipt wins over a lost HTTP response.
+        if (optimisticReducer && seen.has(item.operationId)) {
+          queue.shift(); saveQueue();
+          onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':'已保存到 GitHub 云端', at:Date.now() });
+          continue;
+        }
         if (error.status >= 400 && error.status < 500 && error.status !== 429) {
           queue.shift(); saveQueue();
+          rollback(item, error); previews.delete(item.operationId);
           // Another device may have collected the same saved reward while our
           // live stream was interrupted. Reconcile from the cloud immediately;
           // never award XP or remove a bubble based only on the rejection.
-          if (['claim-growth','invite-cat'].includes(item.action?.type) && error.status === 409) {
+          if ((optimisticReducer || ['claim-growth','invite-cat'].includes(item.action?.type)) && error.status === 409) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* The next live snapshot or poll can still reconcile it. */ }
             if (destroyed) break;
           }
           onSaveStatus({ phase:'error', message:error.message });
           if (queue.length) continue;
         } else {
-          onSaveStatus({ phase:'error', message:'云端保存失败，将自动重试；请暂时保留本页' });
+          rollback(item, error);
+          onSaveStatus({ phase:'error', message:optimisticReducer ? '云端保存结果未确认，已恢复显示；将核对并自动重试，请暂时保留本页' : '云端保存失败，将自动重试；请暂时保留本页' });
           clearTimeout(retry); retry=setTimeout(drain, 8000);
         }
         break;
@@ -104,7 +147,17 @@ export function createCloudRoom(options) {
     start,
     dispatch(action) {
       if (!ready || destroyed || queue.length >= 20) return false;
-      queue.push({operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action}); saveQueue(); drain(); return true;
+      if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
+      const item = {operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action};
+      queue.push(item);
+      if (optimisticReducer && previewTypes.has(action?.type)) previews.set(item.operationId, { at:Date.now(), active:true, animated:false });
+      saveQueue(); drain();
+      if (previews.has(item.operationId)) {
+        publishState();
+        const preview = previews.get(item.operationId);
+        if (preview?.active) { preview.animated=true; onAction(action, me, { operationId:item.operationId, optimistic:true, previewed:false }); }
+      }
+      return true;
     },
     updateName(next) { if (coupleMode) return; me.name=next; if(room&&ready) subscribe(); },
     destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); },

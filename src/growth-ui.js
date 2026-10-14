@@ -18,11 +18,11 @@ export function growthLabel(reward) {
   return reward.kind === 'feed' ? FOODS[reward.food]?.name || '喂食' : LABELS[reward.kind] || '陪伴';
 }
 
-function rewardButton(reward, { blocked = false, claimingRewardId = null, detailed = false, stage = GROWTH_STAGES[0] } = {}) {
-  const claiming = reward.id === claimingRewardId;
+function rewardButton(reward, { blocked = false, claimingRewardId = null, pendingRewardIds = new Set(), detailed = false, stage = GROWTH_STAGES[0] } = {}) {
+  const claiming = reward.id === claimingRewardId || pendingRewardIds.has(reward.id);
   const label = growthLabel(reward);
   const multiplier = reward.boosted ? (10 + (reward.boostCount ?? 1)) / 10 : 1;
-  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${jellyHeartMarkup(stage)}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的陪伴${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
+  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${jellyHeartMarkup(stage)}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的陪伴${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
 }
 
 /** Keep existing rewards in their own side slots when another bubble is collected. */

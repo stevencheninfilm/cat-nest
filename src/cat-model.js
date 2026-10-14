@@ -23,6 +23,11 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       if(ready){playClip(chooseMageClip(reducedMotion?undefined:type,sleeping,[...clips.keys()]));updateExpression();}
       startFrame();
     },
+    cancelReaction(state={}) {
+      reaction='';reactionTime=100;
+      if(typeof state.sleeping==='boolean')sleeping=state.sleeping;
+      if(ready){playClip('idle');updateExpression();startFrame();}
+    },
     setState(state={}) {
       const before=sleeping;
       if(typeof state.sleeping==='boolean')sleeping=state.sleeping;
