@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: cat-nest-cloud
+    runtime: node
+    plan: free
+    region: oregon
+    repo: https://github.com/stevencheninfilm/cat-nest
+    branch: main
+    buildCommand: npm ci
+    startCommand: node server/pet-server.mjs
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: GITHUB_REPOSITORY
+        value: stevencheninfilm/cat-nest-data
+      - key: GITHUB_BRANCH
+        value: main
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false

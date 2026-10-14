@@ -31,6 +31,9 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_COURT_API_URL: ${{ vars.VITE_COURT_API_URL }}
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload site

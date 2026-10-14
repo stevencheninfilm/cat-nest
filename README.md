@@ -1,43 +1,76 @@
-# 猫猫小窝
+# 猫猫小窝 · 猫猫判官
 
-面向手机浏览器的猫咪养成网站。暖色房间、毛绒小猫与触屏按钮参考提供的 UI；可喂食、摸摸、逗猫、休息和改名。左下角保留「猫猫判官」入口，其独立网站待另行搭建。
+暖色猫咪养成网站。支持喂食、摸摸、逗猫、休息、改名和双人养猫；首页左下角的「猫猫判官」进入独立审理界面。
 
 ## 本地运行
 
-需要 Node.js 22（最低 20.19）。
+需要 Node.js 22（最低 22.13）。
 
 ```sh
 npm ci
+cp .env.example .env
+# 在本机编辑 .env，填入 OPENAI_API_KEY
 npm run dev
 ```
 
-打开终端显示的本机地址。手机与电脑在同一 Wi-Fi 时，可访问终端显示的 Network 地址。
+打开终端显示的 `http://localhost:5173`。此命令同时启动前端和 8787 端口的审理服务，Vite 自动转发 `/api/court` 请求。手机与电脑在同一 Wi-Fi 时，可以使用终端显示的 Network 地址。
+
+不填 API 密钥也可以创建案件、邀请对方、选择角色、上传截图和提交陈词；双方提交后会明确显示「判官尚未连接」，不会生成假判词。配置密钥并重启服务后，可在原案件重试。
 
 ```sh
 npm test
 npm run build
-npm run preview
+npm start
 ```
 
-构建产物位于 `dist/`；所有资源使用相对路径，可部署到 GitHub Pages 的 `/cat-nest/` 子路径。
+生产模式由 Node 同时托管 `dist/` 和审理 API，默认地址 `http://localhost:8787`。只有前端预览时可用 `npm run dev:client`；单独启动审理服务可用 `npm run dev:server`。
 
-## 两个人一起养猫
+## 猫猫判官
 
-1. 点击首页「邀请一起养」，复制邀请链接并发给另一位猫友。
-2. 对方在手机浏览器打开链接；也可输入相同的猫窝暗号。
-3. 双方看到「2 人在线」后，喂食、摸摸、逗猫、休息及改名会实时同步。昵称可在设置中修改。
+1. 点击小窝左下角「猫猫判官」，发起审理。
+2. 双方打开同一个案件邀请链接，分别选择 A 方和 B 方；同一角色只能由一人认领。
+3. 填写经过、感受、诉求，上传截图作为证据。对方可以看到在线与正在输入状态；未提交的草稿保留在自己的设备。
+4. 每轮双方都提交后才启动一次审理。判官参考双方证词和截图，说明事实、证据局限、责任、修复行动及避免重演的约定。
+5. 对判词有异议时可以继续陈词、补充证据。复审同样等待双方提交，结合之前每一轮证据和判词重新判断，并保留历史记录。
 
-同一个小窝最多两人。邀请链接相当于入场钥匙，请分享给信任的人。
+判官语气公正、温柔，带一点猫猫的可爱。不会为了和气强行各打五十大板，也不会将片段截图当成完整事实；遇到威胁和暴力时优先保护当事人，避免强迫和好。
 
-双人功能使用 PeerJS 公共信令服务建立 WebRTC 连接，无需数据库或 API 密钥。双方需要保持页面打开；手机锁屏、浏览器后台暂停或网络限制可能打断连接。此版本没有云端永久存档、登录账户或离线进度合并：进度保存在当前浏览器，加入已有房间时采用第一位在线者的存档；清除浏览器数据会删除本机进度。某些网络需要另行配置 TURN 服务才能稳定连接。
+模型默认 `gpt-6-astra`，推理强度固定为 `high`，使用 OpenAI Responses API；支持图片输入。可以在服务端设置 `OPENAI_MODEL`。模型能力与参数参考 [OpenAI 模型文档](https://developers.openai.com/api/docs/models) 和 [Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create)。截图及已提交证词会发送给 OpenAI 进行分析，API 使用 `store: false`。
 
-## 部署到 GitHub Pages
+## 存档和同步
 
-目标仓库：`stevencheninfilm/cat-nest`。
+- **养猫进度**保存在浏览器，双人养猫使用 PeerJS/WebRTC。邀请链接相当于小窝钥匙，请分享给信任的人。双方需要保持页面打开；手机锁屏或网络限制可能打断连接，部分网络需要 TURN 服务。第一位进入者提供猫窝存档，没有离线进度合并。
+- **审理案件**由服务器保存到 `COURT_DATA_FILE`（默认 `.cat-court/rooms.json`），包括已提交证词、图片、角色凭据和判词。部署时应使用持久化磁盘，并保护该目录及备份。当前版本面向单服务进程，多个实例不能共同写同一个 JSON 文件。
+- **角色凭据**保存在当前浏览器标签页的 sessionStorage。刷新可继续使用原角色；请勿清除此案件的浏览器会话数据，清除后不能仅凭昵称重新领取已占用角色。
+- **输入状态**经服务器同步；双方无需同时在线提交。提交后的陈词和证据不可直接覆盖，补充内容进入下一轮，便于核对审理依据。
+- 案件邀请允许对方认领空闲角色；已认领角色的凭据用于保护案件内容和提交权限。不要公开案件链接或角色凭据。当前版本没有账户系统、角色找回或自动清理服务端案件。
 
-1. 将项目推送到该仓库的 `main` 分支。
-2. 在 GitHub 仓库进入 **Settings → Pages → Build and deployment**，将 **Source** 设为 **GitHub Actions**。
-3. `.github/workflows/deploy.yml` 会先运行测试，再构建并发布 `dist/`。之后每次推送到 `main` 都会自动更新网站，也可在 Actions 中手动运行。
-4. 首次部署成功后，以 **Settings → Pages** 中显示的地址为准。若账户主页绑定了自定义域名，项目网站可能随之使用该域名。
+## 部署
 
-GitHub Pages 只托管前端；本项目的双人连接仍依赖双方浏览器和 PeerJS 服务可用。构建不包含密钥或服务器配置。
+### 前端和 API 一起部署
+
+适合支持 Node.js 22 的服务器或容器平台。设置服务端 `OPENAI_API_KEY`，运行 `npm ci && npm run build`，启动命令 `npm start`。平台应提供 HTTPS，端口由 `PORT` 指定；为 `COURT_DATA_FILE` 挂载持久化磁盘。
+
+项目也包含 Dockerfile：
+
+```sh
+docker build -t cat-nest .
+docker run -p 8787:8787 --env-file .env -v cat-court:/data -e COURT_DATA_FILE=/data/rooms.json cat-nest
+```
+
+API 密钥只通过服务器环境变量传入。不要使用 `VITE_OPENAI_API_KEY`，也不要把 `.env`、案件文件或备份放入公开仓库。
+
+### 保留 GitHub Pages
+
+现有仓库目标为 `stevencheninfilm/cat-nest`，`.github/workflows/deploy.yml` 会测试、构建并部署 `dist/`。GitHub Pages 只能运行静态前端，不能运行判官 API。
+
+1. 另外部署本项目的 Node 服务，设置密钥、持久化磁盘和 HTTPS。
+2. 在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 设置 `VITE_COURT_API_URL` 为 API 的 HTTPS origin，例如 `https://court.example.com`。
+3. 在 API 服务器设置 `COURT_ALLOWED_ORIGINS` 为前端的确切 origin，例如 `https://stevencheninfilm.github.io`；多个 origin 用逗号分隔，不包含路径、不使用通配符。
+4. 重新运行 Pages 工作流。前端会连接此 API；同源部署无需上述两项配置。
+
+没有配置可访问的判官服务时，已部署的静态网站会保留养猫功能，并明确提示判官服务未连接。
+
+## 验证范围
+
+`npm test` 包括养猫状态、PeerJS 双人同步、判官角色权限、双方提交门槛、截图输入、并发审理、复审上下文和存档恢复。判官接口测试使用隔离的模拟 OpenAI 响应验证调用协议，不替代配置真实 API 密钥后的端到端验收。
