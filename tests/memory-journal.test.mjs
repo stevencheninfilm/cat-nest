@@ -101,5 +101,6 @@ test('new-owner adoption records the actual naming time and cat name while resto
   assert.equal(adopted.diary.entries.find(e=>e.id==='adoption').catName,'团团');
   assert.equal(adopted.diary.entries.find(e=>e.id==='adoption').at,adopted.homeBond.adoptedAt);
   const withoutDiary={...adopted};delete withoutDiary.diary;
+  assert.equal(normalizeState(withoutDiary,START+20000).diary.adoptedAt,START+10000);
   assert.equal(normalizeMemoryJournal(undefined,withoutDiary,START+20000,START).adoptedAt,START+10000);
 });
