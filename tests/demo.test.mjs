@@ -5,8 +5,8 @@ import { namespacedStorage, DEMO_PREFIX } from '../demo/storage.js';
 import { createDemoEngine, DEMO_ACTORS, DEMO_ROOM } from '../demo/engine.js';
 import { createDemoCourt } from '../demo/court-engine.js';
 import { validCoupleCare } from '../demo/app/couple-care.js';
-import { validCollection } from '../demo/app/cat-collection.js';
-import { FOODS } from '../demo/app/state.js';
+import { validCollection, COLLECTION_CATS, collectionCatProgress } from '../demo/app/cat-collection.js';
+import { FOODS, levelInfo } from '../demo/app/state.js';
 const time=Date.now();
 function store() { const data=new Map();return {data,getItem:key=>data.get(key) ?? null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)}; }
 function setup() { const storage=store();return {storage,engine:createDemoEngine({storage,now:()=>time})}; }
@@ -39,6 +39,7 @@ test('rejected care changes neither bubbles nor saved state',()=>{
 test('demo scenario unlocks all collection conditions without malformed data',()=>{
   const {engine}=setup();engine.scenario('unlock');const state=engine.snapshot().state;
   assert.ok(state.xp>10000);assert.ok(validCollection(state.collection,Object.keys(FOODS)));
+  assert.ok(COLLECTION_CATS.every(cat=>collectionCatProgress(cat,state.collection,levelInfo(state.xp).level).complete));
   engine.scenario('portion');assert.equal(engine.snapshot().state.feedRecords.length,2);
   engine.reset();assert.equal(engine.snapshot().state.xp,400);
 });

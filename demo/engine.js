@@ -55,9 +55,9 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
     scenario(kind, role='male', food='mousse') {
       const other = role === 'male' ? 'female':'male';
       if (kind === 'unlock') {
-        const s=clone(record.state); s.xp=levelStartXp(85)+20; s.coins=99999;
-        s.collection.stats={feed:200,pet:200,play:200,sleep:100,pair:100}; s.collection.foods=Object.keys(FOODS);
-        s.collection.wins={rps:20,memory:20,gomoku:20};
+        const s=clone(record.state); s.xp=levelStartXp(125)+20; s.coins=99999;
+        s.collection.stats={feed:10000,pet:10000,play:10000,sleep:10000,pair:10000}; s.collection.foods=Object.keys(FOODS);
+        s.collection.wins={rps:10000,memory:10000,gomoku:10000};
         s.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:20,play:10,sleep:3}};
         replace(s); return '已解锁全部成长阶段和图鉴邀请条件';
       }
