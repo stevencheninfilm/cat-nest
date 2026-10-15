@@ -182,13 +182,13 @@ export function normalizeState(value, now = Date.now()) {
   next.pendingGrowth = normalizePendingGrowth(value.pendingGrowth);
   next.games = normalizeGameHub(value.games,now);
   next.coupleCare = normalizeCoupleCare(value.coupleCare, now);
-  next.diary = normalizeMemoryJournal(value.diary, next, now);
   next.careLimits = normalizeCareLimits(value.careLimits, now);
   next.collection = normalizeCollection(value.collection, { ...next, savedBoostCount, careLimits:validCareLimits(value.careLimits) ? value.careLimits : next.careLimits }, FOODS);
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
     next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
   }
   next.homeBond = normalizeHomeBond(value.homeBond,next);
+  next.diary = normalizeMemoryJournal(value.diary, next, now);
   return next;
 }
 function careInfo(current, action, actorId, now) {
