@@ -328,7 +328,7 @@ test('feeding cooldown belongs to each caregiver but daily quota and pair reward
   await assert.rejects(store.applyAction(room.roomId, feed('duplicate')), error => error.code === 'CARE_COOLDOWN' && /30分钟/.test(error.message));
   const paired = await store.applyAction(room.roomId, feed(1, 'client-two'));
   assert.equal(paired.state.xp, room.state.xp);
-  assert.equal(pendingXp(paired.state), pendingXp(first.state) + 16.5);
+  assert.equal(pendingXp(paired.state), pendingXp(first.state) + 18);
   for (let round = 1; round < 3; round += 1) {
     time = CARE_START + round * 4 * HOUR;
     await store.applyAction(room.roomId, feed(round * 2));
@@ -336,13 +336,22 @@ test('feeding cooldown belongs to each caregiver but daily quota and pair reward
   }
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.equal(pendingXp(saved.state), 66);
+  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[5.5,18,5.5,18,5.5,16.5]);
+  assert.equal(pendingXp(saved.state), 69);
   assert.equal(saved.state.coins, room.state.coins - 6 * 5);
   assert.equal(saved.state.careLimits.counts.feed, 6);
   assert.equal(saved.state.careLimits.counts.pair, 3);
+  for(let index=6;index<CARE_LIMITS.feed.dailyLimit;index++) {
+    time=CARE_START+(8+(index-5)*.5)*HOUR;
+    await store.applyAction(room.roomId,feed(index,index%2?'client-two':'client-one'));
+  }
+  const capped=await store.getRoom(room.roomId);
+  assert.equal(capped.state.careLimits.counts.feed,10);
+  assert.equal(capped.state.careLimits.counts.pair,3);
+  assert.equal(capped.state.collection.achievements.daily.feed,10);
   const beforeRejected = structuredClone(mock.files.get(room.roomId).room);
   time = CARE_START + 12 * HOUR;
-  await assert.rejects(store.applyAction(room.roomId, feed(6, 'client-three')), error => error.code === 'DAILY_CARE_LIMIT' && error.status === 409 && /6次上限/.test(error.message) && /4小时后可继续/.test(error.message) && /北京时间00:00/.test(error.message));
+  await assert.rejects(store.applyAction(room.roomId, feed(10, 'client-three')), error => error.code === 'DAILY_CARE_LIMIT' && error.status === 409 && /10次上限/.test(error.message) && /4小时后可继续/.test(error.message) && /北京时间00:00/.test(error.message));
   assert.deepEqual(mock.files.get(room.roomId).room, beforeRejected, 'quota refusal must not spend coins or edit feeding records');
   time = Date.parse('2026-10-13T16:00:00Z');
   const nextDay = await makeStore(mock, { now: () => time }).applyAction(room.roomId, feed('next-day'));
@@ -361,7 +370,8 @@ test('daily play cap prevents added growth and currency, while sleep toggles can
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.coins, room.state.coins + 100);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.equal(pendingXp(saved.state), 90.4);
+  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[...Array(5).fill(9.6),...Array(5).fill(8.8)]);
+  assert.equal(pendingXp(saved.state), 92);
   time += 30 * MINUTE;
   await assert.rejects(store.applyAction(room.roomId, operation('play-quota-excess', 'play')), error => error.code === 'DAILY_CARE_LIMIT');
   assert.deepEqual((await store.getRoom(room.roomId)).state, saved.state);
@@ -416,7 +426,7 @@ test('appearance saves and reloads while care is capped without resetting its le
   const cared = await restarted.applyAction(room.roomId, operation('pet-next-day-outfit'));
   assert.deepEqual(cared.state.appearance, appearance);
   assert.equal(cared.state.xp, dressed.state.xp);
-  assert.equal(pendingXp(cared.state), pendingXp(dressed.state) + 3);
+  assert.equal(pendingXp(cared.state), pendingXp(dressed.state) + 3.3);
   assert.equal(cared.state.coins, dressed.state.coins);
   assert.equal(cared.state.careLimits.counts.pet, 1);
   assert.deepEqual((await makeStore(mock, { now: () => time }).getRoom(room.roomId)).state, cared.state);
@@ -597,7 +607,7 @@ test('boosted decimal growth is persisted before acknowledgment and concurrent c
   assert.equal(saved.state.xp,89.9);
   assert.deepEqual(saved.state.pendingGrowth,[]);
   assert.equal(mock.files.get(room.roomId).room.claimedGrowth[0].amount,3.9);
-  assert.equal(saved.state.energy,52,'the independent saved clock includes a full day offline');
+  assert.equal(saved.state.energy,76,'the independent saved clock includes a full day offline');
   const replay=await makeStore(mock,{now:()=>time}).applyAction(room.roomId,source);
   assert.equal(replay.duplicate,true);
   assert.equal(replay.state.xp,89.9);
@@ -608,7 +618,7 @@ test('server time removes expired boosts and clients cannot supply a multiplier 
   let time=CARE_START;
   const store=makeStore(mock,{now:()=>time});
   const room=await store.createRoom({initialState:{...initialState(time),hunger:81,mood:81,energy:81}});
-  time+=30*MINUTE;
+  time+=HOUR;
   for(const fields of [{boosted:true},{multiplier:1.1},{needsUpdatedAt:time}]) {
     await assert.rejects(store.applyAction(room.roomId,{...operation('client-cannot-set-boost'),action:{type:'pet',...fields}}),error=>error.code==='INVALID_ACTION');
   }
@@ -620,4 +630,28 @@ test('server time removes expired boosts and clients cannot supply a multiplier 
   file.room.state.needsUpdatedAt=-1;
   await assert.rejects(makeStore(mock,{now:()=>time}).getRoom(room.roomId),error=>error.code==='STORAGE_CORRUPT');
   assert.equal(file.room.revision,1);
+});
+
+test('energy recovery is saved once across store restarts and keeps working after the sleep quota', async () => {
+  const mock=mockGitHub(), time=CARE_START;
+  const store=makeStore(mock,{now:()=>time});
+  const state={...initialState(time),hunger:100,mood:100,energy:76};
+  state.careLimits.counts.sleep=CARE_LIMITS.sleep.dailyLimit;
+  const room=await store.createRoom({initialState:state});
+  await assert.rejects(store.applyAction(room.roomId,operation('exhausted-sleep-energy','sleep')),error=>error.code==='DAILY_CARE_LIMIT');
+  const water={...operation('energy-water-source'),action:{type:'feed',food:'water'}};
+  const recovered=await store.applyAction(room.roomId,water);
+  assert.equal(recovered.state.energy,84);
+  assert.equal(recovered.state.pendingGrowth[0].amount,6);
+  assert.equal(recovered.state.careLimits.counts.feed,1);
+  const restarted=makeStore(mock,{now:()=>time});
+  const replay=await restarted.applyAction(room.roomId,water);
+  assert.equal(replay.duplicate,true);
+  assert.equal(replay.state.energy,84);
+  const read=await makeStore(mock,{now:()=>time}).getRoom(room.roomId);
+  assert.equal(read.state.energy,84);
+  assert.equal(read.state.careLimits.counts.sleep,3);
+  const next=await restarted.applyAction(room.roomId,operation('energy-recovered-growth'));
+  assert.equal(next.state.pendingGrowth[1].amount,3.9);
+  assert.equal(next.state.xp,room.state.xp);
 });

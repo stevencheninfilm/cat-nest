@@ -24,7 +24,7 @@ test('a tired cat rests in random mode without rolling an impossible play', () =
   assert.deepEqual(resolveInteraction('random', tired, () => { throw new Error('must not roll while tired'); }), { type: 'sleep' });
   const after = reduceAction(tired, resolveInteraction('random', tired));
   assert.equal(after.sleeping, true);
-  assert.equal(after.energy, 27);
+  assert.equal(after.energy, 37);
   assert.equal(after.history.length, 1);
 });
 
@@ -39,10 +39,10 @@ test('a tap on a sleeping cat in random mode wakes it once', () => {
 test('fixed modes preserve the selection and rest if play is unaffordable', () => {
   const state = initialState();
   assert.deepEqual(resolveInteraction('pet', state, () => 0.9), { type: 'pet' });
-  assert.deepEqual(resolveInteraction('play', { ...state, energy: 8 }), { type: 'play' });
-  assert.deepEqual(resolveInteraction('play', { ...state, energy: 7 }), { type: 'sleep' });
+  assert.deepEqual(resolveInteraction('play', { ...state, energy: 4 }), { type: 'play' });
+  assert.deepEqual(resolveInteraction('play', { ...state, energy: 3 }), { type: 'sleep' });
   assert.deepEqual(resolveInteraction('sleep', state), { type: 'sleep' });
-  assert.match(getInteractionHint('play', { ...state, energy: 7 }), /休息/);
+  assert.match(getInteractionHint('play', { ...state, energy: 3 }), /休息/);
 });
 
 test('random boundaries always produce a supported action', () => {
@@ -64,7 +64,7 @@ test('random taps only select interactions whose shared care limits allow them',
 });
 
 test('tired random interactions can use an available alternative while rest is cooling down', () => {
-  const tired = { ...initialState(), energy: 7 };
+  const tired = { ...initialState(), energy: 3 };
   const allowed = action => action.type !== 'sleep';
   assert.deepEqual(resolveInteraction('random', tired, () => { throw new Error('one possible action needs no random roll'); }, allowed), { type: 'pet' });
   assert.equal(resolveInteraction('random', tired, () => 0, () => false), null);

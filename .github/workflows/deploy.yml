@@ -36,8 +36,6 @@ jobs:
           VITE_COURT_API_URL: ${{ vars.VITE_COURT_API_URL }}
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Build independent demo at /test/
-        run: node scripts/build-demo.mjs
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

@@ -8,4 +8,3 @@ export function initializeDemoVisit(target) {
   // Back/forward cache can restore an entire JS heap without reloading modules.
   target.addEventListener('pageshow',event=>{if(event.persisted)target.location.reload();});
 }
-if(typeof window!=='undefined')initializeDemoVisit(window);

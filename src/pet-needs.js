@@ -1,7 +1,14 @@
-export const NEEDS_DECAY_INTERVAL_MS = 30 * 60_000;
+export const NEEDS_DECAY_INTERVAL_MS = 60 * 60_000;
 export const NEEDS_BOOST_THRESHOLD = 80;
 export const NEED_KEYS = Object.freeze(['hunger', 'mood', 'energy']);
 export const NEED_LABELS = Object.freeze({ hunger:'饱饱', mood:'开心', energy:'活力' });
+export const CARE_NEED_EFFECTS = Object.freeze({
+  feed:Object.freeze({ mood:1 }),
+  pet:Object.freeze({ mood:2 }),
+  play:Object.freeze({ hunger:-1, mood:4, energy:-4 }),
+  sleep:Object.freeze({ energy:30 }),
+});
+export const PLAY_ENERGY_COST = -CARE_NEED_EFFECTS.play.energy;
 
 const validTime = value => Number.isSafeInteger(value) && value >= 0;
 const bounded = value => Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;

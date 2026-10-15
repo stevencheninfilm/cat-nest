@@ -47,6 +47,23 @@ function harness(t,base) {
   return {room,ack,requests,notifications,sources,accepted,display:()=>display,confirmed:()=>confirmed};
 }
 
+test('daily feeding waits for confirmed cloud state before unlocking a new daily cat',async t=>{
+  const base=seedInvites(initialState(),1);base.careLimits.counts.feed=9;base.collection.stats.feed=9;base.collection.achievements.daily.feed=9;
+  const h=harness(t,base);await h.room.start();h.room.dispatch({type:'feed',food:'water'});
+  assert.equal(h.display().collection.achievements.daily.feed,10);
+  assert.equal(h.confirmed().collection.achievements.daily.feed,9);assert.deepEqual(h.notifications,[]);
+  const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
+  assert.deepEqual(h.notifications,[{type:'cat-unlocked',id:'toast'}]);
+});
+
+test('a rejected outfit preview never unlocks the dress cat',async t=>{
+  const base=initialState(),h=harness(t,base);await h.room.start();
+  h.room.dispatch({type:'dress',appearance:{...base.appearance,clothes:1}});
+  assert.equal(h.display().collection.achievements.dress,1);assert.equal(h.confirmed().collection.achievements.dress,0);assert.deepEqual(h.notifications,[]);
+  h.ack.resolve(response({error:{code:'STORAGE_WRITE_FAILED',message:'尚未确认保存'}},503));await flush();
+  assert.equal(h.display().collection.achievements.dress,0);assert.deepEqual(h.notifications,[]);
+});
+
 test('delayed feeding does not unlock a cat until the shared cloud save is confirmed',async t=>{
   const base=seedInvites(initialState(),1);base.collection.stats.feed=29;
   const h=harness(t,base);await h.room.start();h.room.dispatch({type:'feed',food:'meal'});
@@ -54,9 +71,9 @@ test('delayed feeding does not unlock a cat until the shared cloud save is confi
   assert.equal(h.confirmed().collection.stats.feed,29);
   assert.deepEqual(h.notifications,[]);
   const saved=h.accepted();h.ack.resolve(response(saved));await flush();
-  assert.deepEqual(h.notifications,[{type:'cat-unlocked',id:'bolt'}]);
+  assert.deepEqual(h.notifications,[{type:'cat-unlocked',id:'bolt'},{type:'cat-unlocked',id:'sunshine'}]);
   h.sources[0].emit('action',saved);
-  assert.equal(h.notifications.length,1,'HTTP and live receipts celebrate the achievement once');
+  assert.equal(h.notifications.length,2,'HTTP and live receipts celebrate each achievement once');
 });
 
 test('a rejected optimistic care action leaves no unlock notice after rollback',async t=>{

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createServer } from 'vite';
 import { localModelPreview, localModelUrl } from '../scripts/local-model-preview.mjs';
 
 test('development model URL retires the temporary server without altering production or custom URLs', async t => {
@@ -23,13 +22,21 @@ test('Vite serves optimized model files before the API proxy and blocks original
   await writeFile(join(directory, 'model.glb'), bytes);
   await writeFile(join(directory, 'coat-0.webp'), 'RIFF-local-texture-WEBP');
   await writeFile(join(directory, 'original.zip'), 'private-source-package');
-  const server = await createServer({
-    configFile:false, root:directory, plugins:[localModelPreview({ directory })],
-    server:{ host:'127.0.0.1', port:0, proxy:{ '/api':{ target:'http://127.0.0.1:1' } } },
-  });
-  t.after(async () => { await server.close(); await rm(directory, { recursive:true, force:true }); });
-  await server.listen();
-  const base = `http://127.0.0.1:${server.httpServer.address().port}/api/pet-model/mage-cat-v1/`;
+  let middleware;
+  localModelPreview({directory}).configureServer({middlewares:{use(handler){middleware=handler;}}});
+  t.after(()=>rm(directory,{recursive:true,force:true}));
+  const base='http://127.0.0.1/api/pet-model/mage-cat-v1/';
+  // Exercise the actual asset middleware without starting a second Vite preview.
+  async function fetch(url,options={}) {
+    return new Promise((resolve,reject)=>{
+      let status=200,headers={};
+      const response={headersSent:false,destroyed:false,
+        setHeader(key,value){headers[key]=value;},
+        writeHead(code,values){status=code;headers={...headers,...values};this.headersSent=true;},
+        end(body){resolve(new Response(options.method==='HEAD'||status===304?null:body,{status,headers}));}};
+      middleware({url:new URL(url).pathname,method:options.method||'GET',headers:options.headers||{}},response,error=>error?reject(error):reject(Error('asset middleware was bypassed')));
+    });
+  }
   const model = await fetch(`${base}model.glb`);
   assert.equal(model.status, 200);
   assert.equal(model.headers.get('content-type'), 'model/gltf-binary');

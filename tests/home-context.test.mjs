@@ -12,7 +12,9 @@ test('only the named Evian entry selects its fixed, separate save',()=>{
     const home=homeContext(path);
     assert.equal(home.id,'evian');assert.equal(home.roomId,EVIAN_ROOM_ID);
   }
-  for (const path of ['/','/cat-nest/','/cat-nest/index.html','/test/','/evian-other/','/evian/other']) assert.equal(homeContext(path).id,'main');
+  for (const path of ['/','/cat-nest/','/cat-nest/index.html']) assert.equal(homeContext(path).id,'main');
+  assert.equal(homeContext('/test/').id,'test');
+  for (const path of ['/evian-other/','/evian/other']) assert.equal(homeContext(path).id,'unknown');
   assert.notEqual(EVIAN_ROOM_ID,'0aed6937627c924a7497025ebd18fe5d');
 });
 
@@ -59,6 +61,7 @@ test('the deployed nested entry shares parent assets and keeps its own home link
   await plugin.closeBundle();
   const nested=await readFile(join(dir,'dist/evian/index.html'),'utf8');
   assert.equal(await readFile(join(dir,'dist/steven/index.html'),'utf8'),nested);
+  assert.equal(await readFile(join(dir,'dist/test/index.html'),'utf8'),nested);
   assert.match(nested,/<base href="\.\.\/">/);
   const redirect=await readFile(join(dir,'dist/index.html'),'utf8');
   assert.match(redirect,/url=\.\/test\//);assert.match(redirect,/location.replace/);assert.doesNotMatch(redirect,/assets\/app.js|steven|evian/);
@@ -74,5 +77,5 @@ test('Steven uses the original home and unchanged browser keys while keeping nav
  for(const path of ['/steven','/steven/','/cat-nest/steven/','/cat-nest/steven/index.html']) {
   const home=homeContext(path);assert.equal(home.id,'steven');assert.equal(home.roomId,null);assert.equal(home.href,'./steven/');
  }
- assert.equal(homeContext('/steven/other/').id,'main');
+ assert.equal(homeContext('/steven/other/').id,'unknown');
 });

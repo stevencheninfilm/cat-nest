@@ -113,6 +113,18 @@ test('food forecasts include each eligible need and expire with the shared decay
   assert.match(feedingButtonContent({...options(state)}).content,/成长气泡 \+32.5/);
   assert.match(feedingSheet(options(state)),/已含状态 ×1.3 加成/);
   assert.match(feedingSheet(options(state)),/营养猫粮，成长气泡加32.5/);
-  assert.match(feedingButtonContent({...options(state),now:now+30*60_000}).content,/成长气泡 \+25/);
-  assert.match(feedingSheet({...options(state),now:now+30*60_000}),/当前基础成长 ×1.0/);
+  assert.match(feedingButtonContent({...options(state),now:now+60*60_000}).content,/成长气泡 \+25/);
+  assert.match(feedingSheet({...options(state),now:now+60*60_000}),/当前基础成长 ×1.0/);
+});
+
+test('the selected meal and drinking water explain their energy recovery without promising the new bonus early', () => {
+  const state={...initialState(now),hunger:100,mood:100,energy:76};
+  for(const [selectedFood,energy,amount] of [['meal',6,30],['water',8,6]]) {
+    const opts={...options(state),selectedFood};
+    const html=feedingSheet(opts);
+    assert.match(html,new RegExp(`class="dish-time">活力 \\+${energy} · 冷却`));
+    assert.match(html,new RegExp(`data-food="${selectedFood}"[^>]*活力加${energy}`));
+    assert.match(feedingButtonContent(opts).content,new RegExp(`成长气泡 \\+${amount}<`));
+    assert.match(html,/已含状态 ×1.2 加成/);
+  }
 });

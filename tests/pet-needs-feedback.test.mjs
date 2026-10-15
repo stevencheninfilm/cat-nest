@@ -36,14 +36,14 @@ const needs = (mood=70) => ({ hunger:60, mood, energy:90 });
 
 test('care feedback uses actual capped increases, eases to the target and then disappears', () => {
   const f=fixture(), at=Date.UTC(2026,9,14);
-  const before={...initialState(at),hunger:95,mood:98,energy:90};
+  const before={...initialState(at),hunger:95,mood:99,energy:90};
   const after=reduceAction(before,{type:'feed',food:'snack'},{id:'partner-male',name:'男方'},at,'need-feedback-feeding');
   f.feedback.update(petNeeds(before,at));
   assert.equal(f.motions.length,0,'loading a save is quiet');
   f.feedback.update(petNeeds(after,at));
   assert.equal(f.deltas.hunger.textContent,'+5');
-  assert.equal(f.deltas.mood.textContent,'+2');
-  assert.equal(f.deltas.energy.hidden,true);
+  assert.equal(f.deltas.mood.textContent,'+1');
+  assert.equal(f.deltas.energy.textContent,'+6');
   assert.equal(f.numbers.hunger.textContent,'95');
   f.advance(160);
   assert.ok(Number(f.numbers.hunger.textContent)>95 && Number(f.numbers.hunger.textContent)<100);
@@ -69,7 +69,7 @@ test('play shows each positive and negative change, and repeated cloud confirmat
   const after=reduceAction(before,{type:'play'},{id:'partner-male',name:'男方'},at,'need-feedback-playing');
   f.feedback.update(petNeeds(before,at));
   f.feedback.update(petNeeds(after,at));
-  assert.deepEqual(NEED_KEYS.map(key=>f.deltas[key].textContent),['−3','+10','−8']);
+  assert.deepEqual(NEED_KEYS.map(key=>f.deltas[key].textContent),['−1','+4','−4']);
   assert.match(f.deltas.energy.className,/is-negative/);
   assert.match(f.deltas.mood.className,/is-positive/);
   const effects=f.motions.length, timerIds=[...f.timers.keys()];
@@ -78,16 +78,16 @@ test('play shows each positive and negative change, and repeated cloud confirmat
   assert.equal(f.motions.length,effects);
   assert.deepEqual([...f.timers.keys()],timerIds);
   f.advance(2700);
-  assert.deepEqual(NEED_KEYS.map(key=>f.numbers[key].textContent),['57','80','82']);
+  assert.deepEqual(NEED_KEYS.map(key=>f.numbers[key].textContent),['59','74','86']);
   assert.ok(NEED_KEYS.every(key=>f.deltas[key].hidden));
 });
 
-test('new changes replace the old hint and rollback or hydration resets silently', () => {
+test('new changes merge into one total and rollback or hydration resets silently', () => {
   const f=fixture();
   f.feedback.update(needs()); f.feedback.update(needs(76));
   f.advance(100);
   f.feedback.update(needs(80));
-  assert.equal(f.deltas.mood.textContent,'+4');
+  assert.equal(f.deltas.mood.textContent,'+10');
   assert.equal(f.timers.size,1);
   assert.ok(f.motions[0].cancelled,'the earlier floating hint was cancelled');
   f.feedback.reset(needs());
@@ -98,6 +98,52 @@ test('new changes replace the old hint and rollback or hydration resets silently
   assert.equal(f.deltas.mood.textContent,'+6');
   f.advance(320);
   assert.equal(f.numbers.mood.textContent,'76');
+});
+
+test('continuous changes restart a full two-second hold without blinking or stacking timers', () => {
+  const f=fixture();
+  f.feedback.update(needs()); f.feedback.update(needs(72));
+  f.advance(1800); f.feedback.update(needs(74));
+  assert.equal(f.deltas.mood.textContent,'+4');
+  assert.equal(f.timers.size,1);
+  const merged=f.motions.at(-2);
+  assert.equal(merged.keyframes[0].opacity,.96,'the merged hint stays visible');
+  assert.equal(merged.keyframes.at(-2).offset*merged.options.duration,2000);
+  f.advance(1100);
+  assert.equal(f.deltas.mood.hidden,false,'the earlier expiry cannot hide the merged total');
+  f.advance(900);
+  assert.equal(f.deltas.mood.hidden,false,'the merged hint gets its own full hold');
+  f.advance(799); assert.equal(f.deltas.mood.hidden,false);
+  f.advance(1); assert.equal(f.deltas.mood.hidden,true);
+  assert.equal(f.timers.size,0);
+});
+
+test('opposing changes show the net total, switch sign and quietly clear a zero total', () => {
+  const f=fixture();
+  f.feedback.update(needs()); f.feedback.update(needs(74));
+  f.advance(300); f.feedback.update(needs(72));
+  assert.equal(f.deltas.mood.textContent,'+2');
+  f.advance(300); f.feedback.update(needs(68));
+  assert.equal(f.deltas.mood.textContent,'−2');
+  assert.match(f.deltas.mood.className,/is-negative/);
+  f.advance(300); f.feedback.update(needs());
+  assert.equal(f.deltas.mood.hidden,true);
+  assert.equal(f.deltas.mood.textContent,'');
+  f.feedback.update(needs(71));
+  assert.equal(f.deltas.mood.textContent,'+1','a cancelled-out total starts fresh');
+});
+
+test('each state has its own merge window and an expired hint starts a new total', () => {
+  const f=fixture();
+  f.feedback.update(needs());
+  f.feedback.update({hunger:61,mood:72,energy:88});
+  f.advance(1500); f.feedback.update({hunger:61,mood:74,energy:88});
+  assert.deepEqual(NEED_KEYS.map(key=>f.deltas[key].textContent),['+1','+4','−2']);
+  f.advance(1400);
+  assert.equal(f.deltas.hunger.hidden,true); assert.equal(f.deltas.energy.hidden,true);
+  assert.equal(f.deltas.mood.hidden,false);
+  f.feedback.update({hunger:63,mood:74,energy:88});
+  assert.equal(f.deltas.hunger.textContent,'+2');
 });
 
 test('reduced motion keeps a static hint, hidden views settle immediately and teardown clears work', () => {

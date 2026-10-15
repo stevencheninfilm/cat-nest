@@ -1,4 +1,5 @@
 import { clipKey } from './mage-cat-animation.js';
+import { normalizeCatExpression } from './cat-expressions.js';
 
 export const CAT_MOODS = Object.freeze({
   sleeping: '梦乡里', hungry: '肚子饿啦', tired: '有点累了', lonely: '想被陪伴',
@@ -7,14 +8,16 @@ export const CAT_MOODS = Object.freeze({
 export const CAT_PERIODS = Object.freeze({ morning: '早安时光', day: '午后时光', evening: '晚间陪伴', night: '静谧深夜' });
 
 /** Local time only affects presentation; it never changes the shared care save. */
-export function catTemperament(state = {}, now = Date.now()) {
+export function catTemperament(state = {}, now = Date.now(), expression = 'auto') {
   const hour = new Date(now).getHours();
   const period = hour >= 6 && hour < 11 ? 'morning' : hour >= 11 && hour < 18 ? 'day' : hour >= 18 && hour < 22 ? 'evening' : 'night';
   const hunger = Number.isFinite(state.hunger) ? state.hunger : 68;
   const energy = Number.isFinite(state.energy) ? state.energy : 76;
   const moodValue = Number.isFinite(state.mood) ? state.mood : 82;
-  const mood = state.sleeping ? 'sleeping' : hunger < 35 ? 'hungry' : energy < 30 ? 'tired' : moodValue < 40 ? 'lonely'
+  const automaticMood = state.sleeping ? 'sleeping' : hunger < 35 ? 'hungry' : energy < 30 ? 'tired' : moodValue < 40 ? 'lonely'
     : period === 'night' && energy < 65 ? 'sleepy' : moodValue >= 80 && energy >= 50 ? 'happy' : 'calm';
+  expression = normalizeCatExpression(expression);
+  const mood = expression === 'auto' ? automaticMood : expression;
   return { mood, period, moodLabel: CAT_MOODS[mood], periodLabel: CAT_PERIODS[period],
     quiet: ['sleeping', 'tired', 'sleepy'].includes(mood), night: period === 'night',
     energetic: mood === 'happy' && period !== 'night' && hunger >= 35 && energy >= 50 };
@@ -46,6 +49,7 @@ const ACTIVITIES = {
   chase: { label: '小跑着追逗猫棒', clip: 'run', cycles: 2, eyes: 'excited', mouth: 'happy' },
   slowPlay: { label: '轻轻踏步，陪你玩一会儿', clip: 'walk', rate: .72, eyes: 'tired', mouth: 'happy' },
   wake: { label: '揉揉眼，向你道声好', clip: 'idle', seconds: 2.8, eyes: 'basic', mouth: 'happy' },
+  sleepyTouch: { label: '呼噜…睡梦里也收到你的招呼啦', clip: 'idle', seconds: 2.6, eyes: 'closed', mouth: 'happy', rate: .25 },
 };
 
 export function idleChoices(temperament) {
@@ -68,11 +72,11 @@ function choose(choices, recent, sample) {
 }
 
 export function createCatBehavior({ random = Math.random, clock = Date.now, reducedMotion = false, autonomous = true } = {}) {
-  let state = {}, active = null, sequence = 0, elapsed = 0, blinkLeft = 0;
+  let state = {}, expression = 'auto', active = null, sequence = 0, elapsed = 0, blinkLeft = 0;
   let catalog = new Map([['idle', 2.333]]), idleRecent = [], reactionRecent = [];
   const sample = () => { const value = random(); return Number.isFinite(value) ? Math.max(0, Math.min(.999999, value)) : .5; };
   let idleIn = 3 + sample() * 3, blinkIn = 2.8 + sample() * 3.6;
-  const temperament = () => catTemperament(state, clock());
+  const temperament = () => catTemperament(state, clock(), expression);
   const wait = () => { const t = temperament(); return (t.quiet || t.night ? 12 : 5) + sample() * (t.quiet || t.night ? 12 : 8); };
   function neutral() { active = null; idleIn = wait(); }
   function start(id, source) {
@@ -93,17 +97,21 @@ export function createCatBehavior({ random = Math.random, clock = Date.now, redu
     const base = FACES[t.mood];
     const expressive = active && active.time < active.duration * .88;
     const face = expressive && active.eyes ? { eyes: active.eyes, mouth: active.mouth || base.mouth } : base;
-    return { ...t, id: active?.id || 'idle', token: active?.token || 0, source: active?.source || 'idle',
-      label: sleeping ? '安静地做着小猫梦' : active?.label || t.moodLabel,
+    return { ...t, expression, id: active?.id || 'idle', token: active?.token || 0, source: active?.source || 'idle',
+      label: active?.label || (sleeping ? '安静地做着小猫梦' : t.moodLabel),
       clip: active?.clip || 'idle', loop: ['idle', 'walk', 'run'].includes(active?.clip || 'idle'),
       rate: active?.rate || (sleeping ? .25 : reducedMotion ? .45 : t.quiet ? .55 : t.night ? .8 : 1),
       time: active?.time || 0, duration: active?.duration || 0, elapsed,
       wide: !reducedMotion && Boolean(active?.wide), sleeping,
-      eyes: sleeping || blinkLeft > 0 ? 'closed' : face.eyes, mouth: sleeping ? 'basic' : face.mouth };
+      eyes: sleeping || blinkLeft > 0 ? 'closed' : face.eyes, mouth: sleeping && active?.id !== 'sleepyTouch' ? 'basic' : face.mouth };
   }
   return {
     setClips(clips) {
       catalog = new Map(clips.map(clip => [clipKey(clip.name), clip.duration]));
+    },
+    setExpression(value) {
+      expression = normalizeCatExpression(value); neutral(); blinkLeft = 0;
+      return snapshot();
     },
     setState(value = {}) {
       const before = temperament(); state = { ...state, ...value }; const after = temperament();
@@ -117,8 +125,10 @@ export function createCatBehavior({ random = Math.random, clock = Date.now, redu
       const wasSleeping = Boolean(state.sleeping);
       if (typeof value.sleeping !== 'boolean') value = { ...value, sleeping: type === 'sleep' ? !wasSleeping : ['pet', 'feed', 'play'].includes(type) ? false : wasSleeping };
       state = { ...state, ...value };
+      // Deliberate care can wake a posed sleeping face without altering care data.
+      if (type === 'sleep' || (expression === 'sleeping' && ['pet', 'feed', 'play'].includes(type))) expression = 'auto';
       const t = temperament();
-      if (t.mood === 'sleeping') { neutral(); return snapshot(); }
+      if (t.mood === 'sleeping') { if (type === 'touch') start('sleepyTouch', 'interaction'); else neutral(); return snapshot(); }
       let choices;
       if (type === 'sleep') choices = [['wake', 1]];
       else if (type === 'pet' || type === 'touch') choices = t.quiet ? [['gentle', 3], ['comfort', 1]] : t.mood === 'lonely' ? [['comfort', 3], ['nuzzle', 2]] : [['pet', 3], ['nuzzle', 2], ['wink', 1]];

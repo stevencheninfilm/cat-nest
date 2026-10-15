@@ -1,6 +1,6 @@
-import { initialState, normalizeState, reduceAction, FOODS, foodCooldownMs, levelStartXp } from './app/state.js';
-import { publicGameHub } from './app/minigames.js';
-import { COUPLE_ROLES } from './app/couple-profile.js';
+import { initialState, normalizeState, reduceAction, FOODS, foodCooldownMs, levelStartXp } from '../src/state.js';
+import { publicGameHub } from '../src/minigames.js';
+import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { demoLocalStorage } from './storage.js';
 
 export const DEMO_ROOM = 'dddddddddddddddddddddddddddd5174';

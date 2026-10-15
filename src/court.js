@@ -1,8 +1,8 @@
 import './court.css';
+import { getAppRuntime } from './app-runtime.js';
 import { verdictDisplay } from './court-verdict-display.js';
 import { verdictCards } from './court-verdict-cards.js';
 
-const API = `${(import.meta.env.VITE_COURT_API_URL || '').replace(/\/$/, '')}/api/court`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const paths = {
   paw: '<circle cx="7.5" cy="8" r="2"/><circle cx="16.5" cy="8" r="2"/><circle cx="3.5" cy="13" r="1.5"/><circle cx="20.5" cy="13" r="1.5"/><path d="M8 13c-1 2-3 3-3 5 0 3 4 3 7 1 3 2 7 2 7-1 0-2-2-3-3-5-2-3-6-3-8 0Z"/>',
@@ -22,7 +22,6 @@ const paths = {
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.paw}</svg>`;
 const roleLabel = role => role === 'a' ? '猫爪方' : '鱼干方';
 const otherRole = role => role === 'a' ? 'b' : 'a';
-const storedSession = id => { try { return JSON.parse(sessionStorage.getItem(`catcourt.session.${id}`)); } catch { return null; } };
 function safeImage(value) { return /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/=\s]+$/.test(value || '') ? value : ''; }
 function verdictMarkup(value) {
   return esc(value).split('\n').map(line => {
@@ -36,7 +35,9 @@ const textValue = value => typeof value === 'string' ? value : '';
 const textItems = value => Array.isArray(value) ? value.filter(item => typeof item === 'string' && item.trim()) : textValue(value).trim() ? [value] : [];
 const paragraphMarkup = value => textItems(value).map(item => `<p>${esc(item).replace(/\n/g, '<br>')}</p>`).join('');
 
-export function createCourt({ container, onBack, toast = () => {}, profileName = '铲屎官', modelAssetBase, getPetAppearance = () => undefined, previewRoom }) {
+export function createCourt({ container, onBack, toast = () => {}, profileName = '铲屎官', modelAssetBase, getPetAppearance = () => undefined, previewRoom, runtime=getAppRuntime() }) {
+  const {sessionStorage,fetch:fetchImpl,courtApi:API,isTest}=runtime;
+  const storedSession=id=>{try{return JSON.parse(sessionStorage.getItem(`catcourt.session.${id}`));}catch{return null;}};
   const readOnlyPreview = Boolean(import.meta.env.DEV && previewRoom);
   let active = false, room = null, session = null, config = null, configFailed = false;
   let polling = false, busy = false, uploading = false, selectedRole = 'a', appealMode = false;
@@ -86,7 +87,7 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
           <aside class="court-bench-note"><span class="court-note-icon">${icon('heart')}</span><h3>开庭之前，先深呼吸一下</h3><p>可以表达委屈，也请尽量描述具体的行为。猫猫不会因为谁声音大，就偏向谁。</p><div></div><strong>我们一起找的答案</strong><ul><li>哪些事实已经明确？</li><li>各自需要承担什么责任？</li><li>怎样让同样的分歧少发生？</li></ul><span class="court-note-sign">愿每句话被听见，每条边界被尊重。♡</span></aside>
         </div>
       </section>
-      <footer class="court-footer"><span>${icon('paw')} 心平气和，喵喵有理</span><details><summary>关于小法庭与隐私</summary><p>猫猫会根据双方提供的信息分析，不把推测当成事实；信息不足时会说明不确定性。陈词与截图会保存在本网站服务端，审理时发送给 OpenAI。请遮挡无关隐私，只邀请你信任的人。</p><p id="court-config-note">正在检查判官连接…</p></details></footer>
+      <footer class="court-footer"><span>${icon('paw')} 心平气和，喵喵有理</span><details><summary>关于小法庭与隐私</summary><p>猫猫会根据双方提供的信息分析，不把推测当成事实；信息不足时会说明不确定性。${isTest ? '这是测试调试存档，陈词与截图只保存在本次页面内存中，判词为预设示例，不发送给 OpenAI 或正式服务器。' : '陈词与截图会保存在本网站服务端，审理时发送给 OpenAI。请遮挡无关隐私，只邀请你信任的人。'}</p><p id="court-config-note">正在检查判官连接…</p></details></footer>
     </div>
     <dialog class="court-evidence-dialog" id="court-evidence-dialog"><button type="button" class="court-dialog-close" data-court="close-image" aria-label="关闭截图">${icon('close')}</button><img id="court-full-image" alt="本案截图证据"><p id="court-full-image-name"></p></dialog>`;
 
@@ -164,7 +165,7 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     const abort = new AbortController();
     const timeout = setTimeout(() => abort.abort(), 20000);
     try {
-      const response = await fetch(`${API}${path}`, {
+      const response = await fetchImpl(`${API}${path}`, {
         method: options.method || 'GET', signal: abort.signal,
         headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}) },
         ...(options.body ? { body: JSON.stringify(options.body) } : {}),
@@ -198,7 +199,7 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     badge.classList.toggle('connected', Boolean(config?.configured && !configFailed));
     badge.classList.toggle('unavailable', configFailed || config?.configured === false);
     badge.innerHTML = `<i></i>${configFailed ? '服务未连接' : config?.configured ? '判官已就位' : config ? '判官待连接' : '连接中'}`;
-    $('#court-config-note').textContent = configFailed ? '小法庭服务暂时无法连接。网站服务恢复后即可发起或继续审理。' : config?.configured ? `判官使用 ${config.model} · 高思考模式。未提交的输入不会同步给对方；对方可以看到你正在输入。` : 'ChatGPT 尚未接入。你们仍可入席并保存陈词；由网站管理员在服务端配置 OpenAI 后，即可继续审理。';
+    $('#court-config-note').textContent = configFailed ? '小法庭服务暂时无法连接。网站服务恢复后即可发起或继续审理。' : config?.configured ? (isTest ? '测试判官使用预设示例，不调用真实 AI。' : `判官使用 ${config.model} · 高思考模式。未提交的输入不会同步给对方；对方可以看到你正在输入。`) : 'ChatGPT 尚未接入。你们仍可入席并保存陈词；由网站管理员在服务端配置 OpenAI 后，即可继续审理。';
   }
   function stashDraft() {
     if (draftRound) {
@@ -416,9 +417,9 @@ export function createCourt({ container, onBack, toast = () => {}, profileName =
     $('#court-upload-previews').innerHTML = images.map((file, index) => `<div class="court-upload-preview"><img src="${esc(safeImage(file.dataUrl))}" alt="${esc(file.name)}"><button type="button" data-court-remove="${index}" aria-label="移除截图 ${esc(file.name)}">${icon('close')}</button><span>${esc(file.name)}</span></div>`).join('');
   }
   function updateCount() { $('#court-char-count').textContent = `${$('#court-statement').value.length.toLocaleString('en-US')} / 12,000`; }
-  function sharedUrl() { const url = new URL(location.href); url.searchParams.set('court', room.id); return url.href; }
+  function sharedUrl() { const url = new URL(location.href); if(isTest)url.searchParams.delete('court');else url.searchParams.set('court',room.id); return url.href; }
   async function share() {
-    try { await navigator.clipboard.writeText(sharedUrl()); toast('小法庭邀请已复制，发给对方一起入席吧'); }
+    try { await navigator.clipboard.writeText(sharedUrl()); toast(isTest ? '测试链接已复制，对方会打开独立测试存档' : '小法庭邀请已复制，发给对方一起入席吧'); }
     catch { $('#court-share-fallback').hidden = false; $('#court-share-url').value = sharedUrl(); $('#court-share-url').focus(); $('#court-share-url').select(); }
   }
   async function loadRoom(id) {

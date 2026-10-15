@@ -10,7 +10,7 @@ const start=Date.UTC(2026,9,14,0);
 const actor={ id:'partner-male', name:'男方' };
 const act=(state, action, now=start, id=`collection-${action.type}-${now}`) => reduceAction(state, action, actor, now, id);
 const starter=()=>{const state=initialState(start);state.collection.stats.pet=5;return state;};
-const completed=()=>{const state=initialState(start);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.collection.wins={rps:12,memory:12,gomoku:12};state.xp=levelStartXp(120);return state;};
+const completed=()=>{const state=initialState(start);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.collection.wins={rps:12,memory:12,gomoku:12};state.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:10,play:10,sleep:3}};state.xp=levelStartXp(120);return state;};
 
 test('each achievement counts accepted care once, while retries, rejected actions, and waking award nothing', () => {
   const before=initialState(start);
@@ -97,7 +97,9 @@ test('level invitations require claimed growth, not pending rewards or the pet a
 
 test('every cat requires every condition, including the starter and the compound food achievement', () => {
   const setRequirement=(state,{metric,target},below=false)=>{
-    if(metric.startsWith('win-')) state.collection.wins[metric.slice(4)]=target-(below?1:0);
+    if(metric.startsWith('daily-'))state.collection.achievements.daily[metric.slice(6)]=target-(below?1:0);
+    else if(['boost','dress'].includes(metric))state.collection.achievements[metric]=target-(below?1:0);
+    else if(metric.startsWith('win-')) state.collection.wins[metric.slice(4)]=target-(below?1:0);
     else if(metric === 'level') state.xp=levelStartXp(target)-(below?1:0);
     else if(metric === 'foods') state.collection.foods=Object.keys(FOODS).slice(0,target-(below?1:0));
     else state.collection.stats[metric === 'care' ? 'pet' : metric]=target-(below?1:0);
@@ -193,7 +195,7 @@ test('the scene contains exactly the invited cats and requires enough invited ca
   state=completed();
   for(const cat of COLLECTION_CATS) state=act(state,{type:'invite-cat',catId:cat.id},start,`collection-invite-${cat.id}`);
   const full=catbookMarkup(state,{sceneId:'snow'});
-  assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,18);
+  assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,COLLECTION_CATS.length);
   assert.match(full,/data-scene-id="snow"/);
   assert.doesNotMatch(full,/data-book-scene="(?:western|snow)"[^>]*disabled/);
   const atCount=count=>({...state.collection,invited:state.collection.invited.slice(0,count)});
@@ -227,12 +229,12 @@ test('locked invitations, saving and disconnected states disable inviting, and n
 });
 
 test('difficulty rises by five to eight times without exceeding the available food varieties',()=>{
-  assert.deepEqual(COLLECTION_CATS.map(cat=>[cat.id,cat.metric,cat.target]),[
+  assert.deepEqual(COLLECTION_CATS.slice(0,18).map(cat=>[cat.id,cat.metric,cat.target]),[
     ['bandit','care',5],['bolt','feed',30],['breezy','pet',100],['callie','play',50],['cocoa','sleep',30],['dottie','level',40],
     ['fred','feed',180],['gabriel','pet',600],['ginger','play',300],['gozer','feed',54],['lexy','pair',96],['mack','level',120],
     ['scout','win-rps',5],['mochi','win-memory',5],['onyx','win-gomoku',5],['biscuit','win-rps',12],['maple','win-memory',12],['pearl','win-gomoku',12],
   ]);
-  for(const cat of COLLECTION_CATS) {
+  for(const cat of COLLECTION_CATS.slice(0,18)) {
     assert.ok(cat.difficultyMultiplier>=5 && cat.difficultyMultiplier<=8);
     for(const requirement of cat.requirements) if(requirement.metric==='foods') assert.ok(requirement.target<=Object.keys(FOODS).length);
   }

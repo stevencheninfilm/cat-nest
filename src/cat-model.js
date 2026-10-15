@@ -34,6 +34,10 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       if(state.appearance)api.setAppearance(state.appearance);
       if(ready){player.sync(pose);updateExpression();publishBehavior();startFrame();}
     },
+    setExpression(value) {
+      pose=behavior.setExpression(value);
+      if(ready){player.sync(pose);updateExpression();publishBehavior();startFrame();}
+    },
     setAppearance(value) {
       const next=normalizeAppearance(value);
       if(JSON.stringify(next)===JSON.stringify(appearance))return;
@@ -47,8 +51,8 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     destroy(){destroyed=true;cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();decoration?.destroy?.();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
   };
   function publishBehavior(){
-    container.dataset.catMood=pose.mood;container.dataset.catPeriod=pose.period;container.dataset.catAction=pose.id;container.dataset.catClip=pose.clip;
-    const key=`${pose.mood}:${pose.period}:${pose.id}:${pose.source}`;
+    container.dataset.catMood=pose.mood;container.dataset.catPeriod=pose.period;container.dataset.catAction=pose.id;container.dataset.catClip=pose.clip;container.dataset.catExpressionMode=pose.expression;
+    const key=`${pose.mood}:${pose.period}:${pose.id}:${pose.source}:${pose.expression}`;
     if(key!==behaviorKey){behaviorKey=key;onBehaviorChange?.(pose);}
   }
   function fail(error){if(destroyed || failed)return;failed=true;cancelAnimationFrame(frame);frame=0;container?.classList.remove('has-cat-model');container?.setAttribute('aria-busy','false');if(container)container.dataset.modelPhase='error';onError?.(error);}

@@ -35,7 +35,7 @@ export function updateFoodPortions(root, now = Date.now()) {
 export function foodPreview(id) {
   id = selectedMeal(id);
   const food = FOODS[id];
-  return `${foodArt(id)}<span class="food-preview-copy"><small>准备喂食 · 尚未上桌</small><strong>${food.name}</strong><span>♡ +${food.love} <i>·</i> ${food.cost} 猫爪币</span><em>点这里，挑一份喜欢的 <b>›</b></em></span>`;
+  return `${foodArt(id)}<span class="food-preview-copy"><small>准备喂食 · 尚未上桌</small><strong>${food.name}</strong><span>♡ +${food.love} <i>·</i> 活力 +${food.energy} <i>·</i> ${food.cost} 猫爪币</span><em>点这里，挑一份喜欢的 <b>›</b></em></span>`;
 }
 function roleRecord(info, role, clientId) {
   // Stable identities are the normal path. Legacy two-person records remain
@@ -106,12 +106,12 @@ export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'al
   const filters = [['all', '全部'], ['meals', '主食'], ['treats', '小零食'], ['drinks', '饮水']];
   return `<div class="feeding-handle" aria-hidden="true"></div>
     <header class="feeding-sheet-heading"><span>FEED WITH LOVE</span><h2>一起喂养，快乐加倍</h2></header>
-    <div class="dish-preview"><span class="dish-time">◷ 冷却 ${foodDurationText(selectedFood)}</span><div class="food-dish"></div>${foodArt(selectedFood, 'dish-food')}<div class="dish-caption"><strong>${food.name}</strong><span>准备喂食 · 尚未上桌</span></div></div>
+    <div class="dish-preview"><span class="dish-time">活力 +${food.energy} · 冷却 ${foodDurationText(selectedFood)}</span><div class="food-dish"></div>${foodArt(selectedFood, 'dish-food')}<div class="dish-caption"><strong>${food.name}</strong><span>准备喂食 · 尚未上桌</span></div></div>
     ${pairSummary(info, clientId, members)}
     <div class="feeding-tabs" role="tablist" aria-label="喂食页面"><button id="food-menu-tab" role="tab" data-feeding-tab="menu" aria-controls="food-menu-panel" aria-selected="${tab === 'menu'}">挑选食物 <span>${Object.keys(FOODS).length}</span></button><button id="food-pair-tab" role="tab" data-feeding-tab="pair" aria-controls="food-pair-panel" aria-selected="${tab === 'pair'}">喂养详情${completed ? ' ✓' : ''}</button></div>
     <section id="food-menu-panel" role="tabpanel" aria-labelledby="food-menu-tab" ${tab === 'menu' ? '' : 'hidden'}>
       <div class="food-filters" role="group" aria-label="食物分类">${filters.map(([id, label]) => `<button data-food-category="${id}" aria-pressed="${category === id}">${label}</button>`).join('')}</div>
-      <div class="pantry-grid" role="group" aria-label="选择喂食的食物">${Object.entries(FOODS).filter(([id]) => category === 'all' || FOOD_DETAILS[id]?.category === category).map(([id, item]) => `<button class="pantry-item ${id === selectedFood ? 'selected' : ''}" data-food="${id}" aria-pressed="${id === selectedFood}" aria-label="${item.name}，成长气泡加${growthRewardAmount(item.love, needs.boostCount)}，亲密度加${item.love}，${item.cost}猫爪币，冷却${foodDurationText(id)}"><span class="pantry-love"><span>成长 +${growthRewardAmount(item.love, needs.boostCount)}</span><span class="pantry-duration">◷${foodDurationText(id)}</span></span>${foodArt(id)}<strong>${item.name}</strong><span class="pantry-price">✦ ${item.cost}</span><span class="pantry-selected" aria-hidden="true">♥</span></button>`).join('')}</div>
+      <div class="pantry-grid" role="group" aria-label="选择喂食的食物">${Object.entries(FOODS).filter(([id]) => category === 'all' || FOOD_DETAILS[id]?.category === category).map(([id, item]) => `<button class="pantry-item ${id === selectedFood ? 'selected' : ''}" data-food="${id}" aria-pressed="${id === selectedFood}" aria-label="${item.name}，成长气泡加${growthRewardAmount(item.love, needs.boostCount)}，亲密度加${item.love}，活力加${item.energy}，${item.cost}猫爪币，冷却${foodDurationText(id)}"><span class="pantry-love"><span>成长 +${growthRewardAmount(item.love, needs.boostCount)}</span><span class="pantry-duration">◷${foodDurationText(id)}</span></span>${foodArt(id)}<strong>${item.name}</strong><span class="pantry-price">✦ ${item.cost}</span><span class="pantry-selected" aria-hidden="true">♥</span></button>`).join('')}</div>
     </section>
     <section id="food-pair-panel" role="tabpanel" aria-labelledby="food-pair-tab" ${tab === 'pair' ? '' : 'hidden'}>
       <div class="pair-intro"><strong>${completed ? '这一轮，你们的心意都到啦' : '一人一份，都是对小猫的偏爱'}</strong><span>${info.windowActive ? '每人的食物时间各自计算，记录会一直保留' : '首次喂养后，开启 4 小时双人小任务'}</span></div>

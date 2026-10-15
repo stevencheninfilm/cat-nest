@@ -10,15 +10,15 @@ const feed = (state, actor, now = start, food = 'meal') => reduceAction(state, {
 
 test('all nine foods charge their documented price and preserve the original food values', () => {
   assert.deepEqual(FOODS, {
-    snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10 },
-    meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22 },
-    fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35 },
-    chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28 },
-    shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24 },
-    salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32 },
-    mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30 },
-    treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12 },
-    water: { name: '清清饮水', cost: 5, love: 5, hunger: 0 },
+    snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 6 },
+    meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22, energy: 6 },
+    fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35, energy: 6 },
+    chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28, energy: 6 },
+    shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24, energy: 6 },
+    salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32, energy: 6 },
+    mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30, energy: 6 },
+    treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12, energy: 6 },
+    water: { name: '清清饮水', cost: 5, love: 5, hunger: 0, energy: 8 },
   });
   for (const [key, food] of Object.entries(FOODS)) {
     const before = { ...initialState(start), hunger: 10 };
@@ -26,6 +26,7 @@ test('all nine foods charge their documented price and preserve the original foo
     assert.equal(after.coins, before.coins - food.cost, key);
     assert.equal(after.love, before.love + food.love, key);
     assert.equal(after.hunger, before.hunger + food.hunger, key);
+    assert.equal(after.energy, before.energy + food.energy, key);
     assert.equal(after.feedRecords[0].food, key);
   }
 });
@@ -59,9 +60,9 @@ test('same-name caregivers have separate records and earn exactly one pair bonus
   const together = feed(first, bob, start + 2_000);
   assert.equal(together.love, before.love + 2 * FOODS.meal.love + FEEDING_BONUS);
   assert.equal(together.xp, before.xp);
-  assert.deepEqual(together.pendingGrowth.map(reward => reward.amount), [27.5, 42]);
+  assert.deepEqual(together.pendingGrowth.map(reward => reward.amount), [27.5, 45.5]);
   const claimed = together.pendingGrowth.reduce((state, reward) => reduceAction(state, { type: 'claim-growth', rewardId: reward.id }, alice, start + 2_001), together);
-  assert.equal(claimed.xp, before.xp + 69.5);
+  assert.equal(claimed.xp, before.xp + 73);
   assert.deepEqual(claimed.pendingGrowth, []);
   assert.deepEqual(together.feedRecords.map(record => record.actorId), [alice.id, bob.id]);
   assert.equal(together.feedingWindow.bonusClaimed, true);

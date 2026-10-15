@@ -23,6 +23,7 @@ COPY --from=build /app/src/minigames-extra.js ./src/minigames-extra.js
 COPY --from=build /app/src/couple-profile.js ./src/couple-profile.js
 COPY --from=build /app/src/mage-cat-config.js ./src/mage-cat-config.js
 COPY --from=build /app/src/cat-collection.js ./src/cat-collection.js
+COPY --from=build /app/src/couple-care.js ./src/couple-care.js
 RUN mkdir /data && chown node:node /data
 USER node
 VOLUME ["/data"]

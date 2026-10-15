@@ -1,5 +1,8 @@
 // Dialogue is local presentation only. Speaking never creates or collects growth.
 export const CAT_DIALOGUE = Object.freeze({
+  'duo-meal': ['你们一人一份，我吃到的是双倍的爱喵♡', '小碗里装着两个人的心意，今天好幸福。'],
+  'duo-relay': ['一只手摸摸，一根逗猫棒，你们的默契我收到啦♡', '两个人接着陪我玩，我的小窝热闹起来了。'],
+  'duo-goodnight': ['两份陪伴把小被子盖好啦，今晚一定有甜甜的梦。', '一个人哄哄，一个人陪睡，我被你们好好爱着喵。'],
   greeting: ['你回来啦，我等你好久啦～', '快靠近一点，我给你留了位置。', '今天的第一声呼噜，送给你♡', '闻到熟悉的味道啦，是你！', '尾巴摇好了，就等你回家喵。', '你一来，我的小窝就暖起来啦。'],
   idle: ['我把阳光踩软了，分你一半。', '今天也想和你贴贴喵～', '嘘，听见我的小呼噜了吗？', '我刚刚抓住了一小片阳光！', '你忙你的，我在这里陪着你。', '我的魔法？是让你开心一点。', '尾巴晃呀晃，都是喜欢你。', '把烦恼放门口，进来抱抱我。', '我有认真长大，也有认真想你。', '今天的小愿望：一直陪着你。'],
   pet: ['呼噜呼噜…就是这里，再摸摸♡', '我把小脑袋交给你啦。', '你的手暖暖的，我好喜欢。', '耳朵后面也想被摸摸喵。', '舒服得快要变成一摊小猫啦。', '我偷偷把这次摸摸记在心里了。', '再靠近一点，蹭蹭你的手～', '收到温柔啦，我也喜欢你！'],
@@ -35,20 +38,25 @@ export const FOOD_DIALOGUE = Object.freeze({
 });
 
 function dialogueKey(kind, state, action) {
+  const mood=state.behaviorMood;
+  const sleeping=mood ? mood==='sleeping' : state.sleeping;
+  const hungry=mood ? mood==='hungry' : state.hunger<35;
+  const tired=mood ? ['tired','sleepy'].includes(mood) : state.energy<30;
+  const lonely=mood ? mood==='lonely' : state.mood<40;
   if (kind === 'feed') return Object.hasOwn(FOOD_DIALOGUE, action.food) ? `feed:${action.food}` : 'full';
   if (kind === 'sleep') return state.sleeping ? 'sleep' : 'wake';
   if (['pet', 'touch', 'play'].includes(kind)) {
-    if (state.sleeping) return 'sleep';
-    if (kind === 'play' && (state.energy < 30 || state.behaviorPeriod === 'night' || state.hunger < 35)) return 'gentlePlay';
-    if (kind !== 'play' && state.energy < 30) return 'gentlePet';
-    if (kind !== 'play' && state.mood < 40) return 'comfort';
+    if (sleeping) return 'sleep';
+    if (kind === 'play' && (tired || state.behaviorPeriod === 'night' || hungry)) return 'gentlePlay';
+    if (kind !== 'play' && tired) return 'gentlePet';
+    if (kind !== 'play' && lonely) return 'comfort';
     if (kind === 'touch') return 'pet';
   }
   if (kind === 'idle' || kind === 'greeting') {
-    if (state.sleeping) return 'sleep';
-    if (state.hunger < 35) return 'hungry';
-    if (state.energy < 30) return 'tired';
-    if (state.mood < 40) return 'lonely';
+    if (sleeping) return 'sleep';
+    if (hungry) return 'hungry';
+    if (tired) return 'tired';
+    if (lonely) return 'lonely';
     if (state.behaviorPeriod === 'night') return 'night';
     if (kind === 'greeting') return state.behaviorPeriod === 'morning' ? 'morning' : 'greeting';
     if (state.behaviorPeriod === 'evening') return 'evening';

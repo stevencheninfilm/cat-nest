@@ -72,14 +72,14 @@ test('feeding cooldown is personal while all foods and identities consume one sh
     state = reduceAction(state, { type: 'feed', food: index % 2 ? 'water' : 'snack' }, { id: `device-${index}`, name: '猫友' }, start + index);
     assert.ok(state);
   }
-  assert.equal(state.careLimits.counts.feed, 6);
+  assert.equal(state.careLimits.counts.feed, CARE_LIMITS.feed.dailyLimit);
   const snapshot = structuredClone(state);
   assert.equal(careActionInfo(state, action('feed'), 'device-new', start + 10).reason, 'daily_limit');
   assert.equal(reduceAction(state, { type: 'feed', food: 'fish' }, { id: 'device-new', name: '猫友' }, start + 10), null);
   assert.deepEqual(state, snapshot);
 });
 
-test('three complete pair rounds receive exactly three bonuses and then no more feeding rewards', () => {
+test('three complete pair rounds receive exactly three bonuses and later feeds keep their base reward', () => {
   const before = initialState(start);
   let state = before;
   for (let round = 0; round < 3; round += 1) {
@@ -91,12 +91,16 @@ test('three complete pair rounds receive exactly three bonuses and then no more 
     assert.equal(state.feedingWindow.bonusClaimed, true);
   }
   assert.equal(state.xp, before.xp);
-  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 213.5);
+  assert.deepEqual(state.pendingGrowth.map(reward=>reward.amount),[27.5,45.5,30,45.5,30,42]);
+  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 220.5);
   const claimed = state.pendingGrowth.reduce((current, reward) => reduceAction(current, { type: 'claim-growth', rewardId: reward.id }, bob, start + 12 * 3600_000), state);
-  assert.equal(claimed.xp, before.xp + 213.5);
+  assert.equal(claimed.xp, before.xp + 220.5);
   assert.deepEqual(claimed.careLimits.counts, state.careLimits.counts);
   assert.equal(careActionInfo(state, { type: 'pair' }, alice.id, start + 12 * 3600_000).reason, 'daily_limit');
-  assert.equal(reduceAction(state, action('feed'), alice, start + 12 * 3600_000), null);
+  const later=reduceAction(state,action('feed'),alice,start+12*3600_000);
+  assert.ok(later);assert.equal(later.careLimits.counts.pair,3);
+  assert.equal(later.love-state.love,FOODS.meal.love);
+  assert.equal(later.pendingGrowth.length,state.pendingGrowth.length+1);
 });
 
 test('waking never earns resources or consumes quota, and sleeping again cannot farm energy or growth', () => {
@@ -133,7 +137,7 @@ test('Shanghai midnight resets daily counts, preserves cross-day cooldowns and s
 test('a daily cap resets only at the shared timezone boundary, independent of actor identity', () => {
   const midnight = Date.UTC(2026, 9, 13, 16);
   const state = initialState(start);
-  state.careLimits.counts.feed = 6;
+  state.careLimits.counts.feed = CARE_LIMITS.feed.dailyLimit;
   const info = careActionInfo(state, action('feed'), alice.id, midnight - 1);
   assert.equal(info.availableAt, midnight);
   assert.equal(info.allowed, false);

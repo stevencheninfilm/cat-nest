@@ -1,0 +1,5 @@
+[
+  { "id": "steven", "label": "Steven", "source": "couple", "roomId": null, "storagePrefix": "" },
+  { "id": "evian", "label": "Evian", "source": "room", "roomId": "6858d44c3a9ce3b77ea7c5334b4acd02", "storagePrefix": "evian:" },
+  { "id": "test", "label": "测试调试", "source": "test", "roomId": "dddddddddddddddddddddddddddd5174", "storagePrefix": "test:" }
+]

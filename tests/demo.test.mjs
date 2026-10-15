@@ -5,9 +5,9 @@ import { namespacedStorage, DEMO_PREFIX, DEMO_PREFERENCES_PREFIX, createMemorySt
 import { initializeDemoVisit } from '../demo/visit.js';
 import { createDemoEngine, DEMO_ACTORS, DEMO_ROOM } from '../demo/engine.js';
 import { createDemoCourt } from '../demo/court-engine.js';
-import { validCoupleCare } from '../demo/app/couple-care.js';
-import { validCollection, COLLECTION_CATS, collectionCatProgress } from '../demo/app/cat-collection.js';
-import { FOODS, levelInfo } from '../demo/app/state.js';
+import { validCoupleCare } from '../src/couple-care.js';
+import { validCollection, COLLECTION_CATS, collectionCatProgress } from '../src/cat-collection.js';
+import { FOODS, levelInfo } from '../src/state.js';
 const time=Date.now();
 function store() { const data=new Map();return {data,get length(){return data.size;},key:index=>[...data.keys()][index] ?? null,getItem:key=>data.get(key) ?? null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)}; }
 function setup() { const storage=store();return {storage,engine:createDemoEngine({storage,now:()=>time})}; }
@@ -108,15 +108,4 @@ test('closed transport blocks production hosts and unknown endpoints',async()=>{
   const result=await demoFetch(`https://demo.cat-nest.invalid/api/rooms/${DEMO_ROOM}/actions`,{method:'POST',body:JSON.stringify({clientId:DEMO_ACTORS.male.id,operationId:'demo-test-network-reject',action:{type:'pet'}})});
   assert.equal(result.status,409);assert.deepEqual(demoEngine.snapshot(),before);
   demoEngine.setOffline(true);await assert.rejects(()=>demoFetch('https://demo.cat-nest.invalid/api/couple/home'),/网络已断开/);demoEngine.setOffline(false);
-});
-test('copied app has explicit storage and closed transports instead of production API bindings',async()=>{
-  for (const file of ['main.js','cloud.js','court.js']) {
-    const source=await readFile(new URL(`../demo/app/${file}`,import.meta.url),'utf8');
-    if(file==='main.js') { assert.match(source,/demoLocalStorage as localStorage/);assert.match(source,/const apiBase = 'https:\/\/demo.cat-nest.invalid'/); }
-    else assert.match(source,/demoFetch as fetch/);
-  }
-  const files=await readdir(new URL('../demo/app/',import.meta.url));
-  for(const file of files.filter(file=>file.endsWith('.js') && !['main.js','court.js','cloud.js','court-history-preview.js','realtime.js'].includes(file))) {
-    const source=await readFile(new URL(`../demo/app/${file}`,import.meta.url),'utf8');assert.doesNotMatch(source,/\b(?:localStorage|sessionStorage|fetch|EventSource)\s*[.(]/,file);
-  }
 });

@@ -3,6 +3,7 @@ import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, vali
 import { validAppearance } from '../src/mage-cat-config.js';
 import { validCollection, validCollectionCatId, canInviteCat } from '../src/cat-collection.js';
 import { sanitizeGameAction, validGameHub, publicGameHub, publicGameEvent, emptyGameHub } from '../src/minigames.js';
+import { validCoupleCare } from '../src/couple-care.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -46,6 +47,7 @@ function validStoredState(value) {
   if (Object.hasOwn(value, 'pendingGrowth') && !validPendingGrowth(value.pendingGrowth)) return false;
   if (Object.hasOwn(value, 'collection') && !validCollection(value.collection, Object.keys(FOODS))) return false;
   if (Object.hasOwn(value, 'games') && !validGameHub(value.games, { privateState:true })) return false;
+  if (Object.hasOwn(value, 'coupleCare') && !validCoupleCare(value.coupleCare)) return false;
   if (Object.hasOwn(value, 'needsUpdatedAt') && (!Number.isSafeInteger(value.needsUpdatedAt) || value.needsUpdatedAt < 0)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
@@ -155,6 +157,7 @@ export function createGitHubStore({
       const withoutGrowth = { ...room, state: { ...room.state } };
       delete withoutGrowth.state.pendingGrowth;
       delete withoutGrowth.claimedGrowth;
+      if (withoutGrowth.state.coupleCare) withoutGrowth.state.coupleCare = { ...withoutGrowth.state.coupleCare, moments:[] };
       if (Buffer.byteLength(JSON.stringify(withoutGrowth), 'utf8') * 4 / 3 > 350_000) throw new Error();
       for (const operation of room.operations) {
         if (!plain(operation) || typeof operation.id !== 'string' || !OPERATION_ID.test(operation.id) || !plain(operation.event) || operation.event.operationId !== operation.id || !sanitizeAction(operation.event.action) || !sanitizeActor(operation.event.actor?.id, operation.event.actor?.name)) throw new Error();
@@ -233,7 +236,7 @@ export function createGitHubStore({
           if (action.type === 'claim-growth' && !room.state.pendingGrowth?.some(reward => reward.id === action.rewardId)) throw new StorageError('REWARD_ALREADY_CLAIMED', '这颗成长气泡已经被领取，或暂时无法找到。', 409);
           if (action.type === 'invite-cat') {
             if (room.state.collection.invited.some(record => record.id === action.catId)) throw new StorageError('CAT_ALREADY_INVITED', '这位猫猫已经加入庭院啦。', 409);
-            if (!canInviteCat(action.catId, room.state.collection, levelInfo(room.state.xp).level)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
+            if (!canInviteCat(action.catId, normalizeState(room.state,actionAt).collection, levelInfo(room.state.xp).level)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
           }
           const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
           if (!reduced && action.type.startsWith('game-')) throw new StorageError('GAME_ACTION_REJECTED', '对局已更新，请按最新回合操作；只有本局玩家可以参与。', 409);

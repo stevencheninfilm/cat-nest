@@ -216,14 +216,15 @@ test('either caregiver can collect the other caregiver’s bubble and both clien
   const play = male.state.pendingGrowth.find(reward => reward.kind === 'play');
   assert.equal(feed.actorId, 'partner-male');
   assert.equal(play.actorId, 'partner-female');
+  assert.equal(play.amount, 10.4, 'feeding restored energy before the next interaction');
   assert.equal(male.state.xp, xp);
 
   assert.equal(male.cloud.dispatch({ type: 'claim-growth', rewardId: play.id }), true);
-  await until(() => drained(male) && female.state.pendingGrowth.length === 1 && female.state.xp === xp + 9.6, 'the other caregiver’s play reward to be collected');
+  await until(() => drained(male) && female.state.pendingGrowth.length === 1 && female.state.xp === xp + 10.4, 'the other caregiver’s play reward to be collected');
   assert.equal(female.cloud.dispatch({ type: 'claim-growth', rewardId: feed.id }), true);
   await until(() => drained(female) && male.state.pendingGrowth.length === 0 && female.state.pendingGrowth.length === 0, 'both clients to remove the claimed bubbles');
-  assert.equal(male.state.xp, xp + 64.6);
-  assert.equal(female.state.xp, xp + 64.6);
+  assert.equal(male.state.xp, xp + 65.4);
+  assert.equal(female.state.xp, xp + 65.4);
   assert.equal(f.saved.revision, 4);
   assert.deepEqual(f.saved.state.pendingGrowth, []);
   assert.equal(f.saved.state.careLimits.counts.feed, 1);

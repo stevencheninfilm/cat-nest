@@ -1,13 +1,80 @@
-/* Time of day changes the room light while keeping controls legible. */
+/* Local room lighting and the cat's small expression palette. */
 .nest > .room-backdrop { transition: filter 2s ease; }
 .nest[data-cat-period="morning"] > .room-backdrop { filter: brightness(1.04) saturate(.95); }
 .nest[data-cat-period="evening"] > .room-backdrop { filter: brightness(.91) saturate(.92); }
 .nest[data-cat-period="night"] > .room-backdrop { filter: brightness(.72) saturate(.78); }
 .nest.sleeping > .room-backdrop { filter: brightness(.65) saturate(.72); }
 .nest[data-cat-period="night"] .sun-dust { opacity: .12; }
-.nest .pet-card .pet-title { gap: 5px; }
-.cat-rhythm { max-width: 102px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8px; font-weight: 600; line-height: 18px; color: #795f46; text-shadow: 0 1px 3px #fff5df; }
-.nest[data-cat-period="night"] .cat-rhythm { color: #655d79; }
-.nest[data-cat-mood="lonely"] .cat-rhythm { color: #94708a; }
-@media(max-width:360px) { .cat-rhythm { font-size: 7px; max-width: 88px; }.nest .pet-card .pet-title { gap: 3px; } }
-@media(prefers-reduced-motion:reduce) { .nest > .room-backdrop { transition: none; } }
+.expression-portrait {
+  display: block; flex-shrink: 0; width: 54px; height: 54px;
+  background: url('./assets/cat-expressions/v1/expression-atlas.png') var(--expression-art,0% 0%) / 300% 200% no-repeat;
+}
+.cat-rhythm {
+  position: absolute; top: 9%; right: 7%; z-index: 8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 48px; min-height: 52px; padding: 3px 3px 5px;
+  border: 1px solid #fffdf4; border-radius: 19px;
+  background: linear-gradient(145deg,#fffdf3ef,#f0e6d9eb);
+  box-shadow: 0 4px 12px #77533920,inset 0 1px 0 #fff;
+  color: #88705a; cursor: pointer; backdrop-filter: blur(8px);
+  transition: background .18s,box-shadow .18s;
+}
+.cat-rhythm .expression-entry-face { width: 36px; height: 36px; margin-top: -2px; }
+.cat-rhythm small { font-size: 9px; font-weight: 700; line-height: 12px; letter-spacing: 1px; }
+.cat-rhythm:hover,.cat-rhythm[aria-expanded=true] { background: #fffcf5; box-shadow: 0 4px 15px #8d6c542c,0 0 0 2px #fff8e980; }
+.cat-rhythm:focus-visible { outline: 2px solid #ab91b7; outline-offset: 3px; }
+.nest.is-companion .cat-rhythm,.nest.feeding-open .cat-rhythm { display: none; }
+
+/* A palette beside the launcher; no change to the cat's size or camera framing. */
+.expression-sheet {
+  position: fixed; inset: auto; left: var(--expression-left,calc(50% - 130px)); top: var(--expression-top,25svh);
+  margin: 0; width: min(260px,calc(100vw - 24px)); max-width: 260px; max-height: calc(100svh - 24px);
+  padding: 12px; overflow-x: hidden; overflow-y: auto;
+  border: 1px solid #fffdf6; border-radius: 21px;
+  background: linear-gradient(145deg,#fffdf5f7,#f7eedff7);
+  box-shadow: 0 10px 40px #6f4e3b24,0 2px 7px #81665312,inset 0 1px 0 #fff;
+  color: #725740; scrollbar-width: thin;
+}
+.expression-sheet::backdrop { background: #5d463507; backdrop-filter: none; }
+.expression-sheet .modal-close { top: 10px; right: 10px; width: 27px; height: 27px; z-index: 2; background: #e9dfcf7d; }
+.expression-sheet .modal-close svg { width: 13px; height: 13px; }
+.expression-heading { padding: 0 28px 0 2px; text-align: left; }
+.expression-sheet .expression-heading h2 { margin: 0; font-size: 15px; line-height: 21px; font-weight: 800; letter-spacing: 1px; }
+.expression-heading > span { display: block; margin-top: 1px; font-size: 8px; line-height: 12px; color: #ac947d; }
+.expression-auto {
+  display: flex; align-items: center; gap: 6px; width: 100%; min-height: 29px; margin-top: 9px; padding: 5px 9px;
+  border: 1px solid #e4d7c57d; border-radius: 11px; background: #f4ebdf9c; text-align: left;
+}
+.expression-auto > svg { width: 13px; height: 13px; color: #b59a6c; }
+.expression-auto strong { font-size: 10px; line-height: 16px; font-weight: 600; }
+.expression-auto .expression-check { margin-left: auto; }
+.expression-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin-top: 7px; }
+.expression-choice {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0; min-width: 0; min-height: 73px; padding: 3px 2px 6px;
+  border: 1px solid #e8ddcf; border-radius: 13px;
+  background: linear-gradient(150deg,#fffcf5d9,#f5ecdf9c); color: #80674f;
+  transition: border-color .15s,background .15s;
+}
+.expression-choice .expression-portrait { width: 54px; height: 54px; }
+.expression-choice > strong { display: block; font-size: 10px; line-height: 14px; font-weight: 600; }
+.expression-choice:hover { background: #fffdf7; border-color: #cdb7d3; }
+.expression-check { display: grid; place-items: center; flex-shrink: 0; width: 14px; height: 14px; border-radius: 50%; font-size: 9px; line-height: 1; color: #fffdf8; }
+.expression-choice .expression-check { position: absolute; top: 5px; right: 5px; }
+.expression-choice[aria-pressed=true] { border-color: #b39abf; background: linear-gradient(145deg,#fffcf9,#efe7f1); box-shadow: inset 0 0 0 1px #b39abf66; }
+.expression-choice[aria-pressed=true] > strong { color: #846394; font-weight: 800; }
+.expression-choice[aria-pressed=true] .expression-check { background: #aa90b6; }
+.expression-auto[aria-pressed=true] { border-color: #b6a181; background: #fffaf0; }
+.expression-auto[aria-pressed=true] .expression-check { background: #b29e7d; }
+.expression-choice:focus-visible,.expression-auto:focus-visible,.expression-greet:focus-visible { outline: 2px solid #aa90b6; outline-offset: 2px; }
+.expression-footer { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-top: 8px; padding: 7px 0 0; border-top: 1px solid #e6d9c76b; }
+.expression-footer p { max-width: 132px; margin: 0; text-align: left; color: #a18a74; font-size: 8px; line-height: 12px; }
+.expression-greet { flex-shrink: 0; min-height: 28px; padding: 5px 8px; border: 1px solid #ddc9ac; border-radius: 10px; background: linear-gradient(145deg,#fff4db,#f1e0bf); font-size: 9px; font-weight: 700; color: #987449; }
+.expression-greet span { margin-left: 2px; }
+@media(max-width:360px) {
+  .cat-rhythm { right: 5%; width: 44px; min-height: 48px; }
+  .cat-rhythm .expression-entry-face { width: 32px; height: 32px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .nest > .room-backdrop,.cat-rhythm,.expression-choice { transition: none; }
+}

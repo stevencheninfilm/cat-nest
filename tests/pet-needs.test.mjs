@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, normalizeState, reduceAction, levelInfo, validPendingGrowth } from '../src/state.js';
-import { petNeeds, NEEDS_DECAY_INTERVAL_MS as INTERVAL, addGrowthExperience } from '../src/pet-needs.js';
+import { FOODS, CARE_LIMITS, careActionInfo, initialState, normalizeState, reduceAction, levelInfo, validPendingGrowth } from '../src/state.js';
+import { petNeeds, NEED_KEYS, NEEDS_DECAY_INTERVAL_MS as INTERVAL, addGrowthExperience } from '../src/pet-needs.js';
 import { needButtons, needDetails, growthBonusBadge, growthBonusDetails } from '../src/pet-needs-ui.js';
 import { growthStageProgress } from '../src/growth-stages.js';
 import { growthTray } from '../src/growth-ui.js';
@@ -22,8 +22,11 @@ test('each need above 80 adds ten percent, up to an additive 1.3 multiplier', ()
   assert.equal(petNeeds(healthy(), START + 20 * INTERVAL).multiplier,1);
 });
 
-test('saved needs decay at exact half-hour boundaries, preserve partial time and never double-decay', () => {
+test('saved needs decay at exact hourly boundaries, preserve partial time and never double-decay', () => {
   const before = healthy(), snapshot = structuredClone(before);
+  assert.equal(INTERVAL,60*60_000);
+  assert.equal(petNeeds(before,START+30*60_000).hunger,100);
+  assert.deepEqual(NEED_KEYS.map(key=>petNeeds(before,START+24*INTERVAL)[key]),[76,76,76]);
   assert.equal(petNeeds(before, START + INTERVAL - 1).hunger, 100);
   const first = normalizeState(before, START + INTERVAL + 1234);
   assert.deepEqual([first.hunger,first.mood,first.energy], [99,99,99]);
@@ -40,7 +43,7 @@ test('saved needs decay at exact half-hour boundaries, preserve partial time and
 
 test('unrelated saves and care cannot reset the unfinished decay interval', () => {
   let state = healthy();
-  for (let minute=1; minute<30; minute++) state=reduceAction(state,{type:'rename',name:'糯米'},actor,START + minute * 60_000);
+  for (let minute=1; minute<60; minute++) state=reduceAction(state,{type:'rename',name:'糯米'},actor,START + minute * 60_000);
   assert.equal(state.needsUpdatedAt, START);
   const after = reduceAction(state,{type:'pet'},actor,START + INTERVAL,'decay-pet-operation');
   assert.equal(after.hunger,99);
@@ -48,6 +51,26 @@ test('unrelated saves and care cannot reset the unfinished decay interval', () =
   assert.equal(after.needsUpdatedAt,START + INTERVAL);
   const legacy = healthy(); delete legacy.needsUpdatedAt;
   assert.equal(normalizeState(legacy,START + INTERVAL).hunger,99,'legacy saves use their saved update time');
+});
+
+test('care balances lower consumption and slower mood gains with the actual affordability boundary', () => {
+  const before={...initialState(START),hunger:40,mood:40,energy:40},snapshot=structuredClone(before);
+  for (const [action,expected] of [
+    [{type:'feed',food:'meal'},[62,41,46]],
+    [{type:'pet'},[40,42,40]],
+    [{type:'play'},[39,44,36]],
+    [{type:'sleep'},[40,40,70]],
+  ]) {
+    const after=reduceAction(before,action,actor,START,`balanced-care-${action.type}`);
+    assert.deepEqual(NEED_KEYS.map(key=>after[key]),expected,action.type);
+    assert.equal(after.xp,before.xp,'care never claims growth automatically');
+  }
+  assert.deepEqual(before,snapshot);
+  const affordable=reduceAction({...before,energy:4,hunger:0},{type:'play'},actor,START,'balanced-play-last-energy');
+  assert.equal(affordable.energy,0); assert.equal(affordable.hunger,0);
+  assert.equal(reduceAction({...before,energy:3},{type:'play'},actor,START,'balanced-play-not-enough'),null);
+  const full=reduceAction({...before,mood:99},{type:'pet'},actor,START,'balanced-pet-cap');
+  assert.equal(full.mood,100);
 });
 
 test('every boosted care freezes its exact additive reward before applying care changes', () => {
@@ -66,6 +89,48 @@ test('every boosted care freezes its exact additive reward before applying care 
   assert.equal(touched.pendingGrowth[1].amount,3.9);
   const expired=reduceAction({...healthy(),energy:81},{type:'pet'},actor,START + INTERVAL,'expired-boost-reward');
   assert.equal(expired.pendingGrowth[0].amount,3.6,'server-time decay is evaluated before rewarding');
+});
+
+test('food and water restore capped energy even after sleep quota, with rewards frozen before recovery', () => {
+  for (const [food, amount] of [['meal',6],['water',8]]) {
+    const before={...healthy(),energy:76};
+    before.careLimits.counts.sleep=CARE_LIMITS.sleep.dailyLimit;
+    const snapshot=structuredClone(before);
+    assert.equal(careActionInfo(before,{type:'sleep'},actor.id,START).reason,'daily_limit');
+    const after=reduceAction(before,{type:'feed',food},actor,START,`recover-energy-${food}`);
+    assert.equal(after.energy,76+amount);
+    assert.equal(after.careLimits.counts.feed,1);
+    assert.equal(after.careLimits.counts.sleep,3);
+    assert.equal(after.pendingGrowth[0].amount,FOODS[food].love*1.2,'new energy applies to the next reward');
+    const touched=reduceAction(after,{type:'pet'},actor,START,`recovered-bonus-${food}`);
+    assert.equal(touched.pendingGrowth[1].amount,3.9);
+    assert.equal(normalizeState(JSON.parse(JSON.stringify(after)),START).energy,after.energy);
+    assert.equal(reduceAction(after,{type:'feed',food},actor,START+1,`recover-too-early-${food}`),null);
+    const capped=reduceAction({...healthy(),energy:98},{type:'feed',food},actor,START,`recover-energy-cap-${food}`);
+    assert.equal(capped.energy,100);
+    const exhausted={...before,careLimits:{...before.careLimits,counts:{...before.careLimits.counts,feed:CARE_LIMITS.feed.dailyLimit}}};
+    assert.equal(reduceAction(exhausted,{type:'feed',food},actor,START,`recover-feed-limit-${food}`),null);
+    assert.deepEqual(before,snapshot);
+  }
+});
+
+test('two rests and four spaced feeds sustain the full bonus across a day with all ten play sessions', () => {
+  const day=START-8*INTERVAL;
+  let state={...initialState(day),hunger:100,mood:100,energy:100};
+  const schedule=[
+    [.5,'play'],[1.5,'play'],[2.5,'play'],[3.5,'feed','meal'],[4.5,'play'],[5.5,'sleep'],
+    [6.5,'play'],[7.5,'play'],[8.5,'feed','water'],[9.5,'play'],[10.5,'play'],[11.5,'feed','meal'],
+    [12.5,'play'],[13.5,'sleep'],[14.5,'play'],[15.5,'feed','meal'],
+  ];
+  for (const [hour,type,food] of schedule) {
+    const now=day+hour*INTERVAL;
+    assert.equal(petNeeds(state,now).multiplier,1.3,`before ${type} at ${hour}h`);
+    state=reduceAction(state,{type,...(food?{food}:{})},actor,now,`daily-energy-${hour}-${type}`);
+    assert.ok(state,`${type} at ${hour}h respects all care limits`);
+    assert.equal(petNeeds(state,now).multiplier,1.3,`after ${type} at ${hour}h`);
+  }
+  assert.deepEqual([state.careLimits.counts.sleep,state.careLimits.counts.feed,state.careLimits.counts.play],[2,4,10]);
+  assert.equal(petNeeds(state,day+24*INTERVAL-1).multiplier,1.3);
 });
 
 test('frozen boosted bubbles survive offline time and count exact decimal XP once', () => {
@@ -106,17 +171,32 @@ test('each status opens its own readable methods, threshold and decay explanatio
     assert.match(html,/大于 80，成长 \+10%/);
     assert.match(html,/当前成长总倍率 1.2，查看全部成长加成/);
     assert.match(html,new RegExp(`aria-valuenow="${key === 'energy' ? 80 : 100}"`));
-    assert.match(html,/每 30 分钟各下降 1 点/);
+    assert.match(html,/每 60 分钟各下降 1 点/);
     assert.match(html,key === 'energy' ? /再 \+1 达标/ : /本项 \+10%/);
     assert.doesNotMatch(html,/need-bonus-checks|LITTLE DAILY CARE/);
   }
   assert.match(needDetails(healthy(),'hunger',{now:START}),/鲜鱼罐罐<small>冷却 [^<]+<\/small><\/span><b class="need-gain">\+35/);
-  assert.match(needDetails(healthy(),'mood',{now:START}),/温柔摸摸<\/span><b class="need-gain">\+6/);
-  assert.match(needDetails(healthy(),'energy',{now:START}),/立即恢复 20 点活力/);
+  assert.match(needDetails(healthy(),'mood',{now:START}),/温柔摸摸<\/span><b class="need-gain">\+2/);
+  assert.match(needDetails(healthy(),'energy',{now:START}),/立即恢复 30 点活力/);
   assert.match(needDetails(healthy(),'energy',{now:START}),/当前成长总倍率 1.3/);
   const sleeping=needDetails({...healthy(),sleeping:true},'energy',{now:START});
   assert.match(sleeping,/小猫正在休息。叫醒不会再次恢复活力/);
   assert.doesNotMatch(sleeping,/data-need-action="sleep"/);
+});
+
+test('energy details keep food recovery available while sleep is capped, cooling down or already asleep', () => {
+  for (const kind of ['capped','cooldown','sleeping']) {
+    const state={...healthy(),energy:70,sleeping:kind==='sleeping'};
+    if(kind==='capped') state.careLimits.counts.sleep=3;
+    if(kind==='cooldown') state.careLimits.lastActions.sleep=START;
+    const html=needDetails(state,'energy',{now:START,clientId:actor.id});
+    assert.match(html,/开始休息<\/span><b class="need-gain">\+30/);
+    assert.match(html,/清清饮水<\/span><b class="need-gain">\+8/);
+    assert.match(html,/普通食物<\/span><b class="need-gain">\+6/);
+    assert.match(html,/<button type="button" class="need-recovery-link" data-open="feeding">/);
+    assert.match(html,/休息每日 3 次，间隔 4 小时/);
+    if(kind!=='sleeping') assert.match(html,/<button class="primary modal-primary" disabled data-need-action="sleep"/);
+  }
 });
 
 test('the bonus badge remains a keyboard-accessible detail entry even without a bonus', () => {

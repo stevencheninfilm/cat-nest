@@ -8,7 +8,7 @@ import { sanitizeAction, sanitizeActor, publicRoom, StorageError } from '../serv
 import { initialState, normalizeState, reduceAction, careActionInfo } from '../src/state.js';
 import { publicGameEvent, validGameHub } from '../src/minigames.js';
 
-import { EVIAN_ROOM_ID, homeContext, initialHomeState } from '../src/home-context.js';
+import { HOME_ENTRIES, initialHomeState } from '../src/home-context.js';
 
 export const PREVIEW_HOME = '00000000000000000000000000005174';
 /** Development-only file storage. No extra listener, credentials, GitHub call,
@@ -87,14 +87,14 @@ export function localPetPreview({ root, enabled }) {
       // Watching a save can reload the page and interrupt the next bot turn.
       const folder=`cat-nest-preview-${createHash('sha256').update(root).digest('hex').slice(0,16)}`;
       const handle=createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'home.json'),legacyFile:resolve(root,'.cat-preview','home.json')}),coupleRoomId:PREVIEW_HOME,serveStatic:false,pollMs:2000});
-      const evianHandle=createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'evian.json'),homeId:EVIAN_ROOM_ID,seedState:at=>initialHomeState(homeContext('/evian/'),at)}),coupleRoomId:EVIAN_ROOM_ID,serveStatic:false,pollMs:2000});
+      const namedHandles=new Map(HOME_ENTRIES.filter(home=>home.source==='room').map(home=>[home.roomId,createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,`${home.id}.json`),homeId:home.roomId,seedState:at=>initialHomeState(home,at)}),coupleRoomId:home.roomId,serveStatic:false,pollMs:2000})]));
       server.middlewares.use((request,response,next)=>{
         const path=new URL(request.url || '/','http://localhost').pathname;
         if (!['/api/couple/home','/api/health'].includes(path) && !path.startsWith('/api/rooms/')) return next();
-        const selected=path===`/api/rooms/${EVIAN_ROOM_ID}` || path.startsWith(`/api/rooms/${EVIAN_ROOM_ID}/`) ? evianHandle : handle;
+        const selected=namedHandles.get(/^\/api\/rooms\/([a-f0-9]{32})(?:\/|$)/.exec(path)?.[1]) || handle;
         selected(request,response).then(handled=>{if(!handled)next();}).catch(next);
       });
-      server.httpServer?.once('close',()=>{handle.close();evianHandle.close();});
+      server.httpServer?.once('close',()=>{handle.close();for(const named of namedHandles.values())named.close();});
     },
   };
 }

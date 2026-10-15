@@ -57,6 +57,8 @@
 .need-method-list{margin-top:2px}
 .need-method-row{padding:11px 0;font-size:12px}
 .need-methods>.need-method-note{margin-top:10px;font-size:10px;color:#b09a81}
+.need-recovery-link{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:11px 0 2px;border:0;background:none;color:var(--need-ink);font-size:12px;font-weight:700;text-align:left;cursor:pointer}
+.need-recovery-link i{font-size:18px;font-style:normal;font-weight:400}
 .need-bonus-link{display:flex;align-items:center;gap:8px;width:100%;padding:12px 0;border:0;border-top:1px solid #cbb59833;background:none;text-align:left;cursor:pointer;color:#9c856d}
 .need-bonus-link>span{font-size:11px}
 .need-bonus-link>b{font-size:15px;font-weight:800;color:#6f8852;font-variant-numeric:tabular-nums}

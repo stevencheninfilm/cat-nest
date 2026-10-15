@@ -15,7 +15,7 @@ function catalog({ title,quota,invite,connection }) {
 }
 function modePicker(game,{invite,busy,running,multiplayer,connection}) {
   const g=GAMES[game];
-  const hints={solo:soloDescription[game],computer:game==='guess'?'轮流猜数字，先猜中获胜。':game==='rps'?'和电脑猜拳，三局两胜。':'和电脑猫猫轮流比拼。',duo:'两台手机，邀请另一位猫友加入。'};
+  const hints={solo:soloDescription[game],computer:game==='guess'?'轮流猜数字，先猜中获胜。':game==='rps'?'和电脑猜拳，三局两胜。':'和电脑猫猫轮流比拼。',duo:'模拟伙伴会自动加入并回应。'};
   return `<button class="game-back" data-game-lobby>‹ 返回游戏屋</button><div class="game-picker-heading"><span class="game-picker-cover" aria-hidden="true">${cover(game,96)}</span><h2>${g.name}</h2><p>${g.description}</p></div>${invite}<div class="game-mode-picker" aria-label="选择${g.name}玩法">${Object.entries(GAME_MODES).map(([mode,label])=>`<button data-game-create="${game}" data-game-mode="${mode}" ${disabled(busy||running||mode==='duo'&&!multiplayer)}><span class="game-mode-symbol" aria-hidden="true">${mode==='solo'?'🐾':mode==='computer'?'🤖':'♡'}</span><span class="game-mode-copy"><strong>${label}</strong><small>${hints[mode]}</small></span><span class="game-mode-reward">+${g.xp+(mode==='duo'?5:0)}<small>成长</small></span><span class="game-mode-arrow" aria-hidden="true">›</span></button>`).join('')}</div>${connection}`;
 }
 function resultPanel(m,state,busy) {
@@ -71,7 +71,7 @@ export function minigamesPanel({ state,clientId,saving=false,connected=true,mult
   const hub=normalizeGameHub(state.games,now),m=hub.match,busy=saving||!connected;
   const title='<div class="game-heading"><span class="game-heading-icon" aria-hidden="true"><img src="./assets/minigames/game-entry-v1.webp" width="55" height="55" alt="" draggable="false" decoding="async"/></span><h2>猫猫游戏屋</h2></div>';
   const quota=`<div class="game-quota"><span>今日成长</span><div class="game-quota-track" role="progressbar" aria-label="今日小游戏成长" aria-valuemin="0" aria-valuemax="${GAME_DAILY_LIMIT}" aria-valuenow="${hub.earned}"><i style="width:${hub.earned/GAME_DAILY_LIMIT*100}%"></i></div><strong>${hub.earned}<small> / ${GAME_DAILY_LIMIT}</small></strong></div>`;
-  const connection=`<p class="game-connection" role="status">${saving?'正在保存这一回合…':connected?!multiplayer?'单人和电脑可玩 · 双人联机暂不可用':localPreview?'本地联机预览':'已连接小窝 · 实时同步':'正在连接小窝…'}</p>`;
+  const connection=`<p class="game-connection" role="status">${saving?'正在保存这一回合…':connected?!multiplayer?'单人和电脑可玩 · 双人联机暂不可用':localPreview?'演示接口 · 仅本机保存':'已连接小窝 · 实时同步':'正在连接小窝…'}</p>`;
   if(lobby||!m) {
     const running=m&&['waiting','active'].includes(m.status);
     const label=m?.status==='waiting'?`${esc(m.players[0].name)}邀请你玩${GAMES[m.game].name}`:m?.status==='finished'?`${GAMES[m.game].name}已完成`:`${m?GAMES[m.game].name:''}正在进行 · ${m?GAME_MODES[m.mode]:''}`;
@@ -82,7 +82,7 @@ export function minigamesPanel({ state,clientId,saving=false,connected=true,mult
   const player=m.players.findIndex(p=>p.id===clientId),active=m.status==='active';
   const header=`<button class="game-back" data-game-lobby>‹ 返回游戏屋</button><div class="game-match-heading"><h2>${GAMES[m.game].emoji} ${GAMES[m.game].name}</h2><span>${GAME_MODES[m.mode]}</span></div>`;
   const players=`<div class="game-players">${[0,1].filter(n=>m.mode!=='solo'||n===0).map(n=>`<div class="game-player ${m.players[n]?.id===clientId?'is-me':''} ${active&&m.game!=='rps'&&n===m.turn?'has-turn':''}"><span>${m.players[n]?.computer?'🤖':n===0?'🐱':'🐾'}</span><strong>${esc(m.players[n]?.name||'等待猫友')} ${m.players[n]?.id===clientId?'<small>你</small>':''}</strong><b>${EXTRA_GAMES.includes(m.game)?extraScoreLabel(m,n):m.game==='gomoku'?(m.mode==='solo'?`已过 ${m.scores[0]} 关`:n===0?'黑棋':'白棋'):`${m.scores[n]} ${m.game==='memory'?'对':m.mode==='solo'?'题':'胜'}`}</b></div>`).join('')}</div>`;
-  if(m.status==='waiting')return `${header}${players}<div class="game-waiting"><div aria-hidden="true">🐱 <span>♡</span> 🐾</div><h3>${player===-1?'收到一份一起玩的邀请':'等另一位猫友来玩'}</h3><p>另一台手机选择不同身份，<br/>进入「小游戏」，就能加入这一局。</p>${player===-1?`<button class="primary" data-game-join ${disabled(busy)}>加入对局</button>`:'<button class="primary" data-game-copy>复制小窝链接</button>'}</div>${player>=0?`<button class="game-cancel" data-game-cancel ${disabled(busy)}>取消邀请</button>`:''}${connection}`;
+  if(m.status==='waiting')return `${header}${players}<div class="game-waiting"><div aria-hidden="true">🐱 <span>♡</span> 🐾</div><h3>${player===-1?'收到一份一起玩的邀请':'等另一位猫友来玩'}</h3><p>模拟伙伴正在加入，<br/>稍后就可以一起开始这一局。</p>${player===-1?`<button class="primary" data-game-join ${disabled(busy)}>加入对局</button>`:'<button class="primary" data-game-copy>复制小窝链接</button>'}</div>${player>=0?`<button class="game-cancel" data-game-cancel ${disabled(busy)}>取消邀请</button>`:''}${connection}`;
   const board=m.game==='rps'?rpsBoard(m,player,busy,now):m.game==='memory'?memoryBoard(m,player,busy,now):EXTRA_GAMES.includes(m.game)?extraBoardMarkup(m,player,busy,now,selectedCell):gomokuBoard(m,player,busy,now,selectedCell);
   return `${header}${players}${board}${resultPanel(m,state,busy)}${active&&player>=0?`<details class="game-exit"><summary>结束这一局</summary><p>中途退出不发成长奖励，随时可以重新开局。</p><button data-game-cancel class="game-cancel" ${disabled(busy)}>确认结束对局</button></details>`:''}${connection}`;
 }

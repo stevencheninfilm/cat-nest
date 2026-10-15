@@ -8,7 +8,7 @@
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "node --watch server/index.mjs",
     "start": "node server/index.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/verify-shared-build.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.mjs"
   },

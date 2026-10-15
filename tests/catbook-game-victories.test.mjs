@@ -96,7 +96,7 @@ test('new portraits remain gray before invitation and the first scene is the lar
   assert.match(html,/data-scene-id="station"/);
   assert.match(html,/石头剪刀布累计获胜 5 局/);
   assert.match(html,/book-cat-sprite is-game-cat undiscovered/);
-  assert.equal(COLLECTION_CATS.length,18);
+  assert.equal(COLLECTION_CATS.length,24);
   for(const action of [{type:'game-finish',winner:0},{type:'invite-cat',catId:'scout',wins:5}])assert.equal(sanitizeAction(action),null);
 });
 

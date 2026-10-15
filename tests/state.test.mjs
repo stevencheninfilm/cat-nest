@@ -13,8 +13,8 @@ test('insufficient currency and energy cannot create an accepted action', () => 
   const tired={...initialState(),energy:0}; assert.equal(reduceAction(tired,{type:'play'}),null);
 });
 test('play earns currency and consumes energy, resting restores it',()=>{
-  const after=reduceAction(initialState(),{type:'play'}); assert.equal(after.coins,1210); assert.equal(after.energy,68);
-  const rest=reduceAction(after,{type:'sleep'}); assert.equal(rest.energy,88); assert.equal(rest.sleeping,true);
+  const after=reduceAction(initialState(),{type:'play'}); assert.equal(after.coins,1210); assert.equal(after.energy,72);
+  const rest=reduceAction(after,{type:'sleep'}); assert.equal(rest.energy,100); assert.equal(rest.sleeping,true);
 });
 test('persisted state clamps corrupted fields and retains only valid history',()=>{
   const after=normalizeState({...initialState(),hunger:999,coins:-10,name:'',history:[null,{text:'hi',actor:'you',at:123}]});

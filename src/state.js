@@ -1,18 +1,19 @@
 import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
-import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare, recordCollectionVictory } from './cat-collection.js';
-import { petNeeds, growthRewardAmount, addGrowthExperience } from './pet-needs.js';
+import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare, recordCollectionVictory, recordCollectionAchievements } from './cat-collection.js';
+import { petNeeds, growthRewardAmount, addGrowthExperience, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { GAMES, emptyGameHub, normalizeGameHub, reduceGameHub } from './minigames.js';
+import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple-care.js';
 
 export const FOODS = {
-  snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10 },
-  meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22 },
-  fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35 },
-  chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28 },
-  shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24 },
-  salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32 },
-  mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30 },
-  treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12 },
-  water: { name: '清清饮水', cost: 5, love: 5, hunger: 0 },
+  snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 6 },
+  meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22, energy: 6 },
+  fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35, energy: 6 },
+  chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28, energy: 6 },
+  shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24, energy: 6 },
+  salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32, energy: 6 },
+  mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30, energy: 6 },
+  treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12, energy: 6 },
+  water: { name: '清清饮水', cost: 5, love: 5, hunger: 0, energy: 8 },
 };
 export const FEEDING_WINDOW_MS = 4 * 60 * 60 * 1000;
 export const FOOD_COOLDOWN_MS = Object.freeze({
@@ -30,7 +31,7 @@ export const foodCooldownMs = food => typeof food === 'string' && Object.hasOwn(
 export const FEEDING_BONUS = 10;
 export const CARE_TIME_ZONE = 'Asia/Shanghai';
 export const CARE_LIMITS = Object.freeze({
-  feed: Object.freeze({ dailyLimit: 6, cooldownMs: FEEDING_WINDOW_MS }),
+  feed: Object.freeze({ dailyLimit: 10, cooldownMs: FEEDING_WINDOW_MS }),
   pet: Object.freeze({ dailyLimit: 20, cooldownMs: 5 * 60 * 1000 }),
   play: Object.freeze({ dailyLimit: 10, cooldownMs: 30 * 60 * 1000 }),
   sleep: Object.freeze({ dailyLimit: 3, cooldownMs: FEEDING_WINDOW_MS }),
@@ -152,7 +153,7 @@ function feedRecords(value, now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), updatedAt: now };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -172,13 +173,15 @@ export function normalizeState(value, now = Date.now()) {
   next.appearance = normalizeAppearance(value.appearance);
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
+  const savedBoostCount=['hunger','mood','energy'].filter(key=>next[key]>80).length;
   const needs = petNeeds({ ...next, needsUpdatedAt:validTime(value.needsUpdatedAt) ? value.needsUpdatedAt : next.updatedAt }, now);
   for (const key of ['hunger', 'mood', 'energy', 'needsUpdatedAt']) next[key] = needs[key];
   next.feedRecords = feedRecords(value.feedRecords, now);
   next.pendingGrowth = normalizePendingGrowth(value.pendingGrowth);
   next.games = normalizeGameHub(value.games,now);
+  next.coupleCare = normalizeCoupleCare(value.coupleCare, now);
   next.careLimits = normalizeCareLimits(value.careLimits, now);
-  next.collection = normalizeCollection(value.collection, { ...next, careLimits:validCareLimits(value.careLimits) ? value.careLimits : next.careLimits }, FOODS);
+  next.collection = normalizeCollection(value.collection, { ...next, savedBoostCount, careLimits:validCareLimits(value.careLimits) ? value.careLimits : next.careLimits }, FOODS);
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
     next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
   }
@@ -309,6 +312,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       next.history.unshift({ text:`${m.mode === 'duo' ? '一起完成':'完成'}${GAMES[m.game].name}${m.reward ? `，生成${m.reward}点成长气泡待领取`:'，今日小游戏成长已达上限'}`, actor:cleanName(actor?.name), at:now });
       next.history = next.history.slice(0,40);
     }
+    recordCollectionAchievements(next.collection,{boostCount,careCounts:next.careLimits.counts});
     return normalizeState(next,now);
   }
   switch (action.type) {
@@ -317,7 +321,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       const food = FOODS[action.food];
       if (next.coins < food.cost) return null;
       next.coins -= food.cost; next.love += food.love; growth = food.love;
-      next.hunger = cap(next.hunger + food.hunger); next.mood = cap(next.mood + 4); next.sleeping = false;
+      next.hunger = cap(next.hunger + food.hunger); next.mood = cap(next.mood + CARE_NEED_EFFECTS.feed.mood); next.energy = cap(next.energy + food.energy); next.sleeping = false;
       text = `喂了一份${food.name}`;
       if (recordFeeding(next, action.food, actor, now)) {
         growth += FEEDING_BONUS;
@@ -327,13 +331,13 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       break;
     }
     case 'pet':
-      next.love += 3; growth = GROWTH_AMOUNTS.pet; next.mood = cap(next.mood + 6); next.sleeping = false; text = '温柔地摸了摸小猫'; break;
+      next.love += 3; growth = GROWTH_AMOUNTS.pet; next.mood = cap(next.mood + CARE_NEED_EFFECTS.pet.mood); next.sleeping = false; text = '温柔地摸了摸小猫'; break;
     case 'play':
-      if (next.energy < 8) return null;
-      next.energy = cap(next.energy - 8); next.hunger = cap(next.hunger - 3); next.mood = cap(next.mood + 10);
+      if (next.energy < PLAY_ENERGY_COST) return null;
+      next.energy = cap(next.energy + CARE_NEED_EFFECTS.play.energy); next.hunger = cap(next.hunger + CARE_NEED_EFFECTS.play.hunger); next.mood = cap(next.mood + CARE_NEED_EFFECTS.play.mood);
       next.coins += 10; next.love += 5; growth = GROWTH_AMOUNTS.play; next.sleeping = false; text = '陪小猫玩了逗猫棒'; break;
     case 'sleep':
-      next.sleeping = !next.sleeping; next.energy = cap(next.energy + (next.sleeping ? 20 : 0)); growth = next.sleeping ? GROWTH_AMOUNTS.sleep : 0;
+      next.sleeping = !next.sleeping; next.energy = cap(next.energy + (next.sleeping ? CARE_NEED_EFFECTS.sleep.energy : 0)); growth = next.sleeping ? GROWTH_AMOUNTS.sleep : 0;
       text = next.sleeping ? '陪小猫打了个盹' : '轻轻叫醒了小猫'; break;
     case 'claim-growth': {
       if (typeof action.rewardId !== 'string' || !GROWTH_ID.test(action.rewardId)) return null;
@@ -369,6 +373,9 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     text += `，生成${growth}点成长气泡待领取${boostCount ? `（好状态 ×${multiplier}）` : ''}`;
   }
   if (Object.hasOwn(CARE_LIMITS, action.type) && !care.isWake) recordCare(next, action.type, actor?.id, now, action.food);
+  recordCollectionAchievements(next.collection,{boostCount:Math.max(boostCount,petNeeds(next,now).boostCount),careCounts:next.careLimits.counts,
+    dressChanged:action.type === 'dress' && Object.keys(current.appearance).some(key=>current.appearance[key] !== next.appearance[key])});
+  next.coupleCare = recordCoupleCare(next.coupleCare, action, actor?.id, now, rewardId, { isWake:care.isWake, feedingWindow:next.feedingWindow });
   next.history.unshift({ text, actor: cleanName(actor?.name).slice(0, 16), at: next.updatedAt });
   next.history = next.history.slice(0, 40);
   return normalizeState(next, now);

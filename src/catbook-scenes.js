@@ -1,5 +1,6 @@
 import { COLLECTION_CATS, collectionCatProgress } from './cat-collection.js';
 import { GAME_CAT_POSES } from './catbook-game-sprites.js';
+import { ACHIEVEMENT_CAT_POSES } from './catbook-achievement-sprites.js';
 export const DEFAULT_CAT_SCENE='station';
 // Scene sprites use rounded reference poses; original cats keep their pixel portraits.
 // Tight source rectangles avoid neighbouring sprites bleeding across generated atlas cells.
@@ -39,6 +40,9 @@ export const CAT_SCENES = Object.freeze([
     spot(20,48.4,4.8,'电车车顶上'), spot(53,78.8,4.8,'草坪入口'),
     spot(84.2,39,4.8,'红屋露台上'), spot(41,70.5,4.5,'点心柜台旁'),
     spot(89.1,61.8,5.8,'木箱上'), spot(88.5,74.5,6,'小水桶旁'),
+    spot(58.5,44,4.2,'围墙木栏上'), spot(35,45.2,4.2,'电车车顶上'),
+    spot(89.8,56,4.2,'高处木箱上'), spot(45,79.8,4.3,'草坪点心角'),
+    spot(91.2,34.5,4.8,'红屋露台上'), spot(35.5,33.5,5.2,'电车高台上'),
   ] },
   { id:'garden', asset:'garden-portrait', name:'日式庭院', subtitle:'把小日子过成花园', min:0, icon:'leaf', ratio:'863 / 1823', slots:[
     spot(65.5,78,24,'树桩上'), spot(29,35.7,20,'左侧高台上'),
@@ -50,6 +54,9 @@ export const CAT_SCENES = Object.freeze([
     spot(39,26,10,'桥边猫屋前'), spot(11,52.4,10,'橙色猫屋旁'),
     spot(91,80,9,'木廊边'), spot(36,67.3,10,'点心碗旁'),
     spot(55.5,31.5,14,'池塘边'), spot(12,68,13,'前院草地上'),
+    spot(57,39,10,'桥边小路上'), spot(24,62.5,10,'红色软台上'),
+    spot(90,44.5,10,'右侧猫窝顶上'), spot(45,72,10,'木廊点心角'),
+    spot(53,49.5,12,'木廊台阶旁'), spot(11,41.5,12,'橙色猫屋顶上'),
   ] },
   { id:'western', asset:'western-portrait', name:'西部露台', subtitle:'四位猫友的小聚会', min:4, icon:'sun', ratio:'863 / 1822', slots:[
     spot(52,34.5,18,'骰子猫窝顶上'), spot(66.8,49.3,18,'圆形小台上'),
@@ -61,6 +68,9 @@ export const CAT_SCENES = Object.freeze([
     spot(33.7,44.6,10,'木箱上'), spot(42,54,10,'露台中间'),
     spot(88,72.5,9,'抓柱底座旁'), spot(62,77.5,10,'点心碗旁'),
     spot(49,64,13,'阶梯上'), spot(45,79,15,'前院沙地上'),
+    spot(14,43,10,'木箱旁'), spot(46,70,10,'阶梯下面'),
+    spot(90,32,10,'木桶上'), spot(23,73,10,'露台点心角'),
+    spot(76,67.5,12,'抓柱底座旁'), spot(20,36.5,12,'食盆木台上'),
   ] },
   { id:'snow', asset:'snow-portrait', name:'暖暖雪庭', subtitle:'八位猫友，一场暖雪', min:8, icon:'snow', ratio:'863 / 1823', slots:[
     spot(58,60,21,'小伞下面'), spot(38,59,16,'小伞下面'),
@@ -72,6 +82,9 @@ export const CAT_SCENES = Object.freeze([
     spot(19,35.2,10,'室内柜台前'), spot(49,77,10,'木廊前端'),
     spot(89,49,9,'雪庭小路上'), spot(25,48.5,10,'室内点心角'),
     spot(62,76.5,13,'前院草地上'), spot(8,76,14,'木廊边'),
+    spot(66,51,10,'小伞顶上'), spot(50,67,10,'木廊中央'),
+    spot(30,24.5,10,'室内柜台上'), spot(14,62,10,'橙色猫窝旁'),
+    spot(70,36.4,9,'栏杆台面上'), spot(89,34.8,9,'铃铛平台角落'),
   ] },
 ].map(scene => Object.freeze({ ...scene, slots:Object.freeze(scene.slots) })));
 export function collectionSceneProgress(scene, collection, level) {
@@ -84,7 +97,7 @@ export function collectionScene(id, collection, level) {
   return CAT_SCENES.find(scene => scene.id === id && collectionSceneProgress(scene, collection, level).complete) || CAT_SCENES[0];
 }
 export function sceneCatPlacement(scene, cat) {
-  const sprite = cat.index < SCENE_CAT_POSES.length ? SCENE_CAT_POSES[cat.index] : GAME_CAT_POSES[cat.index-SCENE_CAT_POSES.length];
+  const sprite = cat.index < 12 ? SCENE_CAT_POSES[cat.index] : cat.index < 18 ? GAME_CAT_POSES[cat.index-12] : ACHIEVEMENT_CAT_POSES[cat.index-18];
   const placement = scene.slots[cat.index];
   return { ...sprite, ...placement, activity:`${placement.surface}${placement.name || sprite.name}` };
 }

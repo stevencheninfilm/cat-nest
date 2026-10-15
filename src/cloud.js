@@ -4,6 +4,8 @@ import { getCoupleProfile } from './couple-profile.js';
 export function createCloudRoom(options) {
   const { apiBase, roomId, clientId, name, coupleRole, initialState, pending = [], onRoom, onState, onAction, onPresence, onStatus, onSaveStatus, onPending, optimisticReducer, onRollback = () => {} } = options;
   const storageLabel = options.storageLabel || 'GitHub 云端';
+  const fetchImpl=options.fetchImpl || ((...args)=>globalThis.fetch(...args));
+  const eventSourceFactory=options.eventSourceFactory || (url=>new globalThis.EventSource(url));
   const base = apiBase.replace(/\/$/, '');
   const coupleMode = Object.hasOwn(options, 'coupleRole');
   const profile = getCoupleProfile(coupleRole);
@@ -21,7 +23,7 @@ export function createCloudRoom(options) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), optimisticReducer && options.method === 'POST' && path.endsWith('/actions') ? 15000 : 95000);
     try {
-      const res = await fetch(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
+      const res = await fetchImpl(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
       const data = await res.json();
       if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
       return data;
@@ -112,7 +114,7 @@ export function createCloudRoom(options) {
   function subscribe() {
     if (destroyed) return;
     source?.close();
-    source = new EventSource(`${base}/api/rooms/${room}/events?clientId=${encodeURIComponent(me.id)}&name=${encodeURIComponent(me.name)}`);
+    source = eventSourceFactory(`${base}/api/rooms/${room}/events?clientId=${encodeURIComponent(me.id)}&name=${encodeURIComponent(me.name)}`);
     source.addEventListener('state', event => { try { apply(JSON.parse(event.data)); } catch {} });
     source.addEventListener('action', event => { try { apply(JSON.parse(event.data)); } catch {} });
     source.addEventListener('presence', event => { try { onPresence(JSON.parse(event.data)); } catch {} });

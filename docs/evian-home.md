@@ -10,3 +10,5 @@ Vite 发布时生成 `evian/index.html`，通过 `<base href="../">` 复用父�
 
 
 2026-10-15：公共 `/cat-nest/` 仅跳转独立演示 `/cat-nest/test/`；原个人小窝入口迁移为 `/cat-nest/steven/`，沿用原存档及缓存键，入口约定见 `steven-home.md`。Evian 保留原固定房间与独立缓存，不受迁移影响。
+
+2026-10-15：所有存档入口已统一为一份应用构建，测试入口不再独立构建。今后以 `shared-save-architecture.md` 为架构与发布约束，原房间及缓存绑定继续保留。

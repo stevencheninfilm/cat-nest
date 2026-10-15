@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FOOD_COOLDOWN_MS, FEEDING_WINDOW_MS, FEEDING_BONUS, FOODS, initialState, normalizeState, reduceAction, careActionInfo, feedingInfo, validCareLimits } from '../src/state.js';
+import { FOOD_COOLDOWN_MS, FEEDING_WINDOW_MS, FEEDING_BONUS, FOODS, CARE_LIMITS, initialState, normalizeState, reduceAction, careActionInfo, feedingInfo, validCareLimits } from '../src/state.js';
 import { feedingSheet } from '../src/feeding-ui.js';
 
 const now = Date.parse('2026-10-14T00:00:00Z');
@@ -48,7 +48,7 @@ test('food cooldowns cross midnight while the shared daily quota resets', () => 
   const late = Date.parse('2026-10-14T15:59:00Z');
   const fed = reduceAction(initialState(late), { type:'feed', food:'water' }, male, late);
   const info = careActionInfo(JSON.parse(JSON.stringify(fed)), { type:'feed', food:'fish' }, male.id, late + 60_000);
-  assert.equal(info.remaining, 6);
+  assert.equal(info.remaining, CARE_LIMITS.feed.dailyLimit);
   assert.equal(info.reason, 'cooldown');
   assert.equal(info.remainingMs, 29 * 60_000);
 });
@@ -79,7 +79,7 @@ test('unknown food keys in a saved cooldown ledger are rejected', () => {
 test('the menu declares each food duration and selecting another food preserves the current wait', () => {
   const fed = reduceAction(initialState(now), { type:'feed', food:'fish' }, male, now);
   const html = feedingSheet({ state:fed, clientId:male.id, selectedFood:'water', now:now + 1000 });
-  assert.match(html, /◷ 冷却 30分钟/);
+  assert.match(html, /活力 \+8 · 冷却 30分钟/);
   assert.match(html, /清清饮水[^\"]*冷却30分钟/);
   assert.match(html, /幼猫慕斯[^\"]*冷却3小时/);
   assert.match(html, /03:59:59 后可喂食/);
