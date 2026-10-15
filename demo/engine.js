@@ -56,6 +56,8 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
     reset() { record={version:1,revision:record.revision+1,state:demoSeed(now()),receipts:[],court:null}; persist(); },
     scenario(kind, role='male', food='mousse') {
       const other = role === 'male' ? 'female':'male';
+      if (kind === 'new-home') { controls.partnerOnline=false;replace({...initialState(now()),xp:0,love:0});notify('presence-refresh',null);return '已准备全新测试小窝，原有正式存档不受影响'; }
+      if (kind === 'join') { controls.partnerOnline=true;const result=action({clientId:DEMO_ACTORS[other].id,operationId:`demo-join-${crypto.randomUUID()}`,action:{type:'join-home'}});notify('presence-refresh',null);return result.error||'演示伙伴已加入共同小窝'; }
       if (kind === 'unlock') {
         const s=clone(record.state); s.xp=levelStartXp(125)+20; s.coins=99999;
         s.collection.stats={feed:10000,pet:10000,play:10000,sleep:10000,pair:10000}; s.collection.foods=Object.keys(FOODS);

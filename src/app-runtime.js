@@ -14,6 +14,8 @@ export function createHomeRuntime({home,localStorage,sessionStorage,apiBase='',c
     sessionStorage:isTest ? testAdapter.sessionStorage : scopedStorage(sessionStorage,home),
     fetch:isTest ? testAdapter.fetch : fetchImpl,
     eventSourceFactory:isTest ? testAdapter.eventSourceFactory : eventSourceFactory,
+    guidePreferences:isTest ? testAdapter.guidePreferences || testAdapter.localStorage : null,
+    testActions:isTest ? testAdapter.actions || null : null,
     storageLabel:isTest ? '测试存档' : localPreview ? '本地联机预览' : 'GitHub 云端',
     pendingScope:isTest ? 'test' : localPreview ? 'preview' : 'couple',
   });
