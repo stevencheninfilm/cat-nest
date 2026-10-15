@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGitHubStore, ROOM_ID, sanitizeActor, StorageError } from './github-store.mjs';
+import { createStevenAccess } from './steven-access.mjs';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { createModelAssetHandler } from './model-assets.mjs';
 
@@ -11,7 +12,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 /** Reusable API handler. Use serveStatic:false when mounting in another server.
  * Returns false for unrelated routes; call handler.close() during shutdown.
- * A room's unguessable URL is its bearer capability. Never put GITHUB_TOKEN in
+ * Steven's existing home requires separate access credentials. Never put GITHUB_TOKEN in
  * frontend variables; use a private repository for names and interaction logs.
  */
 export function createPetHandler({
@@ -24,6 +25,7 @@ export function createPetHandler({
   maxBodyBytes = 32_768,
   modelAssets = createModelAssetHandler(),
   coupleRoomId = process.env.COUPLE_ROOM_ID || '0aed6937627c924a7497025ebd18fe5d',
+  privateAccess = createStevenAccess(),
 } = {}) {
   const origins = new Set((Array.isArray(corsOrigin) ? corsOrigin : corsOrigin.split(',')).map(value => value.trim()).filter(Boolean));
   const rooms = new Map();
@@ -108,7 +110,7 @@ export function createPetHandler({
   async function handle(request, response) {
     let url;
     try { url = new URL(request.url, 'http://localhost'); } catch { return false; }
-    const apiRoute = url.pathname.startsWith('/api/pet-model/') || url.pathname === '/api/health' || url.pathname === '/api/couple/home' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
+    const apiRoute = url.pathname.startsWith('/api/pet-model/') || url.pathname === '/api/health' || url.pathname === '/api/access/steven' || url.pathname === '/api/couple/home' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
     if (!apiRoute && !serveStatic) return false;
     if (closed) { json(response, 503, { error: { code: 'SHUTTING_DOWN', message: '服务正在重启，请稍后重试。' } }); return true; }
     try {
@@ -124,18 +126,28 @@ export function createPetHandler({
           response.setHeader('Vary', 'Origin');
         }
         if (request.method === 'OPTIONS') {
-          response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' });
+          response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '600' });
           response.end(); return true;
         }
         if (await modelAssets(request, response, url)) return true;
         if (url.pathname === '/api/health' && request.method === 'GET') {
           json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: store.storage || 'github' }); return true;
         }
+        if (url.pathname === '/api/access/steven') {
+          if (request.method === 'POST') {
+            rate(`private-login:${request.headers['x-forwarded-for']?.split(',')[0]?.trim() || request.socket.remoteAddress}`, 20, 900_000);
+            rate('private-login:global', 300, 900_000);
+            json(response, 200, privateAccess.login((await body(request)).password)); return true;
+          }
+          if (request.method === 'GET') { privateAccess.verify(request); json(response, 200, { ok:true }); return true; }
+          json(response, 405, { error:{code:'METHOD_NOT_ALLOWED',message:'请求方式无效。'} }); return true;
+        }
         if (url.pathname === '/api/couple/home') {
           if (request.method !== 'GET') {
             json(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: '这个接口不支持当前请求方式。' } }, { Allow: 'GET' }); return true;
           }
           if (typeof coupleRoomId !== 'string' || !ROOM_ID.test(coupleRoomId)) throw new StorageError('INVALID_COUPLE_HOME', '共同小窝配置无效，请联系网站维护者。', 503);
+          if (privateAccess && coupleRoomId === privateAccess.roomId) privateAccess.verify(request);
           // Read only: a missing or inaccessible save must never create a new home.
           json(response, 200, { ...await store.getRoom(coupleRoomId), roles: COUPLE_ROLES }); return true;
         }
@@ -146,9 +158,22 @@ export function createPetHandler({
           if (input.initialState !== undefined && (input.initialState === null || typeof input.initialState !== 'object' || Array.isArray(input.initialState))) throw new StorageError('INVALID_STATE', '初始存档格式无效。', 400);
           json(response, 201, await store.createRoom(input)); return true;
         }
-        const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9]{32})(?:\/(actions|events))?$/);
+        const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9]{32})(?:\/(actions|events|stream-ticket))?$/);
         if (!match || !ROOM_ID.test(match[1])) { json(response, 404, { error: { code: 'NOT_FOUND', message: '没有找到这个接口。' } }); return true; }
         const [, id, route] = match;
+        let streamExpires;
+        if (privateAccess && id === privateAccess.roomId) {
+          if (route === 'events') streamExpires = privateAccess.verifyStream(url);
+          else privateAccess.verify(request);
+        }
+        if (route === 'stream-ticket' && request.method === 'POST') {
+          if (!privateAccess || id !== privateAccess.roomId) throw new StorageError('NOT_FOUND', '接口不存在。', 404);
+          const input = await body(request);
+          const actor = roomActor(id, input.clientId, input.name);
+          rate(`stream-ticket:${id}`, 120, 60_000);
+          json(response, 200, privateAccess.ticket(request, actor.id)); return true;
+        }
+
         if (!route && request.method === 'GET') { json(response, 200, await store.getRoom(id)); return true; }
         if (route === 'actions' && request.method === 'POST') {
           const input = await body(request);
@@ -183,7 +208,10 @@ export function createPetHandler({
           response.write(': connected\n\n');
           emit(response, 'state', { state: hub.state, revision: hub.revision });
           presence(hub);
+          const accessExpiry = streamExpires ? setTimeout(() => response.end(), Math.min(2_147_483_647, Math.max(1, streamExpires - Date.now()))) : null;
+          accessExpiry?.unref?.();
           response.on('close', () => {
+            clearTimeout(accessExpiry);
             member.responses.delete(response);
             if (!member.responses.size) hub.members.delete(actor.id);
             if (!hub.members.size) clearHub(id, hub);
@@ -214,7 +242,7 @@ export function createPetHandler({
       for (const member of hub.members.values()) for (const response of member.responses) response.end();
       clearHub(id, hub);
     }
-    rates.clear();
+    rates.clear(); privateAccess?.close();
   };
   return handle;
 }

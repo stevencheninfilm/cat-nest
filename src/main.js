@@ -20,6 +20,7 @@ import { createNeedsFeedback } from './pet-needs-feedback.js';
 import { COUPLE_ROLES, normalizeCoupleRole, getCoupleProfile } from './couple-profile.js';
 import { presenceForRole, homePresence, rolePicker, connectionSummary } from './couple-presence-ui.js';
 import { createCloudRoom } from './cloud';
+import { accessToken, forgetAccess } from './private-access.js';
 import { homeContext, homeStorageKey, initialHomeState } from './home-context.js';
 import { createCatSpeech } from './cat-speech.js';
 import { catTemperament } from './cat-behavior.js';
@@ -42,6 +43,7 @@ const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const $ = s => document.querySelector(s);
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const home = homeContext(location.pathname);
+if (home.id === 'steven') document.title = 'Steven · 猫猫小窝';
 if (home.id === 'evian') document.title = 'Evian · 猫猫小窝';
 function read(key, fallback) { try { return JSON.parse(localStorage.getItem(homeStorageKey(key,home))) ?? fallback; } catch { return fallback; } }
 function save(key, value) { try { localStorage.setItem(homeStorageKey(key,home), JSON.stringify(value)); } catch { /* private browsing can disable storage */ } }
@@ -406,7 +408,7 @@ function startCloud() {
   const pending = read(pendingKey, []);
   pendingCloudActions = pending.length;
   pendingGrowthClaims = new Set(pending.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId));
-  cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, ...(home.roomId ? {homeRoomId:home.roomId} : {}), initialState:state, storageLabel:localPetPreview ? '本地联机预览':'GitHub 云端',
+  cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, accessToken:home.id === 'steven' && !localPetPreview ? accessToken() : '', onAccessExpired() { forgetAccess(); location.reload(); }, ...(home.roomId ? {homeRoomId:home.roomId} : {}), initialState:state, storageLabel:localPetPreview ? '本地联机预览':'GitHub 云端',
     pending, optimisticReducer:reduceAction, onRollback:rollbackReaction,
     onRoom(id) { roomId=id; save('catnest.couple.room',id); save('catnest.room',id); },
     onState(next, metadata) {

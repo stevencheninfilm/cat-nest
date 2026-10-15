@@ -20,6 +20,7 @@ test('every Evian cache and pending queue is isolated, while the existing keys r
   const old=homeContext('/cat-nest/'),evian=homeContext('/cat-nest/evian/');
   for (const key of ['catnest.role','catnest.room','catnest.couple.room','catnest.state.saved-room','catnest.pending.couple.male','catnest.pending.couple.female','catnest.food']) {
     assert.equal(homeStorageKey(key,old),key);
+    assert.equal(homeStorageKey(key,homeContext('/cat-nest/steven/')),key);
     assert.equal(homeStorageKey(key,evian),`evian:${key}`);
   }
   const values=new Map([['catnest.state.saved-room',{coins:9000,xp:10000}]]);
@@ -57,11 +58,21 @@ test('the deployed nested entry shares parent assets and keeps its own home link
   const plugin=namedHomeEntry();plugin.configResolved({command:'build',root:dir,build:{outDir:'dist'}});
   await plugin.closeBundle();
   const nested=await readFile(join(dir,'dist/evian/index.html'),'utf8');
+  assert.equal(await readFile(join(dir,'dist/steven/index.html'),'utf8'),nested);
   assert.match(nested,/<base href="\.\.\/">/);
-  assert.equal(await readFile(join(dir,'dist/index.html'),'utf8'),source);
+  const redirect=await readFile(join(dir,'dist/index.html'),'utf8');
+  assert.match(redirect,/url=\.\/test\//);assert.match(redirect,/location.replace/);assert.doesNotMatch(redirect,/assets\/app.js|steven|evian/);
   const base=new URL('../','https://stevencheninfilm.com/cat-nest/evian/');
   assert.equal(new URL('./assets/app.js',base).href,'https://stevencheninfilm.com/cat-nest/assets/app.js');
   assert.equal(new URL(homeContext('/evian/').href,base).href,'https://stevencheninfilm.com/cat-nest/evian/');
   assert.match(namedHomeHtml(source,'/'),/<base href="\/">/);
   assert.throws(()=>namedHomeHtml('<head><base href="/">'),/without an existing base/);
+});
+
+
+test('Steven uses the original home and unchanged browser keys while keeping navigation private',()=>{
+ for(const path of ['/steven','/steven/','/cat-nest/steven/','/cat-nest/steven/index.html']) {
+  const home=homeContext(path);assert.equal(home.id,'steven');assert.equal(home.roomId,null);assert.equal(home.href,'./steven/');
+ }
+ assert.equal(homeContext('/steven/other/').id,'main');
 });

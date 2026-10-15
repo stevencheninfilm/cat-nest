@@ -23,7 +23,7 @@ function harness(t, handler, options = {}) {
   }
   Object.defineProperty(globalThis, 'EventSource', { configurable: true, writable: true, value: FakeEventSource });
   t.mock.method(globalThis, 'fetch', async (url, options = {}) => {
-    const request = { url, method: options.method || 'GET', body: options.body ? JSON.parse(options.body) : undefined };
+    const request = { url, method: options.method || 'GET', headers:options.headers, body: options.body ? JSON.parse(options.body) : undefined };
     requests.push(request);
     return handler(request);
   });
@@ -192,4 +192,27 @@ test('invalid named home configuration fails before any network request',async t
     assert.equal(h.observed.statuses.at(-1).phase,'error');assert.equal(h.requests.length,0);
     client.destroy();
   }
+});
+
+
+test('private sessions authenticate reads and writes; live streams get a scoped ticket without exposing the session in URLs',async t=>{
+  const h=harness(t,request=>{
+    assert.equal(request.headers.Authorization,'Bearer test-session');
+    if(request.url.endsWith('/stream-ticket')) return response({ticket:'one-use-ticket'});
+    return response(saved(20,request.body?.action ? {operationId:request.body.operationId,action:request.body.action,actor:{id:'partner-male',name:'男方'}}:undefined));
+  },{accessToken:'test-session'});
+  const client=h.create();await client.start();await flush();
+  assert.match(h.sources[0].url,/ticket=one-use-ticket$/);
+  assert.ok(!h.sources[0].url.includes('test-session'));
+  assert.equal(client.dispatch({type:'pet'}),true);await flush();
+  assert.equal(h.observed.pending.at(-1).length,0);
+});
+
+test('expired private access preserves pending actions for unlocking again',async t=>{
+  let expired=0;
+  const h=harness(t,request=>request.url.endsWith('/actions') ? response({error:{code:'ACCESS_REQUIRED',message:'重新解锁'}},401) : request.url.endsWith('/stream-ticket') ? response({ticket:'ticket'}) : response(saved()),{accessToken:'old-session',onAccessExpired(){expired++;}});
+  const client=h.create();await client.start();await flush();
+  client.dispatch({type:'pet'});await flush();
+  assert.equal(expired,1);assert.equal(h.observed.pending.at(-1).length,1);
+  assert.equal(client.dispatch({type:'play'}),false);
 });

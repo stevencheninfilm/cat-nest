@@ -9,7 +9,7 @@ import { COUPLE_ROLES } from '../src/couple-profile.js';
 const HOME = '0aed6937627c924a7497025ebd18fe5d';
 const OTHER = 'a'.repeat(32);
 async function running(t, options = {}) {
-  const server = createPetServer({ serveStatic: false, corsOrigin: 'https://example.github.io', heartbeatMs: 1000, pollMs: 60_000, ...options });
+  const server = createPetServer({ privateAccess:null, serveStatic: false, corsOrigin: 'https://example.github.io', heartbeatMs: 1000, pollMs: 60_000, ...options });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(async () => { const closed = once(server, 'close'); server.shutdown(); server.closeAllConnections(); await closed; });
