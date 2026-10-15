@@ -98,6 +98,9 @@ export function favoriteMemory(value,id,favorite) {
 }
 export function memoryDays(value,now=Date.now()) { return Math.max(1,memoryDay(now)-memoryDay(value.adoptedAt)+1); }
 export function nextMemoryAnniversary(value,now=Date.now()) {
+  return nextMemoryAnniversaryGoal(value,now)?.days ?? null;
+}
+export function nextMemoryAnniversaryGoal(value,now=Date.now()) {
   const future=anniversaryTimes(value.adoptedAt,Math.min(now+366*DAY,8_640_000_000_000_000)).find(e=>e.at>now);
-  return future ? Math.max(1,memoryDay(future.at)-memoryDay(now)) : null;
+  return future ? {...future,days:Math.max(1,memoryDay(future.at)-memoryDay(now))} : null;
 }
