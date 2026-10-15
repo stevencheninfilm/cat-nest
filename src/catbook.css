@@ -34,6 +34,8 @@ body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
 .book-visitors{position:absolute;inset:0;z-index:2}
 .book-cat-sprite{display:block;background:url('../public/assets/catbook/cats.png') var(--cat-x) var(--cat-y)/400% 300% no-repeat;aspect-ratio:1;width:100%;image-rendering:pixelated;flex-shrink:0}
 .book-cat-sprite.undiscovered{filter:grayscale(1);opacity:.3}
+.book-cat-sprite.is-game-cat{background:none;display:grid;place-items:center;image-rendering:auto}
+.book-game-portrait{display:block;background-image:url('../public/assets/catbook/game-cats-v1.png');background-repeat:no-repeat}
 .book-yard-cat{position:absolute;left:var(--slot-x);top:var(--slot-y);transform:translate(-50%,calc(-1 * var(--cat-baseline)));aspect-ratio:var(--pose-ratio);padding:0;border:0;background:transparent;width:var(--cat-size);isolation:isolate}
 .book-yard-cat::before{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);border-radius:50%}
 .book-scene-cat{position:relative;display:block;width:100%;aspect-ratio:var(--pose-ratio);background-image:url('../public/assets/catbook/scene-poses.png');background-repeat:no-repeat;transform-origin:50% var(--cat-baseline);animation:book-cat-breathe 5s ease-in-out infinite;animation-delay:var(--idle-delay);filter:drop-shadow(0 1px 1px #473b3324);pointer-events:none}

@@ -1,0 +1,33 @@
+{
+  "createdAt": "2026-10-14",
+  "generator": "Built-in imagegen",
+  "format": "Lossless WebP; 1536 × 1024; original PNGs retained in Codex generated_images; decoded RGBA matches original exactly",
+  "assets": [
+    {
+      "state": "primary-a",
+      "file": "public/assets/court-scales/left-v1.webp",
+      "meaning": "甲方责任较重，左侧蓝色托盘明显下沉",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13870-e73c-7e53-9896-dc1c9dbf266b/exec-1907cb55-f815-4f81-9fa2-4f234738ca02.png",
+      "prompt": "Use case: stylized-concept\nAsset type: transparent courtroom UI illustration for the 猫猫判官 mobile verdict page.\nPrimary request: one original ornate golden balance scale clearly tilted to show MORE RESPONSIBILITY ON THE VIEWER'S LEFT. The left beam endpoint and left weighing pan are dramatically LOWER; the right endpoint and right pan are HIGHER. About a 20 degree slope upward from left to right, unmistakable even at a 280px mobile display.\nSubject: a warm polished gold justice scale with a small cat paw medallion at the central pivot, sturdy central upright and low elegant base. The viewer's LEFT pan carries one large rounded blue weight with a discreet embossed paw; the viewer's RIGHT pan carries one smaller rose pink weight. Both pans must hang vertically and remain horizontal, with the left pan visibly lower. The larger left weight must sit naturally IN the pan.\nStyle: finely painted fantasy courtroom game UI asset, warm gold, restrained polished highlights, soft clean shading, same charming gentle cat court world as antique parchment and wood verdict panels, visually readable and not overly decorative.\nComposition: front view with mild dimensional depth, horizontal landscape composition about 3:2, entire scale visible, generous 8 percent transparent padding around all extremities, centered vertical post. Strong clear mechanical geometry.\nBackground: genuine transparent alpha, no scene, no ground rectangle, no checkerboard baked in.\nText: none. No letters, numerals, labels, ratios, logos or watermark.\nConstraints: precisely ONE complete scale. Viewer-left blue side LOWER and viewer-right rose side HIGHER, large vertical separation between pans. No characters, no weapons, no extra objects, no ghosting or alternate poses."
+    },
+    {
+      "state": "primary-b",
+      "file": "public/assets/court-scales/right-v1.webp",
+      "meaning": "乙方责任较重，右侧粉色托盘明显下沉",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13870-e73c-7e53-9896-dc1c9dbf266b/exec-a466ffbb-5cae-40ee-a124-c9823fc078b6.png",
+      "prompt": "Use case: precise-object-edit. Edit the provided golden cat-paw balance-scale asset into its OPPOSITE RESPONSIBILITY variant. Preserve the exact front-facing camera, gold upright, cat-paw center medallion, low base, painted courtroom-game style, color palette, canvas aspect ratio and overall scale proportions. Keep the BLUE pan/weight on the VIEWER'S LEFT and the ROSE PINK pan/weight on the VIEWER'S RIGHT. Change the beam so the LEFT endpoint and LEFT pan are much HIGHER, and the RIGHT endpoint and RIGHT pan are much LOWER, with approximately 20 degrees slope down from left to right. Replace the left blue weight with a SMALLER rounded blue weight, and the right rose weight with a LARGER rounded rose weight. Both pans hang vertically and their bowls remain horizontal. Entire scale with transparent padding visible, no cropping. True transparent alpha background; remove any background glow/backdrop while preserving the gold object. No text, letters, ratios, numbers, labels, characters or watermark. This asset must communicate that the right-side person bears more responsibility."
+    },
+    {
+      "state": "shared",
+      "file": "public/assets/court-scales/balanced-v1.webp",
+      "meaning": "双方具体行为责任相近，两个托盘持平",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13870-e73c-7e53-9896-dc1c9dbf266b/exec-3ab26549-9790-4fee-a77f-d378bbd3f70b.png",
+      "prompt": "Use case: precise-object-edit. Edit the provided golden cat-paw balance-scale asset into its BALANCED RESPONSIBILITY variant. Preserve the exact front-facing camera, gold upright, cat-paw center medallion, low base, painted courtroom-game style, color palette, canvas aspect ratio and overall scale proportions. Keep the BLUE pan/weight on the VIEWER'S LEFT and the ROSE PINK pan/weight on the VIEWER'S RIGHT. Change the beam to be perfectly HORIZONTAL with both endpoints the SAME HEIGHT; both hanging pans at the SAME HEIGHT. Give both weights identical size and shape, left blue, right rose pink. Pans hang vertically, bowls remain horizontal. Entire scale with transparent padding visible, no cropping. True transparent alpha background; remove any background glow/backdrop while preserving the gold object. No text, letters, ratios, numbers, labels, characters or watermark. This asset must clearly communicate comparable responsibility, and only comparable responsibility."
+    }
+  ],
+  "presentation": "天平插画只按已保存的责任结论选方向，斜度和砝码大小不表示比例。天平下方以网页文字和蓝粉责任条显示新判词已保存的responsibility.percentages，实际姓名、左右角色及较重方均有文字标记。用户选择旧记录不填数值；缺失该字段时显示未记录，不能自动补成50/50或固定70/30。证据不足、低把握与边界优先时不显示数值估计。",
+  "visualInspection": "三张原图方向已检查，WebP保留透明alpha。既有虚构历史案卷的初审不比较责任，复议左侧测试甲责任较重，已在320/390px检查布局。完整提交、复议、部署与资源失败检查等待合并后的统一验收。",
+  "legacyBannerFix": "移除旧版 grid/place-items:center 与绝对定位规则，历史贴图容器明确 width:100%，避免新版 block 布局下因残留 justify-items:center 缩为零宽。",
+  "percentageContract": "新模型比例为5%的整数步长，两方合计100，且与责任方向一致；仅为本轮证据的粗略参考估计。旧档不加字段、不改原文；新响应必填，未知双null；后端校验与存储测试等待统一验收。",
+  "contractReference": "https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses (required fields, nullable integer enum; conditional checks implemented in the server)"
+}

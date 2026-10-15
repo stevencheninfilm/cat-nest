@@ -6,4 +6,5 @@ dist/
 !.env.example
 artifacts/
 .cat-court/
+.cat-preview/
 server/data/

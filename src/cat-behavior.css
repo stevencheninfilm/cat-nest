@@ -1,0 +1,13 @@
+/* Time of day changes the room light while keeping controls legible. */
+.nest > .room-backdrop { transition: filter 2s ease; }
+.nest[data-cat-period="morning"] > .room-backdrop { filter: brightness(1.04) saturate(.95); }
+.nest[data-cat-period="evening"] > .room-backdrop { filter: brightness(.91) saturate(.92); }
+.nest[data-cat-period="night"] > .room-backdrop { filter: brightness(.72) saturate(.78); }
+.nest.sleeping > .room-backdrop { filter: brightness(.65) saturate(.72); }
+.nest[data-cat-period="night"] .sun-dust { opacity: .12; }
+.nest .pet-card .pet-title { gap: 5px; }
+.cat-rhythm { max-width: 102px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8px; font-weight: 600; line-height: 18px; color: #795f46; text-shadow: 0 1px 3px #fff5df; }
+.nest[data-cat-period="night"] .cat-rhythm { color: #655d79; }
+.nest[data-cat-mood="lonely"] .cat-rhythm { color: #94708a; }
+@media(max-width:360px) { .cat-rhythm { font-size: 7px; max-width: 88px; }.nest .pet-card .pet-title { gap: 3px; } }
+@media(prefers-reduced-motion:reduce) { .nest > .room-backdrop { transition: none; } }

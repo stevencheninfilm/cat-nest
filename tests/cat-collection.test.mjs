@@ -10,7 +10,7 @@ const start=Date.UTC(2026,9,14,0);
 const actor={ id:'partner-male', name:'男方' };
 const act=(state, action, now=start, id=`collection-${action.type}-${now}`) => reduceAction(state, action, actor, now, id);
 const starter=()=>{const state=initialState(start);state.collection.stats.pet=5;return state;};
-const completed=()=>{const state=initialState(start);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.xp=levelStartXp(120);return state;};
+const completed=()=>{const state=initialState(start);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.collection.wins={rps:12,memory:12,gomoku:12};state.xp=levelStartXp(120);return state;};
 
 test('each achievement counts accepted care once, while retries, rejected actions, and waking award nothing', () => {
   const before=initialState(start);
@@ -97,7 +97,8 @@ test('level invitations require claimed growth, not pending rewards or the pet a
 
 test('every cat requires every condition, including the starter and the compound food achievement', () => {
   const setRequirement=(state,{metric,target},below=false)=>{
-    if(metric === 'level') state.xp=levelStartXp(target)-(below?1:0);
+    if(metric.startsWith('win-')) state.collection.wins[metric.slice(4)]=target-(below?1:0);
+    else if(metric === 'level') state.xp=levelStartXp(target)-(below?1:0);
     else if(metric === 'foods') state.collection.foods=Object.keys(FOODS).slice(0,target-(below?1:0));
     else state.collection.stats[metric === 'care' ? 'pet' : metric]=target-(below?1:0);
   };
@@ -192,21 +193,21 @@ test('the scene contains exactly the invited cats and requires enough invited ca
   state=completed();
   for(const cat of COLLECTION_CATS) state=act(state,{type:'invite-cat',catId:cat.id},start,`collection-invite-${cat.id}`);
   const full=catbookMarkup(state,{sceneId:'snow'});
-  assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,12);
+  assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,18);
   assert.match(full,/data-scene-id="snow"/);
   assert.doesNotMatch(full,/data-book-scene="(?:western|snow)"[^>]*disabled/);
   const atCount=count=>({...state.collection,invited:state.collection.invited.slice(0,count)});
-  assert.equal(collectionScene('western',atCount(3),120).id,'garden');
+  assert.equal(collectionScene('western',atCount(3),120).id,'station');
   assert.equal(collectionScene('western',atCount(4),120).id,'western');
-  assert.equal(collectionScene('snow',atCount(7),120).id,'garden');
+  assert.equal(collectionScene('snow',atCount(7),120).id,'station');
   assert.equal(collectionScene('snow',atCount(8),120).id,'snow');
-  assert.equal(collectionScene('fake',atCount(12),120).id,'garden');
-  state.collection.stats={feed:30,pet:99,play:50,sleep:6,pair:12};state.xp=levelStartXp(15);
-  assert.equal(collectionScene('western',state.collection,15).id,'garden','old receipts cannot bypass the increased scene goals');
-  assert.equal(collectionSceneProgress(CAT_SCENES[1],state.collection,15).current,3);
-  assert.equal(collectionScene('snow',state.collection,15).id,'garden');
+  assert.equal(collectionScene('fake',atCount(12),120).id,'station');
+  state.collection.stats={feed:30,pet:99,play:50,sleep:6,pair:12};state.xp=levelStartXp(15);state.collection.wins={rps:0,memory:0,gomoku:0};state.collection.invited=state.collection.invited.slice(0,12);
+  assert.equal(collectionScene('western',state.collection,15).id,'station','old receipts cannot bypass the increased scene goals');
+  assert.equal(collectionSceneProgress(CAT_SCENES.find(scene=>scene.id==='western'),state.collection,15).current,3);
+  assert.equal(collectionScene('snow',state.collection,15).id,'station');
   const legacy=catbookMarkup(state,{sceneId:'snow'});
-  assert.match(legacy,/data-scene-id="garden"/);
+  assert.match(legacy,/data-scene-id="station"/);
   assert.match(legacy,/4 位已入住猫友达成进阶陪伴成就（3 \/ 4）/);
   assert.match(legacy,/8 位已入住猫友达成进阶陪伴成就（3 \/ 8）/);
   assert.equal((legacy.match(/class="book-yard-cat\b/g)||[]).length,12,'all previously owned cats remain in the garden');
@@ -229,6 +230,7 @@ test('difficulty rises by five to eight times without exceeding the available fo
   assert.deepEqual(COLLECTION_CATS.map(cat=>[cat.id,cat.metric,cat.target]),[
     ['bandit','care',5],['bolt','feed',30],['breezy','pet',100],['callie','play',50],['cocoa','sleep',30],['dottie','level',40],
     ['fred','feed',180],['gabriel','pet',600],['ginger','play',300],['gozer','feed',54],['lexy','pair',96],['mack','level',120],
+    ['scout','win-rps',5],['mochi','win-memory',5],['onyx','win-gomoku',5],['biscuit','win-rps',12],['maple','win-memory',12],['pearl','win-gomoku',12],
   ]);
   for(const cat of COLLECTION_CATS) {
     assert.ok(cat.difficultyMultiplier>=5 && cat.difficultyMultiplier<=8);

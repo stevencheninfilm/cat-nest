@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "date": "2026-10-14",
+  "assets": [
+    {
+      "game": "rps",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-0ec930b3-b142-4050-a1e0-6177db482f7f.png",
+      "asset": "public/assets/minigames/covers/rps-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: A pair of adorable plush cat paws making rock and scissors hand gestures, playful face peeking behind the paws, apricot and peach background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouettes at 64px, matching a cozy cream and brown cat-care app.\nComposition: one compact centered game-specific scene filling about 85 percent of a square image; a full-bleed gently shaded pastel background; no border, no surrounding UI, no montage, no multiple panels.\nLighting: warm soft studio light, subtle soft shadows, polished production game icon.\nConstraints: no logos, no watermark, no captions or typography except the explicitly requested number/question cards for the guess-number illustration. Make this one finished square cover only.",
+      "tool": "built-in image_gen",
+      "useCase": "stylized-concept"
+    },
+    {
+      "game": "memory",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-ca7257e8-486c-4762-8c98-9e12e3017878.png",
+      "asset": "public/assets/minigames/covers/memory-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: Three illustrated playing cards, one face down with a paw pattern and two face up with matching cute tuxedo kitten faces, mint green background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouettes at 64px, matching a cozy cream and brown cat-care app.\nComposition: one compact centered game-specific scene filling about 85 percent of a square image; a full-bleed gently shaded pastel background; no border, no surrounding UI, no montage, no multiple panels.\nLighting: warm soft studio light, subtle soft shadows, polished production game icon.\nConstraints: no logos, no watermark, no captions or typography except the explicitly requested number/question cards for the guess-number illustration. Make this one finished square cover only.",
+      "tool": "built-in image_gen",
+      "useCase": "stylized-concept"
+    },
+    {
+      "game": "gomoku",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-fa6df7d0-2a98-4fda-8a17-464dbfb40b0d.png",
+      "asset": "public/assets/minigames/covers/gomoku-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: A small wooden gomoku board with a neat short line of black stones and white stones, a tiny relaxed kitten peeking at the corner, warm sand background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouettes at 64px, matching a cozy cream and brown cat-care app.\nComposition: one compact centered game-specific scene filling about 85 percent of a square image; a full-bleed gently shaded pastel background; no border, no surrounding UI, no montage, no multiple panels.\nLighting: warm soft studio light, subtle soft shadows, polished production game icon.\nConstraints: no logos, no watermark, no captions or typography except the explicitly requested number/question cards for the guess-number illustration. Make this one finished square cover only.",
+      "tool": "built-in image_gen",
+      "useCase": "stylized-concept"
+    },
+    {
+      "game": "tictactoe",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-875b0cb5-e478-4998-986b-de3c40d47755.png",
+      "asset": "public/assets/minigames/covers/tictactoe-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: A chunky three by three tic tac toe board with teal X pieces and peach O pieces, a little cat paw placing one O, lavender background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouettes at 64px, matching a cozy cream and brown cat-care app.\nComposition: one compact centered game-specific scene filling about 85 percent of a square image; a full-bleed gently shaded pastel background; no border, no surrounding UI, no montage, no multiple panels.\nLighting: warm soft studio light, subtle soft shadows, polished production game icon.\nConstraints: no logos, no watermark, no captions or typography except the explicitly requested number/question cards for the guess-number illustration. Make this one finished square cover only.",
+      "tool": "built-in image_gen",
+      "useCase": "stylized-concept"
+    },
+    {
+      "game": "connect4",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-12b3a5cb-89f7-43e1-b3ac-ddb143360041.png",
+      "asset": "public/assets/minigames/covers/connect4-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: A blue upright four in a row board with circular coral and golden yellow counters dropping into its round holes, a small happy kitten at its base, sky blue background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouettes at 64px, matching a cozy cream and brown cat-care app.\nComposition: one compact centered game-specific scene filling about 85 percent of a square image; a full-bleed gently shaded pastel background; no border, no surrounding UI, no montage, no multiple panels.\nLighting: warm soft studio light, subtle soft shadows, polished production game icon.\nConstraints: no logos, no watermark, no captions or typography except the explicitly requested number/question cards for the guess-number illustration. Make this one finished square cover only.",
+      "tool": "built-in image_gen",
+      "useCase": "stylized-concept"
+    },
+    {
+      "game": "guess",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-55ba3e86-f0b6-4fb3-a4b3-37fa6145174c.png",
+      "asset": "public/assets/minigames/covers/guess-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: A curious cute orange kitten holding three number cards reading 1, 2, and 3, with a large simple question mark on a fourth card, pastel pink background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouettes at 64px, matching a cozy cream and brown cat-care app.\nComposition: one compact centered game-specific scene filling about 85 percent of a square image; a full-bleed gently shaded pastel background; no border, no surrounding UI, no montage, no multiple panels.\nLighting: warm soft studio light, subtle soft shadows, polished production game icon.\nConstraints: no logos, no watermark, no captions or typography except the explicitly requested number/question cards for the guess-number illustration. Make this one finished square cover only.",
+      "tool": "built-in image_gen",
+      "useCase": "stylized-concept"
+    }
+  ]
+}

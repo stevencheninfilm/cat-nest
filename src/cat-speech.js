@@ -14,6 +14,12 @@ export const CAT_DIALOGUE = Object.freeze({
   lonely: ['今天想多蹭蹭你，可以吗？', '我把小脑袋伸过来啦，摸摸嘛。', '有你陪着，我就会开心一点。', '我攒了一肚子小呼噜，想给你听。'],
   full: ['肚子圆圆，心里也暖暖的♡', '吃饱饱啦，想和你一起晒太阳。', '小碗香香，我也乖乖。', '我把幸福装进小肚子里啦。'],
   collect: ['你的心意，我有好好收下喵♡', '一点点长大，都有你陪着我。', '看，我又朝你长大了一点点！', '我把这份喜欢，藏进小心心啦。'],
+  morning: ['早呀，我把今天的第一声呼噜留给你。', '阳光进屋啦，陪我慢慢醒来喵。', '早安，今天也想和你一起长大。', '新的一天，从蹭蹭你的手开始♡'],
+  evening: ['天色软下来啦，终于等到你陪我。', '忙了一天，来听一会儿我的呼噜吧。', '窗外慢慢暗了，小窝里还有我们。', '晚上的小魔法，是陪你把心放松。'],
+  night: ['夜深啦，我轻轻陪着你。', '嘘，小魔杖也要休息啦。', '月亮替我们守着窗，我就在这里。', '慢一点，今晚只想安安静静地贴贴。'],
+  comfort: ['有你摸摸，心里慢慢暖起来了。', '刚刚有点失落，现在想再靠近你一点。', '谢谢你发现我想被陪着喵。', '把小脑袋交给你，我就安心啦。'],
+  gentlePet: ['困困的，也想轻轻蹭蹭你的手。', '呼噜…我眯着眼也知道是你。', '摸摸收到啦，让我慢慢充电。', '小爪子累了，靠着你就很好。'],
+  gentlePlay: ['我慢慢追，你也慢一点点喵。', '小魔杖轻轻挥，陪你玩一小会儿。', '今天想玩温柔一点的游戏。', '追两步就歇歇，有你陪着就开心。'],
 });
 
 export const FOOD_DIALOGUE = Object.freeze({
@@ -31,12 +37,21 @@ export const FOOD_DIALOGUE = Object.freeze({
 function dialogueKey(kind, state, action) {
   if (kind === 'feed') return Object.hasOwn(FOOD_DIALOGUE, action.food) ? `feed:${action.food}` : 'full';
   if (kind === 'sleep') return state.sleeping ? 'sleep' : 'wake';
+  if (['pet', 'touch', 'play'].includes(kind)) {
+    if (state.sleeping) return 'sleep';
+    if (kind === 'play' && (state.energy < 30 || state.behaviorPeriod === 'night' || state.hunger < 35)) return 'gentlePlay';
+    if (kind !== 'play' && state.energy < 30) return 'gentlePet';
+    if (kind !== 'play' && state.mood < 40) return 'comfort';
+    if (kind === 'touch') return 'pet';
+  }
   if (kind === 'idle' || kind === 'greeting') {
     if (state.sleeping) return 'sleep';
-    if (kind === 'greeting') return 'greeting';
     if (state.hunger < 35) return 'hungry';
     if (state.energy < 30) return 'tired';
     if (state.mood < 40) return 'lonely';
+    if (state.behaviorPeriod === 'night') return 'night';
+    if (kind === 'greeting') return state.behaviorPeriod === 'morning' ? 'morning' : 'greeting';
+    if (state.behaviorPeriod === 'evening') return 'evening';
     if (state.hunger >= 90) return 'full';
   }
   return Object.hasOwn(CAT_DIALOGUE, kind) ? kind : 'idle';

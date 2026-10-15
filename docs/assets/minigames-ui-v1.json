@@ -1,0 +1,11 @@
+{
+  "tool": "built-in image_gen",
+  "asset": "public/assets/minigames/game-entry-v1.webp",
+  "original": "artifacts/generated/minigames/game-entry-v1.png",
+  "purpose": "Homepage mini-game entry below the left play-with-cat action, also used in the games lobby heading",
+  "transparent_background": true,
+  "source_size": "1254x1254",
+  "web_size": "256x256",
+  "processing": "Resize and WebP compression only; alpha preserved.",
+  "prompt": "Use case: stylized-concept. Asset type: a production bitmap icon for a cozy Chinese cat-care mobile website, the small 'mini games' button beneath the play-with-cat action. Primary request: one adorable cat-themed game controller UI icon, isolated on a genuinely transparent background. Subject: a single chunky cream and caramel gamepad with two subtle rounded cat ears built into its upper silhouette; a warm brown paw-shaped directional pad on the left and two sage-green and muted coral round buttons on the right. Style/medium: polished soft 3D clay toy render, gently rounded shapes, warm storybook game UI quality, compatible with a cozy honey-colored wooden room and cute cat companion. Composition/framing: centered front three-quarter view, compact very readable silhouette at 40–48 px, fills 80 percent of the square frame with even transparent padding, no surrounding tile or badge. Lighting/mood: soft warm studio light, small subtle contact shading attached to the object, cheerful and calm. Materials/textures: smooth matte ceramic/clay, restrained soft highlights. Text: none. Constraints: one object only, true alpha transparency outside the controller, no white or colored background, no checkerboard baked into the image, no words, no watermark, no extra cat character, no decorative sparkles, no separate floating objects, no photorealism."
+}

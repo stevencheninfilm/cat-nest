@@ -7,7 +7,7 @@ import { initialState, reduceAction, levelStartXp, FOODS } from '../src/state.js
 const now=Date.UTC(2026,9,14);
 const actor={id:'preview-partner',name:'猫友'};
 const invite=(state,id)=>reduceAction(state,{type:'invite-cat',catId:id},actor,now,`event-invite-${id}`);
-const completed=()=>{const state=initialState(now);state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);return state;};
+const completed=()=>{const state=initialState(now);state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.collection.wins={rps:12,memory:12,gomoku:12};return state;};
 
 test('opening or reloading an existing save produces no retroactive unlocks or entrances',()=>{
   let state=completed();
@@ -51,7 +51,7 @@ test('one shared update may add several cats and scenes without duplicate achiev
   let next=state;
   for(const cat of COLLECTION_CATS) next=invite(next,cat.id);
   const batch=events.observe(next);
-  assert.equal(batch.filter(event=>event.type==='cat-arrived').length,12);
+  assert.equal(batch.filter(event=>event.type==='cat-arrived').length,18);
   assert.deepEqual(batch.filter(event=>event.type==='scene-unlocked').map(event=>event.id),['western','snow']);
   assert.equal(batch.filter(event=>event.type==='cat-unlocked').length,0);
   assert.deepEqual(events.observe(next),[]);
@@ -68,7 +68,7 @@ test('older snapshots followed by reconnects do not replay already observed cele
 
 test('old owned cats only unlock a new scene when enough increased achievements are really met',()=>{
   let state=completed();for(const cat of COLLECTION_CATS) state=invite(state,cat.id);
-  state.collection.stats={feed:30,pet:99,play:49,sleep:30,pair:95};
+  state.collection.stats={feed:30,pet:99,play:49,sleep:30,pair:95};state.collection.wins={rps:0,memory:0,gomoku:0};
   state.xp=levelStartXp(39);
   const events=createCollectionEvents(state);
   assert.deepEqual(events.observe(state),[]);

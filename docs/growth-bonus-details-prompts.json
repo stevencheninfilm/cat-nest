@@ -1,0 +1,20 @@
+{
+  "generator": "Built-in image_gen tool",
+  "reference": "src/assets/growth-bonus/v1/pistachio-glass.webp",
+  "usage": "Current multiplier lens and three-step goal fill; all text and progress stay dynamic HTML. Original badge is retained.",
+  "processing": "Transparent export margin trimmed around the continuous capsule body; lens resized to 256px high, fill to 128px high; WebP with alpha preserved; original generated PNGs retained.",
+  "assets": [
+    {
+      "id": "detail-lens",
+      "prompt": "Use case: stylized-concept\nAsset type: transparent, production-ready 3D UI texture for the main current-experience-multiplier display in a cozy kitten game.\nInput image 1 is STYLE AND MATERIAL REFERENCE ONLY: the existing pistachio glass / vanilla cream badge. Create one new matching standalone display plate, not a screenshot or mockup.\nPrimary request: a single blank, horizontal soft capsule-shaped optical lens, approximately 2.2:1 width to height, full and rounded with visible pillowy depth. Warm ivory / vanilla cream center, airy very pale pistachio-green translucent glass at the rounded rim, barely-there thin champagne-gold hairline detail, broad soft white highlight across the upper curved face, gentle illuminated lower edge. Thinner and lighter rim than the reference, no heavy dark green metal. It must feel like the reference's elegant glass-jelly material.\nComposition: straight-on orthographic front view, perfectly horizontal and symmetrical, centered with only a small transparent margin. The calm central 70 percent must stay pale and almost uniform, suitable for live dark-green HTML text at runtime. No text is baked in. Rich tactile highlights and softly beveled sidewall give volume; keep the object light and restrained.\nBackground: genuine transparency. Small soft attached shadow only; no opaque background.\nConstraints: one object only. No letters, numbers, labels, icon, heart, stars, particles, decorative ornament, sparkle bursts, frame around the canvas, checkerboard, watermark, scene, screenshot, or extra UI pieces.",
+      "source": "/Users/stevenchen/.codex/generated_images/01a138a3-f778-72a3-b40c-6b8046f19dc0/exec-a4d9c8c6-d03f-49c0-95b9-23253ed796fa.png",
+      "asset": "src/assets/growth-bonus/v1/detail-lens.webp"
+    },
+    {
+      "id": "detail-fill",
+      "prompt": "Use case: stylized-concept\nAsset type: transparent, production-ready glossy progress-fill texture, for a three-step growth-bonus meter in a cozy kitten game.\nInput image 1 is STYLE AND MATERIAL REFERENCE ONLY: match the existing pistachio-green glass-jelly / warm cream badge material.\nPrimary request: a single horizontal long rounded capsule of translucent light pistachio jelly, approximately 3:1 width to height. Plump hemispherical ends, visible softly rounded thickness, a wide warm white glossy highlight across the upper third, gentle internal pale lime-to-sage depth, one very subtle champagne-light edge. The body should be luminous pale green rather than cream white so it reads as the filled portion of a progress meter. Lighter and softer than a jewel; no dark heavy border.\nComposition: front view, orthographic, perfectly horizontal, symmetrical and centered, small transparent margin only. Surface stays quiet and uniform in the middle so it can be stretched horizontally; preserve smooth rounded caps. Visible 3D depth even when rendered 12 CSS pixels high. This is a single plain fill material, not an entire UI, not a track, not a chart.\nBackground: true transparency with only a very small attached soft shadow.\nConstraints: no text, numbers, letters, hearts, icons, stars, loose glints, particles, ribbons, illustrations, checkerboard, watermark, background, extra objects or decorative elements. One blank capsule only.",
+      "source": "/Users/stevenchen/.codex/generated_images/01a138a3-f778-72a3-b40c-6b8046f19dc0/exec-b66af587-4a86-4bcf-b6b0-987605d64deb.png",
+      "asset": "src/assets/growth-bonus/v1/detail-fill.webp"
+    }
+  ]
+}

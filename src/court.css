@@ -489,15 +489,9 @@ body:has(.cat-court:not([hidden])) { min-width: 0; }
 @keyframes court-gavel-impact { 0%,52%,75%,100% { filter: none; } 58% { filter: drop-shadow(0 0 12px #f8d577); } }
 .court-formal-emblem { flex-shrink: 0; display: grid; place-items: center; width: 61px; height: 67px; color: #a57535; background: linear-gradient(#f8e9c5,#e8d2a2); border: 3px double #c19b55; border-radius: 16px; }
 .court-formal-emblem svg { width: 30px; height: 30px; }
-.court-ruling-banner { position: relative; margin: 22px 0 8px; min-height: 166px; display: grid; place-items: center; overflow: hidden; border-radius: 13px; border: 1px solid #c19b55; background-color: #f0dfbd; background-image: var(--court-ruling-art); background-size: 100% 100%; background-position: center; }
-.court-ruling-copy { width: 64%; padding: 24px 0 30px; text-align: center; color: #3b2622; text-shadow: 0 1px 0 #fff7e8; }
-.court-ruling-copy > span { font-size: 10px; letter-spacing: 2px; color: #947244; }
-.court-ruling-copy h4 { font-family: var(--court-serif); font-style: italic; letter-spacing: 5px; font-size: 38px; font-weight: 900; line-height: 1.2; margin: 7px 0; color: #872e27; text-shadow: 1px 2px 0 #fff5d9; }
-.court-ruling-banner.cobalt h4 { color: #274d7e; }.court-ruling-banner.indigo h4 { color: #4d4c74; }.court-ruling-banner.amber h4 { color: #775225; }.court-ruling-banner.jade h4 { color: #285e49; }
-.court-ruling-copy p { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.7; overflow-wrap: anywhere; }
-.court-ruling-replay { position: absolute; right: 7px; bottom: 7px; display: flex; align-items: center; gap: 5px; padding: 7px 10px; min-height: 34px; border-radius: 7px; background: #4a302be6; color: #fce4ab; font-size: 10px; box-shadow: 0 1px 2px #34201150; }
+.court-ruling-banner { position: relative; margin: 22px 0 8px; display: block; overflow: hidden; border-radius: 13px; border: 1px solid #c19b55; background: #fff8e9; --court-title-left: 13%; --court-title-right: 13%; }
+.court-ruling-replay { display: flex; align-items: center; gap: 5px; padding: 8px 10px; min-height: 44px; border-radius: 7px; background: #4a302be6; color: #fce4ab; font-size: 12px; box-shadow: 0 1px 2px #34201150; }
 .court-ruling-replay svg { width: 14px; height: 14px; }
-.court-ruling-history-note { position: absolute; bottom: 9px; left: 13px; max-width: 66%; font-size: 9px; color: #6d655f; }
 @media(max-width:600px) {
   .court-hero, .has-case .court-hero { padding: 12px 0 16px; gap: 10px; }
   .court-hero h1, .has-case .court-hero h1 { font-size: 20px; letter-spacing: .3px; }
@@ -529,12 +523,6 @@ body:has(.cat-court:not([hidden])) { min-width: 0; }
   .court-legacy-verdict .court-verdict-body { line-height: 1.95; }
   .court-formal-emblem { width: 44px; height: 51px; border-radius: 12px; }
   .court-formal-emblem svg { width: 24px; height: 24px; }
-  .court-ruling-banner { min-height: 155px; background-size: cover; }
-  .court-ruling-copy { width: 73%; padding: 24px 0 48px; }
-  .court-ruling-copy h4 { font-size: 33px; letter-spacing: 3px; }
-  .court-ruling-copy p { font-size: 12px; }
-  .court-ruling-replay { min-height: 44px; font-size: 12px; padding: 8px 10px; }
-  .court-ruling-history-note { bottom: 48px; font-size: 8px; }
 }
 @media(max-width:360px) {
   .cat-court { padding-left: 12px; padding-right: 12px; }
@@ -547,9 +535,8 @@ body:has(.cat-court:not([hidden])) { min-width: 0; }
 
 /* Generated illustrations label saved explanations; text has its own surface. */
 .court-explainer-content { display: grid; gap: 20px; margin-top: 22px; }
-.court-ruling-banner { display: block; min-height: 0; background: #fff8e9; --court-title-left: 13%; --court-title-right: 13%; }
 .court-ruling-round { display: block; padding: 8px 12px; font-size: 11px; color: #84613a; text-align: center; }
-.court-ruling-image { position: relative; aspect-ratio: 3 / 1; background-image: var(--court-ruling-art); background-size: 100% 100%; background-position: center; }
+.court-ruling-image { position: relative; width: 100%; min-width: 0; aspect-ratio: 3 / 1; background-image: var(--court-ruling-art); background-size: 100% 100%; background-position: center; }
 .court-ruling-image h4 { position: absolute; left: var(--court-title-left); right: var(--court-title-right); top: 50%; transform: translateY(-50%); margin: 0; font-family: var(--court-serif); font-size: 34px; font-weight: 900; letter-spacing: 3px; text-align: center; color: #872e27; line-height: 1.25; }
 .court-ruling-banner[data-ruling="primary-a"] { --court-title-left: 29%; --court-title-right: 8%; }
 .court-ruling-banner[data-ruling="primary-b"] { --court-title-left: 11%; --court-title-right: 27%; }
@@ -568,6 +555,29 @@ body:has(.cat-court:not([hidden])) { min-width: 0; }
 .court-explainer-heading > img { display: block; width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 3px 4px #57361f14); }
 .court-explainer-heading h4 { margin: 0; font-size: 22px; font-family: var(--court-serif); color: #6c4933; line-height: 1.5; }
 .court-explainer-heading p { margin: 4px 0 0; font-size: 12px; color: #93806d; line-height: 1.7; }
+.court-responsibility-scale { width: 100%; min-width: 0; margin: 0 0 17px; padding: 16px; border: 1px solid #ddc9a5; border-radius: 15px; background: radial-gradient(ellipse at 50% 42%,#fff6db,#fffaf0 72%); }
+.court-responsibility-scale > figcaption { text-align: center; color: #6c4933; font-size: 18px; line-height: 1.6; overflow-wrap: anywhere; }
+.is-layout-sample .court-responsibility-scale::before { content: '布局样例 · 非真实判词'; display: block; text-align: center; font-size: 11px; color: #9b8b78; margin-bottom: 8px; }
+.court-responsibility-scale > img { display: block; width: 100%; max-width: 360px; height: auto; aspect-ratio: 3 / 2; object-fit: contain; margin: 8px auto 0; }
+.court-responsibility-meter { margin-top: 16px; }
+.court-responsibility-values { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: start; }
+.court-responsibility-value { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; color: #4475a5; }
+.court-responsibility-value.b { align-items: flex-end; text-align: right; color: #b36075; }
+.court-ratio-role { font-size: 11px; line-height: 1.5; opacity: .85; }
+.court-ratio-number { display: block; font-family: system-ui,sans-serif; font-size: 36px; line-height: 1.2; letter-spacing: -1px; font-variant-numeric: tabular-nums; margin: 3px 0 4px; }
+.court-ratio-number > small { font-size: .5em; margin-left: 2px; letter-spacing: 0; }
+.court-ratio-name { font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.court-responsibility-value > em { font-size: 11px; font-style: normal; line-height: 1.6; }
+.court-responsibility-track { height: 20px; display: flex; overflow: hidden; margin-top: 12px; border-radius: 999px; background: #ece5d9; box-shadow: inset 0 1px 3px #7b603719; }
+.court-responsibility-track > .a { flex: 0 0 auto; background: linear-gradient(#86b7e6,#5689bb); }
+.court-responsibility-track > .b { flex: 0 0 auto; background: linear-gradient(#edb0be,#cf8197); }
+.court-responsibility-track > .a + .b { box-shadow: inset 2px 0 #fff7e6; }
+.court-responsibility-track.is-empty { height: 28px; justify-content: center; align-items: center; border: 1px dashed #cfc2ac; background: #f0ebe2; box-shadow: none; }
+.court-ratio-empty-label { font-size: 11px; color: #9b8b78; }
+.is-unrecorded .court-ratio-number { opacity: .55; font-size: 29px; }
+.court-scale-key { margin: 10px 0 0; text-align: center; color: #927a5c; font-size: 12px; line-height: 1.7; }
+.court-scale-pending { margin: 0 0 16px; padding: 14px; border: 1px dashed #cbbda7; border-radius: 12px; color: #797086; background: #f8f5f0; text-align: center; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.court-scale-pending[data-balance="boundaries"] { color: #426c51; background: #f1f7ec; border-color: #bed1ad; }
 .court-explainer-card > p, .court-explainer-list p, .court-explainer-person > p { margin: 10px 0; font-size: 16px; line-height: 1.85; color: #6c5140; overflow-wrap: anywhere; }
 .court-explainer-parties { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .court-explainer-person { min-width: 0; padding: 17px; background: #f0f5fa; border: 1px solid #dce6ef; border-radius: 14px; }
@@ -616,6 +626,11 @@ body:has(.cat-court:not([hidden])) { min-width: 0; }
   .court-explainer-heading > img { width: 58px; height: 58px; }
   .court-explainer-heading h4 { font-size: 21px; }
   .court-explainer-heading p { font-size: 11px; }
+  .court-responsibility-scale { padding: 12px 10px; border-radius: 12px; }
+  .court-responsibility-scale > figcaption { font-size: 16px; }
+  .court-responsibility-values { gap: 10px; }
+  .court-ratio-number { font-size: 32px; }
+  .court-ratio-role { font-size: 10px; }
   .court-explainer-parties { grid-template-columns: minmax(0,1fr); gap: 11px; }
   .court-explainer-person { padding: 15px; }
   .court-explainer-person h5 { font-size: 17px; }

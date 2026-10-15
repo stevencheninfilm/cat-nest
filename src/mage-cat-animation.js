@@ -15,9 +15,9 @@ export function mageExpression(type, sleeping, phase = 0) {
 export const MAGE_REACTION_SECONDS = {pet:2.6,feed:2.8,play:2.9};
 
 /** Keep facial planes, skin and clothing on the author's rig; animate only its outer group. */
-export function advanceMagePose(mixer, pivot, delta, {sleeping=false,reaction='',reactionTime=0,elapsed=0,yaw=0,reducedMotion=false}={}) {
+export function advanceMagePose(mixer, pivot, delta, {sleeping=false,reaction='',reactionTime=0,activityDuration,elapsed=0,yaw=0,reducedMotion=false}={}) {
   mixer.update(delta);
-  const duration=MAGE_REACTION_SECONDS[reaction] || 0;
+  const duration=activityDuration ?? MAGE_REACTION_SECONDS[reaction] ?? 0;
   const strength=duration && reactionTime<duration ? Math.sin(Math.PI*reactionTime/duration) : 0;
   const gain=reducedMotion?.25:1;
   pivot.position.y=reaction==='feed' && !sleeping ? Math.sin(reactionTime*9)**2*.025*strength*gain : 0;

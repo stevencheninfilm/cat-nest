@@ -17,7 +17,7 @@ export function createCourtJudge({ container, assetBase, getAppearance = () => u
     destroy() { avatar?.destroy(); },
   };
   avatar = createCatModel({
-    container, assetBase, reducedMotion,
+    container, assetBase, reducedMotion, autonomous: false,
     onReady() { api.syncAppearance(); onReady?.(); if (queuedStrike) { queuedStrike = false; api.announce(); } },
     onError,
     decorateScene({ scene, model, pivot }) {

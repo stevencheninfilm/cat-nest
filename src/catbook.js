@@ -4,12 +4,13 @@ import { sceneCatPlacement } from './catbook-scenes.js';
 import { createCollectionEvents, catArrivalRoute, CAT_ARRIVAL_MS } from './catbook-events.js';
 import { levelInfo } from './state.js';
 
-export function createCatbook({ container, getState, getAvailability, onAction, onBack, initialScene='garden', onSceneChange }) {
+export function createCatbook({ container, getState, getAvailability, onAction, onBack, initialScene='station', onSceneChange }) {
   let tab='book', catId='bandit', sceneId=initialScene, panel=null, detailOrigin=null;
   let trigger=null, drag=null, petTap=null, blockCatClickUntil=0;
   let presentation=null, ownInvitation=null, ownInvitationSaving=false, sceneRevealAt=0;
   const events=createCollectionEvents(getState()), rewards=[];
   const walkingImage=new Image();
+  const gameWalkingImage=new Image();
   const petTapDuration=620;
   const cameras=new Map(), sheetScroll=new Map();
   const token = element => {
@@ -129,16 +130,12 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   }
   function petCat(button) {
     cancelPetTap();
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { openCat(button); return; }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // Restart the response on every tap, including repeated taps on the same cat.
     void button.offsetWidth;
     button.style.setProperty('--pet-tap-duration',`${petTapDuration}ms`);
     button.classList.add('is-petted');
-    petTap={ button, timer:setTimeout(() => {
-      const active=button.isConnected && !container.hidden && !panel;
-      cancelPetTap();
-      if (active) openCat(button);
-    },petTapDuration) };
+    petTap={ button, timer:setTimeout(cancelPetTap,petTapDuration) };
   }
   function dismiss() { panel=null; detailOrigin=null; render({ restore:true }); }
   container.addEventListener('click', event => {
@@ -229,5 +226,5 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   container.addEventListener('pointercancel',stopDrag);
   window.addEventListener('resize',()=>{if(!container.hidden && presentation?.event.type === 'cat-arrived'){presentation.route=null;render();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden) stopPresentation({pauseAll:true});else if(!container.hidden) render();});
-  return { render, open() { if(!walkingImage.src) walkingImage.src=new URL('../public/assets/catbook/walking-cats.png',import.meta.url).href; panel=null; detailOrigin=null; container.hidden=false; render(); container.querySelector('[data-catbook-back]').focus({preventScroll:true}); }, close() { cancelPetTap(); stopPresentation({pause:true}); panel=null; container.querySelector('dialog[open]')?.close(); container.hidden=true; } };
+  return { render, open() { if(!walkingImage.src) walkingImage.src=new URL('../public/assets/catbook/walking-cats.png',import.meta.url).href; if(!gameWalkingImage.src) gameWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/game-walking-v1.png`; panel=null; detailOrigin=null; container.hidden=false; render(); container.querySelector('[data-catbook-back]').focus({preventScroll:true}); }, close() { cancelPetTap(); stopPresentation({pause:true}); panel=null; container.querySelector('dialog[open]')?.close(); container.hidden=true; } };
 }

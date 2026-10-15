@@ -1,0 +1,55 @@
+.nest .together {
+  left: auto; right: 22px; width: 172px; max-width: calc(100% - 44px); height: 28px;
+  padding: 0 8px; gap: 6px; border: 1px solid #fffaf080; border-radius: 14px;
+  background: linear-gradient(135deg, #fff9edc4, #fff4e4aa);
+  box-shadow: 0 2px 7px #6f4d2914, inset 0 1px 0 #ffffff45;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.nest .together::before { content: ''; position: absolute; inset: -8px 0; }
+.together-presence { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.partner-presence { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 0; font-size: 9px; line-height: 14px; }
+.partner-presence > b { font-size: 9.5px; font-weight: 700; color: #5d7e93; }
+.partner-presence.female > b { color: #ac7483; }
+.partner-presence > em { font-size: 6.5px; line-height: 11px; padding: 0; color: #5d7e93; font-style: normal; font-weight: 700; flex: none; }
+.partner-presence.female > em { color: #ac7483; }
+.partner-presence + .partner-presence { position: relative; }
+.partner-presence + .partner-presence::before { content: ''; position: absolute; left: -5px; top: 50%; transform: translateY(-50%); width: 1px; height: 11px; background: #ab987938; }
+.presence-indicator { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 10px; line-height: 16px; font-weight: 600; color: #92877d; white-space: nowrap; }
+.presence-indicator > i { display: block; width: 5px; height: 5px; border-radius: 50%; background: #b5aea4; flex: none; }
+.presence-indicator[data-presence-state="online"] { color: #64874f; }
+.presence-indicator[data-presence-state="online"] > i { background: #7caa66; box-shadow: 0 0 0 2px #8eb97518; }
+.presence-indicator[data-presence-state="unknown"] { color: #a58b6c; }
+.presence-indicator[data-presence-state="unknown"] > i { background: #c8a56d; }
+.partner-presence .presence-indicator { font-size: 9px; line-height: 14px; gap: 3px; font-weight: 500; color: #887e73; }
+.partner-presence .presence-indicator[data-presence-state="online"] { color: #608348; }
+.partner-presence .presence-indicator[data-presence-state="unknown"] { color: #a08869; }
+.partner-presence .presence-indicator > i { width: 4px; height: 4px; }
+.nest .together-link { display: grid; place-items: center; width: 6px; height: 16px; font-size: 13px; line-height: 1; color: #9c8166; flex: none; margin-left: 0; }
+.role-dialog { width: min(360px, calc(100vw - 32px)); max-width: 360px; padding: 24px 20px 18px; border-radius: 28px; }
+.role-dialog .modal-close { top: 12px; right: 12px; width: 28px; height: 28px; }
+.role-picker-heading > span { display: block; font-size: 25px; margin-bottom: 8px; }
+.role-dialog .role-picker-heading h2 { font-size: 21px; line-height: 1.4; margin: 0; }
+.role-picker-heading p { margin: 7px 0 18px; font-size: 11px; color: #a78b73; }
+.role-dialog .role-choices { gap: 12px; }
+.role-dialog .role-choice { padding: 15px 8px 12px; border-radius: 20px; }
+.role-dialog .role-portrait { width: 60px; height: 60px; font-size: 42px; margin: 0 0 9px; box-shadow: none; }
+.role-dialog .role-choice strong { font-size: 16px; letter-spacing: 0; }
+.role-dialog .role-choice > .presence-indicator { margin-top: 5px; font-size: 11px; }
+.role-dialog .role-enter { margin-top: 12px; font-size: 10px; line-height: 15px; }
+.role-connection { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 17px; min-height: 20px; font-size: 10px; color: #ab927a; }
+.role-connection .text-button { margin: 0; padding: 4px 0; font-size: 10px; white-space: nowrap; }
+.role-connection .text-button[hidden] { display: none; }
+@media (max-width: 360px) {
+  .nest .together { right: 18px; padding-inline: 8px; }
+  .role-dialog { padding: 22px 17px 16px; }
+}
+@media (max-height: 680px) {
+  .nest .together { height: 24px; }
+  .role-dialog { padding-block: 18px 14px; }
+  .role-picker-heading > span { font-size: 21px; margin-bottom: 5px; }
+  .role-dialog .role-picker-heading h2 { font-size: 19px; }
+  .role-picker-heading p { margin-bottom: 13px; }
+  .role-dialog .role-portrait { width: 50px; height: 50px; font-size: 36px; }
+  .role-dialog .role-choice { padding-block: 12px 10px; }
+  .role-connection { margin-top: 12px; }
+}

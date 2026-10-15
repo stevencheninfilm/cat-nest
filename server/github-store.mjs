@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth, levelInfo } from '../src/state.js';
 import { validAppearance } from '../src/mage-cat-config.js';
 import { validCollection, validCollectionCatId, canInviteCat } from '../src/cat-collection.js';
+import { sanitizeGameAction, validGameHub, publicGameHub, publicGameEvent, emptyGameHub } from '../src/minigames.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -16,6 +17,7 @@ export class StorageError extends Error {
 
 export function sanitizeAction(value) {
   if (!plain(value)) return null;
+  if (typeof value.type === 'string' && value.type.startsWith('game-')) return sanitizeGameAction(value);
   const keys = Object.keys(value);
   if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && typeof value.food === 'string' && Object.hasOwn(FOODS, value.food)) return { type: 'feed', food: value.food };
   if (['pet', 'play', 'sleep'].includes(value.type) && keys.length === 1) return { type: value.type };
@@ -43,6 +45,7 @@ function validStoredState(value) {
   if (Object.hasOwn(value, 'careLimits') && !validCareLimits(value.careLimits)) return false;
   if (Object.hasOwn(value, 'pendingGrowth') && !validPendingGrowth(value.pendingGrowth)) return false;
   if (Object.hasOwn(value, 'collection') && !validCollection(value.collection, Object.keys(FOODS))) return false;
+  if (Object.hasOwn(value, 'games') && !validGameHub(value.games, { privateState:true })) return false;
   if (Object.hasOwn(value, 'needsUpdatedAt') && (!Number.isSafeInteger(value.needsUpdatedAt) || value.needsUpdatedAt < 0)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
@@ -51,7 +54,7 @@ function validStoredState(value) {
   return Array.isArray(value.history) && value.history.length <= 40 && value.history.every(item => plain(item) && typeof item.text === 'string' && item.text.length <= 200 && typeof item.actor === 'string' && item.actor.length <= 20 && Number.isFinite(item.at));
 }
 
-function publicRoom(room) { return { roomId: room.roomId, state: copy(room.state), revision: room.revision }; }
+export function publicRoom(room) { const state = copy(room.state); if (state.games) state.games = publicGameHub(state.games); return { roomId: room.roomId, state, revision: room.revision }; }
 
 function careRejection(action, info, now) {
   const label = { feed: '喂食', pet: '摸摸', play: '玩耍', sleep: '休息' }[action.type];
@@ -189,6 +192,7 @@ export function createGitHubStore({
       for (let attempt = 0; attempt < maxRetries; attempt += 1) {
         const createdAt = now();
         const room = { version: 1, roomId: id, revision: 0, createdAt, updatedAt: createdAt, state: safeState(suppliedState || initialState(createdAt), createdAt), operations: [], claimedGrowth: [] };
+        room.state.games = emptyGameHub(createdAt);
         if (await write(room)) return publicRoom(room);
         if (await read(id, { missing: true })) id = randomBytes(16).toString('hex');
       }
@@ -206,9 +210,10 @@ export function createGitHubStore({
           const duplicate = room.operations.find(operation => operation.id === operationId);
           if (duplicate) {
             if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
-            return { ...publicRoom(room), event: copy(duplicate.event), duplicate: true };
+            return { ...publicRoom(room), event: publicGameEvent(duplicate.event), duplicate: true };
           }
           const invitation = room.state.collection?.invited.find(record => record.operationId === operationId);
+          if (action.type === 'game-create' && (room.state.pendingGrowth?.some(reward => reward.id === `game:${operationId}`) || room.claimedGrowth.some(reward => reward.id === `game:${operationId}`))) throw new StorageError('OPERATION_CONFLICT','这个操作编号已用于已结算的小游戏。',409);
           if (invitation) {
             if (invitation.actorId !== actor.id || action.type !== 'invite-cat' || action.catId !== invitation.id) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event:{ operationId, action, actor }, duplicate:true };
@@ -231,6 +236,7 @@ export function createGitHubStore({
             if (!canInviteCat(action.catId, room.state.collection, levelInfo(room.state.xp).level)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
           }
           const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
+          if (!reduced && action.type.startsWith('game-')) throw new StorageError('GAME_ACTION_REJECTED', '对局已更新，请按最新回合操作；只有本局玩家可以参与。', 409);
           if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
           const event = { operationId, action, actor };
@@ -238,7 +244,7 @@ export function createGitHubStore({
             ? [...room.claimedGrowth, copy(room.state.pendingGrowth.find(reward => reward.id === action.rewardId))]
             : room.claimedGrowth;
           const next = { ...room, revision: room.revision + 1, state: safeState(reduced, actionAt), claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
-          if (await write(next, sha)) return { ...publicRoom(next), event, duplicate: false };
+          if (await write(next, sha)) return { ...publicRoom(next), event:publicGameEvent(event), duplicate: false };
           cache.delete(id);
         }
         throw new StorageError('STORAGE_CONFLICT', '两位铲屎官的存档正在合并，请重试这次互动。');

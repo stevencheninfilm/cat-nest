@@ -3,6 +3,7 @@ import { getCoupleProfile } from './couple-profile.js';
 /** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
 export function createCloudRoom(options) {
   const { apiBase, roomId, clientId, name, coupleRole, initialState, pending = [], onRoom, onState, onAction, onPresence, onStatus, onSaveStatus, onPending, optimisticReducer, onRollback = () => {} } = options;
+  const storageLabel = options.storageLabel || 'GitHub 云端';
   const base = apiBase.replace(/\/$/, '');
   const coupleMode = Object.hasOwn(options, 'coupleRole');
   const profile = getCoupleProfile(coupleRole);
@@ -76,13 +77,13 @@ export function createCloudRoom(options) {
         if (destroyed) break;
         if (optimisticReducer && (!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
         apply(data, item); queue.shift(); saveQueue();
-        onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':'已保存到 GitHub 云端', at:Date.now() });
+        onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
       } catch (error) {
         if (destroyed) break;
         // A confirmed live receipt wins over a lost HTTP response.
         if (optimisticReducer && seen.has(item.operationId)) {
           queue.shift(); saveQueue();
-          onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':'已保存到 GitHub 云端', at:Date.now() });
+          onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
           continue;
         }
         if (error.status >= 400 && error.status < 500 && error.status !== 429) {
@@ -91,7 +92,7 @@ export function createCloudRoom(options) {
           // Another device may have collected the same saved reward while our
           // live stream was interrupted. Reconcile from the cloud immediately;
           // never award XP or remove a bubble based only on the rejection.
-          if ((optimisticReducer || ['claim-growth','invite-cat'].includes(item.action?.type)) && error.status === 409) {
+          if ((optimisticReducer || ['claim-growth','invite-cat'].includes(item.action?.type) || item.action?.type?.startsWith('game-')) && error.status === 409) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* The next live snapshot or poll can still reconcile it. */ }
             if (destroyed) break;
           }
@@ -115,7 +116,7 @@ export function createCloudRoom(options) {
     source.addEventListener('action', event => { try { apply(JSON.parse(event.data)); } catch {} });
     source.addEventListener('presence', event => { try { onPresence(JSON.parse(event.data)); } catch {} });
     source.addEventListener('full', () => { ready=false; source.close(); onStatus({phase:'full',role:null,message:'这个猫窝已有两位猫友在线，请稍后再来'}); });
-    source.onopen=() => { if (destroyed) return; ready=true; onStatus({phase:'online',role:'cloud',message:'已连接云端小窝，互动会自动保存到 GitHub'}); drain(); };
+    source.onopen=() => { if (destroyed) return; ready=true; onStatus({phase:'online',role:'cloud',message:`已连接共同小窝，互动会自动保存到 ${storageLabel}`}); drain(); };
     source.onerror=() => { if (!destroyed) onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复，已保存的云端存档仍然保留'}); };
     clearInterval(poll); poll=setInterval(async () => { if (destroyed) return; try { apply(await request(`/api/rooms/${room}`)); } catch {} }, 20000);
   }
@@ -127,7 +128,7 @@ export function createCloudRoom(options) {
       return;
     }
     onStatus({phase:'connecting',role:'cloud',message:'正在唤醒云端小窝，首次连接可能需要约一分钟…'});
-    onSaveStatus({phase:'loading',message:'正在读取云端存档…'});
+    onSaveStatus({phase:'loading',message:`正在读取 ${storageLabel}存档…`});
     try {
       const data = coupleMode ? await request('/api/couple/home') : room ? await request(`/api/rooms/${room}`) : await request('/api/rooms', {method:'POST',body:JSON.stringify({name:me.name,initialState})});
       if (destroyed) return;
@@ -135,7 +136,7 @@ export function createCloudRoom(options) {
         throw new Error('共同小窝存档暂不可用，原存档没有被修改');
       }
       room=data.roomId; onRoom(room); apply(data);
-      onSaveStatus({phase:'saved',message:'已读取 GitHub 云端存档',at:Date.now()});
+      onSaveStatus({phase:'saved',message:`已读取 ${storageLabel}存档`,at:Date.now()});
       ready=true; subscribe(); drain();
     } catch(error) {
       if (destroyed) return;

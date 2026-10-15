@@ -9,6 +9,7 @@ export function structuredVerdict(overrides = {}) {
     disputes: ['双方是否明确确认了最后的时间，需要补充完整上下文。'],
     responsibility: {
       assessment: 'a_more', summary: '本轮暂以核对甲方所依据的约定为主要改进方向，结论可被新证据修正。',
+      percentages: overrides.repairMode === 'boundaries_first' ? { a: null, b: null } : { a: 65, b: 35 },
       a: { level: 'primary', reason: '甲方需要先核对明确约定，再表达对迟到的判断。' },
       b: { level: 'contributing', reason: '乙方需要及时说明安排变化，减少对方猜测。' },
     },

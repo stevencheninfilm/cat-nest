@@ -1,5 +1,6 @@
 import { FOODS } from './state.js';
 import { GROWTH_STAGES, stageStyle } from './growth-stages.js';
+import { GAMES } from './minigames.js';
 
 const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
 const LABELS = { feed:'喂食', pet:'摸摸', play:'玩耍', sleep:'休息' };
@@ -15,6 +16,7 @@ export function jellyHeartMarkup(stage = GROWTH_STAGES[0]) {
 }
 
 export function growthLabel(reward) {
+  if (reward.kind === 'game') return GAMES[reward.game]?.name || '小游戏';
   return reward.kind === 'feed' ? FOODS[reward.food]?.name || '喂食' : LABELS[reward.kind] || '陪伴';
 }
 

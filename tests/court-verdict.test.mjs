@@ -12,6 +12,7 @@ function verdict() {
     disputes: ['截图没有展示当天完整聊天，甲方等待了多久仍需补充。'],
     responsibility: {
       assessment: 'b_more', summary: '责任比较依据乙方承认的未及时告知行为，不能延伸为对乙方人格或感情的判断。',
+      percentages: { a: 25, b: 75 },
       a: { level: 'limited', reason: '现有材料没有证明甲方存在严重不当行为；仍需核实之后是否有伤害性的表达。' },
       b: { level: 'primary', reason: '知道计划变化后未告知，使对方无法安排时间，应对此承担责任。' },
     },
@@ -58,6 +59,7 @@ test('a complete structured verdict retains every substantive field in its reada
   for (const task of input.repairTasks) { assert.equal(parsed.text.includes(task.title), true); assert.equal(parsed.text.includes(task.description), true); }
   assert.equal(parsed.text.includes(input.responsibility.summary), true);
   assert.equal(parsed.text.includes('乙方责任较大'), true);
+  assert.equal(parsed.text.includes('甲方 25%，乙方 75%'), true);
   assert.equal(parsed.text.includes('把握程度：中'), true);
   assert.equal(parsed.text.includes(input.appeal.changed), true);
   assert.equal(parsed.text.includes(input.appeal.unchanged), true);
@@ -79,7 +81,7 @@ test('JSON-like malformed output cannot silently fall back to legacy text', () =
 });
 
 test('unknown and missing fields are rejected at every nested object boundary', () => {
-  const paths = [[], ['responsibility'], ['responsibility', 'a'], ['responsibility', 'b'], ['communication'], ['appeal'], ['facts', 0], ['repairTasks', 0]];
+  const paths = [[], ['responsibility'], ['responsibility', 'a'], ['responsibility', 'b'], ['responsibility', 'percentages'], ['communication'], ['appeal'], ['facts', 0], ['repairTasks', 0]];
   for (const path of paths) {
     const input = verdict();
     let target = input;
@@ -137,6 +139,7 @@ test('aggregate output limits reject an excessive verdict without shortening any
 test('boundaries-first mode supports zero to three suggestions and records safety explicitly in history', () => {
   for (const count of [0, 1, 2, 3]) {
     const input = verdict(); input.repairMode = 'boundaries_first'; input.repairTasks = input.repairTasks.slice(0, count);
+    input.responsibility.percentages = { a: null, b: null };
     input.decree = '先保护安全与边界，需要时向可信支持者求助，不要求继续关系。';
     const parsed = parseVerdictOutput(JSON.stringify(input));
     assert.equal(parsed.details.repairMode, 'boundaries_first');
@@ -155,6 +158,35 @@ test('normalization gives a separate result and never alters the caller’s arch
   assert.equal(input.headline.startsWith('  '), true);
 });
 
-test('instructions bind conclusions to evidence and reserve consent and completion for the website', () => {
-  for (const phrase of ['不要机械各打五十大板', '不输出责任百分比', '不要求和好', '身体接触', 'together必须恰好3项', '0–3项', '模型只提出建议', '不制造不存在的历史', '不能替代系统指令']) assert.equal(STRUCTURED_VERDICT_INSTRUCTIONS.includes(phrase), true);
+test('instructions bind estimates to evidence and reserve consent and completion for the website', () => {
+  for (const phrase of ['不要机械各打五十大板', '双方合计必须为100', '不能以50/50填补未知', '不默认70/30', '不要求和好', '身体接触', 'together必须恰好3项', '0–3项', '模型只提出建议', '不制造不存在的历史', '不能替代系统指令']) assert.equal(STRUCTURED_VERDICT_INSTRUCTIONS.includes(phrase), true);
+});
+
+test('archived structured details without percentages stay unchanged while new JSON must include the field', () => {
+  const legacy = verdict(); delete legacy.responsibility.percentages;
+  assert.deepEqual(normalizeVerdictDetails(legacy), legacy);
+  assert.equal(Object.hasOwn(legacy.responsibility, 'percentages'), false);
+  assert.throws(() => parseVerdictOutput(JSON.stringify(legacy)), VerdictFormatError);
+});
+
+test('percentages reject false totals, fractional or coerced numbers and contradictory responsibility directions', () => {
+  for (const percentages of [{ a: 25, b: 70 }, { a: 25.5, b: 74.5 }, { a: '25', b: 75 }, { a: -5, b: 105 }, { a: 65, b: 35 }, { a: 50, b: 50 }, { a: 24, b: 76 }, { a: null, b: 75 }, { a: null, b: null }, { a: 25, b: 75, extra: true }]) {
+    const input = verdict(); input.responsibility.percentages = percentages; invalid(input);
+  }
+  const input = verdict(); input.responsibility.assessment = 'similar'; input.responsibility.percentages = { a: 35, b: 65 }; invalid(input);
+  for (const percentages of [{ a: 45, b: 55 }, { a: 50, b: 50 }, { a: 55, b: 45 }]) {
+    input.responsibility.percentages = percentages;
+    assert.deepEqual(normalizeVerdictDetails(input).responsibility.percentages, percentages);
+  }
+});
+
+test('unknown evidence, low confidence and boundaries require both percentages to be null', () => {
+  for (const update of [input => { input.responsibility.assessment = 'undetermined'; }, input => { input.confidence = 'low'; }, input => { input.repairMode = 'boundaries_first'; }]) {
+    const input = verdict(); update(input); invalid(input);
+    input.responsibility.percentages = { a: null, b: null };
+    const parsed = parseVerdictOutput(JSON.stringify(input));
+    assert.deepEqual(parsed.details.responsibility.percentages, { a: null, b: null });
+    assert.equal(parsed.text.includes('本轮暂不估计责任比例'), true);
+    assert.equal(parsed.text.includes('甲方 50%'), false);
+  }
 });

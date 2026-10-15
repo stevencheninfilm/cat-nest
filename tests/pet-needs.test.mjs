@@ -103,14 +103,20 @@ test('each status opens its own readable methods, threshold and decay explanatio
   for (const key of ['hunger','mood','energy']) {
     assert.match(buttons,new RegExp(`data-open="need-${key}"`));
     const html=needDetails({...healthy(),energy:80},key,{now:START,clientId:actor.id});
-    assert.match(html,/大于 80/); assert.match(html,/已开启 ×1.2/);
-    assert.match(html,/活力还需 \+1/); assert.match(html,/每 30 分钟各下降 1 点/);
-    assert.match(html,/已生成的气泡数值不变/);
+    assert.match(html,/大于 80，成长 \+10%/);
+    assert.match(html,/当前成长总倍率 1.2，查看全部成长加成/);
+    assert.match(html,new RegExp(`aria-valuenow="${key === 'energy' ? 80 : 100}"`));
+    assert.match(html,/每 30 分钟各下降 1 点/);
+    assert.match(html,key === 'energy' ? /再 \+1 达标/ : /本项 \+10%/);
+    assert.doesNotMatch(html,/need-bonus-checks|LITTLE DAILY CARE/);
   }
-  assert.match(needDetails(healthy(),'hunger',{now:START}),/鲜鱼罐罐<b>\+35/);
-  assert.match(needDetails(healthy(),'mood',{now:START}),/温柔摸摸 \+6/);
+  assert.match(needDetails(healthy(),'hunger',{now:START}),/鲜鱼罐罐<small>冷却 [^<]+<\/small><\/span><b class="need-gain">\+35/);
+  assert.match(needDetails(healthy(),'mood',{now:START}),/温柔摸摸<\/span><b class="need-gain">\+6/);
   assert.match(needDetails(healthy(),'energy',{now:START}),/立即恢复 20 点活力/);
-  assert.match(needDetails(healthy(),'energy',{now:START}),/满状态 ×1.3/);
+  assert.match(needDetails(healthy(),'energy',{now:START}),/当前成长总倍率 1.3/);
+  const sleeping=needDetails({...healthy(),sleeping:true},'energy',{now:START});
+  assert.match(sleeping,/小猫正在休息。叫醒不会再次恢复活力/);
+  assert.doesNotMatch(sleeping,/data-need-action="sleep"/);
 });
 
 test('the bonus badge remains a keyboard-accessible detail entry even without a bonus', () => {
@@ -119,8 +125,9 @@ test('the bonus badge remains a keyboard-accessible detail entry even without a 
   assert.doesNotMatch(html,/\bhidden\b/);
   const none=growthBonusDetails({...healthy(),hunger:80,mood:70,energy:0},{now:START});
   assert.match(none,/当前总倍率<\/span><strong>×1.0/);
+  assert.doesNotMatch(none,/bonus-goal|bonus-step-meter|距离 ×1.3/);
   assert.equal((none.match(/<b>\+0%<\/b>/g)||[]).length,3);
-  for(const [label,gap] of [['饱饱',1],['开心',11],['活力',81]]) assert.match(none,new RegExp(`${label}再 \\+${gap}`));
+  for(const [label,value,gap] of [['饱饱',80,1],['开心',70,11],['活力',0,81]]) assert.match(none,new RegExp(`${label} ${value} / 100，成长加成 0%，还差 ${gap} 点到 81`));
 });
 
 test('bonus overview itemizes contributions and exact state gaps without changing the save', () => {
@@ -131,21 +138,20 @@ test('bonus overview itemizes contributions and exact state gaps without changin
   assert.match(html,/饱饱 90 \/ 100，成长加成 10%，已达标/);
   assert.match(html,/开心 80 \/ 100，成长加成 0%，还差 1 点到 81/);
   assert.match(html,/活力 70 \/ 100，成长加成 0%，还差 11 点到 81/);
-  assert.match(html,/还差 2 项达标/);
-  assert.match(html,/开心再 \+1/); assert.match(html,/活力再 \+11/);
+  assert.doesNotMatch(html,/bonus-goal|bonus-step-meter|还差 2 项达标|开心再 \+1|活力再 \+11/);
   assert.match(html,/3 → 3.3/);
   assert.deepEqual(state,before);
   const full=growthBonusDetails(healthy(),{now:START});
   assert.match(full,/当前总倍率<\/span><strong>×1.3/);
-  assert.match(full,/已达到 1.3 倍/);
+  assert.equal((full.match(/<b>\+10%<\/b>/g)||[]).length,3);
   assert.doesNotMatch(full,/再 \+0|还差 0 项/);
 });
 
-test('the overview recalculates contributions and the 1.3 goal after a decay boundary', () => {
+test('the overview recalculates contributions and per-state gaps after a decay boundary', () => {
   const state={...healthy(),hunger:81,mood:82};
   assert.match(growthBonusDetails(state,{now:START}),/<strong>×1.3/);
   const first=growthBonusDetails(state,{now:START+INTERVAL});
-  assert.match(first,/<strong>×1.2/); assert.match(first,/饱饱再 \+1/);
+  assert.match(first,/<strong>×1.2/); assert.match(first,/饱饱 80 \/ 100，成长加成 0%，还差 1 点到 81/);
   const second=growthBonusDetails(state,{now:START+2*INTERVAL});
-  assert.match(second,/<strong>×1.1/); assert.match(second,/饱饱再 \+2/); assert.match(second,/开心再 \+1/);
+  assert.match(second,/<strong>×1.1/); assert.match(second,/饱饱 79 \/ 100，成长加成 0%，还差 2 点到 81/); assert.match(second,/开心 80 \/ 100，成长加成 0%，还差 1 点到 81/);
 });

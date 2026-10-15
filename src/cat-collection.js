@@ -1,5 +1,6 @@
-// Shared by the client and server: achievements only advance after accepted care.
+// Shared by the client and server: achievements advance after accepted care or victories.
 export const COLLECTION_STATS = Object.freeze(['feed', 'pet', 'play', 'sleep', 'pair']);
+export const COLLECTION_GAMES = Object.freeze(['rps', 'memory', 'gomoku']);
 const cat = (id, name, english, index, personality, achievement, metric, baseTarget, difficultyMultiplier, extraRequirements = []) => {
   const target = baseTarget * difficultyMultiplier;
   const requirements = Object.freeze([{ metric, target }, ...extraRequirements].map(Object.freeze));
@@ -18,6 +19,12 @@ export const COLLECTION_CATS = Object.freeze([
   cat('gozer', '布丁', 'Gozer', 9, '喜欢尝鲜，也会记住你认真准备的每一顿饭。', '尝鲜小食客', 'feed', 9, 6, [{ metric:'foods', target:9 }]),
   cat('lexy', '银杏', 'Lexy', 10, '看见你们一直一起照顾小猫，就想加入这个家。', '双人的心意', 'pair', 12, 8),
   cat('mack', '云朵', 'Mack', 11, '在漫长的成长路上等着你，带来新的陪伴。', '小窝新伙伴', 'level', 15, 8),
+  cat('scout', '栗栗', 'Scout', 12, '戴着牛仔帽的小队长，每一次猜拳都像一场小冒险。', '猜拳小能手', 'win-rps', 1, 5),
+  cat('mochi', '年糕', 'Mochi', 13, '围着薄荷色小围巾，能记住每张卡片和每位朋友。', '翻牌记忆家', 'win-memory', 1, 5),
+  cat('onyx', '墨影', 'Onyx', 14, '安静的忍者小猫，总能在棋盘上找到自己的节奏。', '棋盘新星', 'win-gomoku', 1, 5),
+  cat('biscuit', '饼饼', 'Biscuit', 15, '穿着小围裙的快乐厨师，喜欢把胜利变成新的点心。', '猜拳常胜客', 'win-rps', 2, 6),
+  cat('maple', '枫糖', 'Maple', 16, '带着星星项链的小旅人，玩累了就找个角落打盹。', '翻牌大师', 'win-memory', 2, 6),
+  cat('pearl', '珍珠', 'Pearl', 17, '别着粉色蝴蝶结的小棋手，喜欢在阳光里伸懒腰。', '五子棋高手', 'win-gomoku', 2, 6),
 ]);
 const byId = new Map(COLLECTION_CATS.map(cat => [cat.id, cat]));
 const STABLE_ID = /^[a-zA-Z0-9_.:-]{8,180}$/;
@@ -26,7 +33,7 @@ const safeCount = value => Number.isSafeInteger(value) && value >= 0;
 export const getCollectionCat = id => byId.get(id) || null;
 export const validCollectionCatId = id => typeof id === 'string' && byId.has(id);
 export function emptyCollection() {
-  return { stats:Object.fromEntries(COLLECTION_STATS.map(key => [key, 0])), foods:[], invited:[] };
+  return { stats:Object.fromEntries(COLLECTION_STATS.map(key => [key, 0])), wins:Object.fromEntries(COLLECTION_GAMES.map(key => [key, 0])), foods:[], invited:[] };
 }
 function validInvite(value) {
   return value && typeof value === 'object' && !Array.isArray(value) && validCollectionCatId(value.id)
@@ -35,8 +42,9 @@ function validInvite(value) {
     && Object.keys(value).every(key => ['id', 'at', 'operationId', 'actorId'].includes(key));
 }
 export function validCollection(value, foodIds) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['stats','foods','invited'].includes(key))) return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['stats','wins','foods','invited'].includes(key))) return false;
   if (!value.stats || typeof value.stats !== 'object' || Array.isArray(value.stats) || Object.keys(value.stats).length !== COLLECTION_STATS.length || !COLLECTION_STATS.every(key => safeCount(value.stats[key]))) return false;
+  if (value.wins !== undefined && (!value.wins || typeof value.wins !== 'object' || Array.isArray(value.wins) || Object.keys(value.wins).length !== COLLECTION_GAMES.length || !COLLECTION_GAMES.every(key => safeCount(value.wins[key])))) return false;
   if (!Array.isArray(value.foods) || value.foods.length > foodIds.length || new Set(value.foods).size !== value.foods.length || !value.foods.every(id => foodIds.includes(id))) return false;
   if (!Array.isArray(value.invited) || value.invited.length > COLLECTION_CATS.length || !value.invited.every(validInvite)) return false;
   return new Set(value.invited.map(record => record.id)).size === value.invited.length && new Set(value.invited.map(record => record.operationId)).size === value.invited.length;
@@ -47,7 +55,7 @@ export function normalizeCollection(value, legacy, foods) {
   const foodIds = Object.keys(foods);
   if (value !== undefined) {
     if (!validCollection(value, foodIds)) return next;
-    return { stats:{ ...value.stats }, foods:[...value.foods], invited:value.invited.map(record => ({ ...record })) };
+    return { stats:{ ...value.stats }, wins:{ ...next.wins, ...value.wins }, foods:[...value.foods], invited:value.invited.map(record => ({ ...record })) };
   }
   for (const entry of legacy.history || []) {
     const text = entry.text;
@@ -64,7 +72,7 @@ export function normalizeCollection(value, legacy, foods) {
 }
 export function collectionCatProgress(cat, collection, level) {
   const requirements = cat.requirements.map(({ metric, target }) => {
-    const current = metric === 'level' ? level : metric === 'foods' ? collection.foods.length : metric === 'care'
+    const current = metric.startsWith('win-') ? collection.wins?.[metric.slice(4)] || 0 : metric === 'level' ? level : metric === 'foods' ? collection.foods.length : metric === 'care'
       ? Math.min(Number.MAX_SAFE_INTEGER, ['feed','pet','play','sleep'].reduce((sum, key) => sum + collection.stats[key], 0))
       : collection.stats[metric];
     return { metric, current, target, complete:current >= target, fraction:Math.min(1, current / target) };
@@ -84,4 +92,13 @@ export function canInviteCat(id, collection, level) {
 export function recordCollectionCare(collection, type, food) {
   collection.stats[type] = Math.min(Number.MAX_SAFE_INTEGER, collection.stats[type] + 1);
   if (type === 'feed' && !collection.foods.includes(food)) collection.foods.push(food);
+}
+/** Call only on the server-validated transition to a finished game. One win per match. */
+export function recordCollectionVictory(collection, match) {
+  if (match.status !== 'finished' || !COLLECTION_GAMES.includes(match.game) || !Number.isInteger(match.winner) || match.winner < 0) return false;
+  const winner = match.players[match.winner];
+  if (!winner || winner.computer || winner.id === 'computer-cat') return false;
+  collection.wins ??= Object.fromEntries(COLLECTION_GAMES.map(key => [key, 0]));
+  collection.wins[match.game] = Math.min(Number.MAX_SAFE_INTEGER, collection.wins[match.game] + 1);
+  return true;
 }

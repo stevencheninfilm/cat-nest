@@ -3,6 +3,7 @@ const string = { type: 'string' };
 const list = (items) => ({ type: 'array', items });
 const choice = (values) => ({ type: 'string', enum: values });
 const partyResponsibility = strictObject({ level: choice(['primary', 'contributing', 'limited', 'unclear']), reason: string });
+const percentage = { type: ['integer', 'null'], enum: [...Array.from({ length: 21 }, (_, index) => index * 5), null] };
 const schema = strictObject({
   headline: string,
   conclusion: string,
@@ -13,6 +14,7 @@ const schema = strictObject({
   responsibility: strictObject({
     assessment: choice(['a_more', 'b_more', 'similar', 'undetermined']),
     summary: string,
+    percentages: strictObject({ a: percentage, b: percentage }),
     a: partyResponsibility,
     b: partyResponsibility,
   }),
@@ -40,7 +42,8 @@ export const STRUCTURED_VERDICT_INSTRUCTIONS = `本次必须按 cat_judge_verdic
 headline：简洁的案件裁定标题，最多80字。conclusion：直接说明本轮结论及其依据，最多500字。confidence只能为high、medium、low，反映证据支持程度，片面、裁切或缺少上下文时明确降低把握。
 rootAnalysis：从双方具体说法和行为分析矛盾的根本问题，最多700字。未被材料支持的动机、心理状态、感情温度、关系质量不能编造或当作事实，不做人格或心理诊断。
 facts：最多8项，每项text最多240字、source最多160字。区分截图可见内容、当事人陈述与真正双方认可的事实；来源写清对应第几轮、哪方陈词，或已提供的截图编号和文件名，不虚构引语、时间、截图内容、来源编号或截图真实性。证据不足可以为空数组。
-disputes：最多6项，每项最多180字，列仍有冲突或无法核实的地方。responsibility.assessment只能为a_more、b_more、similar、undetermined；对应甲方责任较大、乙方责任较大、行为责任相近、现有证据无法比较。不要机械各打五十大板，不输出责任百分比。summary最多400字；a和b各有level和reason，level只能为primary、contributing、limited、unclear，reason最多400字，评估具体行为而非人格。结论必须与材料和把握程度一致。
+disputes：最多6项，每项最多180字，列仍有冲突或无法核实的地方。responsibility.assessment只能为a_more、b_more、similar、undetermined；对应甲方责任较大、乙方责任较大、行为责任相近、现有证据无法比较。不要机械各打五十大板。summary最多400字；a和b各有level和reason，level只能为primary、contributing、limited、unclear，reason最多400字，评估具体行为而非人格。结论必须与材料和把握程度一致。
+responsibility.percentages包含a、b两个必填字段，表示本轮具体行为责任的参考估计，不是客观测量、法律责任或人格评分。证据足够比较时，以5%的步长给出0–100的整数，双方合计必须为100；a_more必须a>b，b_more必须b>a，similar的双方差值最多10。请根据造成事件、沟通与后续升级的具体行为说明估计依据，不默认70/30，不从上一轮比例直接照搬，也不根据谁更委屈、谁性别不同来分配。assessment为undetermined、confidence为low或repairMode为boundaries_first时，a、b必须同时为null，不能以50/50填补未知；其余情形必须给出相符的比例。
 decree：温柔而清楚的猫猫判令，最多500字，说明需要停止或改变的行为，以及以后如何避免争执，不羞辱、不威胁、不把相处建议说成真实法律强制令。
 repairMode：一般争执可用together。涉及威胁、暴力、控制、跟踪或明显危险，必须用boundaries_first，先保护安全与边界，不要求和好、当面对质、身体接触、继续共同活动或取得对方许可才能保护自己。
 repairTasks：together必须恰好3项，boundaries_first可以0–3项，仅作为安全建议。每项title最多60字、description最多400字；建议要具体、适量、现实可执行，写清可做什么、何时或如何完成，给双方保留自愿协商空间。不要制定羞辱、强制亲密、购买礼物或金钱交换原谅的惩罚，不假定双方已同意或已完成。模型只提出建议，由网站记录双方的确认。
@@ -85,10 +88,28 @@ function stringTotal(value) {
   return 0;
 }
 
+function normalizePercentages(value, assessment, confidence, repairMode) {
+  const field = 'responsibility.percentages';
+  keys(value, ['a', 'b'], field);
+  const mustOmit = assessment === 'undetermined' || confidence === 'low' || repairMode === 'boundaries_first';
+  if (mustOmit) {
+    if (value.a !== null || value.b !== null) invalid(field);
+    return { a: null, b: null };
+  }
+  if (![value.a, value.b].every(number => Number.isInteger(number) && number >= 0 && number <= 100 && number % 5 === 0)
+    || value.a + value.b !== 100
+    || assessment === 'a_more' && value.a <= value.b
+    || assessment === 'b_more' && value.b <= value.a
+    || assessment === 'similar' && Math.abs(value.a - value.b) > 10) invalid(field);
+  return { a: value.a, b: value.b };
+}
+
 /** Validate without guessing, truncating, or accepting any unknown fields. */
-export function normalizeVerdictDetails(value) {
+export function normalizeVerdictDetails(value, { requirePercentages = false } = {}) {
   keys(value, Object.keys(schema.properties), 'details');
-  keys(value.responsibility, ['assessment', 'summary', 'a', 'b'], 'responsibility');
+  const hasPercentages = object(value.responsibility) && Object.hasOwn(value.responsibility, 'percentages');
+  if (requirePercentages && !hasPercentages) invalid('responsibility.percentages');
+  keys(value.responsibility, ['assessment', 'summary', 'a', 'b', ...(hasPercentages ? ['percentages'] : [])], 'responsibility');
   keys(value.communication, ['a', 'b'], 'communication');
   keys(value.appeal, ['changed', 'unchanged'], 'appeal');
   const details = {
@@ -117,6 +138,9 @@ export function normalizeVerdictDetails(value) {
     followUpQuestions: array(value.followUpQuestions, 5, 'followUpQuestions', (item, field) => text(item, 220, field)),
     appeal: { changed: text(value.appeal.changed, 400, 'appeal.changed'), unchanged: text(value.appeal.unchanged, 400, 'appeal.unchanged') },
   };
+  // Archived structured verdicts predate percentages. Preserve their exact
+  // shape, so reading/importing old cases never manufactures a ratio.
+  if (hasPercentages) details.responsibility.percentages = normalizePercentages(value.responsibility.percentages, details.responsibility.assessment, details.confidence, details.repairMode);
   if (details.repairMode === 'together' && details.repairTasks.length !== 3) invalid('repairTasks');
   if (stringTotal(details) > 6000) invalid('details.length');
   return details;
@@ -134,7 +158,9 @@ function formatVerdict(details) {
   const repairMode = details.repairMode === 'boundaries_first'
     ? '先保护安全与边界。以下仅为建议，不要求和好、共同完成或身体接触。'
     : '双方自愿协商后，一起尝试修复。以下建议尚未表示双方已经同意或完成。';
-  return `${details.headline}\n\n【本轮裁定】\n${details.conclusion}\n把握程度：${confidenceLabel[details.confidence]}。\n\n【矛盾根源分析】\n${details.rootAnalysis}\n\n【已确认的信息及来源】\n${facts}\n\n【争议点】\n${disputes}\n\n【行为责任】\n责任比较：${assessmentLabel[details.responsibility.assessment]}。\n${details.responsibility.summary}\n甲方（${levelLabel[details.responsibility.a.level]}）：${details.responsibility.a.reason}\n乙方（${levelLabel[details.responsibility.b.level]}）：${details.responsibility.b.reason}\n\n【猫猫判令】\n${details.decree}\n\n【修复方式】\n${repairMode}\n\n【修复建议】\n${tasks}\n\n【沟通话术】\n甲方：${details.communication.a}\n乙方：${details.communication.b}\n\n【仍需补充的信息】\n${questions}\n\n【复议变化】\n本轮改变：${details.appeal.changed}\n保持不变：${details.appeal.unchanged}`;
+  const percentages = details.responsibility.percentages;
+  const percentageText = percentages ? percentages.a === null ? '\n本轮暂不估计责任比例。' : `\n行为责任参考估计：甲方 ${percentages.a}%，乙方 ${percentages.b}%。仅依据本轮材料，后续证据可修正。` : '';
+  return `${details.headline}\n\n【本轮裁定】\n${details.conclusion}\n把握程度：${confidenceLabel[details.confidence]}。\n\n【矛盾根源分析】\n${details.rootAnalysis}\n\n【已确认的信息及来源】\n${facts}\n\n【争议点】\n${disputes}\n\n【行为责任】\n责任比较：${assessmentLabel[details.responsibility.assessment]}。\n${details.responsibility.summary}${percentageText}\n甲方（${levelLabel[details.responsibility.a.level]}）：${details.responsibility.a.reason}\n乙方（${levelLabel[details.responsibility.b.level]}）：${details.responsibility.b.reason}\n\n【猫猫判令】\n${details.decree}\n\n【修复方式】\n${repairMode}\n\n【修复建议】\n${tasks}\n\n【沟通话术】\n甲方：${details.communication.a}\n乙方：${details.communication.b}\n\n【仍需补充的信息】\n${questions}\n\n【复议变化】\n本轮改变：${details.appeal.changed}\n保持不变：${details.appeal.unchanged}`;
 }
 
 /** Legacy plain text stays plain text; JSON-like output must pass the schema. */
@@ -145,6 +171,6 @@ export function parseVerdictOutput(output) {
   let value;
   try { value = JSON.parse(trimmed); }
   catch { invalid('output.json'); }
-  const details = normalizeVerdictDetails(value);
+  const details = normalizeVerdictDetails(value, { requirePercentages: true });
   return { text: formatVerdict(details), details };
 }

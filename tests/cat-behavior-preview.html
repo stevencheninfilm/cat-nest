@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>猫咪行为 · 本地验收</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#eee4d6;color:#654d3b;font:14px system-ui}main{max-width:940px;margin:24px auto;padding:20px;display:grid;grid-template-columns:minmax(300px,1fr) 300px;gap:24px}h1{font-size:20px;margin:0 0 8px}p{font-size:12px;line-height:1.8}.room{position:relative;height:580px;overflow:hidden;border:1px solid #fff8;border-radius:28px;background:url('/assets/room.webp') center/cover}.shade{position:absolute;inset:0;background:#1d193b;opacity:0;transition:opacity 1s}.room[data-period=night] .shade{opacity:.3}.room[data-period=evening] .shade{opacity:.12}#cat{position:absolute;inset:30px 15px 65px;border:0;background:none;cursor:grab;touch-action:pan-y}.cat-model-canvas{width:100%;height:100%}#status{position:absolute;bottom:20px;left:20px;right:20px;background:#fff4dfdc;padding:12px;border-radius:16px;text-align:center;font-size:13px}.controls{padding:20px;border-radius:24px;background:#fff9ed}label{display:block;font-size:12px;margin:16px 0 6px}select,button{font:inherit;color:inherit;padding:10px;border:1px solid #d4bfa5;border-radius:12px;background:#fffcf5}select{width:100%}.actions{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}button:disabled{opacity:.5}#details{font:11px/1.8 ui-monospace,monospace;white-space:pre-wrap}#history{font-size:11px;line-height:1.8;padding-left:18px}a{color:inherit}@media(max-width:650px){main{grid-template-columns:1fr;margin:0;padding:12px}.room{height:430px}}
+</style>
+<main>
+  <section class="room" id="room"><div class="shade"></div><button id="cat" aria-label="轻轻摸摸测试猫咪"></button><div id="status" role="status">小猫正在回家…</div></section>
+  <section class="controls"><h1>小猫有自己的节奏</h1><p>本地行为验收，独立于养成存档。可切换心情和时段，观察原素材动作、表情与互动打断。</p>
+    <label for="scenario">猫咪状态</label><select id="scenario"><option value="happy">开心 · 活力充足</option><option value="calm">平静 · 悠闲陪伴</option><option value="lonely">低落 · 想被陪伴</option><option value="hungry">饥饿 · 等待开饭</option><option value="tired">疲惫 · 放慢动作</option><option value="sleeping">熟睡 · 安静呼吸</option></select>
+    <label for="hour">本地时段</label><select id="hour"><option value="8">08:00 · 清晨</option><option value="14" selected>14:00 · 午后</option><option value="19">19:00 · 傍晚</option><option value="23">23:00 · 深夜</option></select>
+    <label><input type="checkbox" id="reduced"> 减少动态效果</label>
+    <div class="actions"><button data-action="pet">摸摸</button><button data-action="feed">喂食</button><button data-action="play">逗猫</button><button data-action="sleep">休息 / 叫醒</button><button id="pause">暂停</button></div>
+    <div id="details"></div><ol id="history" aria-label="最近行为"></ol><p><a href="/">返回共享小窝预览</a></p>
+  </section>
+</main>
+<script type="module">
+  import { createCatModel } from '/src/cat-model.js';
+  const $ = id => document.getElementById(id);
+  const scenarios={happy:{mood:92,energy:85,hunger:70},calm:{mood:60,energy:65,hunger:70},lonely:{mood:22,energy:65,hunger:70},hungry:{mood:65,energy:65,hunger:20},tired:{mood:65,energy:18,hunger:70},sleeping:{mood:65,energy:65,hunger:70,sleeping:true}};
+  let model,state,paused=false;
+  const clock=()=>new Date(2026,9,14,Number($('hour').value)).valueOf();
+  function show(pose){
+    $('room').dataset.period=pose.period;
+    $('status').textContent=`${pose.periodLabel} · ${pose.moodLabel} · ${pose.label}`;
+    $('details').textContent=`心情 ${pose.mood}\n动作 ${pose.id}\n原生片段 ${pose.clip}\n表情 ${pose.eyes} / ${pose.mouth}\n播放速度 ${pose.rate.toFixed(2)}×`;
+    const item=document.createElement('li');item.textContent=`${pose.label} · ${pose.clip}`;$('history').prepend(item);
+    while($('history').children.length>8)$('history').lastElementChild.remove();
+  }
+  function reset(){state={sleeping:false,...scenarios[$('scenario').value]};model?.cancelReaction(state);model?.setState(state);}
+  function create(){model?.destroy();paused=false;$('pause').textContent='暂停';reset();model=createCatModel({container:$('cat'),assetBase:'/api/pet-model/mage-cat-v1',clock,reducedMotion:$('reduced').checked,onBehaviorChange:show,onReady(){model.setState(state);},onError(error){$('status').textContent=`加载失败：${error.message}`;}});model.setState(state);}
+  $('scenario').addEventListener('change',reset);$('hour').addEventListener('change',reset);$('reduced').addEventListener('change',create);
+  for(const button of document.querySelectorAll('[data-action]'))button.addEventListener('click',()=>{
+    const type=button.dataset.action;state={...state,sleeping:type==='sleep'?!state.sleeping:false};model.react(type,state);
+  });
+  $('cat').addEventListener('click',()=>{if(!model.consumeTap())model.react('touch',state);});
+  $('pause').addEventListener('click',()=>{paused=!paused;model.setPaused(paused);$('pause').textContent=paused?'继续':'暂停';});
+  document.addEventListener('visibilitychange',()=>model.setPaused(document.hidden||paused));
+  create();
+</script>
+</html>

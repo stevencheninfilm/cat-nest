@@ -129,7 +129,7 @@ export function createPetHandler({
         }
         if (await modelAssets(request, response, url)) return true;
         if (url.pathname === '/api/health' && request.method === 'GET') {
-          json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: 'github' }); return true;
+          json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: store.storage || 'github' }); return true;
         }
         if (url.pathname === '/api/couple/home') {
           if (request.method !== 'GET') {
