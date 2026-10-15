@@ -39,7 +39,7 @@ export function namedHomeEntry() {
         await writeFile(resolve(outDir,name,'index.html'),html);
       }
       await writeFile(resolve(outDir,'index.html'),demoRedirectHtml());
-      await writeFile(resolve(outDir,'404.html'),namedHomeHtml(source,base || '/cat-nest/'));
+      await writeFile(resolve(outDir,'404.html'),namedHomeHtml(source,base?.startsWith('/') ? base : '/cat-nest/'));
     },
   };
 }

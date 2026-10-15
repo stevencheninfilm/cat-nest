@@ -68,10 +68,14 @@ test('the common cloud client completes a test action through its injected adapt
 
 test('build verification rejects drifted entry HTML and copied per-save bundles',async t=>{
   const dir=await mkdtemp(join(tmpdir(),'shared-app-build-'));t.after(()=>rm(dir,{recursive:true,force:true}));
-  const html='<head><base href="../"><script type="module" src="/cat-nest/assets/entry.js"></script></head>';
+  const html='<head><base href="../"><script type="module" src="./assets/entry.js"></script></head>';
   await mkdir(join(dir,'assets'));await writeFile(join(dir,'assets/entry.js'),'one app');
   for(const {id} of HOME_ENTRIES){await mkdir(join(dir,id));await writeFile(join(dir,id,'index.html'),html);}
   assert.deepEqual((await verifySharedBuild(dir)).entries,['steven','evian','test']);
+  for(const origin of ['https://stevencheninfilm.com/cat-nest/','https://cat-nest-api.onrender.com/'])for(const {id} of HOME_ENTRIES){
+    const base=new URL('../',`${origin}${id}/`);
+    assert.equal(new URL('./assets/entry.js',base).href,`${origin}assets/entry.js`);
+  }
   await writeFile(join(dir,'test/index.html'),html+'different');await assert.rejects(()=>verifySharedBuild(dir),/不同的应用入口/);
   await writeFile(join(dir,'test/index.html'),html);await mkdir(join(dir,'test/assets'));await assert.rejects(()=>verifySharedBuild(dir),/资源副本/);
 });

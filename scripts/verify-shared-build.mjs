@@ -17,8 +17,8 @@ export async function verifySharedBuild(directory,entries=HOME_ENTRIES) {
     }
   }
   const scripts=[...common.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(match=>match[1]);
-  if(scripts.length!==1 || !scripts[0].startsWith('/cat-nest/assets/'))throw new Error('缺少唯一共享入口');
-  const entry=scripts[0].replace('/cat-nest/','');
+  if(scripts.length!==1 || !scripts[0].startsWith('./assets/'))throw new Error('缺少唯一共享入口');
+  const entry=scripts[0].slice(2);
   const assets=await readdir(resolve(directory,'assets'));
   await access(resolve(directory,entry));
   const appHash=createHash('sha256').update(common).digest('hex');

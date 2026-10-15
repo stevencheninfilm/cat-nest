@@ -18,7 +18,7 @@ export default defineConfig(({ command, mode }) => {
   const localPet = command === 'serve' && !process.env.VITE_API_URL && !env.VITE_API_URL;
   const modelUrl = localModelUrl({ command, directory:modelDirectory, configuredUrl:process.env.VITE_MODEL_URL || env.VITE_MODEL_URL });
   return {
-  base: command==='build' ? '/cat-nest/' : '/',
+  base: './',
   plugins: [namedHomeEntry(),localModelPreview({ directory:modelDirectory }),localPetPreview({root,enabled:localPet})],
   define: { ...(modelUrl ? { 'import.meta.env.VITE_MODEL_URL':JSON.stringify(modelUrl) } : {}), 'import.meta.env.VITE_LOCAL_PET_PREVIEW':JSON.stringify(localPet) },
   server: {
