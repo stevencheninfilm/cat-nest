@@ -119,7 +119,7 @@ test('food forecasts include each eligible need and expire with the shared decay
 
 test('the selected meal and drinking water explain their energy recovery without promising the new bonus early', () => {
   const state={...initialState(now),hunger:100,mood:100,energy:76};
-  for(const [selectedFood,energy,amount] of [['meal',6,30],['water',8,6]]) {
+  for(const [selectedFood,energy,amount] of [['meal',10,30],['water',12,6]]) {
     const opts={...options(state),selectedFood};
     const html=feedingSheet(opts);
     assert.match(html,new RegExp(`class="dish-time">活力 \\+${energy} · 冷却`));

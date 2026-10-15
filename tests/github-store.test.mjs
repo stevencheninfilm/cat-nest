@@ -336,8 +336,8 @@ test('feeding cooldown belongs to each caregiver but daily quota and pair reward
   }
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[5.5,18,5.5,18,5.5,16.5]);
-  assert.equal(pendingXp(saved.state), 69);
+  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[5.5,18,5.5,16.5,5.5,16.5]);
+  assert.equal(pendingXp(saved.state), 67.5);
   assert.equal(saved.state.coins, room.state.coins - 6 * 5);
   assert.equal(saved.state.careLimits.counts.feed, 6);
   assert.equal(saved.state.careLimits.counts.pair, 3);
@@ -370,8 +370,8 @@ test('daily play cap prevents added growth and currency, while sleep toggles can
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.coins, room.state.coins + 100);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[...Array(5).fill(9.6),...Array(5).fill(8.8)]);
-  assert.equal(pendingXp(saved.state), 92);
+  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[...Array(8).fill(9.6),...Array(2).fill(8.8)]);
+  assert.equal(pendingXp(saved.state), 94.4);
   time += 30 * MINUTE;
   await assert.rejects(store.applyAction(room.roomId, operation('play-quota-excess', 'play')), error => error.code === 'DAILY_CARE_LIMIT');
   assert.deepEqual((await store.getRoom(room.roomId)).state, saved.state);
@@ -641,15 +641,15 @@ test('energy recovery is saved once across store restarts and keeps working afte
   await assert.rejects(store.applyAction(room.roomId,operation('exhausted-sleep-energy','sleep')),error=>error.code==='DAILY_CARE_LIMIT');
   const water={...operation('energy-water-source'),action:{type:'feed',food:'water'}};
   const recovered=await store.applyAction(room.roomId,water);
-  assert.equal(recovered.state.energy,84);
+  assert.equal(recovered.state.energy,88);
   assert.equal(recovered.state.pendingGrowth[0].amount,6);
   assert.equal(recovered.state.careLimits.counts.feed,1);
   const restarted=makeStore(mock,{now:()=>time});
   const replay=await restarted.applyAction(room.roomId,water);
   assert.equal(replay.duplicate,true);
-  assert.equal(replay.state.energy,84);
+  assert.equal(replay.state.energy,88);
   const read=await makeStore(mock,{now:()=>time}).getRoom(room.roomId);
-  assert.equal(read.state.energy,84);
+  assert.equal(read.state.energy,88);
   assert.equal(read.state.careLimits.counts.sleep,3);
   const next=await restarted.applyAction(room.roomId,operation('energy-recovered-growth'));
   assert.equal(next.state.pendingGrowth[1].amount,3.9);

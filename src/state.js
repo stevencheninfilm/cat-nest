@@ -7,15 +7,15 @@ import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple
 import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, favoriteMemory } from './memory-journal.js';
 
 export const FOODS = {
-  snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 6 },
-  meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22, energy: 6 },
-  fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35, energy: 6 },
-  chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28, energy: 6 },
-  shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24, energy: 6 },
-  salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32, energy: 6 },
-  mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30, energy: 6 },
-  treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12, energy: 6 },
-  water: { name: '清清饮水', cost: 5, love: 5, hunger: 0, energy: 8 },
+  snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 10 },
+  meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22, energy: 10 },
+  fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35, energy: 10 },
+  chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28, energy: 10 },
+  shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24, energy: 10 },
+  salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32, energy: 10 },
+  mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30, energy: 10 },
+  treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12, energy: 10 },
+  water: { name: '清清饮水', cost: 5, love: 5, hunger: 0, energy: 12 },
 };
 export const FEEDING_WINDOW_MS = 4 * 60 * 60 * 1000;
 export const FOOD_COOLDOWN_MS = Object.freeze({

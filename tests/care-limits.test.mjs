@@ -91,10 +91,10 @@ test('three complete pair rounds receive exactly three bonuses and later feeds k
     assert.equal(state.feedingWindow.bonusClaimed, true);
   }
   assert.equal(state.xp, before.xp);
-  assert.deepEqual(state.pendingGrowth.map(reward=>reward.amount),[27.5,45.5,30,45.5,30,42]);
-  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 220.5);
+  assert.deepEqual(state.pendingGrowth.map(reward=>reward.amount),[27.5,45.5,30,42,30,42]);
+  assert.equal(state.pendingGrowth.reduce((total, reward) => total + reward.amount, 0), 217);
   const claimed = state.pendingGrowth.reduce((current, reward) => reduceAction(current, { type: 'claim-growth', rewardId: reward.id }, bob, start + 12 * 3600_000), state);
-  assert.equal(claimed.xp, before.xp + 220.5);
+  assert.equal(claimed.xp, before.xp + 217);
   assert.deepEqual(claimed.careLimits.counts, state.careLimits.counts);
   assert.equal(careActionInfo(state, { type: 'pair' }, alice.id, start + 12 * 3600_000).reason, 'daily_limit');
   const later=reduceAction(state,action('feed'),alice,start+12*3600_000);

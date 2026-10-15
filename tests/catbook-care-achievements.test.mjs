@@ -65,7 +65,7 @@ test('the x1.3 achievement respects >80, records activation after care, and keep
   assert.equal(activated.collection.achievements.boost,3);assert.equal(canInviteCat('sunshine',activated.collection,1),true);
   const poor={...threshold,coins:0};assert.equal(act(poor,{type:'feed',food:'meal'}),null);assert.equal(poor.collection.achievements.boost,0);
   const used=act({...initialState(start),hunger:90,mood:90,energy:82},{type:'play'});
-  assert.equal(used.energy,78);assert.equal(used.pendingGrowth[0].boostCount,3);
+  assert.equal(used.energy,80);assert.equal(used.pendingGrowth[0].boostCount,3);
   assert.equal(used.collection.achievements.boost,3,'the pre-action x1.3 reward also proves activation');
   const later=normalizeState(activated,start+100*day);
   assert.equal(later.hunger,0);assert.equal(canInviteCat('sunshine',later.collection,1),true);

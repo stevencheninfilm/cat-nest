@@ -1,12 +1,13 @@
 export const NEEDS_DECAY_INTERVAL_MS = 60 * 60_000;
+export const NEEDS_DECAY_PER_INTERVAL = Object.freeze({ hunger:1, mood:2, energy:1 });
 export const NEEDS_BOOST_THRESHOLD = 80;
 export const NEED_KEYS = Object.freeze(['hunger', 'mood', 'energy']);
 export const NEED_LABELS = Object.freeze({ hunger:'饱饱', mood:'开心', energy:'活力' });
 export const CARE_NEED_EFFECTS = Object.freeze({
-  feed:Object.freeze({ mood:1 }),
-  pet:Object.freeze({ mood:2 }),
-  play:Object.freeze({ hunger:-1, mood:4, energy:-4 }),
-  sleep:Object.freeze({ energy:30 }),
+  feed:Object.freeze({ mood:0 }),
+  pet:Object.freeze({ mood:1 }),
+  play:Object.freeze({ hunger:-1, mood:2, energy:-2 }),
+  sleep:Object.freeze({ energy:40 }),
 });
 export const PLAY_ENERGY_COST = -CARE_NEED_EFFECTS.play.energy;
 
@@ -23,10 +24,14 @@ export function petNeeds(state, now = Date.now()) {
     : validTime(state?.updatedAt) ? state.updatedAt : now;
   const elapsed = Math.floor(Math.max(0, now - anchor) / NEEDS_DECAY_INTERVAL_MS);
   const needsUpdatedAt = anchor + elapsed * NEEDS_DECAY_INTERVAL_MS;
-  const values = Object.fromEntries(NEED_KEYS.map(key => [key, Math.max(0, bounded(state?.[key]) - elapsed)]));
+  const values = Object.fromEntries(NEED_KEYS.map(key => [key, Math.max(0, bounded(state?.[key]) - elapsed * NEEDS_DECAY_PER_INTERVAL[key])]));
   const boostCount = NEED_KEYS.filter(key => values[key] > NEEDS_BOOST_THRESHOLD).length;
   return { ...values, needsUpdatedAt, nextDecayAt:needsUpdatedAt + NEEDS_DECAY_INTERVAL_MS,
     boostCount, boosted:boostCount > 0, multiplier:(10 + boostCount) / 10 };
+}
+
+export function needsDecayDescription() {
+  return `每 ${NEEDS_DECAY_INTERVAL_MS / 60_000} 分钟：${NEED_KEYS.map(key=>`${NEED_LABELS[key]}下降 ${NEEDS_DECAY_PER_INTERVAL[key]} 点`).join('、')}`;
 }
 
 export function growthRewardAmount(base, boostCount = 0) {

@@ -79,7 +79,7 @@ test('unknown food keys in a saved cooldown ledger are rejected', () => {
 test('the menu declares each food duration and selecting another food preserves the current wait', () => {
   const fed = reduceAction(initialState(now), { type:'feed', food:'fish' }, male, now);
   const html = feedingSheet({ state:fed, clientId:male.id, selectedFood:'water', now:now + 1000 });
-  assert.match(html, /活力 \+8 · 冷却 30分钟/);
+  assert.match(html, /活力 \+12 · 冷却 30分钟/);
   assert.match(html, /清清饮水[^\"]*冷却30分钟/);
   assert.match(html, /幼猫慕斯[^\"]*冷却3小时/);
   assert.match(html, /03:59:59 后可喂食/);

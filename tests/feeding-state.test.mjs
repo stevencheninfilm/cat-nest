@@ -8,17 +8,17 @@ const bob = { id: 'client-bobby', name: '小雨' };
 const third = { id: 'client-third', name: '第三位猫友' };
 const feed = (state, actor, now = start, food = 'meal') => reduceAction(state, { type: 'feed', food }, actor, now);
 
-test('all nine foods charge their documented price and preserve the original food values', () => {
+test('all nine foods preserve prices and growth while applying the balanced energy recovery', () => {
   assert.deepEqual(FOODS, {
-    snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 6 },
-    meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22, energy: 6 },
-    fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35, energy: 6 },
-    chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28, energy: 6 },
-    shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24, energy: 6 },
-    salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32, energy: 6 },
-    mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30, energy: 6 },
-    treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12, energy: 6 },
-    water: { name: '清清饮水', cost: 5, love: 5, hunger: 0, energy: 8 },
+    snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 10 },
+    meal: { name: '营养猫粮', cost: 20, love: 25, hunger: 22, energy: 10 },
+    fish: { name: '鲜鱼罐罐', cost: 40, love: 50, hunger: 35, energy: 10 },
+    chicken: { name: '鸡胸肉', cost: 30, love: 35, hunger: 28, energy: 10 },
+    shrimp: { name: '鲜虾小餐', cost: 30, love: 30, hunger: 24, energy: 10 },
+    salmon: { name: '三文鱼块', cost: 45, love: 45, hunger: 32, energy: 10 },
+    mousse: { name: '幼猫慕斯', cost: 35, love: 40, hunger: 30, energy: 10 },
+    treat: { name: '猫咪肉条', cost: 15, love: 15, hunger: 12, energy: 10 },
+    water: { name: '清清饮水', cost: 5, love: 5, hunger: 0, energy: 12 },
   });
   for (const [key, food] of Object.entries(FOODS)) {
     const before = { ...initialState(start), hunger: 10 };
@@ -32,7 +32,7 @@ test('all nine foods charge their documented price and preserve the original foo
 });
 
 test('old version-one saves retain progress, timestamps and diary without inventing feeding records', () => {
-  const legacy = { version: 1, name: '糯米', coins: 100, love: 200, xp: 300, hunger: 40, mood: 50, energy: 60, sleeping: true, history: [{ text: '旧日记', actor: '小雨', at: start - 1_000 }], updatedAt: start - 500 };
+  const legacy = { version: 1, name: '糯米', coins: 100, love: 200, xp: 300, hunger: 40, mood: 50, energy: 100, sleeping: true, history: [{ text: '旧日记', actor: '小雨', at: start - 1_000 }], updatedAt: start - 500 };
   const result = normalizeState(legacy, start);
   for (const [key, value] of Object.entries(legacy)) assert.deepEqual(result[key], value);
   assert.deepEqual(result.feedRecords, []);
