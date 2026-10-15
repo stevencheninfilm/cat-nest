@@ -28,10 +28,36 @@ function validEntry(e) {
   if(e.kind==='fun')return Number.isInteger(e.variant) && e.variant>=0 && e.variant<12 && validMemoryId(e.sourceId) && e.id===`fun:${memoryDay(e.at)}`;
   return typeof e.text==='string' && e.text.length>0 && e.text.length<=200 && !/[\u0000-\u001f\u007f]/.test(e.text) && e.id.startsWith('legacy:');
 }
-/** Count actual unlocked timeline cards once; favorites and locked previews add nothing. */
-export function unlockedMemoryCardCount(value) {
-  if(value?.version!==1 || !Array.isArray(value.entries))return 0;
-  return new Set(value.entries.filter(validEntry).map(entry=>entry.id)).size;
+// A collection card represents a theme, while the ledger keeps every occurrence.
+export const MEMORY_CARD_THEME_TOTAL = 1 + firsts.size + pairs.size + Object.keys(GAMES).length + 12 + 2;
+export function memoryCardThemeId(e) {
+  if(['adoption','level','anniversary'].includes(e?.kind))return e.kind;
+  if(e?.kind==='first' && firsts.has(e.occasion))return `first:${e.occasion}`;
+  if(e?.kind==='together' && pairs.has(e.occasion))return `together:${e.occasion}`;
+  if(e?.kind==='game' && Object.hasOwn(GAMES,e.occasion))return `game:${e.occasion}`;
+  if(e?.kind==='fun' && Number.isInteger(e.variant) && e.variant>=0 && e.variant<12)return `fun:${e.variant}`;
+  return null;
+}
+/** Read-only collection projection. Prefer a saved favorite, then the first occurrence. */
+export function memoryCollectionCards(value,{favoritesOnly=false}={}) {
+  if(value?.version!==1 || !Array.isArray(value.entries))return [];
+  const favorites=new Set(Array.isArray(value.favorites)?value.favorites:[]),themes=new Map();
+  for(const e of value.entries) {
+    if(!validEntry(e) || favoritesOnly&&!favorites.has(e.id))continue;
+    const theme=memoryCardThemeId(e);if(!theme)continue;
+    const previous=themes.get(theme),star=favorites.has(e.id),previousStar=previous&&favorites.has(previous.id);
+    if(!previous || star&&!previousStar || star===previousStar&&(e.at<previous.at || e.at===previous.at&&e.id<previous.id))themes.set(theme,e);
+  }
+  return [...themes.values()].sort((a,b)=>b.at-a.at || a.id.localeCompare(b.id));
+}
+/** All collection progress, including catbook goals, uses these same distinct themes. */
+export function unlockedMemoryCardCount(value) { return memoryCollectionCards(value).length; }
+/** Old imported moments belong with daily footprints, without deleting their saved ledger. */
+export function memoryDailyFootprints(value,history=[]) {
+  const recent=(Array.isArray(history)?history:[]).filter(e=>time(e?.at)&&typeof e.actor==='string'&&typeof e.text==='string').slice().sort((a,b)=>b.at-a.at).slice(0,40);
+  const legacy=(Array.isArray(value?.entries)?value.entries:[]).filter(e=>validEntry(e)&&e.kind==='legacy').map(e=>({at:e.at,text:e.text,actor:e.actorId==='partner-male'?'男方':e.actorId==='partner-female'?'女方':'我们的小窝'}));
+  const seen=new Set();
+  return [...recent,...legacy].filter(e=>{const key=JSON.stringify([e.at,e.actor,e.text]);if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>b.at-a.at);
 }
 export function validMemoryJournal(value) {
   if(!plain(value) || value.version!==1 || !time(value.adoptedAt) || !Array.isArray(value.entries) || !Array.isArray(value.favorites) || Object.keys(value).some(k=>!['version','adoptedAt','entries','favorites'].includes(k)))return false;

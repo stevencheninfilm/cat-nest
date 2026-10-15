@@ -6,6 +6,7 @@ import { catbookMarkup } from '../src/catbook-ui.js';
 import { CAT_SCENES, collectionSceneProgress, collectionScene } from '../src/catbook-scenes.js';
 import { createCollectionEvents } from '../src/catbook-events.js';
 import { emptyMemoryJournal, unlockedMemoryCardCount, memoryHash } from '../src/memory-journal.js';
+import { formalMemoryEntries } from './memory-fixtures.mjs';
 
 const now=Date.UTC(2026,9,15),actor={id:'partner-male',name:'男方'};
 const cohort=COLLECTION_CATS.slice(24,36);
@@ -13,7 +14,7 @@ const receipt=cat=>({id:cat.id,at:now,operationId:`diary-goal-seed-${cat.id}`,ac
 function withCards(count) {
   const state=initialState(now);
   state.diary=emptyMemoryJournal(now);
-  state.diary.entries.push(...Array.from({length:count-1},(_,i)=>({id:`level:${i+2}`,kind:'level',level:i+2,at:now,catName:'糯米',photo:'happy'})));
+  state.diary.entries=formalMemoryEntries(now).slice(0,count);
   return normalizeState(state,now);
 }
 const progress=(cat,state)=>collectionCatProgress(cat,state.collection,1,state.diary);
@@ -36,7 +37,7 @@ test('No.25–36 require 3,6,…36 unlocked diary cards, independent of invited 
   }
 });
 
-test('only valid distinct permanent card IDs count; favorites, locked previews, recent care history and exports add nothing',()=>{
+test('only valid distinct formal themes count; favorites, locked previews, recent care history and exports add nothing',()=>{
   const state=withCards(2),diary=structuredClone(state.diary);
   diary.entries.push({...diary.entries[1]}, {id:'locked:first:pet',kind:'locked',at:now,catName:'糯米',photo:'happy'});
   diary.favorites=['adoption','level:2'];

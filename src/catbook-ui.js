@@ -1,4 +1,5 @@
 import { levelInfo } from './state.js';
+import { MEMORY_CARD_THEME_TOTAL } from './memory-journal.js';
 import { COLLECTION_CATS, collectionCatProgress, getCollectionCat, collectionSceneInvitation } from './cat-collection.js';
 import { CAT_SCENES, DEFAULT_CAT_SCENE, collectionScene, collectionSceneProgress, sceneCatPlacement, sceneCatClipPath, sceneCatGlassShapes, sceneAllowsCat, catArrivalScene, catPoseSprite } from './catbook-scenes.js';
 import { GAME_CAT_WALKS } from './catbook-game-sprites.js';
@@ -92,7 +93,7 @@ function unlockHelp(cat,progress) {
   const tips=new Set(cat.requirements.map(({metric,target})=>{
     if(metric.startsWith('daily-'))return `${careTips[metric.slice(6)]}需在同一天完成 ${target} 次，跨日次数不相加；达成后记录永久保留。`;
     if(metric.startsWith('win-'))return `回小窝，打开「小游戏」中的「${{rps:'石头剪刀布',memory:'猫猫翻牌',gomoku:'五子棋'}[metric.slice(4)]}」，完成整局并获胜。单人挑战成功、战胜电脑或双人中任一真人获胜都计入。`;
-    if(metric==='diary-cards')return '打开「日记 → 待解锁」查看达成方法。照顾、成长里程碑和双人互动会自动留下卡片；按时光轴中的正式卡片累计，同一卡片收藏或生成纪念卡不会重复计数。';
+    if(metric==='diary-cards')return `打开「日记 → 待解锁」查看达成方法。按正式卡册的不重复主题累计，共 ${MEMORY_CARD_THEME_TOTAL} 个主题；旧日记瞬间、重复升级和重复对局不增加收集数量，收藏或生成纪念卡也不重复计数。`;
     if(metric==='foods')return '回小窝，点击「喂食」，选择还没喂过的食物，每种食物只计一次。';
     if(metric==='pair')return '回小窝，打开「喂食」，两位主人在同一轮各喂一份，完成一次双人喂养。';
     if(metric==='level')return '回小窝照顾小猫，领取成长气泡来升级。';

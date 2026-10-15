@@ -21,18 +21,20 @@ test('unlock guide reads the existing save without adding entries, favorites or 
   assert.match(find(state,'first:sleep').requirement,/唤醒不计入/);
 });
 
-test('growth goals use claimed cumulative experience, include future heart stages and never invent missing old milestones',()=>{
+test('growth has one uncollected theme, uses claimed growth and never invents old milestones',()=>{
   const state={...initialState(NOW),xp:119,pendingGrowth:[{id:'unclaimed-growth',amount:1000}]};
   assert.deepEqual(find(state,'level:2').progress,{value:119,max:120});
   assert.match(find(state,'level:2').status,/还差 1 成长/);
-  assert.equal(find(state,'level:11').progress.max,2550);
-  assert.match(find(state,'level:11').requirement,/领取成长气泡/);
+  assert.equal(find(state,'level:11'),undefined);
+  assert.match(find(state,'level:2').requirement,/领取成长气泡/);
   const old={...state,xp:4000},current=levelInfo(old.xp).level;
   const levels=memoryUnlocks(old,NOW).filter(goal=>goal.entry.kind==='level');
   assert.equal(levels[0].entry.level,current+1);
   assert.ok(levels.every(goal=>goal.entry.level>current));
   assert.equal(levels[0].progress.max,levelStartXp(current+1));
   assert.equal(old.diary.entries.some(entry=>entry.kind==='level'),false);
+  old.diary.entries.push({id:'level:6',kind:'level',level:6,at:NOW,catName:'糯米',photo:'happy'});
+  assert.equal(memoryUnlocks(old,NOW).some(goal=>goal.entry.kind==='level'),false);
 });
 
 test('cooperation progress uses real valid records, expires with the shared window, and stays collected across days',()=>{
@@ -78,7 +80,7 @@ test('next anniversary shares leap-day and Shanghai boundaries with actual journ
   const state={...initialState(adopted),diary:emptyMemoryJournal(adopted)};
   assert.deepEqual(nextMemoryAnniversaryGoal(state.diary,before),{at:Date.parse('2025-02-27T16:00:00Z'),year:1,days:1});
   assert.match(find(state,'anniversary:1',before).status,/还需 1 天/);
-  assert.ok(!find(state,'anniversary:1',due));assert.ok(find(state,'anniversary:2',due));
+  assert.ok(!find(state,'anniversary:1',due));assert.ok(!find(state,'anniversary:2',due));
   assert.ok(normalizeMemoryJournal(state.diary,state,due).entries.some(entry=>entry.id==='anniversary:1'));
   assert.equal(state.diary.entries.length,1);
 });

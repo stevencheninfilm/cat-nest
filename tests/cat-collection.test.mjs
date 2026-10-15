@@ -7,6 +7,7 @@ import { catbookMarkup, collectionScene } from '../src/catbook-ui.js';
 import { CAT_SCENES, collectionSceneProgress, sceneAllowsCat } from '../src/catbook-scenes.js';
 import { sanitizeAction } from '../server/github-store.mjs';
 import { validateAction } from '../src/realtime.js';
+import { formalMemoryEntries } from './memory-fixtures.mjs';
 const start=Date.UTC(2026,9,14,0);
 const actor={ id:'partner-male', name:'男方' };
 const act=(state, action, now=start, id=`collection-${action.type}-${now}`) => reduceAction(state, action, actor, now, id);
@@ -101,7 +102,7 @@ test('every cat requires every condition, including the starter and the compound
     if(metric.startsWith('daily-'))state.collection.achievements.daily[metric.slice(6)]=target-(below?1:0);
     else if(['boost','dress'].includes(metric))state.collection.achievements[metric]=target-(below?1:0);
     else if(metric.startsWith('win-')) state.collection.wins[metric.slice(4)]=target-(below?1:0);
-    else if(metric === 'diary-cards')state.diary.entries=[state.diary.entries.find(entry=>entry.id==='adoption'),...Array.from({length:target-(below?1:0)-1},(_,i)=>({id:`level:${i+2}`,kind:'level',level:i+2,at:start,catName:'糯米',photo:'happy'}))];
+    else if(metric === 'diary-cards')state.diary.entries=formalMemoryEntries(start).slice(0,target-(below?1:0));
     else if(metric === 'level') state.xp=levelStartXp(target)-(below?1:0);
     else if(metric === 'foods') state.collection.foods=Object.keys(FOODS).slice(0,target-(below?1:0));
     else state.collection.stats[metric === 'care' ? 'pet' : metric]=target-(below?1:0);

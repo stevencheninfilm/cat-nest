@@ -6,6 +6,7 @@ import { createCollectionEvents } from '../src/catbook-events.js';
 import { catbookMarkup } from '../src/catbook-ui.js';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
 import { gomokuWinningCells } from '../src/minigames-computer.js';
+import { unlockedMemoryCardCount } from '../src/memory-journal.js';
 
 const now=Date.UTC(2026,9,14), alice={id:'victory-player-one',name:'男方'},bob={id:'victory-player-two',name:'女方'};
 let serial=0;
@@ -70,8 +71,9 @@ test('five and twelve victories unlock the new cats even after the daily growth 
     assert.equal(canInviteCat('biscuit',state.collection,1),n>=12);
     const notices=events.observe(state);
     const expected=n===5?[{type:'cat-unlocked',id:'scout'}]:n===12?[{type:'cat-unlocked',id:'biscuit'}]:[];
-    // Each finished duo game adds a diary card, alongside the adoption card.
-    if(n>=2 && n<=35 && (n+1)%3===0)expected.push({type:'cat-unlocked',id:COLLECTION_CATS[24+(n+1)/3-1].id});
+    // Repeated matches stay in the timeline but collect only one game theme.
+    assert.equal(unlockedMemoryCardCount(state.diary),2);
+    assert.equal(canInviteCat('porter',state.collection,1,undefined,state.diary),false);
     assert.deepEqual(notices,expected);
   }
   assert.equal(state.history.length,40);

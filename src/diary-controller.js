@@ -3,7 +3,7 @@ import { memoryJournalPanel, memoryCardPanel, memoryPresentation } from './memor
 import { createMemoryCard } from './memory-card.js';
 
 export function createDiaryController({root,getState,saving=()=>false,dispatch,toast=()=>{},supplemental=()=>''}) {
-  let tab='moments',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,pending=null,message='',progressTimer=null;
+  let tab='collection',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,pending=null,message='',progressTimer=null;
   const state=()=>getState();
   const journal=()=>normalizeMemoryJournal(state().diary,state());
   const selectedEntry=()=>journal().entries.find(e=>e.id===selected);
@@ -40,7 +40,7 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
     if(root.dataset.view!=='diary')return;
     const button=event.target.closest('button');if(!button||button.disabled)return;
     if(button.dataset.diaryTab){tab=button.dataset.diaryTab;page=0;message='';draw();}
-    else if(button.dataset.diaryFilter){filter=button.dataset.diaryFilter;if(button.hasAttribute('data-diary-show-all'))tab='moments';page=0;draw();}
+    else if(button.dataset.diaryFilter){filter=button.dataset.diaryFilter;if(button.hasAttribute('data-diary-show-all'))tab='collection';page=0;draw();}
     else if(button.dataset.diaryPage!==undefined){page=Math.max(0,Number(button.dataset.diaryPage)||0);draw();root.closest('dialog').scrollTop=0;}
     else if(button.dataset.memoryFavorite){
       const id=button.dataset.memoryFavorite,favorite=!journal().favorites.includes(id);
@@ -54,5 +54,5 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
       catch(failure){if(failure.name!=='AbortError')toast('暂时无法直接分享，可以先保存图片');}
     }
   });
-  return {panel,refresh,open(nextFilter='all'){tab='moments';filter=['together','fun','growth'].includes(nextFilter)?nextFilter:'all';page=0;selected=null;cleanCard();},close(){clearInterval(progressTimer);progressTimer=null;selected=null;pending=null;message='';signature='';cleanCard();}};
+  return {panel,refresh,open(nextFilter='all'){tab='collection';filter=['together','fun','growth'].includes(nextFilter)?nextFilter:'all';page=0;selected=null;cleanCard();},close(){clearInterval(progressTimer);progressTimer=null;selected=null;pending=null;message='';signature='';cleanCard();}};
 }
