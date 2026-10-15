@@ -1,3 +1,4 @@
+import { validHomeBond } from '../src/home-bond.js';
 import { randomBytes } from 'node:crypto';
 import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth, levelInfo } from '../src/state.js';
 import { validAppearance } from '../src/mage-cat-config.js';
@@ -22,6 +23,8 @@ export function sanitizeAction(value) {
   if (typeof value.type === 'string' && value.type.startsWith('game-')) return sanitizeGameAction(value);
   const keys = Object.keys(value);
   if(value.type==='diary-favorite' && keys.length===3 && validMemoryId(value.memoryId) && typeof value.favorite==='boolean')return {type:'diary-favorite',memoryId:value.memoryId,favorite:value.favorite};
+  if (value.type === 'join-home' && keys.length === 1) return {type:'join-home'};
+  if (value.type === 'adopt-cat' && keys.length === 3 && keys.includes('name') && keys.includes('appearance') && validText(value.name,16) && validAppearance(value.appearance)) return {type:'adopt-cat',name:value.name.trim(),appearance:{...value.appearance}};
   if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && typeof value.food === 'string' && Object.hasOwn(FOODS, value.food)) return { type: 'feed', food: value.food };
   if (['pet', 'play', 'sleep'].includes(value.type) && keys.length === 1) return { type: value.type };
   if (value.type === 'dress' && keys.length === 2 && keys.includes('appearance') && validAppearance(value.appearance)) return { type:'dress', appearance:{...value.appearance} };
@@ -44,6 +47,7 @@ function safeState(value, now = Date.now()) {
 
 function validStoredState(value) {
   if (!plain(value) || value.version !== 1 || !validText(value.name, 16) || typeof value.sleeping !== 'boolean' || !Number.isFinite(value.updatedAt)) return false;
+  if (Object.hasOwn(value, 'homeBond') && !validHomeBond(value.homeBond)) return false;
   if (Object.hasOwn(value, 'appearance') && !validAppearance(value.appearance)) return false;
   if (Object.hasOwn(value, 'careLimits') && !validCareLimits(value.careLimits)) return false;
   if (Object.hasOwn(value, 'pendingGrowth') && !validPendingGrowth(value.pendingGrowth)) return false;
