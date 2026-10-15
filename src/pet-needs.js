@@ -1,5 +1,5 @@
-export const NEEDS_DECAY_INTERVAL_MS = 60 * 60_000;
-export const NEEDS_DECAY_PER_INTERVAL = Object.freeze({ hunger:1, mood:2, energy:1 });
+export const NEEDS_DECAY_INTERVAL_MS = 30 * 60_000;
+export const NEEDS_DECAY_PER_INTERVAL = Object.freeze({ hunger:1, mood:1, energy:1 });
 export const NEEDS_BOOST_THRESHOLD = 80;
 export const NEED_KEYS = Object.freeze(['hunger', 'mood', 'energy']);
 export const NEED_LABELS = Object.freeze({ hunger:'饱饱', mood:'开心', energy:'活力' });

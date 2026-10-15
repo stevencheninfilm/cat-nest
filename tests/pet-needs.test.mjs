@@ -18,19 +18,21 @@ test('each need above 80 adds ten percent, up to an additive 1.3 multiplier', ()
     assert.equal(petNeeds({...healthy(),...values},START).multiplier,(10+count)/10);
     assert.equal(petNeeds({...healthy(),...values},START).boostCount,count);
   }
-  assert.equal(petNeeds(healthy(), START + 9 * INTERVAL).multiplier,1.3);
-  assert.equal(petNeeds(healthy(), START + 10 * INTERVAL).multiplier,1.2,'mood loses its bonus earlier than hunger and energy');
+  assert.equal(petNeeds(healthy(), START + 19 * INTERVAL).multiplier,1.3);
+  assert.equal(petNeeds(healthy(), START + 20 * INTERVAL - 1).multiplier,1.3);
   assert.equal(petNeeds(healthy(), START + 20 * INTERVAL).multiplier,1);
 });
 
-test('saved needs decay at exact hourly boundaries, preserve partial time and never double-decay', () => {
+test('saved needs decay at exact half-hour boundaries, preserve partial time and never double-decay', () => {
   const before = healthy(), snapshot = structuredClone(before);
-  assert.equal(INTERVAL,60*60_000);
-  assert.equal(petNeeds(before,START+30*60_000).hunger,100);
-  assert.deepEqual(NEED_KEYS.map(key=>petNeeds(before,START+24*INTERVAL)[key]),[76,52,76]);
+  assert.equal(INTERVAL,30*60_000);
+  assert.deepEqual(NEED_KEYS.map(key=>petNeeds(before,START+30*60_000-1)[key]),[100,100,100]);
+  assert.deepEqual(NEED_KEYS.map(key=>petNeeds(before,START+30*60_000)[key]),[99,99,99]);
+  assert.deepEqual(NEED_KEYS.map(key=>petNeeds(before,START+60*60_000)[key]),[98,98,98]);
+  assert.deepEqual(NEED_KEYS.map(key=>petNeeds(before,START+24*60*60_000)[key]),[52,52,52]);
   assert.equal(petNeeds(before, START + INTERVAL - 1).hunger, 100);
   const first = normalizeState(before, START + INTERVAL + 1234);
-  assert.deepEqual([first.hunger,first.mood,first.energy], [99,98,99]);
+  assert.deepEqual([first.hunger,first.mood,first.energy], [99,99,99]);
   assert.equal(first.needsUpdatedAt, START + INTERVAL);
   const reloaded = normalizeState(JSON.parse(JSON.stringify(first)), START + 2 * INTERVAL - 1);
   assert.equal(reloaded.hunger, 99);
@@ -44,7 +46,7 @@ test('saved needs decay at exact hourly boundaries, preserve partial time and ne
 
 test('unrelated saves and care cannot reset the unfinished decay interval', () => {
   let state = healthy();
-  for (let minute=1; minute<60; minute++) state=reduceAction(state,{type:'rename',name:'糯米'},actor,START + minute * 60_000);
+  for (let minute=1; minute<30; minute++) state=reduceAction(state,{type:'rename',name:'糯米'},actor,START + minute * 60_000);
   assert.equal(state.needsUpdatedAt, START);
   const after = reduceAction(state,{type:'pet'},actor,START + INTERVAL,'decay-pet-operation');
   assert.equal(after.hunger,99);
@@ -130,18 +132,18 @@ test('one available rest recovers low energy above 90 and drinking still works a
 test('feeding no longer refills a full mood, while elapsed time and companionship have distinct effects',()=>{
   const before=healthy();
   const fed=reduceAction(before,{type:'feed',food:'meal'},actor,START+INTERVAL,'balance-mood-meal');
-  assert.equal(fed.mood,98);
+  assert.equal(fed.mood,99);
   const petted=reduceAction(fed,{type:'pet'},actor,START+INTERVAL,'balance-mood-pet');
-  assert.equal(petted.mood,99);
+  assert.equal(petted.mood,100);
   const played=reduceAction({...before,mood:85},{type:'play'},actor,START,'balance-mood-play');
   assert.equal(played.mood,87);assert.equal(played.energy,98);
   const reload=normalizeState(JSON.parse(JSON.stringify(petted)),START+INTERVAL);
-  assert.equal(reload.mood,99);assert.equal(reload.energy,petted.energy);
+  assert.equal(reload.mood,100);assert.equal(reload.energy,petted.energy);
   assert.equal(reload.xp,before.xp);assert.deepEqual(reload.pendingGrowth,petted.pendingGrowth);
 });
 
 test('a legitimate day keeps energy recoverable while happiness no longer stays full from feeding and play', () => {
-  const day=START-8*INTERVAL;
+  const hourMs=60*60_000, day=START-8*hourMs;
   let state={...initialState(day),hunger:100,mood:100,energy:100};
   const schedule=[
     [.5,'play'],[1.5,'play'],[2.5,'play'],[3.5,'feed','meal'],[4.5,'play'],[5.5,'sleep'],
@@ -149,15 +151,15 @@ test('a legitimate day keeps energy recoverable while happiness no longer stays 
     [12.5,'play'],[13.5,'sleep'],[14.5,'play'],[15.5,'feed','meal'],
   ];
   for (const [hour,type,food] of schedule) {
-    const now=day+hour*INTERVAL;
+    const now=day+hour*hourMs;
     state=reduceAction(state,{type,...(food?{food}:{})},actor,now,`daily-energy-${hour}-${type}`);
     assert.ok(state,`${type} at ${hour}h respects all care limits`);
   }
   assert.deepEqual([state.careLimits.counts.sleep,state.careLimits.counts.feed,state.careLimits.counts.play],[2,4,10]);
   assert.ok(state.energy>=90,'normal feeding and two rests sustain high energy with ten play sessions');
   assert.ok(state.mood>=80 && state.mood<100,'a day of play leaves a healthy but non-maxed mood');
-  const nextMorning=petNeeds(state,day+24*INTERVAL-1);
-  assert.ok(nextMorning.energy>=90);assert.ok(nextMorning.mood<80);
+  const nextMorning=petNeeds(state,day+24*hourMs-1);
+  assert.ok(nextMorning.energy>80);assert.ok(nextMorning.mood<80);
   assert.equal(nextMorning.multiplier,1.2,'happiness needs renewed attention after time away');
 });
 
@@ -191,7 +193,7 @@ test('old bubble values never gain a bonus at claim time and invalid bonus metad
   assert.equal(boosted.pendingGrowth.length,1);
 });
 
-test('each status explains its balanced recovery and the distinct hourly decay rates', () => {
+test('each status explains its balanced recovery and the shared half-hour decay rule', () => {
   const buttons=needButtons();
   for (const key of ['hunger','mood','energy']) {
     assert.match(buttons,new RegExp(`data-open="need-${key}"`));
@@ -199,7 +201,7 @@ test('each status explains its balanced recovery and the distinct hourly decay r
     assert.match(html,/大于 80，成长 \+10%/);
     assert.match(html,/当前成长总倍率 1.2，查看全部成长加成/);
     assert.match(html,new RegExp(`aria-valuenow="${key === 'energy' ? 80 : 100}"`));
-    assert.match(html,/每 60 分钟：饱饱下降 1 点、开心下降 2 点、活力下降 1 点/);
+    assert.match(html,/每 30 分钟：饱饱下降 1 点、开心下降 1 点、活力下降 1 点/);
     assert.match(html,key === 'energy' ? /再 \+1 达标/ : /本项 \+10%/);
     assert.doesNotMatch(html,/need-bonus-checks|LITTLE DAILY CARE/);
   }
@@ -256,10 +258,10 @@ test('bonus overview itemizes contributions and exact state gaps without changin
 });
 
 test('the overview recalculates contributions and per-state gaps after a decay boundary', () => {
-  const state={...healthy(),hunger:81,mood:82};
+  const state={...healthy(),hunger:81,mood:81};
   assert.match(growthBonusDetails(state,{now:START}),/<strong>×1.3/);
   const first=growthBonusDetails(state,{now:START+INTERVAL});
   assert.match(first,/<strong>×1.1/); assert.match(first,/饱饱 80 \/ 100，成长加成 0%，还差 1 点到 81/);
   const second=growthBonusDetails(state,{now:START+2*INTERVAL});
-  assert.match(second,/<strong>×1.1/); assert.match(second,/饱饱 79 \/ 100，成长加成 0%，还差 2 点到 81/); assert.match(second,/开心 78 \/ 100，成长加成 0%，还差 3 点到 81/);
+  assert.match(second,/<strong>×1.1/); assert.match(second,/饱饱 79 \/ 100，成长加成 0%，还差 2 点到 81/); assert.match(second,/开心 79 \/ 100，成长加成 0%，还差 2 点到 81/);
 });

@@ -370,8 +370,8 @@ test('daily play cap prevents added growth and currency, while sleep toggles can
   const saved = await store.getRoom(room.roomId);
   assert.equal(saved.state.coins, room.state.coins + 100);
   assert.equal(saved.state.xp, room.state.xp);
-  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[...Array(8).fill(9.6),...Array(2).fill(8.8)]);
-  assert.equal(pendingXp(saved.state), 94.4);
+  assert.deepEqual(saved.state.pendingGrowth.map(reward=>reward.amount),[...Array(7).fill(9.6),...Array(3).fill(8.8)]);
+  assert.equal(pendingXp(saved.state), 93.6);
   time += 30 * MINUTE;
   await assert.rejects(store.applyAction(room.roomId, operation('play-quota-excess', 'play')), error => error.code === 'DAILY_CARE_LIMIT');
   assert.deepEqual((await store.getRoom(room.roomId)).state, saved.state);
@@ -426,7 +426,7 @@ test('appearance saves and reloads while care is capped without resetting its le
   const cared = await restarted.applyAction(room.roomId, operation('pet-next-day-outfit'));
   assert.deepEqual(cared.state.appearance, appearance);
   assert.equal(cared.state.xp, dressed.state.xp);
-  assert.equal(pendingXp(cared.state), pendingXp(dressed.state) + 3.3);
+  assert.equal(pendingXp(cared.state), pendingXp(dressed.state) + 3);
   assert.equal(cared.state.coins, dressed.state.coins);
   assert.equal(cared.state.careLimits.counts.pet, 1);
   assert.deepEqual((await makeStore(mock, { now: () => time }).getRoom(room.roomId)).state, cared.state);
@@ -607,7 +607,7 @@ test('boosted decimal growth is persisted before acknowledgment and concurrent c
   assert.equal(saved.state.xp,89.9);
   assert.deepEqual(saved.state.pendingGrowth,[]);
   assert.equal(mock.files.get(room.roomId).room.claimedGrowth[0].amount,3.9);
-  assert.equal(saved.state.energy,76,'the independent saved clock includes a full day offline');
+  assert.equal(saved.state.energy,52,'the independent saved clock includes 48 half-hour intervals offline');
   const replay=await makeStore(mock,{now:()=>time}).applyAction(room.roomId,source);
   assert.equal(replay.duplicate,true);
   assert.equal(replay.state.xp,89.9);
@@ -625,7 +625,7 @@ test('server time removes expired boosts and clients cannot supply a multiplier 
   const next=await store.applyAction(room.roomId,operation('decayed-cloud-reward'));
   assert.equal(next.state.pendingGrowth[0].amount,3);
   assert.equal(next.state.pendingGrowth[0].boosted,undefined);
-  assert.equal(next.state.hunger,80);
+  assert.equal(next.state.hunger,79);
   const file=mock.files.get(room.roomId);
   file.room.state.needsUpdatedAt=-1;
   await assert.rejects(makeStore(mock,{now:()=>time}).getRoom(room.roomId),error=>error.code==='STORAGE_CORRUPT');
