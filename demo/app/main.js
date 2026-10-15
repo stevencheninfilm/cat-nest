@@ -75,7 +75,7 @@ const localPetPreview = true;
 const apiBase = 'https://demo.cat-nest.invalid';
 let cloudConfigured = Boolean(apiBase);
 const modelAssetBase = new URL('./model/', location.href).href.replace(/\/$/, '');
-let saveStatus = { phase:'local', message:'本机预览 · 云端待连接' };
+let saveStatus = { phase:'local', message:'独立演示 · 请选择身份' };
 let status = { phase:'solo', message:'选择身份，回到你们的小窝' };
 let members = [];
 let presenceKnown = false;
@@ -603,7 +603,7 @@ function gameAction(action) {
 }
 async function copyGameLink() {
   const url = new URL(location.href); url.search=''; url.hash='';
-  try { await navigator.clipboard.writeText(url.href); toast('小窝链接已复制，发给另一位猫友就能一起玩'); }
+  try { await navigator.clipboard.writeText(url.href); toast('演示链接已复制，对方会打开自己的演示小窝'); }
   catch { toast('复制暂不可用，可以直接分享浏览器地址'); }
 }
 function appearanceSheet() {

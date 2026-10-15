@@ -3,7 +3,7 @@
   "createdAt": "2026-10-15T07:42:31.629541+00:00",
   "scope": "Independent source snapshot; production entry unchanged",
   "files": {
-    "app/minigames-ui.js": "ece51c21f4368a11912a68df6b6ff857369359b5c970d685faa42164d075f6f1",
+    "app/minigames-ui.js": "ff13ba280873e3aa549ba8bad782141b13508b8a396da5efc9af146e085e71b3",
     "app/diary-ui.js": "9dd73b046871f3844daf72d4229dbb4caf6485b29892605c08775bb44cc97f90",
     "app/couple-care-ui.js": "ea2bdd4cb4a02193b2f867b5bd784cee993b594d8a606b3e1798942a9dcaab24",
     "app/feeding.css": "709055ceb70323cccf378f0b5f79759666953883df7ea1b232f3efdacc78a662",
@@ -41,7 +41,7 @@
     "app/catbook-scenes.js": "9c9607e13d8a0d426f0703748cabd11892871ef2601c639fc616893fb61f2dde",
     "app/care-ui.js": "1aaa76778326840b04fd1d4f25a1a4949d6bde1b00b2a1af5efcc6109f180231",
     "app/couple-presence.css": "ab54dfb0252b75331479159347d7bb4c3ccdf6c8b9753ca19f771efb59f1421c",
-    "app/main.js": "574517fc0a2c53da57f65b86f203c4991fc6538722084d9d4142255162fe5e8c",
+    "app/main.js": "bf4b279f5fa824dfa1329c2f39679a8fe174b3a3959394a0c6f9208378c20f2a",
     "app/mage-cat-config.js": "b5ead18197835e95bbce38e1c6fd363b6822ce3eeb13df863b48419b2b681515",
     "app/pet-needs-ui.js": "e8953b6984a755bcb9aa07dd23c9ad0646786405487dd08bc6bd01e5484359d5",
     "app/growth-heart.js": "066c5c603e383d6bc765ce937762c7df77335e2ab853d6ab2d4c1af9a6406362",
