@@ -2,8 +2,7 @@ import { createDemoEngine, DEMO_ROOM, DEMO_ACTORS } from './engine.js';
 import { createDemoCourt } from './court-engine.js';
 
 export const DEMO_ORIGIN = 'https://demo.cat-nest.invalid';
-const channel = typeof window !== 'undefined' && typeof BroadcastChannel === 'function' ? new BroadcastChannel('catnest-demo-v1') : null;
-export const demoEngine = createDemoEngine({publish:revision => channel?.postMessage({revision})});
+export const demoEngine = createDemoEngine();
 export const demoCourt = createDemoCourt(demoEngine);
 let partnerTimer;
 function schedulePartner(viewerId) {
@@ -15,8 +14,6 @@ function schedulePartner(viewerId) {
     if(moved || match?.phase==='reveal' && match.status==='active')schedulePartner(viewerId);
   },850);
 }
-if (channel) channel.onmessage = () => demoEngine.sync();
-if (typeof window !== 'undefined') window.addEventListener('storage', event => { if(event.key === 'catnest.demo.v1.server') demoEngine.sync(); });
 
 function pause(ms, signal) {
   return new Promise((resolve,reject) => {
@@ -27,10 +24,6 @@ function pause(ms, signal) {
   });
 }
 function response(status,data) { return new Response(JSON.stringify(data), {status,headers:{'Content-Type':'application/json'}}); }
-async function locked(callback) {
-  if (typeof navigator !== 'undefined' && navigator.locks) return navigator.locks.request('catnest-demo-actions-v1',callback);
-  return callback();
-}
 /** Closed transport. Unknown hosts/routes never fall through to real fetch. */
 export async function demoFetch(input, options={}) {
   const url=new URL(String(input),DEMO_ORIGIN);
@@ -45,16 +38,14 @@ export async function demoFetch(input, options={}) {
   }
   let body={};
   try { body=typeof options.body==='string' ? JSON.parse(options.body):options.body || {}; } catch { return response(400,{error:{message:'演示请求格式错误'}}); }
-  return locked(() => {
-    demoEngine.sync();
-    let result;
-    if (path.startsWith('/api/court/')) result=demoCourt.request(path.slice('/api/court'.length)+url.search,method,body,options.headers);
-    else if (method==='GET' && (path==='/api/couple/home' || path===`/api/rooms/${DEMO_ROOM}`)) result={data:demoEngine.snapshot()};
-    else if (method==='POST' && path===`/api/rooms/${DEMO_ROOM}/actions`) { result=demoEngine.action(body); if(body.action?.type?.startsWith('game-') && result.status===200)schedulePartner(body.clientId); }
-    else result={status:404,error:'此接口不属于独立演示环境'};
-    const status=result.status || 200; demoEngine.log(method,path,status);
-    return response(status,result.error ? {error:{code:'DEMO_ACTION_REJECTED',message:result.error}}:result.data);
-  });
+  demoEngine.sync();
+  let result;
+  if (path.startsWith('/api/court/')) result=demoCourt.request(path.slice('/api/court'.length)+url.search,method,body,options.headers);
+  else if (method==='GET' && (path==='/api/couple/home' || path===`/api/rooms/${DEMO_ROOM}`)) result={data:demoEngine.snapshot()};
+  else if (method==='POST' && path===`/api/rooms/${DEMO_ROOM}/actions`) { result=demoEngine.action(body); if(body.action?.type?.startsWith('game-') && result.status===200)schedulePartner(body.clientId); }
+  else result={status:404,error:'此接口不属于独立演示环境'};
+  const status=result.status || 200; demoEngine.log(method,path,status);
+  return response(status,result.error ? {error:{code:'DEMO_ACTION_REJECTED',message:result.error}}:result.data);
 }
 
 export class DemoEventSource {

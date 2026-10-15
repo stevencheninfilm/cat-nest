@@ -1,7 +1,8 @@
+import './visit.js';
 import './demo.css';
 import './app/main.js';
 import { demoEngine, demoCourt } from './transport.js';
-import { demoLocalStorage, demoSessionStorage } from './storage.js';
+import { demoLocalStorage, demoSessionStorage, demoPreferences } from './storage.js';
 
 // /test also works when opened without the trailing slash on a static host.
 if (!location.pathname.endsWith('/') && !location.pathname.endsWith('.html')) location.replace(`${location.pathname}/${location.search}${location.hash}`);
@@ -14,7 +15,7 @@ badge.setAttribute('aria-label','打开独立演示控制台');
 const panel=document.createElement('dialog'); panel.className='demo-console';
 panel.setAttribute('aria-label','独立演示控制台');
 panel.innerHTML=`<div class="demo-console-heading"><div><small>CAT NEST · DEMO 2026.10.15</small><h2>随时带朋友来看看</h2></div><button data-demo="close" aria-label="关闭演示控制台">×</button></div>
-<p class="demo-intro">完整界面，独立演示存档。伙伴是模拟玩家，法庭使用虚构示例；刷新会保留本机演示进度。</p>
+<p class="demo-intro">伙伴是模拟玩家，法庭使用虚构示例。进度仅本次体验有效，刷新或重新进入会恢复默认。</p>
 <div class="demo-shortcuts"><button data-shortcut="feeding">🍽️ 喂食</button><button data-shortcut="appearance">🎨 装扮</button><button data-shortcut="stages">💛 成长</button><button data-shortcut="games">🎲 小游戏</button><button data-shortcut="shared-care">💑 双人照顾</button><button data-shortcut="collection">🐈 猫猫图鉴</button><button data-shortcut="diary">📔 日记</button></div>
 <section><h3>一分钟看效果</h3><div class="demo-buttons"><button data-demo="unlock">解锁所有成长与图鉴</button><button data-demo="relay">伙伴摸摸 · 你来逗猫</button><button data-demo="feed">伙伴喂一份慕斯</button><button data-demo="portion">食物剩余 25%</button><button data-demo="court">查看示例判词</button><button data-demo="clear-limits">恢复体力与互动次数</button></div><p class="demo-status" role="status" id="demo-status">演示与正式存档完全隔离。</p></section>
 <label class="demo-row">示例判词效果<select id="demo-ruling"><option value="similar">共同调整</option><option value="a_more">猫爪方责任较重</option><option value="b_more">鱼干方责任较重</option><option value="undetermined">等待补充证据</option><option value="boundaries">边界优先</option></select></label>
@@ -38,7 +39,7 @@ function openWelcome() {
   welcome.querySelector('[data-welcome-start]').innerHTML=`${choosingRole ? '选好身份，开始体验':'继续体验小窝'} <span aria-hidden="true">→</span>`;
   welcome.showModal();
 }
-function finishWelcome() { demoLocalStorage.setItem('onboarding.welcome.v1','done'); welcome.close(); }
+function finishWelcome() { demoPreferences.setItem('welcome','done'); welcome.close(); }
 welcome.querySelector('[data-welcome-start]').addEventListener('click',finishWelcome);
 welcome.querySelector('[data-welcome-close]').addEventListener('click',finishWelcome);
 welcome.addEventListener('cancel',event=>{event.preventDefault();finishWelcome();});
@@ -85,4 +86,4 @@ function addModalEntry() {
   const entry=document.createElement('button');entry.dataset.demoConsoleEntry='';entry.className='demo-modal-entry';entry.textContent='✦ 演示控制台 · 全部玩法';entry.addEventListener('click',()=>{panel.showModal();updateLog();});modal.append(entry);
 }
 if(modal){new MutationObserver(addModalEntry).observe(modal,{childList:true,attributes:true,attributeFilter:['open']});addModalEntry();}
-if(demoLocalStorage.getItem('onboarding.welcome.v1')!=='done')openWelcome();
+if(demoPreferences.getItem('welcome')!=='done')openWelcome();

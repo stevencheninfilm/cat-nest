@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
-import { namespacedStorage, DEMO_PREFIX } from '../demo/storage.js';
+import { namespacedStorage, DEMO_PREFIX, DEMO_PREFERENCES_PREFIX, createMemoryStorage, clearLegacyDemoProgress } from '../demo/storage.js';
+import { initializeDemoVisit } from '../demo/visit.js';
 import { createDemoEngine, DEMO_ACTORS, DEMO_ROOM } from '../demo/engine.js';
 import { createDemoCourt } from '../demo/court-engine.js';
 import { validCoupleCare } from '../demo/app/couple-care.js';
 import { validCollection, COLLECTION_CATS, collectionCatProgress } from '../demo/app/cat-collection.js';
 import { FOODS, levelInfo } from '../demo/app/state.js';
 const time=Date.now();
-function store() { const data=new Map();return {data,getItem:key=>data.get(key) ?? null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)}; }
+function store() { const data=new Map();return {data,get length(){return data.size;},key:index=>[...data.keys()][index] ?? null,getItem:key=>data.get(key) ?? null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)}; }
 function setup() { const storage=store();return {storage,engine:createDemoEngine({storage,now:()=>time})}; }
 
 test('demo storage never reads, changes, or deletes an existing real save',()=>{
@@ -26,12 +27,12 @@ test('demo seed contains both feeding portions, bubbles and valid two-person rec
   const {engine}=setup(),snap=engine.snapshot();assert.equal(snap.roomId,DEMO_ROOM);assert.equal(snap.state.feedRecords.length,2);
   assert.equal(snap.state.pendingGrowth.length,3);assert.ok(validCoupleCare(snap.state.coupleCare));assert.equal(snap.state.coupleCare.moments[0].kind,'meal');
 });
-test('accepted care persists on reload and duplicate operation IDs award only once',()=>{
+test('accepted care updates the current visit and duplicate operation IDs award only once',()=>{
   const {engine,storage}=setup();const item={clientId:DEMO_ACTORS.male.id,operationId:'demo-test-operation-01',action:{type:'play'}};
   const before=engine.snapshot();assert.equal(engine.action(item).status,200);const after=engine.snapshot();
   assert.equal(after.revision,before.revision+1);assert.equal(after.state.coupleCare.moments.length,2);
   assert.equal(engine.action(item).status,200);assert.equal(engine.snapshot().revision,after.revision);
-  const reopened=createDemoEngine({storage,now:()=>time});assert.deepEqual(reopened.snapshot(),after);
+  const sameVisit=createDemoEngine({storage,now:()=>time});assert.deepEqual(sameVisit.snapshot(),after);
 });
 test('rejected care changes neither bubbles nor saved state',()=>{
   const {engine}=setup();const before=engine.snapshot();assert.equal(engine.action({clientId:DEMO_ACTORS.female.id,operationId:'demo-test-reject-01',action:{type:'pet'}}).status,409);assert.deepEqual(engine.snapshot(),before);
@@ -43,8 +44,40 @@ test('demo scenario unlocks all collection conditions without malformed data',()
   engine.scenario('portion');assert.equal(engine.snapshot().state.feedRecords.length,2);
   engine.reset();assert.equal(engine.snapshot().state.xp,400);
 });
-test('multiple demo engines reconcile newer snapshots only',()=>{
-  const {engine,storage}=setup(),other=createDemoEngine({storage,now:()=>time});engine.scenario('unlock');other.sync();assert.deepEqual(other.snapshot(),engine.snapshot());
+test('separate demo visits do not share unlocks or resume saved play',()=>{
+  const first=createMemoryStorage(),second=createMemoryStorage();
+  const a=createDemoEngine({storage:first,now:()=>time}),b=createDemoEngine({storage:second,now:()=>time});
+  first.setItem('catnest.role','"female"');a.scenario('unlock');b.sync();
+  assert.ok(a.snapshot().state.xp>10000);assert.equal(b.snapshot().state.xp,400);assert.equal(second.getItem('catnest.role'),null);
+});
+test('refreshing starts default pet, games, requests and court instead of the prior visit',()=>{
+  const oldLocal=createMemoryStorage(),oldSession=createMemoryStorage();
+  const oldEngine=createDemoEngine({storage:oldLocal,now:()=>time});
+  oldEngine.scenario('unlock');createDemoCourt(oldEngine,{now:()=>time}).showcase();
+  oldLocal.setItem('catnest.role','"female"');oldLocal.setItem('catnest.pending.preview.female','[{"action":{"type":"pet"}}]');
+  oldSession.setItem('catcourt.session.demo','old-session');
+  oldEngine.action({clientId:DEMO_ACTORS.female.id,operationId:'demo-previous-game-01',action:{type:'game-create',game:'rps',mode:'duo',previousId:null}});
+  assert.ok(oldEngine.snapshot().state.games.match);
+  const freshLocal=createMemoryStorage(),freshSession=createMemoryStorage(),fresh=createDemoEngine({storage:freshLocal,now:()=>time});
+  assert.equal(fresh.snapshot().state.xp,400);assert.equal(fresh.snapshot().state.coins,11960);
+  assert.equal(fresh.snapshot().state.games.match,null);assert.equal(fresh.getCourt(),null);
+  assert.equal(freshLocal.getItem('catnest.role'),null);assert.equal(freshLocal.getItem('catnest.pending.preview.female'),null);assert.equal(freshSession.getItem('catcourt.session.demo'),null);
+});
+test('legacy cleanup clears only old demo keys and preserves real saves and guide preference',()=>{
+  const raw=store();
+  const preserved={'catnest.role':'"male"','catnest.state.real':'real-pet','catcourt.session.real':'real-court',[`${DEMO_PREFERENCES_PREFIX}welcome`]:'done'};
+  for(const [key,value] of Object.entries(preserved))raw.setItem(key,value);
+  for(const key of ['server','catnest.role','catcourt.session.demo','catnest.pending.preview.male'])raw.setItem(DEMO_PREFIX+key,'old-demo');
+  clearLegacyDemoProgress(raw);
+  for(const [key,value] of Object.entries(preserved))assert.equal(raw.getItem(key),value);
+  assert.equal(raw.length,Object.keys(preserved).length);
+  assert.doesNotThrow(()=>clearLegacyDemoProgress(null));assert.doesNotThrow(()=>clearLegacyDemoProgress({get length(){throw Error('blocked');}}));
+});
+test('a restored browser history page reloads while an ordinary first load does not',()=>{
+  const listeners=new Map();let reloads=0,cleaned;
+  initializeDemoVisit({location:{href:'https://example.com/test/?court=oldcase&room=oldroom&mode=judge&campaign=demo',reload(){reloads++;}},history:{replaceState(_state,_title,url){cleaned=new URL(url);}},addEventListener:(name,handler)=>listeners.set(name,handler)});
+  assert.equal(cleaned.searchParams.has('court'),false);assert.equal(cleaned.searchParams.has('room'),false);assert.equal(cleaned.searchParams.has('mode'),false);assert.equal(cleaned.searchParams.get('campaign'),'demo');
+  listeners.get('pageshow')({persisted:false});assert.equal(reloads,0);listeners.get('pageshow')({persisted:true});assert.equal(reloads,1);
 });
 test('simulated partner joins and plays a real duo game without exposing hidden hands',()=>{
   const {engine}=setup();
