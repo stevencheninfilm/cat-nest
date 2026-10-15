@@ -1,3 +1,6 @@
+import './onboarding.css';
+import { createOnboarding } from './onboarding.js';
+import { homeBinding } from './home-bond.js';
 import { getAppRuntime } from './app-runtime.js';
 import { initialHomeState } from './home-context.js';
 import './style.css';
@@ -52,6 +55,9 @@ const runtime=getAppRuntime(),home=runtime.home,localStorage=runtime.localStorag
 function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
 function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private browsing can disable storage */ } }
 const params = new URLSearchParams(location.search);
+const invitedRole = normalizeCoupleRole(params.get('join'));
+const returningOwner = (Boolean(read('catnest.role',null)) && !invitedRole) || params.has('court') || params.get('mode')==='judge';
+let onboarding;
 // A remembered role is only a hint; every visit begins with an explicit choice.
 let coupleRole = normalizeCoupleRole(read('catnest.role', null));
 let roleEntered = false;
@@ -207,6 +213,7 @@ function render() {
   refreshGames();
   renderCoupleCare();
   diary.refresh();
+  onboarding?.sync();
 }
 function renderConnection() {
   diary.refresh();
@@ -230,6 +237,8 @@ function renderConnection() {
   $('#save-status').textContent = saveStatus.message;
   $('#save-status').className = saveStatus.phase;
   $('#connection-note').textContent = roleEntered && cloudConfigured && ['error','offline','full'].includes(status.phase) ? '云端连接中断 · 点击身份栏重试，原存档会保留' : '';
+  const bindingNote=$('.onboarding-role-note');
+  if(bindingNote&&coupleSnapshotReady){const binding=homeBinding(confirmedState);bindingNote.textContent=`${binding.count}/2 位主人已加入${binding.complete?' · 已一起养猫':' · 等待另一位主人'}`;}
   const roleStatus = $('#role-connection-status');
   if (roleStatus) roleStatus.textContent = connectionSummary({ ...options, savePhase:saveStatus.phase });
   const retry = $('#retry-cloud');
@@ -240,17 +249,22 @@ function renderConnection() {
   renderGrowth();
   catbook?.render();
   renderCoupleCare();
+  onboarding?.sync();
 }
-function presenceOptions() { return { members, phase:status.phase, configured:cloudConfigured, entered:roleEntered, known:presenceKnown, selectedRole:coupleRole }; }
+function presenceOptions() { return { members, phase:status.phase, configured:cloudConfigured, entered:roleEntered, known:presenceKnown, selectedRole:coupleRole, binding:coupleSnapshotReady?homeBinding(confirmedState):null }; }
 function sharedCareOptions(now = Date.now()) { return { ...presenceOptions(), now, clientId, tab:coupleTab, activityPage:couplePages.activity, memoriesPage:couplePages.memories, saving:careSaving(), ready:!cloudConfigured || coupleSnapshotReady, notice:coupleNotice }; }
 function renderCoupleCare(now = Date.now()) {
   const snapshot = cloudConfigured ? confirmedState : state;
   if (roleEntered && (!cloudConfigured || coupleSnapshotReady)) coupleExperience.observe(snapshot, now);
   const options = sharedCareOptions(now);
-  const update = partnerUpdate(snapshot, clientId, options);
+  const binding=homeBinding(snapshot,members,presenceKnown);
+  const invite=roleEntered && options.ready && !binding.complete;
+  const update = invite ? {html:'<span class="partner-update-icon" aria-hidden="true">♡</span><span class="partner-update-copy"><b>还差一位主人</b><small>邀请 TA，一起把小猫养大</small></span><span class="partner-update-arrow" aria-hidden="true">›</span>',description:'等待另一位主人加入，打开邀请'} : partnerUpdate(snapshot, clientId, options);
   const entry = $('#partner-update');
   if (entry.innerHTML !== update.html) entry.innerHTML = update.html;
   entry.setAttribute('aria-label', update.description);
+  entry.dataset.open=invite?'invite':'shared-care';
+  entry.classList.toggle('is-invitation',invite);
   entry.classList.toggle('is-new', coupleHasNew);
   if (!$('#modal').open || $('#modal-content').dataset.view !== 'shared-care') return;
   const content = sharedCarePanel(snapshot, options);
@@ -346,7 +360,7 @@ function scheduleUpgrade() {
   clearTimeout(upgradeTimer);
   if (!pendingUpgrade) return;
   upgradeTimer=setTimeout(() => {
-    if (!pendingUpgrade || !roleEntered || companion.active || $('.nest').hidden || $('#modal').open || document.hidden) return;
+    if (!pendingUpgrade || !roleEntered || onboarding?.isOpen() || companion.active || $('.nest').hidden || $('#modal').open || document.hidden) return;
     lastCelebratedStage=pendingUpgrade.to.min;
     openModal('stage-upgrade');
     pendingUpgrade=null;
@@ -357,6 +371,8 @@ function chime() {
   try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const gain = ctx.createGain(); gain.connect(ctx.destination); gain.gain.setValueAtTime(.04, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .35); const osc = ctx.createOscillator(); osc.connect(gain); osc.type = 'sine'; osc.frequency.setValueAtTime(660, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + .1); osc.start(); osc.stop(ctx.currentTime + .35); osc.onended = () => ctx.close(); } catch {}
 }
 function react(action, actor, { optimistic = false, previewed = false, operationId, previousXp, confirmedXp } = {}) {
+  onboarding?.confirmed(action,actor,{optimistic,operationId});
+  if (['join-home','adopt-cat'].includes(action.type)) return;
   const mine = actor.id === clientId;
   if(action.type==='diary-favorite'){diary.refresh();return;}
   if (action.type?.startsWith('game-')) { refreshGames(); return; }
@@ -489,6 +505,7 @@ function startCloud() {
     onSaveStatus(next) {
       saveStatus=next;
       if (next.phase==='error') {
+        onboarding?.fail(next.message);
         // A rejected claim leaves its bubble in the last saved snapshot. Release
         // the click lock so it remains usable; retrying writes stay queue-blocked.
         if (claimingRewardId && pendingCloudActions === 0) {
@@ -520,6 +537,7 @@ function openModal(view, options = {}) {
   if(view==='diary' && $('#modal-content').dataset.view!=='diary')diary.open(options.diaryFilter);
   companion.exit();
   if (!roleEntered && view !== 'roles') view='roles';
+  if (view === 'onboarding' || view === 'invite') { onboarding?.start({invite:view==='invite'}); return; }
   if (view === 'judge') { closeModal(); showCourt(); return; }
   if (view === 'collection') { closeModal(); showCatbook(); return; }
   if (view === 'shared-care' && (!$('#modal').open || $('#modal-content').dataset.view !== 'shared-care')) { coupleTab='activity'; couplePages.activity=couplePages.memories=0; coupleHasNew=false; }
@@ -552,9 +570,9 @@ function openModal(view, options = {}) {
     appearance: () => appearanceSheet(),
     expressions: () => catExpressionsPanel(catExpression),
     feeding: () => feedingSheet(feedingSheetOptions()),
-    roles: () => rolePicker(presenceOptions()),
+    roles: () => rolePicker({...presenceOptions(),state:cloudConfigured?confirmedState:state,ready:roleEntered&&coupleSnapshotReady,invitedRole,newVisitor:!returningOwner}),
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
-    settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row" data-open="appearance"><span>${icon('shirt')} 小猫装扮</span><b>换个小魔法 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${runtime.isTest ? '当前为测试调试存档，刷新或重新进入恢复默认；不会写入正式小窝或调用真实 AI。' : localPetPreview ? '当前为本地联机预览，互动、对局和成长保存在这台电脑。' : cloudConfigured ? '小猫的互动与成长会自动保存到 GitHub 私有云存档。下次打开网站，选择你的身份就能继续。请等页面显示「已保存」再离开。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
+    settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row onboarding-settings-row" data-open="invite"><span>♡ 双人绑定与邀请</span><b>查看主人 ›</b></button><button class="setting-row onboarding-settings-row" data-open="onboarding"><span>✨ 一分钟新手引导</span><b>跟着小猫试试 ›</b></button><button class="setting-row" data-open="appearance"><span>${icon('shirt')} 小猫装扮</span><b>换个小魔法 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${runtime.isTest ? '当前为测试调试存档，刷新或重新进入恢复默认；不会写入正式小窝或调用真实 AI。' : localPetPreview ? '当前为本地联机预览，互动、对局和成长保存在这台电脑。' : cloudConfigured ? '小猫的互动与成长会自动保存到 GitHub 私有云存档。下次打开网站，选择你的身份就能继续。请等页面显示「已保存」再离开。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
     diary: () => diary.panel(),
     guide: () => `${header('✨','GROW WITH LOVE','每一点爱，都算数','照顾小猫会产生成长气泡，点击领取才计入成长；升级所需成长逐级增加：120、150、180……每级多 30 点。')}<div class="guide-list"><div><span>🐟 9 种美味食物<small>${careRuleText('feed')} · 食物活力 +${FOODS.meal.energy}，饮水 +${FOODS.water.energy}</small></span><b>+5～50 成长</b></div><div><span>🤍 温柔摸摸<small>${careRuleText('pet')}</small></span><b>+3 成长 · +${CARE_NEED_EFFECTS.pet.mood} 开心</b></div><div><span>🪄 陪它玩耍<small>${careRuleText('play')}</small></span><b>+8 成长 · +10 猫爪币</b></div><div><span>🌙 休息一下<small>${careRuleText('sleep')}</small></span><b>+4 成长 · +${CARE_NEED_EFFECTS.sleep.energy} 活力</b></div><div><span>🐾 本轮双人喂养<small>${careRuleText('pair')} · 每轮一次</small></span><b>额外 +10 亲密度和成长</b></div></div><p class="guide-limits-note">饱饱、开心、活力每一项大于 80，成长各加 10%；一项 ×1.1，两项 ×1.2，三项 ×1.3（摸摸 3→3.9）；领取时不重复加成。三项状态每 ${NEEDS_DECAY_INTERVAL_MS / 60_000} 分钟各下降 1 点，离线也会计算。点击小猫下方的具体状态可查看提升方法。</p><p class="guide-limits-note">每日次数由两人共享，北京时间（UTC+8）0 点重置。喂食冷却按身份单独计算，摸摸、逗猫和休息共享冷却；跨日仍需等冷却结束。叫醒随时可用，不消耗次数，也不增加成长。</p><p class="fine-print">气泡不会自动消失，刷新或离开小窝也会保留，点击后小爱心会飞入成长条。首次喂食开启 4 小时一轮的双人小任务，两位猫友在本轮各喂一次，额外成长会加入本次喂食气泡。每日双人奖励用完后，喂食仍可在其次数和冷却内进行。猫爪币通过逗猫免费获得。</p>`,
     home: () => `${header('🏡','YOUR COZY CORNER','欢迎回到小窝',`这里是${esc(state.name)}的家，也是你每天可以放松一下的地方。`)}<div class="home-summary"><div><strong>${levelInfo(state.xp).level}</strong><span>小猫等级</span></div><div><strong>${state.love}</strong><span>积攒的爱</span></div><div><strong>${state.history.length}</strong><span>近期陪伴</span></div></div><button class="primary modal-primary" data-open="roles">${icon('users-round')} 查看或切换身份</button>`,
@@ -893,6 +911,12 @@ async function showCourt() {
     updateModelPause();
   } catch { toast('猫猫判官正在准备中，稍后就能见面啦'); }
 }
+onboarding=createOnboarding({storage:runtime.localStorage,preferences:runtime.guidePreferences||runtime.localStorage,home,baseUrl:document.baseURI,isTest:runtime.isTest,testActions:runtime.testActions,returning:returningOwner,
+  getContext:()=>({state:cloudConfigured?confirmedState:state,role:coupleRole,entered:roleEntered,available:!$('.nest').hidden&&!document.hidden,ready:!cloudConfigured||coupleSnapshotReady,connected:!cloudConfigured||status.phase==='online',members,known:presenceKnown&&status.phase==='online',canCare:type=>careActionInfo(state,{type},clientId).allowed&&(type!=='play'||petNeeds(state).energy>=PLAY_ENERGY_COST)}),
+  dispatch,greet(){catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');},toast,onClose:scheduleUpgrade,
+});
+window.addEventListener('catnest:onboarding',event=>onboarding.start({restart:event.detail?.restart===true}));
+if(import.meta.hot)import.meta.hot.dispose(()=>onboarding.destroy());
 render(); renderConnection(); initializeCatModel(); openModal('roles');
 import('./growth-heart.js').then(({ createGrowthHeartRenderer }) => createGrowthHeartRenderer()).catch(() => { /* Keep the glossy fallback if 3D rendering is unavailable. */ });
 window.addEventListener('pagehide', () => { clearTimeout(coupleFeedbackTimer); clearTimeout(coupleHeartsTimer); $('.nest').classList.remove('duo-celebrating'); });
