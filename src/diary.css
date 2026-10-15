@@ -46,3 +46,61 @@
   .diary-dialog { padding: 25px 18px 20px; }
   .diary-event-content p { font-size: 10px; }
 }
+
+/* A small shared album, with warm paper around the photographic keepsakes. */
+#modal.diary-dialog { width:min(440px,calc(100vw - 24px));max-width:440px;max-height:90svh;padding:25px 20px 20px;border-radius:27px;background:linear-gradient(155deg,#fffaf1,#f8eedf);scrollbar-width:thin; }
+.diary-dialog .modal-close { position:sticky;float:right;top:0;z-index:8;margin:-11px -5px -25px 0;background:#f4eadc; }
+.journal-heading { text-align:left;padding-right:22px; }
+.journal-heading>span { font-size:9px;letter-spacing:2px;color:#b5987b; }
+.journal-heading h2 { font-size:23px;line-height:1.5;color:#77543c;margin:9px 0 5px;overflow-wrap:anywhere; }
+.journal-heading p { font-size:11px;color:#a28972;line-height:1.8;margin:0; }
+.journal-summary { display:grid;grid-template-columns:repeat(3,1fr);margin:16px 0 11px;text-align:left;gap:15px; }
+.journal-summary>div+div { border-left:1px solid #e5d8c5;padding-left:17px; }
+.journal-summary strong { display:block;font:600 27px/1.4 Georgia,serif;color:#997253; }
+.journal-summary strong small { margin-left:4px;font:500 10px system-ui; }
+.journal-summary>div>span { font-size:10px;color:#a68d77; }
+.journal-adoption { display:grid;gap:4px;text-align:left;margin:0 0 12px;color:#a18a6d;font-size:10px;line-height:1.6; }
+.journal-adoption small { font-size:9px;color:#b59c7e; }
+.journal-tabs { position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(3,1fr);padding:4px;gap:3px;border-radius:13px;background:#eee2d2ed;backdrop-filter:blur(10px); }
+.journal-tabs button { padding:9px 2px;font-size:11px;background:none;border-radius:10px;color:#9c826b; }
+.journal-tabs button[aria-selected=true] { background:#fffaf0;color:#805d43;box-shadow:0 2px 7px #79502a0d;font-weight:700; }
+.journal-feedback { min-height:19px;text-align:left;color:#9a7b56;font-size:10px;line-height:1.8;padding-top:5px; }
+.journal-filters { display:flex;gap:7px;margin:5px 0 19px; }
+.journal-filters button { border:1px solid transparent;border-radius:20px;padding:6px 12px;background:transparent;font-size:10px;color:#a48e79; }
+.journal-filters button[aria-pressed=true] { border-color:#e2cfb2;background:#fffaf1;color:#8a6749; }
+.journal-timeline { position:relative;padding-left:14px;border-left:1px solid #e5d3bc;margin-left:3px; }
+.journal-memory-card { position:relative;--memory-accent:#b99868;background:#fffdf7;border:1px solid #eddfcb;border-radius:17px;margin-bottom:21px;box-shadow:0 5px 15px #9e71400a;text-align:left; }
+.journal-memory-card::before { content:'';position:absolute;top:22px;left:-19px;width:7px;height:7px;background:var(--memory-accent);border:2px solid #fcf4e7;border-radius:50%; }
+.journal-memory-card[data-memory-tone=rose] { --memory-accent:#bd8996; }.journal-memory-card[data-memory-tone=sage] { --memory-accent:#8b9e7f; }.journal-memory-card[data-memory-tone=lavender] { --memory-accent:#ac97bf; }
+.memory-photo-wrap { position:relative;margin:7px 7px 0;overflow:hidden;border-radius:12px; }
+.memory-photo { position:relative;aspect-ratio:1.95;overflow:hidden;background:#a08f86; }
+.memory-photo>span { position:absolute;width:100%;aspect-ratio:1;top:50%;transform:translateY(-50%);background-size:300% 200%;background-repeat:no-repeat; }
+.memory-photo::after { content:'';position:absolute;inset:0;background:linear-gradient(transparent 50%,#30231e80);pointer-events:none; }
+.memory-kind { position:absolute;top:10px;left:10px;background:#fff7e9e8;border:1px solid #ffffff7a;backdrop-filter:blur(6px);border-radius:20px;padding:5px 9px;color:#87674f;font-size:9px;letter-spacing:.5px; }
+.memory-favorite { position:absolute;top:8px;right:8px;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid #ffffff96;background:#fffaf0e8;font-size:23px;color:#b69f8e;box-shadow:0 2px 5px #372c3620; }
+.memory-favorite.is-favorite { color:#bb798b;background:#fff4f3f2; }.memory-favorite:disabled { opacity:.55;cursor:wait; }
+.memory-photo-wrap time { position:absolute;bottom:10px;left:12px;color:#fff5e8;font-size:9px;letter-spacing:.6px; }
+.journal-memory-card-copy { padding:16px 15px 13px; }
+.journal-memory-card-copy h3 { font-size:16px;line-height:1.65;color:#805f47;margin:0 0 7px;overflow-wrap:anywhere;font-weight:650; }
+.journal-memory-card-copy>p { font-size:11px;line-height:1.9;color:#aa8a70;margin:0;overflow-wrap:anywhere; }
+.journal-memory-card-copy footer { display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #eee3d2;margin-top:14px;padding-top:11px; }
+.journal-memory-card-copy footer>span { color:var(--memory-accent);font-size:9px; }
+.journal-memory-card-copy footer>button { color:#9b7958;font-size:10px;background:none;padding:5px 0 5px 8px; }.journal-memory-card-copy footer>button>span { margin-left:5px;font-size:13px; }
+.journal-footnote,.journal-recent-note { color:#ae967e;font-size:9px;line-height:1.9;text-align:center;margin:17px 0 10px; }
+.journal-recent-note { text-align:left;margin:8px 0; }.journal-couple-link { display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:18px;padding:13px 0 3px;border-top:1px solid #e7d7c0;color:#a0876d;background:none;font-size:10px; }
+.journal-pagination { display:flex;align-items:center;justify-content:center;gap:17px;font-size:10px;color:#a68d77; }.journal-pagination button { background:#f6eddd;border:1px solid #e9d8bf;border-radius:10px;padding:9px 13px;font-size:10px; }.journal-pagination button:disabled { opacity:.4; }
+.journal-empty { padding:27px 5px 32px;text-align:center; }.journal-empty>span { font-size:38px;color:#cbb59b; }.journal-empty h3 { font-size:15px;color:#91745b;margin:14px 0 9px; }.journal-empty p { font-size:11px;color:#b0977d;line-height:1.9;margin:0 0 17px; }.journal-empty button { border-radius:12px;background:#f1e3ce;font-size:10px;padding:11px 18px; }
+.journal-card-panel .journal-heading h2 { font-size:20px; }.journal-back { display:block;background:none;padding:0 0 19px;color:#a38a72;font-size:11px; }
+.journal-export-preview { aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:center;align-items:center;margin:21px 0 18px;border:1px solid #e8d9c3;border-radius:15px;overflow:hidden;background:#fff8ec; }
+.journal-export-preview>img { display:block;width:100%;height:auto; }.journal-export-preview p { padding:14px;text-align:center;color:#9a7b60;font-size:11px;line-height:1.8; }.journal-export-preview>button { padding:10px 18px;border-radius:10px;font-size:11px;background:#efdfc6; }
+.journal-card-loader { display:block;color:#c6a776;font-size:39px;animation:journal-breathe 1.5s ease-in-out infinite; }
+.journal-export-actions { display:flex;gap:9px; }.journal-export-actions button { flex:1;font-size:12px;border-radius:13px;padding:13px 10px;background:#f1e1c8;color:#846044; }.journal-export-actions button.primary { background:linear-gradient(#f6db9d,#dfb976);color:#775327; }.journal-export-actions button:disabled { opacity:.4; }
+.diary-dialog .diary-timeline { max-height:none; }.diary-dialog .diary-day-heading { background:#fbf2e5; }
+.memory-journal button:focus-visible,.journal-card-panel button:focus-visible { outline:2px solid #b78c5e;outline-offset:3px; }
+@keyframes journal-breathe { 50% { opacity:.4;transform:scale(.9); } }
+@media (prefers-reduced-motion:reduce) { .journal-card-loader { animation:none; } }
+@media (max-width:360px) { #modal.diary-dialog { padding:24px 14px 18px; }.journal-heading h2 { font-size:21px; }.journal-summary { gap:9px; }.journal-summary>div+div { padding-left:12px; }.journal-memory-card-copy { padding:13px 12px; }.journal-memory-card-copy h3 { font-size:15px; }.journal-filters { gap:4px; } }
+
+.journal-summary>div { display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 6px; }
+.journal-summary strong { font-size:25px; }
+.journal-feedback:empty { display:none; }
