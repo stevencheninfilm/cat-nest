@@ -8,13 +8,10 @@ export function createCloudRoom(options) {
   const coupleMode = Object.hasOwn(options, 'coupleRole');
   const profile = getCoupleProfile(coupleRole);
   const homeRoomId = options.homeRoomId;
-  const optionsAccessToken = options.accessToken || '';
-  const expired = error => error.status === 401 && error.code === 'ACCESS_REQUIRED';
-  function accessExpired() { ready=false; source?.close(); clearInterval(poll); clearTimeout(retry); clearTimeout(streamRetry); options.onAccessExpired?.(); }
   let room = /^[a-f0-9]{32}$/.test(roomId || '') ? roomId : null;
   let queue = [...pending];
   let revision = -1;
-  let source, poll, retry, streamRetry, destroyed = false, draining = false, ready = false;
+  let source, poll, retry, destroyed = false, draining = false, ready = false;
   const seen = new Set();
   const previews = new Map();
   const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename']);
@@ -24,7 +21,7 @@ export function createCloudRoom(options) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), optimisticReducer && options.method === 'POST' && path.endsWith('/actions') ? 15000 : 95000);
     try {
-      const res = await fetch(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(optionsAccessToken ? { Authorization:`Bearer ${optionsAccessToken}` } : {}), ...options.headers } });
+      const res = await fetch(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
       const data = await res.json();
       if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
       return data;
@@ -90,7 +87,6 @@ export function createCloudRoom(options) {
           onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
           continue;
         }
-        if (expired(error)) { rollback(item,error); onSaveStatus({phase:'error',message:'访问验证已过期，待提交操作已保留，请重新解锁小窝。'}); accessExpired(); break; }
         if (error.status >= 400 && error.status < 500 && error.status !== 429) {
           queue.shift(); saveQueue();
           rollback(item, error); previews.delete(item.operationId);
@@ -113,30 +109,17 @@ export function createCloudRoom(options) {
     }
     draining=false;
   }
-  async function subscribe() {
+  function subscribe() {
     if (destroyed) return;
     source?.close();
-    let ticket = '';
-    if (optionsAccessToken) {
-      try {
-        const data = await request(`/api/rooms/${room}/stream-ticket`, {method:'POST',body:JSON.stringify({clientId:me.id,name:me.name})});
-        if (destroyed) return;
-        ticket = `&ticket=${encodeURIComponent(data.ticket)}`;
-      } catch (error) {
-        if (destroyed) return;
-        if (expired(error)) { accessExpired(); return; }
-        onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复'});
-        clearTimeout(streamRetry); streamRetry=setTimeout(subscribe,8000); return;
-      }
-    }
-    source = new EventSource(`${base}/api/rooms/${room}/events?clientId=${encodeURIComponent(me.id)}&name=${encodeURIComponent(me.name)}${ticket}`);
+    source = new EventSource(`${base}/api/rooms/${room}/events?clientId=${encodeURIComponent(me.id)}&name=${encodeURIComponent(me.name)}`);
     source.addEventListener('state', event => { try { apply(JSON.parse(event.data)); } catch {} });
     source.addEventListener('action', event => { try { apply(JSON.parse(event.data)); } catch {} });
     source.addEventListener('presence', event => { try { onPresence(JSON.parse(event.data)); } catch {} });
     source.addEventListener('full', () => { ready=false; source.close(); onStatus({phase:'full',role:null,message:'这个猫窝已有两位猫友在线，请稍后再来'}); });
     source.onopen=() => { if (destroyed) return; ready=true; onStatus({phase:'online',role:'cloud',message:`已连接共同小窝，互动会自动保存到 ${storageLabel}`}); drain(); };
-    source.onerror=() => { if (optionsAccessToken) { source.close(); clearTimeout(streamRetry); if (!destroyed) streamRetry=setTimeout(subscribe,4000); } if (!destroyed) onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复，已保存的云端存档仍然保留'}); };
-    clearInterval(poll); poll=setInterval(async () => { if (destroyed) return; try { apply(await request(`/api/rooms/${room}`)); } catch (error) { if (expired(error)) accessExpired(); } }, 20000);
+    source.onerror=() => { if (!destroyed) onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复，已保存的云端存档仍然保留'}); };
+    clearInterval(poll); poll=setInterval(async () => { if (destroyed) return; try { apply(await request(`/api/rooms/${room}`)); } catch {} }, 20000);
   }
   async function start() {
     if (coupleMode && !profile) {
@@ -163,7 +146,6 @@ export function createCloudRoom(options) {
       ready=true; subscribe(); drain();
     } catch(error) {
       if (destroyed) return;
-      if (expired(error)) accessExpired();
       ready=false; onStatus({phase:'error',role:'cloud',message:error.message || '云端连接失败，请稍后重试'});
       onSaveStatus({phase:'error',message:'未能连接云端，存档没有被清除'});
     }
@@ -185,6 +167,6 @@ export function createCloudRoom(options) {
       return true;
     },
     updateName(next) { if (coupleMode) return; me.name=next; if(room&&ready) subscribe(); },
-    destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); clearTimeout(streamRetry); },
+    destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); },
   };
 }

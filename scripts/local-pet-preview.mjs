@@ -86,8 +86,8 @@ export function localPetPreview({ root, enabled }) {
       // Preview saves are runtime data, outside watched source directories.
       // Watching a save can reload the page and interrupt the next bot turn.
       const folder=`cat-nest-preview-${createHash('sha256').update(root).digest('hex').slice(0,16)}`;
-      const handle=createPetHandler({privateAccess:null,store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'home.json'),legacyFile:resolve(root,'.cat-preview','home.json')}),coupleRoomId:PREVIEW_HOME,serveStatic:false,pollMs:2000});
-      const evianHandle=createPetHandler({privateAccess:null,store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'evian.json'),homeId:EVIAN_ROOM_ID,seedState:at=>initialHomeState(homeContext('/evian/'),at)}),coupleRoomId:EVIAN_ROOM_ID,serveStatic:false,pollMs:2000});
+      const handle=createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'home.json'),legacyFile:resolve(root,'.cat-preview','home.json')}),coupleRoomId:PREVIEW_HOME,serveStatic:false,pollMs:2000});
+      const evianHandle=createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'evian.json'),homeId:EVIAN_ROOM_ID,seedState:at=>initialHomeState(homeContext('/evian/'),at)}),coupleRoomId:EVIAN_ROOM_ID,serveStatic:false,pollMs:2000});
       server.middlewares.use((request,response,next)=>{
         const path=new URL(request.url || '/','http://localhost').pathname;
         if (!['/api/couple/home','/api/health'].includes(path) && !path.startsWith('/api/rooms/')) return next();

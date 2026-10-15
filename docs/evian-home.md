@@ -9,4 +9,4 @@ Evian 所有主应用本机缓存和待保存队列增加 `evian:` 前缀，避�
 Vite 发布时生成 `evian/index.html`，通过 `<base href="../">` 复用父目录的构建资源；品牌首页链接仍停留在 Evian 入口。无需新增后端服务、环境变量或重启正式 API。
 
 
-2026-10-15：公共 `/cat-nest/` 仅跳转独立演示 `/cat-nest/test/`；原个人小窝入口迁移为 `/cat-nest/steven/`，沿用原存档及缓存键，访问验证见 `steven-private-home.md`。Evian 保留原固定房间与独立缓存，不受迁移影响。
+2026-10-15：公共 `/cat-nest/` 仅跳转独立演示 `/cat-nest/test/`；原个人小窝入口迁移为 `/cat-nest/steven/`，沿用原存档及缓存键，入口约定见 `steven-home.md`。Evian 保留原固定房间与独立缓存，不受迁移影响。
