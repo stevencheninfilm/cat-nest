@@ -8,7 +8,9 @@ const clone = value => structuredClone(value);
 export const DEMO_ACTORS = Object.fromEntries(COUPLE_ROLES.map(role => [role.id, { id:role.clientId, name:role.name }]));
 
 export function demoSeed(now = Date.now()) {
-  let state = { ...initialState(now), name:'糯米', coins:12000, xp:400, love:320, hunger:90, mood:94, energy:96, appearance:{body:4,clothes:1,eyes:0,wand:0} };
+  let state = { ...initialState(now-13*86_400_000), name:'糯米', coins:12000, xp:400, love:320, hunger:90, mood:94, energy:96, needsUpdatedAt:now, updatedAt:now, appearance:{body:4,clothes:1,eyes:0,wand:0} };
+  // Fictional keepsakes belong only to the isolated, reset-on-refresh test save.
+  state.diary.entries.push({id:'level:2',kind:'level',at:now-7*86_400_000,catName:'糯米',photo:'happy',level:2});
   for (const [role, action, age] of [['male',{type:'feed',food:'water'},12*60_000],['female',{type:'feed',food:'mousse'},8*60_000],['female',{type:'pet'},2*60_000]]) {
     state = reduceAction(state, action, DEMO_ACTORS[role], now-age, `demo-seed-${role}-${action.type}`) || state;
   }

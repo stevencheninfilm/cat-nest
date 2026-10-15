@@ -101,7 +101,7 @@ function tasksPanel(state, options) {
 function memoriesPanel(state, options) {
   const care = normalizeCoupleCare(state.coupleCare, options.now);
   const pages = Math.max(1, Math.ceil(care.moments.length / 20)), page = Math.max(0, Math.min(pages - 1, options.memoriesPage || 0));
-  return care.moments.length ? `<p class="shared-intro">你们一起完成的事，小窝会记得。<small>已留下 ${care.moments.length} 个共同纪念</small></p><div class="shared-memories">${care.moments.slice(page * 20, (page + 1) * 20).map(moment => {
+  return care.moments.length ? `<p class="shared-intro">你们一起完成的事，小窝会记得。<small>已留下 ${care.moments.length} 个共同纪念</small></p><button class="shared-diary-link" data-open="diary" data-diary-filter="together">打开双人回忆相册 · 收藏与制作纪念卡 ›</button><div class="shared-memories">${care.moments.slice(page * 20, (page + 1) * 20).map(moment => {
     const rule = COOPERATION_RULES.find(item => item.id === moment.kind);
     return `<article class="shared-memory"><span aria-hidden="true">${rule.icon}</span><div><h3>${rule.name}</h3><p><b class="male">男方</b><i>♡</i><b class="female">女方</b><span>一起完成</span></p><time datetime="${new Date(moment.at).toISOString()}">${new Date(moment.at).toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' })} · ${clock(moment.at)}</time></div></article>`;
   }).join('')}</div>${pageButtons('memories', page, pages)}` : '<div class="shared-empty">♡ ♡<strong>等你们的第一份默契</strong><p>一人摸摸、另一人逗猫，<br>就能留下你们的第一份接力纪念。</p><button data-shared-tab="tasks">一起试试 ›</button></div>';

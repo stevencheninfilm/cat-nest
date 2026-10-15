@@ -5,6 +5,7 @@ import { validAppearance } from '../src/mage-cat-config.js';
 import { validCollection, validCollectionCatId, canInviteCat } from '../src/cat-collection.js';
 import { sanitizeGameAction, validGameHub, publicGameHub, publicGameEvent, emptyGameHub } from '../src/minigames.js';
 import { validCoupleCare } from '../src/couple-care.js';
+import { validMemoryJournal, normalizeMemoryJournal, validMemoryId } from '../src/memory-journal.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -21,6 +22,7 @@ export function sanitizeAction(value) {
   if (!plain(value)) return null;
   if (typeof value.type === 'string' && value.type.startsWith('game-')) return sanitizeGameAction(value);
   const keys = Object.keys(value);
+  if(value.type==='diary-favorite' && keys.length===3 && validMemoryId(value.memoryId) && typeof value.favorite==='boolean')return {type:'diary-favorite',memoryId:value.memoryId,favorite:value.favorite};
   if (value.type === 'join-home' && keys.length === 1) return {type:'join-home'};
   if (value.type === 'adopt-cat' && keys.length === 3 && keys.includes('name') && keys.includes('appearance') && validText(value.name,16) && validAppearance(value.appearance)) return {type:'adopt-cat',name:value.name.trim(),appearance:{...value.appearance}};
   if (value.type === 'feed' && keys.length === 2 && keys.includes('food') && typeof value.food === 'string' && Object.hasOwn(FOODS, value.food)) return { type: 'feed', food: value.food };
@@ -52,6 +54,7 @@ function validStoredState(value) {
   if (Object.hasOwn(value, 'collection') && !validCollection(value.collection, Object.keys(FOODS))) return false;
   if (Object.hasOwn(value, 'games') && !validGameHub(value.games, { privateState:true })) return false;
   if (Object.hasOwn(value, 'coupleCare') && !validCoupleCare(value.coupleCare)) return false;
+  if (Object.hasOwn(value, 'diary') && !validMemoryJournal(value.diary)) return false;
   if (Object.hasOwn(value, 'needsUpdatedAt') && (!Number.isSafeInteger(value.needsUpdatedAt) || value.needsUpdatedAt < 0)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
@@ -161,6 +164,7 @@ export function createGitHubStore({
       const withoutGrowth = { ...room, state: { ...room.state } };
       delete withoutGrowth.state.pendingGrowth;
       delete withoutGrowth.claimedGrowth;
+      delete withoutGrowth.state.diary;
       if (withoutGrowth.state.coupleCare) withoutGrowth.state.coupleCare = { ...withoutGrowth.state.coupleCare, moments:[] };
       if (Buffer.byteLength(JSON.stringify(withoutGrowth), 'utf8') * 4 / 3 > 350_000) throw new Error();
       for (const operation of room.operations) {
@@ -168,6 +172,7 @@ export function createGitHubStore({
       }
       // Migrate only the new optional ledger; preserve the original save fields.
       room.state.collection ??= normalizeState(room.state, now()).collection;
+      room.state.diary = normalizeMemoryJournal(room.state.diary,room.state,now(),room.createdAt);
       const record = { room, sha: data.sha };
       cache.set(id, { record, etag: response.headers.get('etag') });
       if (cache.size > 1000) cache.delete(cache.keys().next().value);

@@ -9,6 +9,7 @@ import { initialState, normalizeState, reduceAction, careActionInfo } from '../s
 import { publicGameEvent, validGameHub } from '../src/minigames.js';
 
 import { HOME_ENTRIES, initialHomeState } from '../src/home-context.js';
+import { normalizeMemoryJournal, validMemoryJournal } from '../src/memory-journal.js';
 
 export const PREVIEW_HOME = '00000000000000000000000000005174';
 /** Development-only file storage. No extra listener, credentials, GitHub call,
@@ -24,7 +25,8 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now, homeId
     try {
       await migration;
       const room = JSON.parse(await readFile(file,'utf8'));
-      if (!room || room.roomId !== homeId || !Number.isSafeInteger(room.revision) || !validGameHub(room.state?.games,{privateState:true}) || !Array.isArray(room.operations) || !Array.isArray(room.claimedGrowth)) throw new Error('invalid preview save');
+      if (!room || room.roomId !== homeId || !Number.isSafeInteger(room.revision) || !validGameHub(room.state?.games,{privateState:true}) || !Array.isArray(room.operations) || !Array.isArray(room.claimedGrowth) || (room.state.diary!==undefined && !validMemoryJournal(room.state.diary))) throw new Error('invalid preview save');
+      room.state.diary=normalizeMemoryJournal(room.state.diary,room.state,now(),room.createdAt);
       return room;
     } catch (error) {
       if (error.code !== 'ENOENT') throw new StorageError('PREVIEW_STORAGE_ERROR','本地预览存档暂不可用，原记录没有被覆盖。');
