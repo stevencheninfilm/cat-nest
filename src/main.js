@@ -1,11 +1,10 @@
 import './onboarding.css';
 import { createOnboarding } from './onboarding.js';
 import { homeBinding } from './home-bond.js';
-import { getAppRuntime } from './app-runtime.js';
-import { initialHomeState } from './home-context.js';
 import './style.css';
 import './feeding.css';
 import './home-ui.css';
+import './home-loading.css';
 import './growth.css';
 import './growth-stages.css';
 import './cat-speech.css';
@@ -15,26 +14,39 @@ import './growth-bars.css';
 import './pet-needs.css';
 import './diary.css';
 import './minigames.css';
+import './minigames-arcade.css';
+import './minigames-touch.css';
+import './home-cat-interactions.css';
 import './couple-presence.css';
 import './couple-care.css';
 import './cat-behavior.css';
-import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff } from 'lucide';
+import './interaction-feedback.css';
+import './world-experience.css';
+import './nest-decor.css';
+import './nest-life.css';
+import { createInteractionFeedback } from './interaction-feedback.js';
+import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole } from 'lucide';
 import { FOODS, initialState, normalizeState, reduceAction, levelInfo, careActionInfo } from './state';
 import { petNeeds, growthRewardAmount, NEED_KEYS, NEED_LABELS, needsDecayDescription, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { needButtons, needDetails, growthBonusBadge, growthBonusDetails } from './pet-needs-ui.js';
 import { createNeedsFeedback } from './pet-needs-feedback.js';
+import { homeLoadingMarkup, updateHomeLoading } from './home-loading.js';
 import { COUPLE_ROLES, normalizeCoupleRole, getCoupleProfile } from './couple-profile.js';
 import { presenceForRole, homePresence, rolePicker, connectionSummary } from './couple-presence-ui.js';
 import { cooperationTasks, COOPERATION_RULES } from './couple-care.js';
 import { sharedCarePanel, partnerUpdate, careDescription, cooperationButton } from './couple-care-ui.js';
 import { createCoupleExperience } from './couple-experience.js';
 import { createCloudRoom } from './cloud';
+import { initialHomeState } from './home-context.js';
+import { getAppRuntime } from './app-runtime.js';
 import { createCatSpeech } from './cat-speech.js';
 import { catTemperament } from './cat-behavior.js';
 import { normalizeCatExpression, catExpressionName, catExpressionPortrait } from './cat-expressions.js';
 import { catExpressionsPanel } from './cat-expressions-ui.js';
-import { resolveInteraction, getInteractionHint } from './interaction-mode';
-import { feedingHome, feedingSheet, feedingButtonContent, countdown, updateFoodPortions } from './feeding-ui';
+import { catAction } from './cat-actions.js';
+import { nestItem, nestLevel, nestActionResult } from './nest-decor.js';
+import { WORLD_EXPLORATION_ENABLED, WORLD_LOCK_MESSAGE } from './feature-availability.js';
+import { feedingHome, feedingSheet, feedingButtonContent, countdown, updateFoodPortions, foodArt } from './feeding-ui';
 import { careQuotaText, careStatusText, careBlockedMessage, careRuleText } from './care-ui.js';
 import { growthBubbles, growthTray, growthLabel, jellyHeartMarkup } from './growth-ui.js';
 import { growthStageForXp, getGrowthStageById, stageStyle, growthUpgrade } from './growth-stages.js';
@@ -43,11 +55,15 @@ import { APPEARANCE_OPTIONS, normalizeAppearance, MAGE_CAT_VERSION, MAGE_CAT_AUT
 import { createCompanionMode } from './companion-mode.js';
 import { createCatbook } from './catbook.js';
 import { getCollectionCat } from './cat-collection.js';
-import { catSprite } from './catbook-ui.js';
+import { catSprite, CAT_SCENES } from './catbook-ui.js';
 import { createDiaryController } from './diary-controller.js';
 import { minigamesPanel } from './minigames-ui.js';
+import { createArcadeController } from './minigames-arcade-client.js';
+import { createNestLife } from './nest-life-ui.js';
+import { TOUCH_GAMES, CAT_PLAY_UNLOCK_LEVEL, catPlayUnlocked } from './minigames-touch-rules.js';
+import { createHomeCatInteractions } from './home-cat-interactions.js';
 
-const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff };
+const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole };
 const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const $ = s => document.querySelector(s);
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -74,15 +90,19 @@ let selectedFood = read('catnest.food', 'meal');
 if (!Object.hasOwn(FOODS, selectedFood)) selectedFood = 'meal';
 let feedingTab = 'menu', foodCategory = 'all';
 let catModel = null;
-let catExpression = 'auto', lastCatBehavior = null;
+let homeCat = null;
+let catModelPhase = 'loading';
+let catExpression = 'auto';
+let catPaletteTab = 'expressions';
 let catbook = null;
+let world = null, worldOpening = false;
 let appearanceDraft=normalizeAppearance(state.appearance),appearanceTab='body',appearanceSubmitting=false;
 let sound = read('catnest.sound', false);
 let cloud = null;
 const localPetPreview = runtime.localPreview;
 const apiBase = runtime.apiBase;
 let cloudConfigured = Boolean(apiBase);
-const modelAssetBase = import.meta.env.VITE_MODEL_URL || new URL('./model/',document.baseURI).href.replace(/\/$/,'');
+const modelAssetBase=import.meta.env.VITE_MODEL_URL || new URL('./model/',document.baseURI).href.replace(/\/$/,'');
 let saveStatus = { phase:'local', message:`${runtime.storageLabel} · 请选择身份` };
 let status = { phase:'solo', message:'选择身份，回到你们的小窝' };
 let members = [];
@@ -100,34 +120,47 @@ let growthPage = 0, claimingRewardId = null, growthGlowTimer;
 let stagePreviewId = null, pendingUpgrade = null, upgradeTimer, lastCelebratedStage = 0;
 const rewardVisuals = new Map();
 const claimOrigins = new Map();
+let growthHomeSignature = '';
 
 
 
 $('#app').innerHTML = `
 <main class="nest" aria-label="猫猫小窝养成游戏">
   <div class="room-backdrop"></div><div class="warm-overlay"></div><div class="sun-dust" aria-hidden="true"></div>
-  <header class="topbar"><a class="brand" href="${home.href}" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small>A LITTLE HOME, A LOT OF LOVE</small></span></a><div class="topbar-actions"><button class="companion-entry" data-companion-enter aria-label="沉浸陪伴，隐藏全部界面" title="隐藏全部界面，安静陪猫猫">${icon('eye-off')}<span>沉浸陪伴</span></button><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></div></header>
+  <header class="topbar"><a class="brand" href="${home.href}" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small data-nest-time>小窝的此刻</small></span></a><div class="topbar-actions"><button class="companion-entry" data-companion-enter aria-label="沉浸陪伴，隐藏全部界面" title="隐藏全部界面，安静陪猫猫">${icon('eye-off')}<span>沉浸陪伴</span></button><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></div></header>
   <div class="wallet" aria-label="养成资源"><div class="currency"><span class="coin-icon">${icon('paw-print')}</span><strong id="coins">1,200</strong><span class="currency-label">猫爪币</span></div><div class="currency"><span class="heart-icon">${icon('heart')}</span><strong id="love">86</strong><span class="currency-label">亲密度</span></div><button class="currency level-currency" data-open="stages" aria-label="查看全部成长阶段"><span class="level-heart" data-live-growth-heart></span><strong id="top-level">Lv.1</strong><span class="currency-label">成长</span></button></div>
   <button class="together" data-open="roles" aria-label="查看双方在线状态和切换身份"><span class="together-presence" id="together-presence"></span><span class="together-link" id="together-cta">进入 ›</span></button>
   <button class="partner-update" id="partner-update" data-open="shared-care" aria-label="查看伙伴动态和共同照顾记录"></button>
-  <div class="scene"><div class="speech-bubble" id="speech" role="status" aria-live="polite" aria-atomic="true" hidden><span class="speech-speaker" aria-hidden="true">${icon('paw-print')}<span class="speech-name"></span><span class="speech-dots"><i></i><i></i><i></i></span></span><span class="speech-text" aria-hidden="true"><span class="speech-content"></span></span><span class="sr-only speech-announcement"></span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><button class="model-status" id="retry-cat-model" disabled aria-live="polite">小猫正在回家…</button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div><div class="growth-rewards" id="growth-rewards" role="group" aria-label="待领取的成长气泡"></div></div>
+  <div class="scene"><div class="speech-bubble" id="speech" role="status" aria-live="polite" aria-atomic="true" hidden><span class="speech-speaker" aria-hidden="true">${icon('paw-print')}<span class="speech-name"></span><span class="speech-dots"><i></i><i></i><i></i></span></span><span class="speech-text" aria-hidden="true"><span class="speech-content"></span></span><span class="sr-only speech-announcement"></span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><button class="model-status" id="retry-cat-model" hidden disabled aria-live="polite">小猫正在回家…</button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div><div class="growth-rewards" id="growth-rewards" role="group" aria-label="待领取的成长气泡"></div>${homeLoadingMarkup()}</div>
   <div class="side-actions left-actions"><button data-action="pet" aria-label="摸摸小猫"><span>${icon('hand')}</span><small>摸摸</small><em class="care-badge" data-care-badge="pet"></em></button><button data-action="play" aria-label="用逗猫棒陪小猫玩"><span>${icon('wand-sparkles')}</span><small>逗猫</small><em class="care-badge" data-care-badge="play"></em></button><button class="game-entry" data-open="games" aria-label="小游戏，进入猫猫游戏屋"><span><img src="./assets/minigames/game-entry-v1.webp" width="44" height="44" alt="" aria-hidden="true" draggable="false" decoding="async"/></span><small>小游戏</small></button></div>
-  <div class="side-actions right-actions"><button data-open="diary" aria-label="查看养猫日记"><span>${icon('notebook-pen')}</span><small>日记</small></button><button data-action="sleep" id="sleep-button" aria-label="让小猫休息"><span>${icon('moon')}</span><small>休息</small><em class="care-badge" data-care-badge="sleep"></em></button><button data-open="appearance" aria-label="给小猫换装扮"><span>${icon('shirt')}</span><small>装扮</small></button></div>
+  <div class="side-actions right-actions"><button data-open="diary" aria-label="查看养猫日记"><span>${icon('notebook-pen')}</span><small>日记</small></button><button data-action="sleep" id="sleep-button" aria-label="让小猫休息"><span>${icon('moon')}</span><small>休息</small><em class="care-badge" data-care-badge="sleep"></em></button><button data-open="appearance" aria-label="给小猫换装扮"><span>${icon('shirt')}</span><small>装扮</small></button><button data-world-enter data-world-decorate aria-label="布置小窝，摆放家具和收藏装饰"><span>${icon('house')}</span><small>布置小窝</small></button></div>
   <section class="pet-card glass" aria-label="小猫状态"><div class="pet-title"><button class="pet-name" data-open="rename"><strong id="pet-name">糯米</strong>${icon('pencil')}</button><span class="level-badge"><span class="level-badge-heart" data-live-growth-heart></span><b id="level">Lv.1</b></span>${growthBonusBadge()}</div><div class="xp-row"><span class="xp-stage-heart" data-live-growth-heart></span><div class="progress-track" role="progressbar" aria-label="小猫成长进度" aria-valuemin="0"><div id="xp-bar"></div></div><span id="xp">86 / 120</span></div><div class="needs" aria-label="小猫状态，点击查看详情">${needButtons()}</div></section>
   <button class="feeding-preview glass" data-open="feeding" aria-label="查看当前餐食和双方喂养状态">${feedingHome({ state, clientId, members, selectedFood })}</button>
   <button class="feed-button" id="feed-button">${icon('paw-print')}<span>喂食</span><span class="feed-love">+25 ${icon('heart')}</span><span class="button-sparkle">✦</span><small class="feed-care-badge" data-care-status="feed" data-care-compact="true"></small></button>
-  <nav class="bottom-nav" aria-label="小窝导航"><button class="nav-entry judge" data-open="judge"><span class="nav-icon">${icon('gavel')}</span><span>猫猫判官<small>CAT JUDGE</small></span></button><span class="home-note">${icon('heart')}<span id="save-status" aria-live="polite">本机预览 · 云端待连接</span></span><button class="nav-entry home catbook-entry" data-open="collection" aria-label="猫猫图鉴，查看成就和邀请新猫猫"><span class="nav-icon book-nav-icon">${catSprite(getCollectionCat('bandit'))}<b class="book-nav-count" id="catbook-nav-count" aria-hidden="true" hidden></b></span><span>猫猫图鉴<small>CAT BOOK</small></span></button></nav>
+  <nav class="bottom-nav" aria-label="小窝导航"><button class="nav-entry judge" data-open="judge"><span class="nav-icon">${icon('gavel')}</span><span>猫猫判官<small>CAT JUDGE</small></span></button><span class="home-note"><button class="nest-home-entry" data-open="nest" aria-label="布置共同的小窝">⌂ 布置小窝 <b id="nest-home-level">Lv.1</b></button><span id="save-status" aria-live="polite">${runtime.storageLabel} · 请选择身份</span></span><button class="nav-entry home catbook-entry" data-open="collection" aria-label="猫猫图鉴，查看成就和邀请新猫猫"><span class="nav-icon book-nav-icon">${catSprite(getCollectionCat('bandit'))}<b class="book-nav-count" id="catbook-nav-count" aria-hidden="true" hidden></b></span><span>猫猫图鉴<small>CAT BOOK</small></span></button></nav>
   <div class="connection-note" id="connection-note" aria-live="polite"></div>
   <div class="companion-controls" id="companion-controls" hidden><button class="companion-exit" data-companion-exit>${icon('x')}<span>退出沉浸</span></button><p class="companion-hint" id="companion-hint"><strong>只留下你和猫猫</strong>点点猫猫，继续互动<br/>轻点空白处显示退出按钮 · Esc 返回小窝</p></div>
 </main>
 <dialog id="modal"><button class="modal-close round-button" id="modal-close" aria-label="关闭弹窗">${icon('x')}</button><div class="modal-content" id="modal-content"></div></dialog>
 <div class="toast" id="toast" role="status"></div>`;
+if (!WORLD_EXPLORATION_ENABLED) {
+  for (const button of document.querySelectorAll('[data-world-enter], [data-open="nest"]')) {
+    button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('aria-label', WORLD_LOCK_MESSAGE);
+    button.title = WORLD_LOCK_MESSAGE;
+    if (button.hasAttribute('data-world-enter')) {
+      button.querySelector('span').innerHTML = icon('lock-keyhole');
+      button.querySelector('small').textContent = '3D 小屋';
+      button.insertAdjacentHTML('beforeend', '<em class="care-badge">暂未开放</em>');
+    } else button.firstChild.textContent = '🔒 3D 小屋 ';
+  }
+}
 const catSpeech = createCatSpeech({
   element:$('#speech'), getState:() => {
-    const needs=petNeeds(state), behavior=catTemperament({...state,...needs},Date.now(),catExpression);
+    const needs=petNeeds(state), behavior=catTemperament({...state,...needs},nestLife.now(),catExpression);
     return {...state,...needs,behaviorPeriod:behavior.period,behaviorMood:behavior.mood};
   },
-  canSpeak:() => roleEntered && !document.hidden && !$('.nest').hidden && !$('.nest').classList.contains('is-companion') && (!$('#modal').open || ['feeding','expressions'].includes($('#modal-content').dataset.view)),
+  canSpeak:() => roleEntered && !homeCat?.active && !document.hidden && !$('.nest').hidden && !$('.nest').classList.contains('is-companion') && (!$('#modal').open || ['feeding','expressions'].includes($('#modal-content').dataset.view)),
   reducedMotion:() => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 });
 const companion = createCompanionMode({ nest:$('.nest'), cat:$('#cat'), controls:$('#companion-controls'), onChange() {
@@ -138,6 +171,34 @@ function renderIcons() { createIcons({ icons: ICONS, attrs: { 'stroke-width': 1.
 const needsFeedback = createNeedsFeedback({ root:$('.needs'), canAnimate:() =>
   roleEntered && !document.hidden && !$('.nest').hidden && !companion.active,
 });
+const interactionFeedback = createInteractionFeedback();
+const arcadeController=createArcadeController({root:$('#modal-content'),getMatch:()=>state.games.match,getClientId:()=>clientId,isSaving:careSaving,isConnected:()=>!cloudConfigured||status.phase==='online',dispatch,storage:runtime.sessionStorage,isVisible:()=>$('#modal').open&&$('#modal-content').dataset.view==='games'});
+homeCat=createHomeCatInteractions({nest:$('.nest'),scene:$('.scene'),cat:$('#cat'),getState:()=>state,getClientId:()=>clientId,getModel:()=>catModel,
+  canInteract:()=>{if(!roleEntered){openModal('roles');return false;}return !document.hidden&&!$('.nest').hidden&&!$('#modal').open&&!actionLocked;},
+  isCompanion:()=>companion.active,isSaving:careSaving,isConnected:()=>!cloudConfigured||status.phase==='online',getSaveStatus:()=>saveStatus,
+  storage:runtime.sessionStorage,dispatch,toast,
+  onPet(){
+    nestLife.interrupt();
+    if(state.sleeping){dispatch({type:'sleep'});return;}
+    if(!careSaving()&&careActionInfo(state,{type:'pet'},clientId).allowed){dispatch({type:'pet'});return;}
+    catModel?.react('touch',{...petNeeds(state),sleeping:false});catSpeech.say('touch');
+    if(!companion.active)interactionFeedback.care('touch',{sleeping:false});
+  },
+  onVisual(type){if(type==='play')catModel?.playAction('attack');else catModel?.react(type,{...petNeeds(state),sleeping:false});},
+  onOpen(){nestLife.interrupt();catSpeech.quiet();interactionFeedback.clear();},
+  onRestore(){catModel?.cancelReaction({...petNeeds(state),sleeping:state.sleeping});scheduleUpgrade();},
+  onClaim(id,button){claimOrigins.set(id,button.getBoundingClientRect());const accepted=dispatch({type:'claim-growth',rewardId:id});if(!accepted)claimOrigins.delete(id);return accepted;},
+});
+if(import.meta.hot)import.meta.hot.dispose(()=>homeCat.destroy());
+const nestLife=createNestLife({nest:$('.nest'),scene:$('.scene'),storage:localStorage,key:()=>`catnest.life.v1.${roomId}`,
+  canEvent:()=>roleEntered&&!homeCat?.active&&!document.hidden&&!$('.nest').hidden&&!companion.active&&!document.querySelector('dialog[open]')&&!state.sleeping&&!careSaving()&&!actionLocked&&$('#speech').hidden&&!$('#toast').classList.contains('visible')&&!$('.scene').classList.contains('is-home-loading')&&!$('.nest').classList.contains('duo-celebrating')&&(catModelPhase==='error'||catModel?.canAmbientEvent()),
+  onCatEvent:kind=>catModelPhase==='error'||catModel?.ambientEvent(kind),
+  showProp:event=>catModel?.stageAction({type:'life-show',kind:event.kind,variant:event.variant})===true,
+  hideProp:()=>catModel?.stageAction({type:'life-hide'}),
+});
+if(runtime.isTest)window.addEventListener('catnest:life-preview',event=>{if(event.detail?.event&&!careSaving()){catSpeech.quiet();catModel?.cancelReaction({...petNeeds(state),sleeping:state.sleeping});}nestLife.preview(event.detail);});
+if(import.meta.hot)import.meta.hot.dispose(()=>nestLife.destroy());
+if (import.meta.hot) import.meta.hot.dispose(() => interactionFeedback.destroy());
 const coupleExperience = createCoupleExperience({
   readSeen:key => read(key, null), writeSeen:save,
   canNotify:() => roleEntered && !document.hidden && !$('.nest').hidden && !companion.active,
@@ -167,7 +228,7 @@ const coupleExperience = createCoupleExperience({
     toast(message);
   },
 });
-const diary = createDiaryController({root:$('#modal-content'),getState:()=>cloudConfigured?confirmedState:state,saving:careSaving,dispatch,toast});
+const diary = createDiaryController({root:$('#modal-content'),getState:()=>cloudConfigured?confirmedState:state,saving:careSaving,dispatch,toast,supplemental:()=>nestLife.diary()});
 renderIcons();
 function render() {
   const level = levelInfo(state.xp);
@@ -191,7 +252,7 @@ function render() {
   $('#catbook-nav-count').hidden = state.collection.invited.length === 0;
   $('#cat').setAttribute('aria-label', `和${state.name}互动`);
   if (companion.active) $('#cat').removeAttribute('title');
-  else $('#cat').title = getInteractionHint('random', { ...state, ...petNeeds(state) });
+  else $('#cat').title = state.sleeping?'轻点叫醒猫猫':homeCat?.rotating?'左右滑动，转着看看':'轻点摸摸，按住滑动抚摸猫猫';
   $('.kitten').alt = `坐在暖暖房间里的橘色小猫${state.name}`;
   $('#xp').textContent = `${level.progress} / ${level.target}`;
   $('#xp-bar').style.width = `${level.progress / level.target * 100}%`;
@@ -200,6 +261,10 @@ function render() {
   $('.feed-love').firstChild.textContent = `+${growthRewardAmount(FOODS[selectedFood].love,petNeeds(state).boostCount)} `;
   renderNeeds();
   catModel?.setState({ sleeping:state.sleeping, appearance:$('#modal').open && $('#modal-content').dataset.view==='appearance' ? appearanceDraft : state.appearance });
+  world?.setState(state);
+  $('.nest').dataset.nestPalette=state.nest.palette;
+  $('#nest-home-level').textContent=WORLD_EXPLORATION_ENABLED ? `Lv.${state.nest.level}` : '暂未开放';
+  $('.nest-home-entry').title=WORLD_EXPLORATION_ENABLED ? `${nestLevel(state.nest.level).name} · 已收藏 ${state.nest.owned.length} 件家具和装饰` : WORLD_LOCK_MESSAGE;
   $('.nest').classList.toggle('sleeping', state.sleeping);
   $('#sleep-button small').textContent = state.sleeping ? '叫醒' : '休息';
   $('#sleep-button').setAttribute('aria-label', state.sleeping ? '轻轻叫醒小猫' : '让小猫休息');
@@ -213,10 +278,14 @@ function render() {
   refreshGames();
   renderCoupleCare();
   diary.refresh();
-  onboarding?.sync();
+}
+function renderHomeLoading() {
+  updateHomeLoading($('#home-loading'), { entered:roleEntered, configured:cloudConfigured, phase:status.phase, snapshotReady:coupleSnapshotReady, modelPhase:catModelPhase });
 }
 function renderConnection() {
   diary.refresh();
+  world?.refreshSaveStatus();
+  renderHomeLoading();
   refreshGames();
   const options = presenceOptions();
   const together = COUPLE_ROLES.every(role => presenceForRole(role, options).state === 'online');
@@ -313,7 +382,8 @@ function renderGrowth() {
   for (const reward of rewards) rewardVisuals.set(reward.id, { ...reward, visualXp:state.xp });
   if (claimingRewardId && !rewards.some(reward => reward.id === claimingRewardId)) claimingRewardId = null;
   const options = { blocked:cloudConfigured && status.phase !== 'online', claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(state.xp) };
-  $('#growth-rewards').innerHTML = growthBubbles(rewards, options);
+  const signature = JSON.stringify([rewards.map(({id,amount,kind,food,game,boosted,boostCount}) => [id,amount,kind,food,game,boosted,boostCount]), options.blocked, claimingRewardId, [...pendingGrowthClaims].sort(), options.stage.id]);
+  if (signature !== growthHomeSignature) { $('#growth-rewards').innerHTML = growthBubbles(rewards, options); growthHomeSignature = signature; }
   if ($('#modal').open && $('#modal-content').dataset.view === 'growth') {
     const focusedId = document.activeElement?.dataset.growthReward;
     const scroll = $('#modal').scrollTop;
@@ -324,24 +394,8 @@ function renderGrowth() {
   while (rewardVisuals.size > rewards.length + 100) rewardVisuals.delete(rewardVisuals.keys().next().value);
 }
 function animateGrowthCollection(rewardId, stage, operationId) {
-  const target = $('#xp-bar').getBoundingClientRect();
   const origin = claimOrigins.get(rewardId) || $('#growth-rewards').getBoundingClientRect();
-  const startX = origin.left + origin.width / 2, startY = origin.top + origin.height / 2;
-  const targetX = target.left + Math.max(10, target.width / 2), targetY = target.top + target.height / 2;
-  for (let index = 0; index < 4; index += 1) {
-    const heart = document.createElement('span');
-    heart.className = 'growth-flight'; heart.style.cssText=stageStyle(stage); heart.innerHTML = jellyHeartMarkup(stage);
-    if (operationId) heart.dataset.operationId = operationId;
-    heart.style.setProperty('--i', index);
-    heart.style.setProperty('--from-x', `${startX - 12}px`);
-    heart.style.setProperty('--from-y', `${startY - 12}px`);
-    heart.style.setProperty('--to-x', `${targetX - startX + index * 4}px`);
-    heart.style.setProperty('--to-y', `${targetY - startY}px`);
-    heart.style.setProperty('--arc-x', `${(index - 1.5) * 22}px`);
-    heart.style.setProperty('--arc-y', `${-35 - index * 7}px`);
-    document.body.append(heart);
-    setTimeout(() => heart.remove(), 1400);
-  }
+  interactionFeedback.collect({ origin, target:$('.progress-track'), artwork:`${import.meta.env.BASE_URL}assets/growth-hearts/v1/${stage.id}.webp`, operationId });
   claimOrigins.delete(rewardId);
   $('.pet-card').classList.add('growth-collected');
   clearTimeout(growthGlowTimer);
@@ -360,7 +414,7 @@ function scheduleUpgrade() {
   clearTimeout(upgradeTimer);
   if (!pendingUpgrade) return;
   upgradeTimer=setTimeout(() => {
-    if (!pendingUpgrade || !roleEntered || onboarding?.isOpen() || companion.active || $('.nest').hidden || $('#modal').open || document.hidden) return;
+    if (!pendingUpgrade || !roleEntered || onboarding?.isOpen() || companion.active || homeCat?.active || $('.nest').hidden || $('#modal').open || document.hidden) return;
     lastCelebratedStage=pendingUpgrade.to.min;
     openModal('stage-upgrade');
     pendingUpgrade=null;
@@ -373,11 +427,13 @@ function chime() {
 function react(action, actor, { optimistic = false, previewed = false, operationId, previousXp, confirmedXp } = {}) {
   onboarding?.confirmed(action,actor,{optimistic,operationId});
   if (['join-home','adopt-cat'].includes(action.type)) return;
+  nestLife.interrupt();
   const mine = actor.id === clientId;
   if(action.type==='diary-favorite'){diary.refresh();return;}
+  if(action.type?.startsWith('nest-')){if(!optimistic&&!previewed)toast(`${actor.name}${mine?'':'刚刚'}${state.nest.lastEdit?.text||'更新了小窝布置'}`);return;}
   if (action.type?.startsWith('game-')) { refreshGames(); return; }
   if (action.type === 'invite-cat') {
-    toast(`${getCollectionCat(action.catId)?.name || '新猫猫'}已加入猫猫庭院，快去看看它吧 ♡`);
+    toast(`${getCollectionCat(action.catId)?.name || '新猫猫'}已加入${CAT_SCENES.find(scene=>scene.id===action.sceneId)?.name || '猫猫车站'}，快去看看它吧 ♡`);
     chime();
     return;
   }
@@ -416,13 +472,16 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   void $('.kitten').offsetWidth;
   $('.kitten').classList.add(`react-${action.type}`);
   catModel?.react(action.type, { ...petNeeds(state), sleeping: state.sleeping });
-  if (!state.sleeping) {
-    $('#particles').innerHTML = Array.from({ length:6 }, (_, i) => `<span style="--i:${i};--x:${18+i*12}%">✦</span>`).join('');
-    setTimeout(() => { $('#particles').innerHTML = ''; }, 1400);
+  if (!companion.active) {
+    interactionFeedback.care(action.type, { local:mine, sleeping:state.sleeping, operationId, foodMarkup:action.type === 'feed' ? foodArt(action.food) : '' });
+    const rewardButton = Array.from($('#growth-rewards').querySelectorAll('[data-growth-reward]')).find(button => button.dataset.growthReward === operationId);
+    if (rewardButton) interactionFeedback.rewardReady(rewardButton, operationId);
   }
-  chime(); if (mine && navigator.vibrate) navigator.vibrate(12);
+  chime();
 }
 function rollbackReaction(action, actor, { operationId }) {
+  if(action.type?.startsWith('nest-')){world?.setState(state);return;}
+  interactionFeedback.rollback(operationId);
   needsFeedback.reset(petNeeds(state));
   for (const flight of document.querySelectorAll('.growth-flight')) {
     if (flight.dataset.operationId === operationId) flight.remove();
@@ -441,13 +500,11 @@ function careNotice(key, message) {
   const now = Date.now();
   if (key !== careFeedbackKey || now - careFeedbackAt >= 5000) { toast(message); careFeedbackKey=key; careFeedbackAt=now; }
 }
-function currentInteraction() {
-  return resolveInteraction('random', { ...state, ...petNeeds(state) }, Math.random, action => careActionInfo(state, action, clientId).allowed);
-}
 function dispatch(action) {
   if (!roleEntered) { openModal('roles'); return false; }
+  if(action?.type==='game-create'&&TOUCH_GAMES.includes(action.game)&&!catPlayUnlocked(levelInfo(state.xp).level)){toast(`猫猫达到 Lv.${CAT_PLAY_UNLOCK_LEVEL} 后解锁陪玩`);return false;}
   if (action?.type?.startsWith('game-') && careSaving()) return false;
-  if (actionLocked && !['claim-growth','invite-cat'].includes(action?.type) && !action?.type?.startsWith('game-')) return false;
+  if (actionLocked && !['claim-growth','invite-cat'].includes(action?.type) && !action?.type?.startsWith('game-') && !action?.type?.startsWith('nest-')) return false;
   if (!action) {
     if (careSaving()) { careNotice('pending', '上一份陪伴正在保存，稍等一下 ♡'); return false; }
     const nearest = ['pet', 'sleep', ...(petNeeds(state).energy >= PLAY_ENERGY_COST ? ['play'] : [])].map(type => ({ type, info:careActionInfo(state, { type }, clientId) })).sort((a,b) => a.info.availableAt - b.info.availableAt)[0];
@@ -455,6 +512,7 @@ function dispatch(action) {
     return false;
   }
   const care = careActionInfo(state, action, clientId);
+  if(action.type.startsWith('nest-')){const result=nestActionResult(state,action,{id:clientId,name:profile.name});if(!result.ok){toast(result.reason);return false;}}
   if (action.type === 'invite-cat' && careSaving()) { careNotice('pending', '正在保存上一份陪伴，稍等一下再邀请 ♡'); return false; }
   if (action.type === 'claim-growth') {
     if (pendingGrowthClaims.has(action.rewardId)) return false;
@@ -469,14 +527,15 @@ function dispatch(action) {
   if (action.type === 'play' && petNeeds(state).energy < PLAY_ENERGY_COST) { toast('小猫有点累，先让它休息一下吧'); return false; }
   initializeCatbook();
   if (cloudConfigured) {
-    if (!cloud || status.phase !== 'online' || !cloud.dispatch(action)) { toast('正在连接演示小窝，连上后就可以继续照顾小猫'); return false; }
+    if (!cloud || status.phase !== 'online' || !cloud.dispatch(action)) { toast('正在连接云端小窝，连上后就可以继续照顾小猫'); return false; }
     if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
     actionLocked = true; setTimeout(() => actionLocked = false, 650); return true;
   }
   const actor = { id:clientId, name:profile.name };
-  const next = reduceAction(state, action, actor, Date.now(), crypto.randomUUID());
+  const localOperationId = crypto.randomUUID();
+  const next = reduceAction(state, action, actor, Date.now(), localOperationId);
   if (!next) { toast('这次互动暂时不能完成，请稍后再试'); updateCareControls(); return false; }
-  state = next; render(); react(action, actor);
+  state = next; render(); react(action, actor, { operationId:localOperationId });
   if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
   return true;
@@ -496,10 +555,12 @@ function startCloud() {
     pending, optimisticReducer:reduceAction, onRollback:rollbackReaction,
     onRoom(id) { roomId=id; save('catnest.couple.room',id); save('catnest.room',id); coupleExperience.reset({ role:chosenRole, roomId:id }); },
     onState(next, metadata) {
+      arcadeController.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);
+      homeCat?.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);
       confirmedState=normalizeState(metadata?.confirmedState || next); state=normalizeState(next);
       coupleSnapshotReady=true;
       if (!receivedNeedsState) { needsFeedback.reset(petNeeds(state)); receivedNeedsState=true; }
-      render();
+      render(); renderHomeLoading();
     },
     onAction:react,
     onPresence(next) { members=next; presenceKnown=true; coupleExperience.presence(next, status.phase === 'online'); renderConnection(); },
@@ -536,12 +597,16 @@ function enterRole(role) {
   if (params.has('court') || params.get('mode') === 'judge') { params.delete('court'); params.delete('mode'); showCourt(); }
 }
 function openModal(view, options = {}) {
+  if (view === 'nest' && !WORLD_EXPLORATION_ENABLED) { toast(WORLD_LOCK_MESSAGE); return; }
+  homeCat?.dismiss();
   if(view==='diary' && $('#modal-content').dataset.view!=='diary')diary.open(options.diaryFilter);
+  nestLife.interrupt();
   companion.exit();
   if (!roleEntered && view !== 'roles') view='roles';
   if (view === 'onboarding' || view === 'invite') { onboarding?.start({invite:view==='invite'}); return; }
   if (view === 'judge') { closeModal(); showCourt(); return; }
   if (view === 'collection') { closeModal(); showCatbook(); return; }
+  if (view === 'nest') { closeModal(); void showWorld({decorate:true}); return; }
   if (view === 'shared-care' && (!$('#modal').open || $('#modal-content').dataset.view !== 'shared-care')) { coupleTab='activity'; couplePages.activity=couplePages.memories=0; coupleHasNew=false; }
   if(view==='appearance' && (!$('#modal').open || $('#modal-content').dataset.view!=='appearance')){appearanceDraft=normalizeAppearance(state.appearance);appearanceSubmitting=false;}
   if (view==='stages' && (!$('#modal').open || $('#modal-content').dataset.view!=='stages')) stagePreviewId=growthStageForXp(state.xp).id;
@@ -550,6 +615,8 @@ function openModal(view, options = {}) {
   $('#modal').classList.toggle('appearance-sheet',view==='appearance');
   $('#modal').classList.toggle('expression-sheet',view==='expressions');
   catRhythm.setAttribute('aria-expanded',String(view==='expressions'));
+  if(view==='expressions')$('#modal').setAttribute('aria-labelledby','expression-panel-title');
+  else $('#modal').removeAttribute('aria-labelledby');
   $('.nest').classList.toggle('expressions-open',view==='expressions');
   $('#modal-close').hidden = view === 'roles' && !roleEntered;
   $('#modal').classList.toggle('role-dialog', view === 'roles');
@@ -570,7 +637,7 @@ function openModal(view, options = {}) {
     stages: () => growthStagesPanel(state.xp, stagePreviewId),
     'stage-upgrade': () => pendingUpgrade ? growthUpgradePanel(pendingUpgrade,state.xp) : growthStagesPanel(state.xp),
     appearance: () => appearanceSheet(),
-    expressions: () => catExpressionsPanel(catExpression),
+    expressions: () => catExpressionsPanel(catPaletteTab),
     feeding: () => feedingSheet(feedingSheetOptions()),
     roles: () => rolePicker({...presenceOptions(),state:cloudConfigured?confirmedState:state,ready:roleEntered&&coupleSnapshotReady,invitedRole,newVisitor:!returningOwner}),
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
@@ -583,6 +650,7 @@ function openModal(view, options = {}) {
   if (view==='guide') $('#modal-content').insertAdjacentHTML('beforeend','<button class="stage-guide-link" data-open="stages">查看全部成长阶段 <span>›</span></button>');
   renderIcons(); renderConnection();
   if (!$('#modal').open) $('#modal').showModal();
+  interactionFeedback.panel($('#modal-content'));
   if (view === 'expressions') positionExpressionsPanel();
   if (view === 'feeding') catSpeech.say('feeding');
   updateFeedingSaveStatus();
@@ -590,12 +658,16 @@ function openModal(view, options = {}) {
 }
 function gameOptions() { return { state, clientId, saving:careSaving(), multiplayer:cloudConfigured, connected:cloudConfigured ? status.phase === 'online' : true, lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, localPreview:!cloudConfigured || localPetPreview }; }
 function refreshGames() {
+  homeCat?.sync();
   scheduleComputerTurn();
-  if (!$('#modal').open || $('#modal-content').dataset.view !== 'games') return;
+  if (!$('#modal').open || $('#modal-content').dataset.view !== 'games') {arcadeController.suspend();return;}
   const selection = `${state.games.match?.id}:${state.games.match?.step}`;
   if (selection !== gameSelectionStep) { gameSelectionStep=selection; gameSelectedCell=null; }
   const content = minigamesPanel(gameOptions());
-  if (content === gameLastMarkup) return;
+  const current=state.games.match;
+  // Keep pointer capture and the playfield alive while input checkpoints save.
+  if(!gameLobby&&current?.id===gameRenderedId&&TOUCH_GAMES.includes(current.game)&&current.status==='active'&&current.arcade.stage==='running'&&$('#modal-content').querySelector('[data-arcade-id]')){gameLastMarkup=content;arcadeController.sync();return;}
+  if (content === gameLastMarkup) {arcadeController.sync();return;}
   gameLastMarkup=content;
   const matchId = state.games.match?.id || '';
   const changedMatch = gameRenderedId !== matchId;
@@ -604,6 +676,7 @@ function refreshGames() {
   const cell = focus?.dataset.gameCell, column = focus?.dataset.gameColumn, move = focus?.dataset.gameMove;
   const scroll = changedMatch ? 0 : $('#modal').scrollTop;
   $('#modal-content').innerHTML = content;
+  arcadeController.sync();
   $('#modal').scrollTop = scroll;
   if (cell !== undefined) $(`[data-game-cell="${cell}"]`)?.focus({preventScroll:true});
   else if (column !== undefined) $(`[data-game-column="${column}"]`)?.focus({preventScroll:true});
@@ -699,6 +772,7 @@ function updateCareControls(now = Date.now()) {
   }
 }
 const careClock = setInterval(() => {
+  nestLife.tick();
   refreshGames();
   if (document.hidden) return;
   updateCareControls();
@@ -715,7 +789,7 @@ const careClock = setInterval(() => {
   if (expired && $('#modal').open && $('#modal-content').dataset.view === 'feeding') refreshFeedingSheet();
 }, 1000);
 function closeModal() { if (roleEntered && !appearanceSubmitting) $('#modal').close(); }
-function updateModelPause() { catModel?.setPaused(document.hidden || ($('#modal').open && !['feeding','appearance','expressions'].includes($('#modal-content').dataset.view)) || $('.nest').hidden); catSpeech.sync(); }
+function updateModelPause() { nestLife.interrupt();catModel?.setPaused(document.hidden || ($('#modal').open && !['feeding','appearance','expressions'].includes($('#modal-content').dataset.view)) || $('.nest').hidden); catSpeech.sync();nestLife.tick(); }
 const catRhythm = document.createElement('button');
 catRhythm.id='cat-rhythm';catRhythm.className='cat-rhythm';
 catRhythm.dataset.open='expressions';catRhythm.setAttribute('aria-haspopup','dialog');catRhythm.setAttribute('aria-controls','modal');
@@ -726,42 +800,40 @@ function positionExpressionsPanel() {
   if(!$('#modal').open || $('#modal-content').dataset.view!=='expressions')return;
   const anchor=catRhythm.getBoundingClientRect(), panel=$('#modal').getBoundingClientRect();
   const gap=10, margin=12, width=window.innerWidth, height=window.innerHeight;
-  const left=anchor.right+gap+panel.width<=width-margin ? anchor.right+gap : anchor.right-panel.width;
+  const beside=anchor.right+gap+panel.width<=width-margin;
+  const left=beside ? anchor.right+gap : anchor.right-panel.width;
+  const top=beside ? anchor.top-6 : $('#cat').getBoundingClientRect().bottom+gap;
   $('#modal').style.setProperty('--expression-left',`${Math.max(margin,Math.min(left,width-panel.width-margin))}px`);
-  $('#modal').style.setProperty('--expression-top',`${Math.max(margin,Math.min(anchor.top-6,height-panel.height-margin))}px`);
+  $('#modal').style.setProperty('--expression-top',`${Math.max(margin,Math.min(top,height-panel.height-margin))}px`);
 }
 window.addEventListener('resize',positionExpressionsPanel);
 window.addEventListener('scroll',positionExpressionsPanel,{passive:true});
-function refreshExpressionControls() {
-  for(const button of document.querySelectorAll('[data-expression-choice]')) {
-    const selected=button.dataset.expressionChoice===catExpression;
-    button.setAttribute('aria-pressed',String(selected));
-    button.querySelector('.expression-check').textContent=selected?'✓':'';
-  }
-}
 function renderCatBehavior(behavior) {
-  lastCatBehavior=behavior;catExpression=behavior.expression;
+  catExpression=behavior.expression;
   $('.nest').dataset.catPeriod=behavior.period;
   $('.nest').dataset.catMood=behavior.mood;
   const name=catExpressionName(behavior.mood)==='跟随心情'?behavior.moodLabel:catExpressionName(behavior.mood);
   catRhythm.innerHTML=`${catExpressionPortrait(behavior.mood,'expression-entry-face')}<small>表情</small>`;
   catRhythm.title=`${behavior.periodLabel}：${behavior.label}`;
   catRhythm.setAttribute('aria-label', `表情，当前${name}，点击切换猫咪表情`);
-  refreshExpressionControls();
 }
 async function initializeCatModel() {
-  catModel?.destroy();
-  $('#retry-cat-model').textContent='小猫正在回家…';$('#retry-cat-model').disabled=true;
+  catModel?.destroy(); catModelPhase='loading'; renderHomeLoading();
+  $('#retry-cat-model').hidden=true;$('#retry-cat-model').disabled=true;
+  const failed=() => {
+    catModelPhase='error'; renderHomeLoading();
+    $('#retry-cat-model').hidden=false;$('#retry-cat-model').disabled=false;$('#retry-cat-model').textContent='小猫还没加载好，点这里重试';
+  };
   try {
-    const { createCatModel } = await import('./cat-model.js');
-    catModel = createCatModel({ container: $('#cat'), assetBase:modelAssetBase, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, onBehaviorChange:renderCatBehavior,
-      onReady() { $('#retry-cat-model').hidden=true; queueMicrotask(() => { catModel?.setState(state); updateModelPause(); }); },
-      onError() { $('#retry-cat-model').hidden=false;$('#retry-cat-model').disabled=false;$('#retry-cat-model').textContent='小猫还没加载好，点这里重试'; },
+    const [{ createCatModel },{ createLifePropStage }] = await Promise.all([import('./cat-model.js'),import('./nest-life-props.js')]);
+    catModel = createCatModel({ container: $('#cat'), assetBase:modelAssetBase, clock:()=>nestLife.now(), canRotate:()=>Boolean(homeCat?.rotating), reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, onBehaviorChange:renderCatBehavior,
+      decorateScene:createLifePropStage,
+      onReady() { catModelPhase='ready'; renderHomeLoading(); $('#retry-cat-model').hidden=true; queueMicrotask(() => { catModel?.setState(state); updateModelPause(); }); },
+      onError:failed,
     });
     catModel.setState(state);
-    catModel.setExpression(catExpression);
     updateModelPause();
-  } catch { /* Keep the illustrated fallback if the 3D module cannot load. */ }
+  } catch { failed(); }
 }
 document.addEventListener('click', event => {
   const el = event.target.closest('button'); if (!el) return;
@@ -779,11 +851,12 @@ document.addEventListener('click', event => {
     return;
   }
   if (el.disabled) return;
+  if (el.hasAttribute('data-home-loading-retry')) { startCloud(); return; }
   if (el.hasAttribute('data-game-copy')) { copyGameLink(); return; }
   if (el.hasAttribute('data-game-lobby')) { gameLobby=true; gameSelectedGame=null; gameSelectedCell=null; refreshGames(); $('#modal').scrollTop=0; return; }
   if (el.dataset.gameSelect) { gameLobby=true; gameSelectedGame=el.dataset.gameSelect; refreshGames(); $('#modal').scrollTop=0; return; }
   if (el.hasAttribute('data-game-open')) { gameLobby=false; refreshGames(); return; }
-  if (el.dataset.gameCreate) { gameAction({type:'game-create',game:el.dataset.gameCreate,mode:el.dataset.gameMode,previousId:state.games.match?.id ?? null}); return; }
+  if (el.dataset.gameCreate) { const difficulty=el.dataset.gameDifficulty||$('#game-computer-difficulty')?.value;gameAction({type:'game-create',game:el.dataset.gameCreate,mode:el.dataset.gameMode,previousId:state.games.match?.id ?? null,...(difficulty&&el.dataset.gameMode==='computer'?{difficulty}:{})}); return; }
   const match = state.games.match;
   if (match && el.hasAttribute('data-game-join')) { gameAction({type:'game-join',gameId:match.id}); return; }
   if (match && el.hasAttribute('data-game-cancel')) { gameAction({type:'game-cancel',gameId:match.id}); return; }
@@ -793,9 +866,16 @@ document.addEventListener('click', event => {
   if (match && el.hasAttribute('data-game-confirm') && gameSelectedCell !== null) { gameAction({type:'game-move',gameId:match.id,step:match.step,move:gameSelectedCell}); return; }
   if (match && el.dataset.gameMove !== undefined) { gameAction({type:'game-move',gameId:match.id,step:match.game === 'rps' ? match.rounds.length : match.step,move:match.game === 'rps' ? el.dataset.gameMove : Number(el.dataset.gameMove)}); return; }
   if (el.hasAttribute('data-companion-enter')) {
+    homeCat?.dismiss();
     if (!roleEntered) { openModal('roles'); return; }
     if (appearanceSubmitting) return;
     closeModal(); companion.enter(el, { keyboard:event.detail === 0 }); return;
+  }
+  if (el.hasAttribute('data-world-enter')) {
+    if (!WORLD_EXPLORATION_ENABLED) { toast(WORLD_LOCK_MESSAGE); return; }
+    if (!roleEntered) { openModal('roles'); return; }
+    if (!appearanceSubmitting) void showWorld({decorate:el.hasAttribute('data-world-decorate')});
+    return;
   }
   if (el.dataset.growthReward) {
     const rewardId = el.dataset.growthReward;
@@ -811,15 +891,25 @@ document.addEventListener('click', event => {
     $('#modal').scrollTop=0; $('.stage-preview')?.focus({preventScroll:true}); return;
   }
   if (el.id==='retry-cat-model'){initializeCatModel();return;}
+  if (el.dataset.catPaletteTab) {
+    catPaletteTab=el.dataset.catPaletteTab==='actions'?'actions':'expressions';
+    $('#modal-content').innerHTML=catExpressionsPanel(catPaletteTab);renderIcons();positionExpressionsPanel();
+    $(`[data-cat-palette-tab="${catPaletteTab}"]`).focus({preventScroll:true});
+    return;
+  }
+  if (el.dataset.catAnimation && catAction(el.dataset.catAnimation)) {
+    closeModal();catModel?.playAction(el.dataset.catAnimation);
+    return;
+  }
   if (el.dataset.expressionChoice!==undefined) {
-    catExpression=normalizeCatExpression(el.dataset.expressionChoice);
-    catModel?.setExpression(catExpression);refreshExpressionControls();
-    $('#expression-feedback').textContent=catExpression==='auto'?'跟着小猫自己的心情，慢慢陪伴。':`${catExpressionName(catExpression)}的猫猫，正在陪着你。`;
+    const expression=normalizeCatExpression(el.dataset.expressionChoice);
+    closeModal();catModel?.setExpression(expression);
     return;
   }
   if (el.hasAttribute('data-expression-greet')) {
+    closeModal();
     catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');
-    $('#expression-feedback').textContent=lastCatBehavior?.label || '收到你的招呼啦 ♡';return;
+    return;
   }
   if (el.dataset.appearanceTab){appearanceTab=el.dataset.appearanceTab;refreshAppearanceSheet();return;}
   if (el.dataset.appearanceChoice!==undefined && !appearanceSubmitting){appearanceDraft={...appearanceDraft,[appearanceTab]:Number(el.dataset.appearanceChoice)};catModel?.setAppearance(appearanceDraft);refreshAppearanceSheet();return;}
@@ -830,21 +920,12 @@ document.addEventListener('click', event => {
   if (el.dataset.close !== undefined || el.id === 'modal-close') { closeModal(); return; }
   if (el.dataset.needAction) { if (dispatch({ type:el.dataset.needAction })) closeModal(); return; }
   if (el.dataset.action) { dispatch({ type: el.dataset.action }); return; }
-  if (el.id === 'cat') {
-    const dragged=catModel?.consumeTap();
-    if (event.detail === 0 || !dragged) {
-      const action=currentInteraction();
-      if (roleEntered && !action) { catModel?.react('touch', { ...petNeeds(state), sleeping:state.sleeping });catSpeech.say('touch'); }
-      else dispatch(action);
-    }
-    return;
-  }
   if (el.dataset.feedingTab) { feedingTab = el.dataset.feedingTab; refreshFeedingSheet(); return; }
   if (el.dataset.foodCategory) { foodCategory = el.dataset.foodCategory; refreshFeedingSheet(); return; }
   if (el.dataset.food) {
     if (!Object.hasOwn(FOODS, el.dataset.food)) return;
     selectedFood = el.dataset.food;
-    save('catnest.food', selectedFood); render(); return;
+    save('catnest.food', selectedFood); render(); interactionFeedback.selection($('.dish-food')); return;
   }
   if (el.id === 'feed-button') { feedingTab='menu'; openModal('feeding'); return; }
   if (el.id === 'serve-food') { if (dispatch({ type:'feed', food:selectedFood })) closeModal(); return; }
@@ -880,6 +961,30 @@ catbookContainer.id = 'catbook-root';
 catbookContainer.hidden = true;
 $('#app').append(catbookContainer);
 let homeScroll = 0;
+const worldContainer = document.createElement('section');
+worldContainer.id='world-root';worldContainer.hidden=true;
+$('#app').append(worldContainer);
+async function showWorld({decorate=false}={}) {
+  if (!WORLD_EXPLORATION_ENABLED) { toast(WORLD_LOCK_MESSAGE); return; }
+  homeCat?.dismiss();
+  if(worldOpening)return;
+  worldOpening=true;
+  try {
+    if(!world){
+      const { createWorldExperience }=await import('./world-experience.js');
+      world=createWorldExperience({container:worldContainer,modelAssetBase,getPetState:()=>state,
+        getSaveStatus:()=>cloudConfigured?saveStatus:{phase:'local'},onDecorAction:dispatch,onRetrySave:startCloud,
+        onFurnitureUse(id){const item=nestItem(id);return item?.care?dispatch({type:item.care,furniture:id}):false;},onBack(){
+        $('.nest').hidden=false;updateModelPause();scheduleUpgrade();window.scrollTo(0,homeScroll);
+        $('[data-world-enter]').focus({preventScroll:true});
+      }});
+    }
+    closeModal();companion.exit();interactionFeedback.clear();homeScroll=window.scrollY;
+    $('.nest').hidden=true;world.open({decorate});updateModelPause();
+  }catch{toast('3D小屋正在准备中，稍后再来看看。');}
+  finally{worldOpening=false;}
+}
+if(import.meta.hot)import.meta.hot.dispose(()=>world?.destroy());
 function initializeCatbook() {
   if (!catbook) catbook = createCatbook({
     container:catbookContainer,
@@ -896,6 +1001,8 @@ function initializeCatbook() {
   });
 }
 function showCatbook() {
+  homeCat?.dismiss();
+  interactionFeedback.clear();
   companion.exit();
   initializeCatbook();
   homeScroll = window.scrollY;
@@ -903,6 +1010,8 @@ function showCatbook() {
   catbook.open(); window.scrollTo(0,0); updateModelPause();
 }
 async function showCourt() {
+  homeCat?.dismiss();
+  interactionFeedback.clear();
   companion.exit();
   try {
     if (!court) {
@@ -920,7 +1029,9 @@ onboarding=createOnboarding({storage:runtime.localStorage,preferences:runtime.gu
 window.addEventListener('catnest:onboarding',event=>onboarding.start({restart:event.detail?.restart===true}));
 if(import.meta.hot)import.meta.hot.dispose(()=>onboarding.destroy());
 render(); renderConnection(); initializeCatModel(); openModal('roles');
+$('.nest').addEventListener('pointerdown',()=>nestLife.interrupt(),{passive:true});
+nestLife.tick();
 import('./growth-heart.js').then(({ createGrowthHeartRenderer }) => createGrowthHeartRenderer()).catch(() => { /* Keep the glossy fallback if 3D rendering is unavailable. */ });
 window.addEventListener('pagehide', () => { clearTimeout(coupleFeedbackTimer); clearTimeout(coupleHeartsTimer); $('.nest').classList.remove('duo-celebrating'); });
-window.addEventListener('pagehide', () => { needsFeedback.reset(petNeeds(state)); clearComputerTurn(); cloud?.destroy(); catModel?.setPaused(true); catSpeech.stop(); });
+window.addEventListener('pagehide', () => { homeCat?.dismiss();nestLife.interrupt();arcadeController.suspend();needsFeedback.reset(petNeeds(state)); clearComputerTurn(); cloud?.destroy(); catModel?.setPaused(true); catSpeech.stop(); });
 window.addEventListener('pageshow', e => { if (e.persisted) { if (roleEntered && cloudConfigured) startCloud(); if (roleEntered) catSpeech.start(); updateModelPause(); } });

@@ -4,21 +4,30 @@ import { normalizeAppearance, MAGE_CAT_VERSION } from './mage-cat-config.js';
 import { advanceMagePose } from './mage-cat-animation.js';
 import { createCatBehavior } from './cat-behavior.js';
 import { createMageAnimationPlayer } from './mage-cat-player.js';
+import { NEST_PERIODS } from './nest-life.js';
+import { catStageFrame, catStageOffset } from './cat-stage-frame.js';
+import { createYarnPawRig } from './nest-yarn-paw.js';
+const PERIOD_LIGHTS=Object.fromEntries(Object.entries(NEST_PERIODS).map(([id,p])=>[id,{...p,skyColor:new THREE.Color(p.sky),keyColor:new THREE.Color(p.tint)}]));
 
 /** Nekueda's licensed Mage Cat, with its original skeleton, LODs, motions and textures. */
-export function createCatModel({container,assetBase,onReady,onError,reducedMotion=false,decorateScene,onBehaviorChange,autonomous=true,random=Math.random,clock=Date.now}={}) {
+export function createCatModel({container,assetBase,onReady,onError,reducedMotion=false,decorateScene,onBehaviorChange,autonomous=true,random=Math.random,clock=Date.now,canRotate=()=>true}={}) {
   const base=(assetBase || `${import.meta.env.BASE_URL}api/pet-model/${MAGE_CAT_VERSION}`).replace(/\/$/,'');
   let renderer,scene,camera,pivot,model,mixer,player,decoration,ambientLight,keyLight;
   let frame=0,lastFrame=0,destroyed=false,paused=false,ready=false,failed=false;
   let elapsed=0,yaw=0,targetYaw=0,behaviorKey='';
+  let engagementYaw=null;
   const behavior=createCatBehavior({random,clock,reducedMotion,autonomous});
   let pose=behavior.snapshot();
   let pointer=null,didDrag=false,observer,currentExpression='',textureRevision=0;
   let appearance=normalizeAppearance();
   let baseHalfHeight=1.72,viewHalfHeight=1.72,viewCenter=1.5;
+  let roomView=false,layout,stageFrame,pawRig;
+  const stageAnchor=new THREE.Vector3(),stageFoot=new THREE.Vector3(),footSample=new THREE.Vector3();let stageFeet=[];
   const materials=new Map(),geometries=new Set(),texturePromises=new Map(),disposers=[];
   const listen=(node,type,handler,options)=>{node.addEventListener(type,handler,options);disposers.push(()=>node.removeEventListener(type,handler,options));};
   const api={
+    canAmbientEvent(){return ready&&!paused&&!pointer&&engagementYaw===null&&behavior.canAmbientEvent();},
+    ambientEvent(kind){if(!api.canAmbientEvent())return false;const next=behavior.ambientEvent(kind);if(!next)return false;pose=next;player.sync(pose);updateExpression();publishBehavior();startFrame();return true;},
     react(type,state={}) {
       if(type && typeof type==='object')type=type.type;
       pose=behavior.react(type,state);
@@ -38,21 +47,26 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       pose=behavior.setExpression(value);
       if(ready){player.sync(pose);updateExpression();publishBehavior();startFrame();}
     },
+    playAction(value) {
+      pose=behavior.playAction(value);
+      if(ready){player.sync(pose);updateExpression();publishBehavior();startFrame();}
+    },
     setAppearance(value) {
       const next=normalizeAppearance(value);
       if(JSON.stringify(next)===JSON.stringify(appearance))return;
       appearance=next;
       if(ready)applyAppearance().catch(fail);
     },
-    setPaused(value){const next=Boolean(value);if(paused===next)return;paused=next;lastFrame=0;if(paused){cancelAnimationFrame(frame);frame=0;behavior.suspend();pose=behavior.snapshot();}else startFrame();},
+    setPaused(value){const next=Boolean(value);if(paused===next)return;paused=next;lastFrame=0;if(paused){decoration?.act?.({type:'life-hide'});cancelAnimationFrame(frame);frame=0;behavior.suspend();pose=behavior.snapshot();}else startFrame();},
     consumeTap(){const result=didDrag;didDrag=false;return result;},
     resetView(){targetYaw=0;startFrame();},
-    stageAction(action){decoration?.act?.(action);startFrame();},
-    destroy(){destroyed=true;cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();decoration?.destroy?.();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
+    setEngaged(value){if(value&&engagementYaw===null){engagementYaw=targetYaw;targetYaw=0;pointer=null;}else if(!value&&engagementYaw!==null){targetYaw=engagementYaw;engagementYaw=null;}startFrame();},
+    stageAction(action){const result=decoration?.act?.(action);startFrame();return result;},
+    destroy(){destroyed=true;cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();pawRig?.restore();decoration?.destroy?.();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
   };
   function publishBehavior(){
     container.dataset.catMood=pose.mood;container.dataset.catPeriod=pose.period;container.dataset.catAction=pose.id;container.dataset.catClip=pose.clip;container.dataset.catExpressionMode=pose.expression;
-    const key=`${pose.mood}:${pose.period}:${pose.id}:${pose.source}:${pose.expression}`;
+    const key=`${pose.mood}:${pose.period}:${pose.id}:${pose.source}:${pose.expression}:${pose.token}`;
     if(key!==behaviorKey){behaviorKey=key;onBehaviorChange?.(pose);}
   }
   function fail(error){if(destroyed || failed)return;failed=true;cancelAnimationFrame(frame);frame=0;container?.classList.remove('has-cat-model');container?.setAttribute('aria-busy','false');if(container)container.dataset.modelPhase='error';onError?.(error);}
@@ -85,11 +99,27 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       startFrame();
     }catch(error){fail(error);}
   }
+  function updateCamera(){
+    if(!layout)return;
+    stageFrame=catStageFrame({...layout,halfHeight:viewHalfHeight,expanded:roomView});
+    for(const edge of ['left','right','top','bottom'])camera[edge]=stageFrame[edge];
+    camera.position.y=viewCenter+.15;camera.lookAt(0,viewCenter,0);camera.updateProjectionMatrix();camera.updateMatrixWorld();
+  }
+  function setRoomView(value){
+    if(roomView===Boolean(value))return;roomView=Boolean(value);
+    if(!roomView){pawRig?.restore();if(pivot){pivot.position.set(0,0,0);pivot.rotation.set(0,yaw,0);}}
+    resize();
+  }
   function resize(){
     if(destroyed || !renderer || !camera)return;
     const width=Math.max(1,container.clientWidth),height=Math.max(1,container.clientHeight),aspect=width/height;
+    const room=container.closest('.nest'),rect=container.getBoundingClientRect(),roomRect=room?.getBoundingClientRect();
+    layout={width,height,roomWidth:room?.clientWidth??width,roomHeight:room?.clientHeight??height,offsetX:roomRect?rect.left-roomRect.left-room.clientLeft:0,offsetY:roomRect?rect.top-roomRect.top-room.clientTop:0};
     baseHalfHeight=Math.max(1.72,1.65/Math.max(.65,aspect));viewHalfHeight=baseHalfHeight;
-    camera.left=-viewHalfHeight*aspect;camera.right=viewHalfHeight*aspect;camera.top=viewHalfHeight;camera.bottom=-viewHalfHeight;camera.updateProjectionMatrix();renderer.setSize(width,height,false);
+    updateCamera();renderer.setSize(stageFrame.width,stageFrame.height,false);
+    const style=renderer.domElement.style;
+    if(roomView){style.left=`${-stageFrame.offsetX}px`;style.top=`${-stageFrame.offsetY}px`;style.width=`${stageFrame.width}px`;style.height=`${stageFrame.height}px`;}
+    else for(const key of ['left','top','width','height'])style.removeProperty(key);
     if(model){const lod=width<275?1:0;model.traverse(n=>{if(n.isMesh){const match=n.name.match(/_LOD([0-2])$/);if(match)n.visible=Number(match[1])===lod;}});}
     decoration?.resize?.({width,height});
     if(ready)renderer.render(scene,camera);
@@ -100,20 +130,32 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     frame=0;if(destroyed || failed || paused || !ready)return;
     if(lastFrame && now-lastFrame<1000/30){frame=requestAnimationFrame(animate);return;}
     const delta=Math.min(.075,lastFrame?(now-lastFrame)/1000:0);lastFrame=now;elapsed+=delta;
-    pose=pointer?behavior.snapshot():behavior.step(delta);player.sync(pose);publishBehavior();
+    pose=pointer?behavior.snapshot():behavior.step(delta);
+    if(decoration?.catPose?.()&&pose.id!=='ambientSpill')decoration.act({type:'life-hide'});
+    if(decoration?.catPose)decoration.update(delta,{elapsed,reducedMotion});
+    const staged=pose.id==='ambientSpill'&&pose.source==='ambient'?decoration?.catPose?.():null;
+    const playback=staged?.blend?{...pose,clip:staged.clip,token:`${pose.token}:${staged.phase}`,rate:staged.clip==='run'?1.1:.9,loop:true}:pose;
+    player.sync(playback);publishBehavior();
     const magic=pose.wide;
     const ease=1-Math.exp(-delta*10);
     viewHalfHeight+=((magic?baseHalfHeight*1.32:baseHalfHeight)-viewHalfHeight)*ease;
     viewCenter+=((magic?1.85:1.5)-viewCenter)*ease;
-    const aspect=Math.max(1,container.clientWidth)/Math.max(1,container.clientHeight);
-    camera.left=-viewHalfHeight*aspect;camera.right=viewHalfHeight*aspect;camera.top=viewHalfHeight;camera.bottom=-viewHalfHeight;camera.updateProjectionMatrix();camera.position.y=viewCenter+.15;camera.lookAt(0,viewCenter,0);
+    updateCamera();
     yaw+=(targetYaw-yaw)*(1-Math.exp(-delta*8));
-    const reaction=['feed','savor'].includes(pose.id)?'feed':['pet','nuzzle','comfort','gentle'].includes(pose.id)?'pet':'';
-    advanceMagePose(player,pivot,delta,{sleeping:pose.sleeping || pose.id==='doze',reaction,reactionTime:pose.time,activityDuration:pose.duration,elapsed,yaw,reducedMotion});
-    const night=autonomous && pose.night;
-    ambientLight.intensity+=((night?1.35:2)-ambientLight.intensity)*ease;
-    keyLight.intensity+=((night?1.65:2.25)-keyLight.intensity)*ease;
-    decoration?.update?.(delta,{elapsed,reducedMotion});
+    const reaction=['feed','savor'].includes(pose.id)?'feed':['pet','nuzzle','comfort','gentle','ambientAffection'].includes(pose.id)?'pet':'';
+    pawRig?.restore();
+    advanceMagePose(player,pivot,delta,{sleeping:pose.sleeping || pose.id==='doze',reaction,reactionTime:pose.time,activityDuration:pose.duration,elapsed,yaw:staged?yaw*(1-staged.blend)+staged.yaw*staged.blend:yaw,reducedMotion});
+    stageFoot.copy(stageAnchor);
+    if(staged&&stageFeet.length){stageFoot.set(0,0,0);for(const foot of stageFeet)stageFoot.add(pivot.worldToLocal(foot.getWorldPosition(footSample)));stageFoot.divideScalar(stageFeet.length);}
+    const offset=staged?catStageOffset(stageAnchor,yaw,pivot.rotation.y,staged,stageFoot):{x:0,z:0};
+    pivot.position.x=offset.x;pivot.position.z=offset.z;pivot.position.y+=staged?.y??0;
+    pawRig?.apply(staged??{});
+    if(roomView)container.dataset.yarnPhase=staged?.phase??'rest';else delete container.dataset.yarnPhase;
+    const lighting=autonomous?PERIOD_LIGHTS[pose.period]:null;
+    ambientLight.intensity+=((lighting?.ambient??2)-ambientLight.intensity)*ease;
+    keyLight.intensity+=((lighting?.key??2.25)-keyLight.intensity)*ease;
+    if(lighting){ambientLight.color.lerp(lighting.skyColor,ease);keyLight.color.lerp(lighting.keyColor,ease);}
+    if(!decoration?.catPose)decoration?.update?.(delta,{elapsed,reducedMotion});
     void updateExpression();
     try{renderer.render(scene,camera);}catch(error){fail(error);return;}
     frame=requestAnimationFrame(animate);
@@ -151,15 +193,21 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       const box=new THREE.Box3().setFromObject(model);const height=box.max.y-box.min.y;const scale=3/height;
       model.scale.multiplyScalar(scale);model.position.x-=((box.min.x+box.max.x)/2)*scale;model.position.y-=box.min.y*scale;
       model.position.z-=((box.min.z+box.max.z)/2)*scale;
+      model.updateWorldMatrix(true,true);
+      let skin;model.traverse(n=>{if(n.isSkinnedMesh&&!skin)skin=n;});
+      stageFeet=skin?.skeleton.bones.filter(b=>['Foot_L','Foot_R'].includes(b.name))??[];
+      for(const foot of stageFeet)stageAnchor.add(foot.getWorldPosition(footSample));
+      if(stageFeet.length)stageAnchor.divideScalar(stageFeet.length);
       const [normal,ao]=await Promise.all([texture('body-normal.webp',false),texture('body-ao.webp',false)]);
       for(const name of ['Mage_Cat','Mage_Cat_Clothes']){const m=materials.get(name);m.normalMap=normal;m.normalScale.set(.45,.45);m.aoMap=ao;m.aoMapIntensity=.35;}
       await applyAppearance();
       if(destroyed)return;
-      decoration=decorateScene?.({scene,model,pivot,camera,renderer,reducedMotion});
+      pawRig=createYarnPawRig(model);
+      decoration=decorateScene?.({scene,model,pivot,camera,renderer,reducedMotion,getStageFrame:()=>stageFrame,setRoomView});
       ready=true;container.classList.add('has-cat-model');container.dataset.modelPhase='ready';container.setAttribute('aria-busy','false');publishBehavior();
       observer=new ResizeObserver(resize);observer.observe(container);resize();renderer.render(scene,camera);
       listen(renderer.domElement,'webglcontextlost',event=>{event.preventDefault();fail(new Error('Graphics context lost'));});
-      listen(container,'pointerdown',event=>{if(event.button!==0 || pointer)return;behavior.suspend();pose=behavior.snapshot();pointer={id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,horizontal:false};didDrag=false;});
+      listen(container,'pointerdown',event=>{if(event.button!==0 || pointer||!canRotate()||engagementYaw!==null)return;behavior.suspend();pose=behavior.snapshot();pointer={id:event.pointerId,x:event.clientX,y:event.clientY,lastX:event.clientX,horizontal:false};didDrag=false;});
       listen(container,'pointermove',event=>{
         if(pointer?.id!==event.pointerId)return;
         const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;

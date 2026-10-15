@@ -41,6 +41,24 @@ function harness(t, handler, pending = []) {
   return { room, requests, sources, observed, latest:() => observed.states.at(-1).state };
 }
 
+test('decoration previews immediately and rebases on the partner’s furniture move while awaiting save',async t=>{
+  const base=initialState(),ack=deferred();const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);
+  await h.room.start();h.room.dispatch({type:'nest-palette',palette:'mint'});const item=h.requests.at(-1).body;
+  assert.equal(h.latest().nest.palette,'mint');assert.equal(h.observed.states.at(-1).confirmedState.nest.palette,'honey');
+  const partnerAction={type:'nest-place',item:'toy',x:-1,z:2,rotation:1},partner=reduceAction(base,partnerAction,female,Date.now(),'partner-nest-move');
+  h.sources[0].emit('action',snapshot(partner,1,{operationId:'partner-nest-move',action:partnerAction,actor:female}));
+  assert.equal(h.latest().nest.palette,'mint');assert.equal(h.latest().nest.placements.find(p=>p.item==='toy').x,-1);
+  const saved=reduceAction(partner,item.action,male,Date.now(),item.operationId);ack.resolve(response(receipt(item,saved,2)));await flush();
+  assert.deepEqual(h.latest().nest,saved.nest);assert.equal(h.observed.saves.at(-1).phase,'saved');
+});
+
+test('a refused furniture edit restores the confirmed layout instead of claiming it was saved',async t=>{
+  const base=initialState(),ack=deferred(),h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);
+  await h.room.start();h.room.dispatch({type:'nest-place',item:'toy',x:-1,z:2,rotation:0});assert.equal(h.latest().nest.placements.find(p=>p.item==='toy').x,-1);
+  ack.resolve(response({error:{code:'NEST_ACTION_REJECTED',message:'对方刚刚调整了这个位置'}},409));await flush();
+  assert.deepEqual(h.latest().nest,base.nest);assert.equal(h.observed.rollbacks.length,1);assert.equal(h.observed.saves.at(-1).phase,'error');assert.deepEqual(h.observed.pending.at(-1),[]);
+});
+
 test('feeding renders and animates before a delayed response while the persisted snapshot remains confirmed', async t => {
   const base = initialState(), ack = deferred();
   const h = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : ack.promise);

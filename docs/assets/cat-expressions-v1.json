@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "generator": "Built-in image_gen",
+  "intent": "Original text-only cozy-game expression portrait atlas",
+  "sourceImageInputs": [],
+  "asset": "src/assets/cat-expressions/v1/expression-atlas.png",
+  "width": 1536,
+  "height": 1024,
+  "alpha": true,
+  "grid": {
+    "columns": 3,
+    "rows": 2,
+    "order": [
+      "happy",
+      "calm",
+      "lonely",
+      "hungry",
+      "tired",
+      "sleeping"
+    ]
+  },
+  "prompt": "Use case: stylized-concept.\nAsset type: ONE production-ready transparent PNG sprite atlas for a cozy cat-care game's expression picker, six head-and-shoulders illustrated portraits in a strict 3-column by 2-row grid. Target composition 1536 by 1024 pixels, each cell a perfect 512 square. Treat the complete grid as one coordinated UI asset.\nPrimary request: create an ORIGINAL adorable little charcoal-black magical kitten in six clearly different emotional expressions. Soft polished 3D storybook game illustration, rounded chibi proportions, warm amber eyes, tiny coral triangle nose, subtle pink cheek blush, soft fur, gentle painterly shading. A small floppy deep lavender wizard hat with a simple cream crescent ornament and a warm muted gold hat ribbon; a little lavender neckerchief. Design an original character, not a replica of an existing game asset. Same face, proportions, hat and rendering style in every cell.\nGrid order EXACTLY:\nTop left: HAPPY — eyes closed in upward smiling arcs, delighted tiny open smile.\nTop middle: CALM — relaxed large warm amber eyes, peaceful closed-mouth smile.\nTop right: LONELY — puppy-like downturned large watery amber eyes, concerned brows, tiny sad pout, shy and seeking affection.\nBottom left: HUNGRY — wide eager amber eyes, tiny open mouth and small visible pink tongue, hopeful anticipation.\nBottom middle: TIRED — narrow half-closed amber eyes, droopy eyelids, a little yawn.\nBottom right: SLEEPING — fully closed gently curved eyelids and relaxed peaceful mouth, completely serene.\nComposition: identical close-up head and shoulders, centered at the exact center of every grid cell. Heads occupy about 78% of each cell including hat. Leave at least 50 pixels clear padding inside each cell; all ear tips and hat tips fully contained within their own cell. No overlapping cells. Front view with slight soft dimensional form. Simple clear silhouettes legible at 48 pixels.\nLighting: soft warm studio light, restrained highlights, premium cozy mobile game UI quality. Face should remain charcoal black and readable with warm soft reflected light.\nBackground: truly transparent alpha across the entire atlas; portraits have clean feather-free edges. No solid background, no checkerboard, no grid lines, no borders, no circular plates, no cards, no labels, no letters, no text, no watermark, no full bodies, no extra characters, no wand, no scenery. Do not draw UI typography or UI panels.",
+  "ui": {
+    "launcher": "Upper right of the cat",
+    "paletteWidth": 260,
+    "shortViewportWidth": 238
+  },
+  "notes": "The licensed Fab model, textures and package artwork were not supplied to the image-generation tool. Portraits are separate original UI illustrations."
+}

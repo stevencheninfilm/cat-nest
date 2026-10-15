@@ -16,7 +16,7 @@
 
 ## 场景和角色
 
-猫猫车站排在场景列表第一位，也是无偏好时的默认场景，免费开放。原日式庭院仍可直接选择；西部露台与暖暖雪庭保持 4 / 8 位已入住且实际满足当前成就门槛的猫友条件。已有有效场景偏好保留。四座庭院分别为全部 18 只猫设置落点，画布铺满手机并可横向拖动；宽屏继续使用手机布局。
+猫猫车站排在场景列表第一位，也是无偏好时的默认场景，免费开放。原日式庭院仍可直接选择；西部露台与暖暖雪庭保持 4 / 8 位已入住且实际满足当前成就门槛的猫友条件。已有有效场景偏好保留。后续布局修订将游戏猫和日常成就猫集中到车站，全部猫的静态与行走尺寸按用户车站参考图逐只校准；日式庭院保留原 12 只猫，并按后续指定加入石灯右侧的墨影；西部露台与暖暖雪庭保留原 12 只猫。车站现有 24 个落点，画布按屏幕高度完整显示并可横向拖动；宽屏继续使用手机布局。
 
 | 猫友 | 外观 | 解锁条件 |
 | --- | --- | --- |
@@ -88,3 +88,8 @@ Row 4 (phase B) repeats row 2 in EXACT same order.
 The walking cats must clearly be the same six cats from the reference. Maple and Pearl WALK, instead of keeping their resting reference pose. Keep white fur and clothing opaque.
 Constraints: ONLY twelve cats and their worn accessories. True transparent alpha outside. No backgrounds, floor, furniture, shadow, text, labels, watermark, grid lines or extra animals. No pixel art. No cell overlap.
 ```
+## 车站落点微调（2026-10-15）
+
+按用户的 7 条场景标注调整可可、芝麻、饼饼、小雪、吐司、布丁和墨影。可可往左下趴在前排椅子上，芝麻往左坐在车厢绿色座椅上；两只猫的图像按底图车窗的四边形开口裁切，窗框和斜向窗台遮住部分身体。裁切层固定，猫猫点按或呼吸动画在层内播放；外层按钮保留原有最小点击区域，未解锁的灰色轮廓也使用同一裁切。
+
+饼饼在冰激凌右边的草坪，小雪移到右下草坪，吐司移到树桩右下方空草地；布丁脚底贴住围墙木栏，墨影移离灯柱并上移到红屋屋檐。只改车站的场景落点和画面遮挡，不改其他庭院、收集记录或入场流程；入场落点自动读取同一份位置定义。

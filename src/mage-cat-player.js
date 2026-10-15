@@ -9,7 +9,7 @@ export function createMageAnimationPlayer(mixer, animations) {
     sync(behavior) {
       const key = clips.has(behavior.clip) ? behavior.clip : 'idle';
       if (!clips.has(key)) return;
-      const nextSignature = key === 'idle' ? key : `${key}:${behavior.token}`;
+      const nextSignature = key === 'idle' && behavior.source !== 'animation' ? key : `${key}:${behavior.token}`;
       if (signature === nextSignature) { current.setEffectiveTimeScale(behavior.rate); return; }
       const before = current;
       current = mixer.clipAction(clips.get(key));

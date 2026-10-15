@@ -18,6 +18,7 @@ export const CAT_DIALOGUE = Object.freeze({
   full: ['肚子圆圆，心里也暖暖的♡', '吃饱饱啦，想和你一起晒太阳。', '小碗香香，我也乖乖。', '我把幸福装进小肚子里啦。'],
   collect: ['你的心意，我有好好收下喵♡', '一点点长大，都有你陪着我。', '看，我又朝你长大了一点点！', '我把这份喜欢，藏进小心心啦。'],
   morning: ['早呀，我把今天的第一声呼噜留给你。', '阳光进屋啦，陪我慢慢醒来喵。', '早安，今天也想和你一起长大。', '新的一天，从蹭蹭你的手开始♡'],
+  day: ['窗边的阳光刚刚好，来一起晒一会儿吧。','你忙你的，我在亮堂堂的小窝里陪着你。','我把地毯晒暖啦，给你留了一个位置。','白天的小愿望，是和你一起慢慢长大。'],
   evening: ['天色软下来啦，终于等到你陪我。', '忙了一天，来听一会儿我的呼噜吧。', '窗外慢慢暗了，小窝里还有我们。', '晚上的小魔法，是陪你把心放松。'],
   night: ['夜深啦，我轻轻陪着你。', '嘘，小魔杖也要休息啦。', '月亮替我们守着窗，我就在这里。', '慢一点，今晚只想安安静静地贴贴。'],
   comfort: ['有你摸摸，心里慢慢暖起来了。', '刚刚有点失落，现在想再靠近你一点。', '谢谢你发现我想被陪着喵。', '把小脑袋交给你，我就安心啦。'],
@@ -58,7 +59,7 @@ function dialogueKey(kind, state, action) {
     if (tired) return 'tired';
     if (lonely) return 'lonely';
     if (state.behaviorPeriod === 'night') return 'night';
-    if (kind === 'greeting') return state.behaviorPeriod === 'morning' ? 'morning' : 'greeting';
+    if (kind === 'greeting') return ['morning','day','evening'].includes(state.behaviorPeriod) ? state.behaviorPeriod : 'greeting';
     if (state.behaviorPeriod === 'evening') return 'evening';
     if (state.hunger >= 90) return 'full';
   }
@@ -156,6 +157,7 @@ export function createCatSpeech({ element, getState, canSpeak = () => true, rand
   return {
     start() { running = true; say('greeting'); },
     say,
+    quiet() { cancel(idleTimer);hide(true);queueIdle(); },
     sync() {
       if (!canSpeak()) { cancel(idleTimer); hide(true); }
       else if (running && element.hidden) queueIdle();

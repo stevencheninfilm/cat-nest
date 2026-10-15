@@ -1,9 +1,10 @@
+import { invitedEverywhere } from './catbook-fixtures.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FOODS, initialState, normalizeState, reduceAction, levelInfo, levelStartXp, CARE_LIMITS } from '../src/state.js';
 import { COLLECTION_CATS, emptyCollection, canInviteCat, validCollection, collectionCatProgress, getCollectionCat } from '../src/cat-collection.js';
 import { catbookMarkup, collectionScene } from '../src/catbook-ui.js';
-import { CAT_SCENES, collectionSceneProgress } from '../src/catbook-scenes.js';
+import { CAT_SCENES, collectionSceneProgress, sceneAllowsCat } from '../src/catbook-scenes.js';
 import { sanitizeAction } from '../server/github-store.mjs';
 import { validateAction } from '../src/realtime.js';
 const start=Date.UTC(2026,9,14,0);
@@ -96,24 +97,26 @@ test('level invitations require claimed growth, not pending rewards or the pet a
 });
 
 test('every cat requires every condition, including the starter and the compound food achievement', () => {
-  const setRequirement=(state,{metric,target},below=false)=>{
+  const setRequirement=(state,{metric,target},below=false,catId)=>{
     if(metric.startsWith('daily-'))state.collection.achievements.daily[metric.slice(6)]=target-(below?1:0);
     else if(['boost','dress'].includes(metric))state.collection.achievements[metric]=target-(below?1:0);
     else if(metric.startsWith('win-')) state.collection.wins[metric.slice(4)]=target-(below?1:0);
+    else if(metric === 'diary-cards')state.diary.entries=[state.diary.entries.find(entry=>entry.id==='adoption'),...Array.from({length:target-(below?1:0)-1},(_,i)=>({id:`level:${i+2}`,kind:'level',level:i+2,at:start,catName:'糯米',photo:'happy'}))];
     else if(metric === 'level') state.xp=levelStartXp(target)-(below?1:0);
     else if(metric === 'foods') state.collection.foods=Object.keys(FOODS).slice(0,target-(below?1:0));
     else state.collection.stats[metric === 'care' ? 'pet' : metric]=target-(below?1:0);
   };
   for(const cat of COLLECTION_CATS) {
     const state=initialState(start);
-    for(const requirement of cat.requirements) setRequirement(state,requirement);
+    for(const requirement of cat.requirements) setRequirement(state,requirement,false,cat.id);
     for(const requirement of cat.requirements) {
-      const below=structuredClone(state);setRequirement(below,requirement,true);
+      const below=structuredClone(state);setRequirement(below,requirement,true,cat.id);
       assert.equal(act(below,{type:'invite-cat',catId:cat.id}),null,`${cat.id}: ${requirement.metric} below threshold`);
     }
+    const before=structuredClone(state);
     const invited=act(state,{type:'invite-cat',catId:cat.id});
-    assert.equal(invited?.collection.invited[0].id,cat.id,`${cat.id} at threshold`);
-    assert.equal(state.collection.invited.length,0);
+    assert.ok(invited?.collection.invited.some(record=>record.id===cat.id),`${cat.id} at threshold`);
+    assert.deepEqual(state,before);
   }
 });
 
@@ -135,7 +138,7 @@ test('existing invitations remain collected after harder requirements and reload
 test('uninvited portraits stay gray in the catalog, achievements and details, even when ready', () => {
   let state=act(starter(),{type:'invite-cat',catId:'bandit'});
   state.collection.stats.feed=30;
-  const card=(html,id)=>html.match(new RegExp(`<button[^>]*data-book-cat="${id}"[^>]*>.*?</button>`))[0];
+  const card=(html,id)=>html.match(new RegExp(`<button class="book-(?:cat-card|achievement-row)[^>]*data-book-cat="${id}"[^>]*>.*?</button>`))[0];
   for(const tab of ['book','achievements']) {
     const html=catbookMarkup(state,{tab,catId:'bolt'});
     assert.match(card(html,'bolt'),/book-cat-sprite undiscovered/,'ready but not invited');
@@ -193,9 +196,10 @@ test('the scene contains exactly the invited cats and requires enough invited ca
   assert.match(empty,/data-book-scene="western"[^>]*disabled/);
   assert.match(empty,/data-book-scene="snow"[^>]*disabled/);
   state=completed();
-  for(const cat of COLLECTION_CATS) state=act(state,{type:'invite-cat',catId:cat.id},start,`collection-invite-${cat.id}`);
-  const full=catbookMarkup(state,{sceneId:'snow'});
-  assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,COLLECTION_CATS.length);
+  for(const cat of COLLECTION_CATS)if(canInviteCat(cat.id,state.collection,120,undefined,state.diary))state=act(state,{type:'invite-cat',catId:cat.id},start,`collection-invite-${cat.id}`);
+  assert.equal((catbookMarkup(state,{sceneId:'snow'}).match(/class="book-yard-cat\b/g)||[]).length,0,'legacy invitations belong to station only');
+  const full=catbookMarkup(invitedEverywhere(state),{sceneId:'snow'});
+  assert.equal((full.match(/class="book-yard-cat\b/g)||[]).length,state.collection.invited.filter(record=>sceneAllowsCat(CAT_SCENES.find(scene=>scene.id==='snow'),getCollectionCat(record.id))).length);
   assert.match(full,/data-scene-id="snow"/);
   assert.doesNotMatch(full,/data-book-scene="(?:western|snow)"[^>]*disabled/);
   const atCount=count=>({...state.collection,invited:state.collection.invited.slice(0,count)});
@@ -217,9 +221,9 @@ test('the scene contains exactly the invited cats and requires enough invited ca
 
 test('locked invitations, saving and disconnected states disable inviting, and names cannot inject HTML', () => {
   const state={...initialState(start),name:'<img src=x onerror=alert(1)>'};
-  assert.match(catbookMarkup(state,{catId:'bolt'}),/data-book-invite="bolt" disabled/);
-  assert.match(catbookMarkup(state,{saving:true}),/data-book-invite="bandit" disabled/);
-  assert.match(catbookMarkup(state,{connected:false}),/data-book-invite="bandit" disabled/);
+  assert.match(catbookMarkup(state,{catId:'bolt'}),/data-book-invite="bolt"[^>]* disabled/);
+  assert.match(catbookMarkup(state,{saving:true}),/data-book-invite="bandit"[^>]* disabled/);
+  assert.match(catbookMarkup(state,{connected:false}),/data-book-invite="bandit"[^>]* disabled/);
   assert.match(catbookMarkup(state),/&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(catbookMarkup(state),/<img src=x/);
   const snapshot=structuredClone(state);

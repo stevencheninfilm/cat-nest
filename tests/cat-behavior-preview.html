@@ -12,15 +12,19 @@
     <label for="hour">本地时段</label><select id="hour"><option value="8">08:00 · 清晨</option><option value="14" selected>14:00 · 午后</option><option value="19">19:00 · 傍晚</option><option value="23">23:00 · 深夜</option></select>
     <label><input type="checkbox" id="reduced"> 减少动态效果</label>
     <div class="actions"><button data-action="pet">摸摸</button><button data-action="feed">喂食</button><button data-action="play">逗猫</button><button data-action="sleep">休息 / 叫醒</button><button id="pause">暂停</button></div>
+    <label>官方动画 · 点选播放一次</label><div class="actions" id="authored-actions"></div>
     <div id="details"></div><ol id="history" aria-label="最近行为"></ol><p><a href="/">返回共享小窝预览</a></p>
   </section>
 </main>
 <script type="module">
   import { createCatModel } from '/src/cat-model.js';
+  import { CAT_ACTIONS } from '/src/cat-actions.js';
   const $ = id => document.getElementById(id);
   const scenarios={happy:{mood:92,energy:85,hunger:70},calm:{mood:60,energy:65,hunger:70},lonely:{mood:22,energy:65,hunger:70},hungry:{mood:65,energy:65,hunger:20},tired:{mood:65,energy:18,hunger:70},sleeping:{mood:65,energy:65,hunger:70,sleeping:true}};
   let model,state,paused=false;
   const clock=()=>new Date(2026,9,14,Number($('hour').value)).valueOf();
+  $('authored-actions').innerHTML=CAT_ACTIONS.map(action=>`<button data-animation="${action.id}" title="${action.original}">${action.name}</button>`).join('');
+  $('authored-actions').addEventListener('click',event=>{const button=event.target.closest('[data-animation]');if(button)model.playAction(button.dataset.animation);});
   function show(pose){
     $('room').dataset.period=pose.period;
     $('status').textContent=`${pose.periodLabel} · ${pose.moodLabel} · ${pose.label}`;

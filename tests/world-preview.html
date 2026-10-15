@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>猫猫小屋 · 3D探索</title><style>*{box-sizing:border-box}body{margin:0}button{font-family:inherit}button b{font:inherit}</style></head><body><section id="world"></section><script type="module">
+import '/src/world-experience.css';
+import {createWorldExperience} from '/src/world-experience.js';
+const world=createWorldExperience({container:document.getElementById('world'),initialTheme:new URLSearchParams(location.search).get('scene') || 'home',modelAssetBase:import.meta.env.VITE_MODEL_URL || '/api/pet-model/mage-cat-v1',getPetState:()=>({name:'糯米',sleeping:false,appearance:{body:4,clothes:1,eyes:0,wand:0}}),onBack:()=>location.assign('/')});
+world.open();
+if(import.meta.hot)import.meta.hot.dispose(()=>world.destroy());
+</script></body></html>

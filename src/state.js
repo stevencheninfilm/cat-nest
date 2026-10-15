@@ -1,10 +1,13 @@
 import { emptyHomeBond, normalizeHomeBond, joinHome, isNewPet } from './home-bond.js';
 import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
 import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare, recordCollectionVictory, recordCollectionAchievements } from './cat-collection.js';
+import { CAT_SCENES, sceneAllowsCat, collectionSceneProgress } from './catbook-scenes.js';
 import { petNeeds, growthRewardAmount, addGrowthExperience, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { GAMES, emptyGameHub, normalizeGameHub, reduceGameHub } from './minigames.js';
+import { TOUCH_GAMES, catPlayUnlocked } from './minigames-touch-rules.js';
 import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple-care.js';
 import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, favoriteMemory } from './memory-journal.js';
+import { emptyNest, normalizeNest, nestActionResult, nestItem, validFurnitureCare } from './nest-decor.js';
 
 export const FOODS = {
   snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 10 },
@@ -51,12 +54,13 @@ const validFood = key => typeof key === 'string' && Object.hasOwn(FOODS, key);
 function validGrowthReward(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.id !== 'string' || !GROWTH_ID.test(value.id)) return false;
   if (!['feed', 'pet', 'play', 'sleep', 'game'].includes(value.kind) || !Number.isFinite(value.amount) || value.amount <= 0) return false;
+  if (Object.hasOwn(value,'furniture') && !validFurnitureCare({type:value.kind,furniture:value.furniture})) return false;
   if (value.kind === 'game') return Object.hasOwn(GAMES,value.game) && Number.isInteger(value.amount) && value.amount <= 15 && typeof value.actorId === 'string' && CLIENT_ID.test(value.actorId) && typeof value.actor === 'string' && value.actor === cleanName(value.actor) && validTime(value.at) && Object.keys(value).every(key => ['id','kind','game','amount','actorId','actor','at'].includes(key));
   if (Object.hasOwn(value, 'boosted') && value.boosted !== true) return false;
   if (Object.hasOwn(value, 'boostCount') && (value.boosted !== true || !Number.isInteger(value.boostCount) || value.boostCount < 1 || value.boostCount > 3)) return false;
   const boostCount = value.boosted ? value.boostCount ?? 1 : 0;
   if (typeof value.actorId !== 'string' || !CLIENT_ID.test(value.actorId) || typeof value.actor !== 'string' || value.actor !== cleanName(value.actor) || !validTime(value.at)) return false;
-  if (Object.keys(value).some(key => !['id', 'kind', 'amount', 'actorId', 'actor', 'food', 'at', 'boosted', 'boostCount'].includes(key))) return false;
+  if (Object.keys(value).some(key => !['id', 'kind', 'amount', 'actorId', 'actor', 'food', 'at', 'boosted', 'boostCount', 'furniture'].includes(key))) return false;
   if (value.kind === 'feed') {
     if (value.food !== undefined && !validFood(value.food)) return false;
     const amounts = value.food === undefined ? Object.values(FOODS).flatMap(food => [food.love, food.love + FEEDING_BONUS]) : [FOODS[value.food].love, FOODS[value.food].love + FEEDING_BONUS];
@@ -155,7 +159,7 @@ function feedRecords(value, now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), diary:emptyMemoryJournal(now), homeBond:emptyHomeBond(), updatedAt: now };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), homeBond:emptyHomeBond(), diary:emptyMemoryJournal(now), nest:emptyNest(), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -173,6 +177,7 @@ export function normalizeState(value, now = Date.now()) {
   next.name = typeof value.name === 'string' ? value.name.trim().slice(0, 16) || fallback.name : fallback.name;
   next.sleeping = value.sleeping === true;
   next.appearance = normalizeAppearance(value.appearance);
+  next.nest = normalizeNest(value.nest);
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
   const savedBoostCount=['hunger','mood','energy'].filter(key=>next[key]>80).length;
@@ -298,6 +303,11 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     const diary=favoriteMemory(current.diary,action.memoryId,action.favorite);
     return diary ? {...current,diary,updatedAt:now} : null;
   }
+  if (Object.hasOwn(action,'furniture') && (!validFurnitureCare(action) || !current.nest.placements.some(p=>p.item===action.furniture))) return null;
+  if (typeof action.type==='string' && action.type.startsWith('nest-')) {
+    const result=nestActionResult(current,action,actor,now);if(!result.ok)return null;
+    return normalizeState({...current,nest:result.nest,coins:result.coins,updatedAt:now,history:[{text:result.text,actor:cleanName(actor?.name).slice(0,16),at:now},...current.history].slice(0,40)},now);
+  }
   if (action.type === 'join-home' || action.type === 'adopt-cat') {
     const bond = joinHome(current,actor?.id,now);
     if (!bond) return null;
@@ -312,11 +322,12 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   const next = { ...current, history: [...current.history], feedRecords: [...current.feedRecords], pendingGrowth: [...current.pendingGrowth], feedingWindow: current.feedingWindow ? { ...current.feedingWindow } : null, updatedAt: now };
   const createsGrowth = ['feed', 'pet', 'play', 'sleep'].includes(action.type) && !care.isWake;
   const rewardActorId = typeof actor?.id === 'string' && CLIENT_ID.test(actor.id) ? actor.id : 'local-care';
-  const rewardId = operationId ?? `${action.type}:${rewardActorId}:${now}${action.type === 'invite-cat' ? `:${action.catId}` : ''}`;
+  const rewardId = operationId ?? `${action.type}:${rewardActorId}:${now}${action.type === 'invite-cat' ? `:${action.catId}${action.sceneId ? `:${action.sceneId}` : ''}` : ''}`;
   if (createsGrowth && (typeof rewardId !== 'string' || !GROWTH_ID.test(rewardId) || next.pendingGrowth.some(reward => reward.id === rewardId))) return null;
   let growth = 0;
   let text;
   if (typeof action.type === 'string' && action.type.startsWith('game-')) {
+    if (action.type === 'game-create' && TOUCH_GAMES.includes(action.game) && !catPlayUnlocked(levelInfo(current.xp).level)) return null;
     if (action.type === 'game-create' && current.pendingGrowth.some(reward => reward.id === `game:${rewardId}`)) return null;
     const hub = reduceGameHub(current.games,action,{ id:rewardActorId, name:cleanName(actor?.name) },now,rewardId);
     if (!hub) return null;
@@ -325,7 +336,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     if (m.status === 'finished' && current.games.match?.status !== 'finished') {
       recordCollectionVictory(next.collection, m);
       if (m.reward > 0) next.pendingGrowth.push({ id:`game:${m.id}`, kind:'game', game:m.game, amount:m.reward, actorId:rewardActorId, actor:cleanName(actor?.name), at:now });
-      next.history.unshift({ text:`${m.mode === 'duo' ? '一起完成':'完成'}${GAMES[m.game].name}${m.reward ? `，生成${m.reward}点成长气泡待领取`:'，今日小游戏成长已达上限'}`, actor:cleanName(actor?.name), at:now });
+      next.history.unshift({ text:`${m.mode === 'duo' ? '一起完成':'完成'}${GAMES[m.game].name}${m.reward ? `，生成${m.reward}点成长气泡待领取`:m.arcade?.rewardEligible===false?'，本局未达到成长条件':'，今日小游戏成长已达上限'}`, actor:cleanName(actor?.name), at:now });
       next.history = next.history.slice(0,40);
     }
     recordCollectionAchievements(next.collection,{boostCount,careCounts:next.careLimits.counts});
@@ -371,11 +382,16 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       if (!validAppearance(action.appearance)) return null;
       next.appearance = normalizeAppearance(action.appearance); text = '给小猫换上了新的魔法装扮'; break;
     case 'invite-cat': {
-      if (!canInviteCat(action.catId, next.collection, levelInfo(next.xp).level)) return null;
-      if (next.collection.invited.some(record => record.operationId === rewardId)) return null;
+      const level=levelInfo(next.xp).level, cat=getCollectionCat(action.catId);
+      const destination=CAT_SCENES.find(scene=>scene.id===(action.sceneId || 'station'));
+      if(!destination || !cat || !sceneAllowsCat(destination,cat) || !collectionSceneProgress(destination,next.collection,level,next.diary).complete) return null;
+      if (!canInviteCat(action.catId, next.collection, level, action.sceneId, next.diary)) return null;
+      if ([...next.collection.invited,...(next.collection.sceneInvited || [])].some(record => record.operationId === rewardId)) return null;
       if (typeof rewardId !== 'string' || !GROWTH_ID.test(rewardId)) return null;
-      next.collection.invited.push({ id:action.catId, at:now, operationId:rewardId, actorId:rewardActorId });
-      text = `邀请${getCollectionCat(action.catId).name}加入猫猫庭院`;
+      const receipt={ id:action.catId, at:now, operationId:rewardId, actorId:rewardActorId };
+      if(!next.collection.invited.some(record=>record.id===action.catId)) next.collection.invited.push(receipt);
+      if(action.sceneId) (next.collection.sceneInvited ??= []).push({...receipt,sceneId:action.sceneId});
+      text = `邀请${cat.name}加入${action.sceneId ? destination.name : '猫猫庭院'}`;
       break;
     }
     case 'rename':
@@ -386,13 +402,14 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   if (growth > 0) {
     growth = growthRewardAmount(growth, boostCount);
     recordCollectionCare(next.collection, action.type, action.food);
-    next.pendingGrowth.push({ id: rewardId, kind: action.type, amount: growth, actorId: rewardActorId, actor: cleanName(actor?.name), ...(action.type === 'feed' ? { food: action.food } : {}), ...(boostCount ? { boosted:true, boostCount } : {}), at: now });
+    next.pendingGrowth.push({ id: rewardId, kind: action.type, amount: growth, actorId: rewardActorId, actor: cleanName(actor?.name), ...(action.type === 'feed' ? { food: action.food } : {}), ...(action.furniture ? {furniture:action.furniture} : {}), ...(boostCount ? { boosted:true, boostCount } : {}), at: now });
     text += `，生成${growth}点成长气泡待领取${boostCount ? `（好状态 ×${multiplier}）` : ''}`;
   }
   if (Object.hasOwn(CARE_LIMITS, action.type) && !care.isWake) recordCare(next, action.type, actor?.id, now, action.food);
   recordCollectionAchievements(next.collection,{boostCount:Math.max(boostCount,petNeeds(next,now).boostCount),careCounts:next.careLimits.counts,
     dressChanged:action.type === 'dress' && Object.keys(current.appearance).some(key=>current.appearance[key] !== next.appearance[key])});
   next.coupleCare = recordCoupleCare(next.coupleCare, action, actor?.id, now, rewardId, { isWake:care.isWake, feedingWindow:next.feedingWindow });
+  if(action.furniture)text=`在${nestItem(action.furniture).name}，${text}`;
   next.history.unshift({ text, actor: cleanName(actor?.name).slice(0, 16), at: next.updatedAt });
   next.history = next.history.slice(0, 40);
   next.diary=recordMemoryJournal(current.diary,{before:current,after:next,action,actorId:actor?.id,now,id:rewardId,levelBefore:levelInfo(current.xp).level,levelAfter:levelInfo(next.xp).level});

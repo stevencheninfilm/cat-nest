@@ -1,0 +1,29 @@
+{
+  "tool": "image_gen.imagegen",
+  "assets": [
+    {
+      "key": "reaction",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-67737a20-d510-4c0d-b77a-d7564c7e35b6.png",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: An adorable plush orange kitten wearing a sweatband, one raised paw about to tap a large mint green glowing toy button, a small toy stopwatch nearby, warm peach background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouette at 64px, cozy cream and brown cat-care game.\nComposition: one compact centered game-specific scene filling 85 percent of a square image; full-bleed shaded pastel background, warm studio lighting and subtle soft shadows.\nConstraints: one square game cover, no UI, no panels, no caption, no logos or watermark. Only the explicitly requested number tile numerals are allowed.",
+      "asset": "public/assets/minigames/covers/reaction-v1.webp"
+    },
+    {
+      "key": "merge2048",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-be9fb6e1-25d0-4a31-ab87-791638792f89.png",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: Four chunky ceramic number tiles reading 2, 4, 8, and 16 arranged in a compact playful stack, an adorable kitten peeking from behind, pastel lavender background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouette at 64px, cozy cream and brown cat-care game.\nComposition: one compact centered game-specific scene filling 85 percent of a square image; full-bleed shaded pastel background, warm studio lighting and subtle soft shadows.\nConstraints: one square game cover, no UI, no panels, no caption, no logos or watermark. Only the explicitly requested number tile numerals are allowed.",
+      "asset": "public/assets/minigames/covers/merge2048-v1.webp"
+    },
+    {
+      "key": "snake",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-a84f9b5a-369c-42f0-af8b-d1fc3fe20e31.png",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: A friendly mint green toy snake curled into a simple S shape following a little fish treat, cute cat ears on its round smiling head, pastel sky blue background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouette at 64px, cozy cream and brown cat-care game.\nComposition: one compact centered game-specific scene filling 85 percent of a square image; full-bleed shaded pastel background, warm studio lighting and subtle soft shadows.\nConstraints: one square game cover, no UI, no panels, no caption, no logos or watermark. Only the explicitly requested number tile numerals are allowed.",
+      "asset": "public/assets/minigames/covers/snake-v1.webp"
+    },
+    {
+      "key": "whack",
+      "source": "/Users/stevenchen/.codex/generated_images/01a13c49-9a8d-7f70-ab62-41b4af964910/exec-619c0361-8b66-4fb1-9bf3-eafd4deec46d.png",
+      "prompt": "Use case: stylized-concept\nAsset type: square cover illustration for a mobile cat-themed mini-game menu\nPrimary request: An adorable plush kitten playing a wooden whack-a-mole toy with three round holes, a friendly mole peeking from one and kitten face from another, soft toy mallet held in a paw, pastel mint green background.\nStyle: polished soft clay and plush 3D toy illustration, cheerful and charming, simple chunky shapes, crisp readable silhouette at 64px, cozy cream and brown cat-care game.\nComposition: one compact centered game-specific scene filling 85 percent of a square image; full-bleed shaded pastel background, warm studio lighting and subtle soft shadows.\nConstraints: one square game cover, no UI, no panels, no caption, no logos or watermark. Only the explicitly requested number tile numerals are allowed.",
+      "asset": "public/assets/minigames/covers/whack-v1.webp"
+    }
+  ]
+}

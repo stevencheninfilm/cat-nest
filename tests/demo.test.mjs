@@ -37,10 +37,13 @@ test('accepted care updates the current visit and duplicate operation IDs award 
 test('rejected care changes neither bubbles nor saved state',()=>{
   const {engine}=setup();const before=engine.snapshot();assert.equal(engine.action({clientId:DEMO_ACTORS.female.id,operationId:'demo-test-reject-01',action:{type:'pet'}}).status,409);assert.deepEqual(engine.snapshot(),before);
 });
-test('demo scenario unlocks all collection conditions without malformed data',()=>{
+test('demo scenario unlocks basic achievements without bypassing diary-card goals',()=>{
   const {engine}=setup();engine.scenario('unlock');const state=engine.snapshot().state;
   assert.ok(state.xp>10000);assert.ok(validCollection(state.collection,Object.keys(FOODS)));
-  assert.ok(COLLECTION_CATS.every(cat=>collectionCatProgress(cat,state.collection,levelInfo(state.xp).level).complete));
+  assert.ok(COLLECTION_CATS.slice(0,24).every(cat=>collectionCatProgress(cat,state.collection,levelInfo(state.xp).level,state.diary).complete));
+  assert.ok(collectionCatProgress(COLLECTION_CATS[24],state.collection,1,state.diary).complete);
+  assert.equal(collectionCatProgress(COLLECTION_CATS[35],state.collection,1,state.diary).complete,false);
+  assert.equal(state.collection.invited.length,0);
   engine.scenario('portion');assert.equal(engine.snapshot().state.feedRecords.length,2);
   engine.reset();assert.equal(engine.snapshot().state.xp,400);
 });

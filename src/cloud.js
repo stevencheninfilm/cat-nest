@@ -16,7 +16,7 @@ export function createCloudRoom(options) {
   let source, poll, retry, destroyed = false, draining = false, ready = false;
   const seen = new Set();
   const previews = new Map();
-  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename']);
+  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
   let authoritativeState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
   async function request(path, options = {}) {

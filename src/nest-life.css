@@ -1,0 +1,42 @@
+/* Tint the room, not the care controls. Light changes remain purely local. */
+.nest[data-nest-period]>.room-backdrop{transition:filter 4s ease}
+.nest[data-nest-period=morning]>.room-backdrop{filter:brightness(1.06) saturate(.93)}
+.nest[data-nest-period=day]>.room-backdrop{filter:brightness(1.02) saturate(.9)}
+.nest[data-nest-period=evening]>.room-backdrop{filter:brightness(.86) saturate(.9) sepia(.12)}
+.nest[data-nest-period=night]>.room-backdrop{filter:brightness(.65) saturate(.6)}
+.nest.sleeping[data-nest-period]>.room-backdrop{filter:brightness(.62) saturate(.65)}
+.nest[data-nest-period]>.warm-overlay{transition:background 4s ease;background:linear-gradient(150deg,#ffe7be35,transparent 48%,#edcda523)}
+.nest[data-nest-period=day]>.warm-overlay{background:linear-gradient(150deg,#fffced38,transparent 52%,#d4b58520)}
+.nest[data-nest-period=evening]>.warm-overlay{background:linear-gradient(125deg,#ffc3a138,transparent 55%,#ad7a9736),radial-gradient(ellipse at 85% 45%,#ffdca334,transparent 65%)}
+.nest[data-nest-period=night]>.warm-overlay{background:linear-gradient(160deg,#2e3e7948,transparent 65%),radial-gradient(ellipse at 82% 52%,#ffd29932,transparent 70%)}
+.nest-atmosphere{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;transition:opacity 4s}
+.nest-atmosphere::before{content:'';position:absolute;inset:0;background:linear-gradient(125deg,transparent 12%,#fff5cd30 12% 17%,transparent 17% 22%,#fff5cd18 22% 28%,transparent 28%);opacity:.65;transition:opacity 4s}
+.nest[data-nest-period=day] .nest-atmosphere::before{opacity:.35}
+.nest[data-nest-period=evening] .nest-atmosphere::before{opacity:.15}
+.nest[data-nest-period=night] .nest-atmosphere::before{opacity:0}
+.nest-moon{position:absolute;left:7%;top:25%;width:20px;height:20px;border-radius:50%;box-shadow:-5px 3px 0 0 #fff2c7;opacity:0;transition:opacity 4s}
+.nest-window-stars{position:absolute;left:5%;top:30%;color:#fff3ceaa;font-size:12px;letter-spacing:8px;font-style:normal;opacity:0;transition:opacity 4s}
+.nest[data-nest-period=night] .nest-moon,.nest[data-nest-period=night] .nest-window-stars{opacity:.8}
+.nest[data-nest-period=night]>.sun-dust{opacity:.1}
+.nest .brand small[data-nest-time]{font-size:8px;line-height:1.5;letter-spacing:.5px;margin-top:3px;font-weight:700;font-variant-numeric:tabular-nums;color:#7d624f;text-shadow:0 1px 3px #fff6e5}
+.nest[data-nest-period=night] .brand{color:#fff0d3;text-shadow:0 1px 4px #27212a99}
+.nest[data-nest-period=night] .brand small[data-nest-time]{color:#f6e3c5;text-shadow:0 1px 3px #352c3a}
+.nest[data-nest-period=night] .side-actions button>small,.nest[data-nest-period=night] .cat-rhythm small{color:#f6e3c5;text-shadow:0 1px 3px #352c3a}
+.nest-moment[hidden]{display:none!important}
+.nest-moment{position:absolute;inset:0;pointer-events:none;z-index:4;animation:life-expire 6.5s ease both}
+.nest-moment-copy{position:absolute;top:0;left:45%;transform:translateX(-50%);width:min(210px,65vw);padding:10px 12px;border:1px solid #fff9e1a6;border-radius:16px 16px 16px 4px;background:#fff9e7eb;box-shadow:0 4px 14px #70533d14;animation:life-arrive .4s ease both;text-align:left;color:#805f47}
+.nest-moment-copy small{display:block;font-size:9px;letter-spacing:.4px;color:#aa8e68;margin-bottom:4px}
+.nest-moment-copy>span{display:block;font-size:11px;line-height:1.8}
+.nest-moment-prop{position:absolute;bottom:9%;right:12%;width:54px;height:54px}
+.life-prop-fallback{display:block;font-size:48px;line-height:1;font-style:normal;filter:drop-shadow(1px 4px 3px #6b483225);animation:life-arrive .7s both}
+.nest-moment[data-kind=affection] .nest-moment-prop{bottom:37%;left:24%}
+.life-heart{display:block;position:absolute;color:#d7a0a1;font-size:32px;font-style:normal;animation:life-heart 3s ease-out both}
+.life-heart.second{left:24px;top:14px;font-size:19px;animation-delay:.4s}
+.life-diary{padding:14px;margin:0 0 20px;border:1px solid #e8dcc6;border-radius:16px;background:#fbf3e5;text-align:left}
+.life-diary header{display:flex;gap:9px;align-items:flex-start}.life-diary header>span{font-size:23px;color:#ae956e}.life-diary h3{font-size:12px;margin:0 0 4px}.life-diary header p,.life-empty{font-size:10px!important;line-height:1.8;color:#9d876d;margin:0}.life-empty{padding-top:9px}
+.life-diary ul{list-style:none;margin:12px 0 0;padding:0}.life-diary li{display:flex;gap:9px;padding:10px 0;border-top:1px solid #e8dcc6}.life-diary li>span{font-size:20px;width:26px;flex-shrink:0}.life-diary time{font-size:9px;color:#b2997d}.life-diary li p{font-size:10px;line-height:1.8;color:#8f775d;margin:4px 0 0}.life-diary>small{display:block;font-size:8px;color:#b29b81;margin-top:6px}
+@keyframes life-arrive{from{opacity:0;translate:0 5px}to{opacity:1;translate:0 0}}
+@keyframes life-heart{0%{opacity:0;translate:0 9px}20%,80%{opacity:.8}100%{opacity:0;translate:3px -22px}}
+@keyframes life-expire{0%,90%{opacity:1}100%{opacity:0}}
+@media(max-width:360px){.nest-moment-copy{left:43%;width:185px;padding:9px 11px}.nest-moment-copy>span{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.nest[data-nest-period]>.room-backdrop,.nest[data-nest-period]>.warm-overlay,.nest-atmosphere,.nest-atmosphere::before,.nest-moon,.nest-window-stars{transition:none}.nest-moment,.nest-moment *{animation:none!important}}

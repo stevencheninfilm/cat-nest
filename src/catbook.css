@@ -1,12 +1,13 @@
 /* Keep the same phone layout on every screen. */
-body.catbook-mode{background:#343c30;min-width:0;overflow:hidden}
+body.catbook-mode{--book-viewport-height:100vh;background:#343c30;min-width:0;overflow:hidden}
+@supports(height:100dvh){body.catbook-mode{--book-viewport-height:100dvh}}
 .book-nav-icon{position:relative}
 .catbook-entry .book-nav-icon>.book-cat-sprite{width:49px;height:49px}
 .book-nav-count{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border:1px solid #fff8e9;border-radius:9px;background:#9ca976;color:#fffdf3;font-size:9px;font-weight:800;text-shadow:none}
 .book-nav-count[hidden]{display:none}
-body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
+body.catbook-mode #app{display:block;padding:0;height:var(--book-viewport-height);min-height:0}
 #catbook-root[hidden]{display:none}
-.catbook{position:relative;max-width:460px;margin:0 auto;color:#615c48;height:100dvh;min-height:0;padding:0;width:min(100%,calc(100dvh * .52));overflow:hidden;isolation:isolate;background:#bac78f}
+.catbook{position:relative;max-width:460px;margin:0 auto;color:#615c48;height:var(--book-viewport-height);min-height:0;padding:0;width:min(100%,calc(var(--book-viewport-height) * min(.52,var(--scene-aspect))));overflow:hidden;isolation:isolate;background:#bac78f}
 .book-topbar{display:flex;align-items:center;border-bottom:1px solid #ddd4c5;gap:15px;padding-bottom:15px}
 .book-back{display:flex;align-items:center;gap:7px;border-radius:20px;padding:0 15px;border:1px solid #d7cbb9;background:#fffaf0;font-weight:700;color:#82745f;font-size:10px;min-height:36px;padding-inline:10px}
 .book-back svg{width:15px;height:15px}
@@ -29,36 +30,52 @@ body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
 .book-yard-camera::-webkit-scrollbar{display:none}
 .book-yard-camera:focus-visible{outline:2px solid #fff6dc;outline-offset:-5px}
 .book-yard-camera.is-dragging{cursor:grabbing}
-.book-yard{position:relative;width:max(100%,calc(132dvh * var(--scene-aspect)));aspect-ratio:var(--scene-ratio);overflow:hidden;background:#dfd6af;isolation:isolate}
-.book-yard-background{display:block;width:100%;height:100%;object-fit:cover;user-select:none}
+/* Fit the complete map height; only its horizontal excess belongs off camera. */
+.book-yard{position:relative;width:calc(var(--book-viewport-height) * var(--scene-aspect));height:100%;aspect-ratio:var(--scene-ratio);overflow:hidden;background:#dfd6af;isolation:isolate}
+.book-yard-background{display:block;width:100%;height:100%;object-fit:contain;user-select:none}
 .book-visitors{position:absolute;inset:0;z-index:2}
 .book-cat-sprite{display:block;background:url('../public/assets/catbook/cats.png') var(--cat-x) var(--cat-y)/400% 300% no-repeat;aspect-ratio:1;width:100%;image-rendering:pixelated;flex-shrink:0}
 .book-cat-sprite.undiscovered{filter:grayscale(1);opacity:.3}
 .book-cat-sprite.is-game-cat{background:none;display:grid;place-items:center;image-rendering:auto}
 .book-game-portrait{display:block;background-image:url('../public/assets/catbook/game-cats-v1.png');background-repeat:no-repeat}
-.book-yard-cat{position:absolute;left:var(--slot-x);top:var(--slot-y);transform:translate(-50%,calc(-1 * var(--cat-baseline)));aspect-ratio:var(--pose-ratio);padding:0;border:0;background:transparent;width:var(--cat-size);isolation:isolate}
-.book-yard-cat::before{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);border-radius:50%}
+.book-yard-cat,.book-yard-placeholder{position:absolute;left:var(--slot-x);top:var(--slot-y);transform:translate(-50%,calc(-1 * var(--cat-baseline)));aspect-ratio:var(--pose-ratio);padding:0;border:0;background:transparent;width:var(--cat-size);isolation:isolate}
+/* Actual pose contours, without revealing fur or facial details before invitation. */
+.book-yard-placeholder{pointer-events:auto;user-select:none;cursor:pointer}
+.book-yard-placeholder:active{transform:translate(-50%,calc(-1 * var(--cat-baseline))) scale(.96)}
+.book-yard-placeholder:focus-visible{outline:2px solid #fff4cb;outline-offset:3px;border-radius:16px}
+.book-yard-placeholder:hover .book-cat-silhouette,.book-yard-placeholder:focus-visible .book-cat-silhouette{filter:drop-shadow(0 0 4px #fff4cb9c)}
+.book-cat-window{position:relative;display:block;width:100%;aspect-ratio:var(--pose-ratio);pointer-events:none}
+.book-cat-glass{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none}
+.book-cat-prop{position:absolute;left:-12%;top:73%;width:124%;z-index:-1;pointer-events:none}
+.book-cat-prop>svg{display:block;width:100%;height:auto}
+.book-cat-silhouette{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+.book-yard-cat::before,.book-yard-placeholder::before{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);border-radius:50%}
 .book-scene-cat{position:relative;display:block;width:100%;aspect-ratio:var(--pose-ratio);background-image:url('../public/assets/catbook/scene-poses.png');background-repeat:no-repeat;transform-origin:50% var(--cat-baseline);animation:book-cat-breathe 5s ease-in-out infinite;animation-delay:var(--idle-delay);filter:drop-shadow(0 1px 1px #473b3324);pointer-events:none}
-.pose-sleep>.book-scene-cat,.pose-loaf>.book-scene-cat,.pose-rest>.book-scene-cat{animation-name:book-cat-doze;animation-duration:6s}
-.pose-scratch>.book-scene-cat{animation-name:book-cat-scratch;animation-duration:7s}
-.pose-peek>.book-scene-cat{animation-name:book-cat-peek;animation-duration:7.5s}
-.pose-play>.book-scene-cat,.pose-roll>.book-scene-cat{animation-name:book-cat-play;animation-duration:5s}
-.pose-eat>.book-scene-cat{animation-name:book-cat-nibble;animation-duration:4s}
-.pose-stretch>.book-scene-cat{animation-name:book-cat-stretch;animation-duration:8s}
+.pose-sleep .book-scene-cat,.pose-loaf .book-scene-cat,.pose-rest .book-scene-cat{animation-name:book-cat-doze;animation-duration:6s}
+.pose-scratch .book-scene-cat{animation-name:book-cat-scratch;animation-duration:7s}
+.pose-peek .book-scene-cat{animation-name:book-cat-peek;animation-duration:7.5s}
+.pose-play .book-scene-cat,.pose-roll .book-scene-cat{animation-name:book-cat-play;animation-duration:5s}
+.pose-eat .book-scene-cat{animation-name:book-cat-nibble;animation-duration:4s}
+.pose-stretch .book-scene-cat{animation-name:book-cat-stretch;animation-duration:8s}
+/* Cloudcap keeps exploring its corner; wrappers leave tap feedback independent. */
+.book-cat-patrol{position:absolute;left:0;bottom:calc(100% - var(--cat-baseline));width:100%;animation:book-cat-patrol 14s linear infinite}
+.book-cat-patrol-facing{display:block;animation:book-cat-patrol-turn 14s steps(1,end) infinite}
+.is-patrolling .book-scene-cat{animation:book-walk-frames .44s steps(1,end) infinite,book-walk-bob .44s ease-in-out infinite}
+.is-patrolling.is-petted .book-cat-patrol,.is-patrolling.is-petted .book-cat-patrol-facing{animation-play-state:paused}
 .book-yarn-ball{position:absolute;width:23%;aspect-ratio:1;left:5%;bottom:3%;border:1.5px solid #40372e;border-radius:50%;background:repeating-linear-gradient(25deg,transparent 0 4px,#ad547966 4px 5px),#e798b2;box-shadow:inset -2px -2px 0 #b85c7c40;animation:book-yarn-roll 5s ease-in-out infinite;animation-delay:var(--idle-delay);pointer-events:none}
 .pose-roll>.book-yarn-ball{left:76%;bottom:9%}
-.book-yard-cat.is-petted>.book-scene-cat{animation:book-cat-tap-hop var(--pet-tap-duration) ease-in-out 1}
-.book-yard-cat.is-petted.pose-sleep>.book-scene-cat,.book-yard-cat.is-petted.pose-loaf>.book-scene-cat,.book-yard-cat.is-petted.pose-rest>.book-scene-cat,.book-yard-cat.is-petted.pose-stretch>.book-scene-cat{animation-name:book-cat-tap-stretch}
-.book-yard-cat.is-petted.pose-peek>.book-scene-cat{animation-name:book-cat-tap-peek}
-.book-yard-cat.is-petted.pose-scratch>.book-scene-cat,.book-yard-cat.is-petted.pose-eat>.book-scene-cat{animation-name:book-cat-tap-nod}
-.book-yard-cat.is-petted.pose-play>.book-scene-cat,.book-yard-cat.is-petted.pose-roll>.book-scene-cat{animation-name:book-cat-tap-wiggle}
+.book-yard-cat.is-petted .book-scene-cat{animation:book-cat-tap-hop var(--pet-tap-duration) ease-in-out 1}
+.book-yard-cat.is-petted.pose-sleep .book-scene-cat,.book-yard-cat.is-petted.pose-loaf .book-scene-cat,.book-yard-cat.is-petted.pose-rest .book-scene-cat,.book-yard-cat.is-petted.pose-stretch .book-scene-cat{animation-name:book-cat-tap-stretch}
+.book-yard-cat.is-petted.pose-peek .book-scene-cat{animation-name:book-cat-tap-peek}
+.book-yard-cat.is-petted.pose-scratch .book-scene-cat,.book-yard-cat.is-petted.pose-eat .book-scene-cat{animation-name:book-cat-tap-nod}
+.book-yard-cat.is-petted.pose-play .book-scene-cat,.book-yard-cat.is-petted.pose-roll .book-scene-cat{animation-name:book-cat-tap-wiggle}
 .book-yard-cat.is-petted>.book-yarn-ball{animation:book-yarn-tap var(--pet-tap-duration) ease-out 1}
 .book-yard-cat.is-petted .book-visitor-name{opacity:1}
 .book-yard-cat:active{transform:translate(-50%,calc(-1 * var(--cat-baseline))) scale(.96)}
 .book-yard-cat:focus-visible{outline:2px solid #fff4cb;outline-offset:-5px;border-radius:20px}
 .book-visitor-name{position:absolute;bottom:5px;left:50%;transform:translate(-50%,65%);font-size:10px;white-space:nowrap;line-height:1.6;background:#fff8e7ec;border:1px solid #fff9f0;border-radius:12px;padding:2px 9px;color:#7d684c;box-shadow:0 2px 5px #3f342728;opacity:0;pointer-events:none;transition:opacity .2s}
 .book-yard-cat:hover .book-visitor-name,.book-yard-cat:focus-visible .book-visitor-name{opacity:1}
-.book-empty-yard{position:absolute;inset:57% 0 auto;display:flex;justify-content:center;pointer-events:none}
+.book-empty-yard{display:flex;justify-content:center;margin:16px 0}
 .book-empty-yard>button{display:flex;align-items:center;gap:7px;min-height:44px;background:#fff7e5e8;border:2px solid #fffced;border-radius:24px;color:#7f7758;font-size:11px;font-weight:800;padding:10px 16px;box-shadow:0 4px 12px #45382225;pointer-events:auto}
 .book-empty-yard>svg{width:30px;height:30px;opacity:.85}
 .book-empty-yard strong{letter-spacing:1px;font-size:12px}
@@ -81,21 +98,30 @@ body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
 .book-state{font-size:9px;font-weight:700;letter-spacing:0;background:#f0eadc;border-radius:10px;padding:4px 9px;color:#aaa087}
 .book-state.ready{background:#e8edce;color:#8b9d53}
 .book-detail-art{background:radial-gradient(ellipse at 50% 85%,#dbdfbf66,transparent 60%);border-radius:50%;grid-row:2/span 2;width:96px;height:96px;margin:0}
-.book-detail h2{margin:0;color:#6f7153;letter-spacing:1px;font-size:19px;padding-top:10px}
+.book-detail h2{margin:0;color:#6f7153;letter-spacing:1px;font-size:23px;padding-top:10px}
 .book-detail h2>span{display:block;color:#b0a38b;font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;margin-top:3px}
-.book-personality{font-size:10px;line-height:1.8;color:#a29881;margin:6px 0 12px;min-height:0}
+.book-personality{font-size:14px;line-height:1.65;color:#82765f;margin:6px 0 14px;min-height:0}
 .book-achievement-card{text-align:left;border:1px solid #e9e1cf;background:#f6f0e2;border-radius:14px;grid-column:1/-1;padding:12px 13px}
-.book-achievement-card>span{display:flex;align-items:center;gap:5px;color:#a3905a;font-size:11px;font-weight:800}
+.book-achievement-card>span{display:flex;align-items:center;gap:5px;color:#857244;font-size:14px;font-weight:800}
 .book-achievement-card svg{width:15px;height:15px}
-.book-achievement-card p{font-size:10px;line-height:1.7;color:#a79778;margin:7px 0 9px}
+.book-achievement-card p{font-size:14px;line-height:1.65;color:#807154;margin:7px 0 9px}
 .book-achievement-progress{display:block;width:100%;height:5px;border-radius:6px;background:#e6dec9;overflow:hidden}
 .book-achievement-progress i{display:block;height:100%;background:#b0be84;border-radius:inherit;transition:width .3s}
-.book-achievement-card small{display:block;font-size:9px;color:#a6987d;margin-top:6px;font-variant-numeric:tabular-nums}
-.book-invite{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:43px;padding:9px 5px;margin-top:15px;border-radius:14px;background:#a8b780;box-shadow:0 3px 0 #8f9e67;color:#fffdf1;font-size:11px;font-weight:800}
+.book-achievement-card small{display:block;font-size:13px;color:#857557;margin-top:6px;font-variant-numeric:tabular-nums}
+.book-invite{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:46px;padding:10px 5px;margin-top:15px;border-radius:14px;background:#a8b780;box-shadow:0 3px 0 #8f9e67;color:#fffdf1;font-size:16px;font-weight:800}
 .book-invite svg{width:15px;height:15px}
 .book-invite:disabled{background:#e9e5d7;box-shadow:none;color:#aaa38c;cursor:default}
 .book-invite:disabled:active{transform:none}
-.book-detail-note{font-size:8px;line-height:1.8;color:#b5a88d;margin:11px 0 0;text-align:center}
+.book-detail-note{font-size:12px;line-height:1.7;color:#96866a;margin:11px 0 0;text-align:center}
+.book-unlock-help{grid-column:1/-1;display:grid;gap:15px;margin-bottom:14px}
+.book-unlock-remaining{padding:13px 15px;border:1px solid #e3c896;border-radius:15px;background:#fff0d3}
+.book-unlock-help h3{margin:0 0 8px;font-size:16px;line-height:1.5;color:#6c6547;font-weight:800}
+.book-unlock-help ul{list-style:none;padding:0;margin:0;display:grid;gap:7px}
+.book-unlock-help li{font-size:17px;line-height:1.8;color:#79542c;font-weight:700}
+.book-unlock-help li strong{font-size:28px;line-height:1.2;color:#b2602b;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+.book-unlock-steps{padding:0 2px}
+.book-unlock-help p{font-size:15px;line-height:1.75;margin:5px 0 0;color:#76674f}
+.book-unlock-help.is-ready{padding:14px;border:1px solid #cad6a7;border-radius:15px;background:#eef3df}
 .book-catalog{margin-top:23px}
 .book-catalog-heading{display:flex;justify-content:space-between;padding-bottom:15px;align-items:flex-start;flex-direction:column;gap:10px}
 .book-tabs{display:flex;gap:4px;border:1px solid #e8dfd0;border-radius:17px;background:#f0eadc;width:100%;padding:4px}
@@ -130,6 +156,8 @@ body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
 .book-footer svg{width:13px;height:13px}
 .book-invite,.book-detail-note{grid-column:1/-1}
 @keyframes book-cat-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.018,.97)}}
+@keyframes book-cat-patrol{0%,100%{transform:translateX(-45%)}50%{transform:translateX(45%)}}
+@keyframes book-cat-patrol-turn{0%{transform:scaleX(-1)}50%{transform:scaleX(1)}}
 @keyframes book-cat-doze{0%,100%{transform:scale(1)}50%{transform:scale(1.012,1.022)}}
 @keyframes book-cat-scratch{0%,50%,80%,100%{transform:none}55%,65%,75%{transform:scaleY(1.045) rotate(-1deg)}60%,70%{transform:scaleY(.985) rotate(1deg)}}
 @keyframes book-cat-peek{0%,30%,100%{transform:none}45%,70%{transform:translateY(-4%) rotate(2deg)}}
@@ -144,7 +172,7 @@ body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
 @keyframes book-cat-tap-wiggle{0%,100%{transform:none}22%{transform:rotate(-10deg) scale(1.05,.97)}48%{transform:translateY(-4%) rotate(9deg)}72%{transform:rotate(-5deg)}87%{transform:rotate(2deg)}}
 @keyframes book-yarn-tap{0%,100%{transform:none}45%{transform:translateX(-55%) rotate(-85deg)}75%{transform:translateX(-20%) rotate(-30deg)}}
 @media(max-width:360px){.book-eyebrow{font-size:6px;letter-spacing:1px}.book-cat-grid{gap:7px}.book-cat-card>.book-cat-sprite{width:72px}.book-card-status{padding-inline:7px}}
-@media(prefers-reduced-motion:reduce){.book-scene-cat,.book-yarn-ball{animation:none}}
+@media(prefers-reduced-motion:reduce){.book-scene-cat,.is-patrolling .book-scene-cat,.book-yarn-ball,.book-cat-patrol,.book-cat-patrol-facing{animation:none}}
 
 /* The yard is the entire game. Information lives in optional phone drawers. */
 .book-game-topbar{position:absolute;top:max(15px,env(safe-area-inset-top));left:15px;right:15px;z-index:5;display:grid;grid-template-columns:44px 1fr 44px;gap:10px;align-items:center;pointer-events:none}
@@ -160,7 +188,7 @@ body.catbook-mode #app{display:block;padding:0;height:100dvh;min-height:0}
 .book-game-menu strong{font-size:10px;font-weight:800;white-space:nowrap;letter-spacing:.4px}
 .book-game-menu small{font-size:8px;line-height:1;font-variant-numeric:tabular-nums;color:#ada17e;margin-top:-2px}
 .book-menu-badge{position:absolute;right:-9px;top:-5px;display:grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border:1px solid #fff8e6;border-radius:9px;background:#a6b47d;color:#fffaf1;font-size:9px;font-weight:800;font-style:normal}
-dialog.book-sheet{position:fixed;inset:auto 0 0;margin:0 auto;width:min(100%,460px,calc(100dvh * .52));max-width:460px;max-height:min(82dvh,760px);padding:17px 18px max(18px,env(safe-area-inset-bottom));border:1.5px solid #fff9ed;border-bottom:0;border-radius:28px 28px 0 0;background:#fbf5e9;color:#736b53;box-shadow:0 -8px 35px #3a342f30;overflow:hidden;animation:book-sheet-in .22s ease-out}
+dialog.book-sheet{position:fixed;inset:auto 0 0;margin:0 auto;width:min(100%,460px,calc(var(--book-viewport-height) * min(.52,var(--scene-aspect))));max-width:460px;max-height:min(82dvh,760px);padding:17px 18px max(18px,env(safe-area-inset-bottom));border:1.5px solid #fff9ed;border-bottom:0;border-radius:28px 28px 0 0;background:#fbf5e9;color:#736b53;box-shadow:0 -8px 35px #3a342f30;overflow:hidden;animation:book-sheet-in .22s ease-out}
 dialog.book-sheet:not([open]){display:none}
 dialog.book-sheet[open]{display:flex;flex-direction:column}
 .book-sheet::backdrop{background:#302c2047;backdrop-filter:blur(2px)}
@@ -203,7 +231,7 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 .book-arrival-facing{width:100%;transform:translate(-50%,calc(-1 * var(--walking-baseline))) scaleX(var(--walk-direction));transform-origin:50% var(--walking-baseline)}
 .book-walking-cat{display:block;width:100%;background-image:url('../public/assets/catbook/walking-cats.png');background-repeat:no-repeat;background-position:var(--walk-a);animation:book-walk-frames .34s steps(1,end) infinite,book-walk-bob .34s ease-in-out infinite;filter:drop-shadow(0 2px 1px #40372a30)}
 .book-yard-cat.is-arriving{visibility:hidden}
-.book-yard-cat.is-new-arrival>.book-scene-cat{animation:book-cat-settle .7s ease-out both;animation-delay:var(--arrival-age)}
+.book-yard-cat.is-new-arrival .book-scene-cat{animation:book-cat-settle .7s ease-out both;animation-delay:var(--arrival-age)}
 .book-yard-cat.is-new-arrival .book-visitor-name{opacity:1}
 .book-yard-background.is-scene-revealing{animation:book-scene-reveal .9s ease-out both}
 .book-reward-layer{position:absolute;inset:78px 14px auto;z-index:7;pointer-events:none}
@@ -232,4 +260,6 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 @keyframes book-scene-unlock{0%,100%{box-shadow:none}35%{box-shadow:0 0 0 5px #f8edb57d,0 0 24px #fff4c2a3}65%{box-shadow:0 0 0 2px #f8edb543}}
 @keyframes book-scene-reveal{from{opacity:.45;filter:brightness(1.15)}to{opacity:1;filter:none}}
 @media(max-width:360px){.book-reward{grid-template-columns:52px minmax(0,1fr);gap:8px}.book-reward-art{width:52px;height:52px}.book-reward-art>.book-cat-sprite{width:54px}.book-reward-copy strong{font-size:12px}}
-@media(prefers-reduced-motion:reduce){.book-walking-cat,.book-reward,.book-reward-sparkles>i,.book-yard-cat.is-new-arrival>.book-scene-cat,.book-yard-background.is-scene-revealing,.book-scene-choice.is-unlocked,.book-game-menu>button.is-unlocked,.book-location.is-unlocked{animation:none}}
+@media(prefers-reduced-motion:reduce){.book-walking-cat,.book-reward,.book-reward-sparkles>i,.book-yard-cat.is-new-arrival .book-scene-cat,.book-yard-background.is-scene-revealing,.book-scene-choice.is-unlocked,.book-game-menu>button.is-unlocked,.book-location.is-unlocked{animation:none}}
+.book-scene-visits{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:12px 0}.book-scene-visits span{font-size:11px;padding:5px 8px;border-radius:12px;background:#eee9db;color:#867c66}.book-scene-visits .visited{background:#e6edce;color:#657845}.book-card-visit{font-size:10px;color:#81775f;margin-top:5px}
+.book-speech-layer{position:absolute;inset:0;z-index:4;pointer-events:none}.book-speech-bubble{position:absolute;box-sizing:border-box;padding:12px 14px;border:2px solid #fff9e8;border-radius:18px;background:#fff8e9;color:#5c4c38;box-shadow:0 4px 0 #7c684b25,0 7px 22px #4b402a18;font-size:14px;line-height:1.5;text-align:left}.book-speech-bubble:after{content:"";position:absolute;bottom:-9px;left:var(--speech-tail);width:14px;height:14px;background:#fff8e9;transform:translateX(-50%) rotate(45deg);border-right:2px solid #fff9e8;border-bottom:2px solid #fff9e8}.book-speech-bubble.is-below:after{top:-9px;bottom:auto;transform:translateX(-50%) rotate(225deg)}.book-speech-bubble strong{font-size:11px;color:#9c8354}.book-speech-bubble p{margin:3px 0 0}.book-speech-bubble small{display:block;margin-top:7px;color:#9d927a;font-size:10px}.book-speech-bubble[data-speech-kind="sleep"] p{font-size:22px;letter-spacing:3px;color:#9b947e}.book-yard-cat.is-speaking .book-visitor-name{opacity:1}

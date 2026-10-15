@@ -1,25 +1,30 @@
-import { COLLECTION_CATS, collectionCatProgress } from './cat-collection.js';
+import { COLLECTION_CATS, collectionCatProgress, collectionSceneInvitations } from './cat-collection.js';
 import { CAT_SCENES, collectionSceneProgress, sceneCatPlacement } from './catbook-scenes.js';
 import { levelInfo } from './state.js';
 
 /** Track confirmed snapshots only. Repeated saves and reconnects do not replay rewards. */
 export function createCollectionEvents(initialState) {
-  const invited=new Set(initialState.collection.invited.map(record=>record.id));
-  const ready=new Set(COLLECTION_CATS.filter(cat=>collectionCatProgress(cat,initialState.collection,levelInfo(initialState.xp).level).complete).map(cat=>cat.id));
-  const scenes=new Set(CAT_SCENES.filter(scene=>collectionSceneProgress(scene,initialState.collection,levelInfo(initialState.xp).level).complete).map(scene=>scene.id));
+  const visitKey=record=>`${record.sceneId}:${record.id}`;
+  const invited=new Set(collectionSceneInvitations(initialState.collection).map(visitKey));
+  const ready=new Set(COLLECTION_CATS.filter(cat=>collectionCatProgress(cat,initialState.collection,levelInfo(initialState.xp).level,initialState.diary).complete).map(cat=>cat.id));
+  const scenes=new Set(CAT_SCENES.filter(scene=>collectionSceneProgress(scene,initialState.collection,levelInfo(initialState.xp).level,initialState.diary).complete).map(scene=>scene.id));
   return {
     observe(state) {
       const result=[], current=new Set(state.collection.invited.map(record=>record.id));
+      const visits=collectionSceneInvitations(state.collection);
       for(const cat of COLLECTION_CATS) {
-        if(current.has(cat.id) && !invited.has(cat.id)) result.push({type:'cat-arrived',id:cat.id});
-        if(current.has(cat.id)) invited.add(cat.id);
+        for(const record of visits.filter(record=>record.id===cat.id)) {
+          const key=visitKey(record);
+          if(!invited.has(key)) result.push({type:'cat-arrived',id:cat.id,...(record.legacy ? {} : {sceneId:record.sceneId})});
+          invited.add(key);
+        }
       }
       for(const scene of CAT_SCENES) {
-        if(collectionSceneProgress(scene,state.collection,levelInfo(state.xp).level).complete && !scenes.has(scene.id)) { scenes.add(scene.id); result.push({type:'scene-unlocked',id:scene.id}); }
+        if(collectionSceneProgress(scene,state.collection,levelInfo(state.xp).level,state.diary).complete && !scenes.has(scene.id)) { scenes.add(scene.id); result.push({type:'scene-unlocked',id:scene.id}); }
       }
       const level=levelInfo(state.xp).level;
       for(const cat of COLLECTION_CATS) {
-        const progress=collectionCatProgress(cat,state.collection,level);
+        const progress=collectionCatProgress(cat,state.collection,level,state.diary);
         if(progress.complete && !ready.has(cat.id)) {
           ready.add(cat.id);
           if(!current.has(cat.id)) result.push({type:'cat-unlocked',id:cat.id});
@@ -36,6 +41,7 @@ export const CAT_ARRIVAL_MS=3200;
 /** Walk along the foreground, then hop through the furniture tiers to the exact foot anchor. */
 export function catArrivalRoute(scene,cat,{width,height,left,top,viewWidth,viewHeight}) {
   const place=sceneCatPlacement(scene,cat);
+  if(!place) return null;
   const target={x:width*place.x/100,y:height*place.y/100};
   const fromLeft=target.x < left+viewWidth/2, direction=fromLeft ? 1 : -1;
   const startX=fromLeft ? left-90 : left+viewWidth+90;

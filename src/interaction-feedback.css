@@ -1,0 +1,19 @@
+/* Short, bounded presentation effects; all overlays pass input through. */
+.nest-motion-layer{position:fixed;inset:0;z-index:100;overflow:hidden;pointer-events:none;contain:strict}
+.nest-motion-layer>*{position:absolute;pointer-events:none;user-select:none;will-change:transform,opacity}
+.nest-motion-particle{font-size:15px;line-height:1;color:#f2bc6a;text-shadow:0 1px 2px #fff8e0}
+.nest-motion-particle.is-heart{color:#e59cae;font-size:16px}
+.nest-motion-ring{width:35px;height:35px;border:2px solid #ffe9b2;border-radius:50%;box-shadow:0 0 8px #fff7d447}
+.nest-motion-food{width:74px;height:64px;display:grid;place-items:center;color:#eeb980;font-size:36px;filter:drop-shadow(0 5px 5px #8959371f)}
+.nest-motion-food .food-sprite{position:static!important;display:block!important;width:74px!important;height:64px!important;min-height:0!important;transform:none!important;margin:0!important}
+.nest-motion-reward{width:38px;height:38px;color:#ed9bac;font-size:32px;line-height:1;filter:drop-shadow(0 2px 5px #ffd78977)}
+.nest-motion-reward img{display:block;width:100%;height:100%;object-fit:contain}
+.nest-motion-sleep{font-size:27px;color:#e2d1ab;text-shadow:0 0 8px #fff4c5}
+button.has-motion-press{will-change:scale}
+button.has-motion-press:active{transform:none}
+.pantry-item,.feeding-tabs button,.food-categories button,.court-result-tabs button,.appearance-choice,.setting-row{transition:background-color 180ms ease,border-color 180ms ease,box-shadow 180ms ease}
+.nest .pet-card .need-button{transition:background-color 240ms ease,color 240ms ease}
+.nest .pet-card .need-button:has(>.need-delta.is-positive:not([hidden])){background:#dcebc14d}
+.nest .pet-card .need-button:has(>.need-delta.is-negative:not([hidden])){background:#edddc333}
+.need-dot,.needs-boost{transition:background-color 240ms ease,box-shadow 240ms ease,opacity 240ms ease}
+@media(prefers-reduced-motion:reduce){.nest-motion-layer{display:none}.has-motion-press{will-change:auto}.pantry-item,.feeding-tabs button,.food-categories button,.court-result-tabs button,.appearance-choice,.setting-row,.nest .pet-card .need-button,.need-dot,.needs-boost{transition:none}}

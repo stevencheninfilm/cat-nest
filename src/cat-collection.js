@@ -1,4 +1,6 @@
 // Shared by the client and server: achievements advance after accepted care or victories.
+import { unlockedMemoryCardCount } from './memory-journal.js';
+import { REFERENCE_CAT_DEFINITIONS } from './catbook-reference-cats.js';
 export const COLLECTION_STATS = Object.freeze(['feed', 'pet', 'play', 'sleep', 'pair']);
 export const COLLECTION_GAMES = Object.freeze(['rps', 'memory', 'gomoku']);
 export const COLLECTION_DAILY_LIMITS = Object.freeze({feed:10,pet:20,play:10,sleep:3});
@@ -32,6 +34,10 @@ export const COLLECTION_CATS = Object.freeze([
   cat('toast', '吐司', 'Toast', 21, '围着红格子小围兜，把每一顿认真准备的饭都记在心里。', '今日开饭啦', 'daily-feed', 10, 1),
   cat('mint', '薄荷', 'Mint', 22, '白白软软的小猫，得到摸摸后就会伸一个长长的懒腰。', '今日温柔时光', 'daily-pet', 10, 1),
   cat('luna', '月牙', 'Luna', 23, '戴着小月亮项链，会陪你把忙碌的一天慢慢放下来。', '今日安心好梦', 'daily-sleep', 3, 1),
+  ...REFERENCE_CAT_DEFINITIONS.map((entry,index)=>Object.freeze({
+    ...cat(entry.id,entry.name,entry.english,24+index,entry.personality,entry.achievement,entry.metric,entry.base,entry.multiplier,entry.extra || []),
+    reviewOutline:true,
+  })),
 ]);
 const byId = new Map(COLLECTION_CATS.map(cat => [cat.id, cat]));
 const STABLE_ID = /^[a-zA-Z0-9_.:-]{8,180}$/;
@@ -39,6 +45,16 @@ const ACTOR_ID = /^[a-zA-Z0-9_-]{6,80}$/;
 const safeCount = value => Number.isSafeInteger(value) && value >= 0;
 export const getCollectionCat = id => byId.get(id) || null;
 export const validCollectionCatId = id => typeof id === 'string' && byId.has(id);
+export const COLLECTION_SCENE_IDS=Object.freeze(['station','garden','western','snow']);
+export const validCollectionSceneId=id=>COLLECTION_SCENE_IDS.includes(id);
+/** Legacy receipts belong to the original station; explicit visits never fan out. */
+export function collectionSceneInvitations(collection) {
+  const visits=(collection.sceneInvited || []).map(record=>({...record}));
+  const explicit=new Set(visits.map(record=>record.operationId));
+  for(const record of collection.invited) if(!explicit.has(record.operationId) && !visits.some(visit=>visit.id===record.id && visit.sceneId==='station')) visits.push({...record,sceneId:'station',legacy:true});
+  return visits;
+}
+export const collectionSceneInvitation=(collection,id,sceneId)=>collectionSceneInvitations(collection).find(record=>record.id===id && record.sceneId===sceneId) || null;
 export function emptyCollectionAchievements() {
   return {boost:0,dress:0,daily:Object.fromEntries(Object.keys(COLLECTION_DAILY_LIMITS).map(key=>[key,0]))};
 }
@@ -76,14 +92,22 @@ function validInvite(value) {
     && typeof value.actorId === 'string' && ACTOR_ID.test(value.actorId)
     && Object.keys(value).every(key => ['id', 'at', 'operationId', 'actorId'].includes(key));
 }
+function validSceneInvites(value,invited) {
+  if(value === undefined) return true;
+  if(!Array.isArray(value) || value.length>COLLECTION_CATS.length*COLLECTION_SCENE_IDS.length) return false;
+  const collected=new Set(invited.map(record=>record.id));
+  if(!value.every(record=>record && validCollectionSceneId(record.sceneId) && collected.has(record.id) && validInvite(Object.fromEntries(Object.entries(record).filter(([key])=>key!=='sceneId'))))) return false;
+  if(new Set(value.map(record=>`${record.sceneId}:${record.id}`)).size!==value.length || new Set(value.map(record=>record.operationId)).size!==value.length) return false;
+  return value.every(record=>!invited.some(first=>first.operationId===record.operationId && (first.id!==record.id || first.actorId!==record.actorId || first.at!==record.at)));
+}
 export function validCollection(value, foodIds) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['stats','wins','achievements','foods','invited'].includes(key))) return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['stats','wins','achievements','foods','invited','sceneInvited'].includes(key))) return false;
   if (!value.stats || typeof value.stats !== 'object' || Array.isArray(value.stats) || Object.keys(value.stats).length !== COLLECTION_STATS.length || !COLLECTION_STATS.every(key => safeCount(value.stats[key]))) return false;
   if (value.wins !== undefined && (!value.wins || typeof value.wins !== 'object' || Array.isArray(value.wins) || Object.keys(value.wins).length !== COLLECTION_GAMES.length || !COLLECTION_GAMES.every(key => safeCount(value.wins[key])))) return false;
   if (value.achievements !== undefined && !validAchievements(value.achievements)) return false;
   if (!Array.isArray(value.foods) || value.foods.length > foodIds.length || new Set(value.foods).size !== value.foods.length || !value.foods.every(id => foodIds.includes(id))) return false;
   if (!Array.isArray(value.invited) || value.invited.length > COLLECTION_CATS.length || !value.invited.every(validInvite)) return false;
-  return new Set(value.invited.map(record => record.id)).size === value.invited.length && new Set(value.invited.map(record => record.operationId)).size === value.invited.length;
+  return new Set(value.invited.map(record => record.id)).size === value.invited.length && new Set(value.invited.map(record => record.operationId)).size === value.invited.length && validSceneInvites(value.sceneInvited,value.invited);
 }
 /** Old saves contribute only verifiable lower bounds from their remaining records. */
 export function normalizeCollection(value, legacy, foods) {
@@ -92,7 +116,7 @@ export function normalizeCollection(value, legacy, foods) {
   if (value !== undefined) {
     if (!validCollection(value, foodIds)) return next;
     const achievements=value.achievements;
-    return { stats:{ ...value.stats }, wins:{ ...next.wins, ...value.wins }, achievements:achievements ? {...achievements,daily:{...achievements.daily}} : knownAchievements(legacy), foods:[...value.foods], invited:value.invited.map(record => ({ ...record })) };
+    return { stats:{ ...value.stats }, wins:{ ...next.wins, ...value.wins }, achievements:achievements ? {...achievements,daily:{...achievements.daily}} : knownAchievements(legacy), foods:[...value.foods], invited:value.invited.map(record => ({ ...record })), ...(value.sceneInvited ? {sceneInvited:value.sceneInvited.map(record=>({...record}))} : {}) };
   }
   for (const entry of legacy.history || []) {
     const text = entry.text;
@@ -108,10 +132,11 @@ export function normalizeCollection(value, legacy, foods) {
   next.achievements=knownAchievements(legacy);
   return next;
 }
-export function collectionCatProgress(cat, collection, level) {
+export function collectionCatProgress(cat, collection, level, diary) {
   const requirements = cat.requirements.map(({ metric, target }) => {
     const current = metric.startsWith('daily-') ? collection.achievements?.daily[metric.slice(6)] || 0
       : ['boost','dress'].includes(metric) ? collection.achievements?.[metric] || 0
+      : metric === 'diary-cards' ? unlockedMemoryCardCount(diary)
       : metric.startsWith('win-') ? collection.wins?.[metric.slice(4)] || 0 : metric === 'level' ? level : metric === 'foods' ? collection.foods.length : metric === 'care'
       ? Math.min(Number.MAX_SAFE_INTEGER, ['feed','pet','play','sleep'].reduce((sum, key) => sum + collection.stats[key], 0))
       : collection.stats[metric];
@@ -123,11 +148,11 @@ export function collectionCatProgress(cat, collection, level) {
   // Previously invited cats remain collected when achievement thresholds increase.
   return { current, target, requirements, achieved, complete:!!invited || achieved, invited, fraction:invited ? 1 : Math.min(...requirements.map(requirement => requirement.fraction)) };
 }
-export function canInviteCat(id, collection, level) {
+export function canInviteCat(id, collection, level, sceneId, diary) {
   const cat = getCollectionCat(id);
   if (!cat) return false;
-  const progress = collectionCatProgress(cat, collection, level);
-  return progress.complete && !progress.invited;
+  const progress = collectionCatProgress(cat, collection, level, diary);
+  return progress.complete && (sceneId === undefined ? !progress.invited : validCollectionSceneId(sceneId) && !collectionSceneInvitation(collection,id,sceneId));
 }
 export function recordCollectionCare(collection, type, food) {
   collection.stats[type] = Math.min(Number.MAX_SAFE_INTEGER, collection.stats[type] + 1);

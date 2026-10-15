@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>互动手感 · 本地视觉预览</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:14px;background:#efe1cd;color:#76523c;font:14px/1.6 system-ui}main{max-width:460px;margin:auto}h1{font-size:21px;margin:5px 0}p{font-size:12px;margin:6px 0 12px}.demo-room{position:relative;height:440px;border:2px solid #fff5df;border-radius:28px;overflow:hidden;background:url('/assets/room.webp') center/cover}.demo-heading{position:absolute;top:14px;left:18px;right:18px;padding:8px 14px;border-radius:15px;background:#fff8e3df;font-size:12px;text-align:center}#cat{position:absolute;inset:55px 30px 80px;border:0;background:none;touch-action:pan-y}.cat-model-canvas{display:block;width:100%;height:100%}.demo-progress{position:absolute;bottom:25px;left:40px;right:40px;background:#fff8e7e8;padding:12px 14px;border-radius:17px}.demo-progress span{font-size:12px}.demo-track{height:9px;margin-top:7px;border-radius:9px;background:#e5ceb0;overflow:hidden}.demo-track i{display:block;height:100%;width:42%;background:linear-gradient(#f5b5bd,#d8849d);border-radius:inherit}.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:13px 0}button{font:inherit;color:inherit;cursor:pointer;border:1px solid #fff8eb;background:linear-gradient(#fff4da,#f4dbaa);border-radius:14px;padding:12px 6px;touch-action:manipulation}button:focus-visible{outline:3px solid #ac7e52;outline-offset:2px}#status{min-height:38px;padding:9px 12px;border-radius:12px;background:#fff8e5;font-size:12px}.demo-options{display:flex;flex-wrap:wrap;gap:8px 15px;font-size:12px;margin:14px 0}.demo-options label{display:flex;align-items:center;gap:4px}dialog{border:0;padding:20px;border-radius:22px;background:#fff8e8;max-width:340px;width:90%;color:inherit}dialog::backdrop{background:#73543744}.dish-food{width:120px;height:110px;display:block;margin:10px auto}.demo-panels{display:flex;gap:8px;margin:10px 0}.demo-panels button{flex:1;padding:8px;font-size:12px}.demo-notice{color:#9b7a5c}.demo-room .nest-motion-food{width:70px}
+</style>
+<main>
+  <h1>让每次陪伴，都有一点回应</h1><p class="demo-notice">本地动效示意 · 不提交操作、不增减成长、不写入小窝存档</p>
+  <section class="demo-room"><div class="demo-heading">按下轻轻回弹，回应跟着手指走</div><button id="cat" aria-label="轻轻摸摸示意猫猫"></button><div class="demo-progress"><span>成长条 · 动效示意</span><div class="demo-track" id="target"><i></i></div></div></section>
+  <div class="controls"><button data-demo="pet">♡ 摸摸</button><button data-demo="feed">🐟 投喂</button><button data-demo="play">✦ 逗猫</button><button data-demo="collect" id="reward">♥ 领奖</button></div>
+  <div id="status" role="status">正在加载主页同款猫猫…</div>
+  <div class="demo-panels"><button id="open-panel">查看投喂过渡</button><button id="cancel">撤回当前效果</button></div>
+  <div class="demo-options"><label><input id="reduce" type="checkbox"> 减少动态效果</label><label><input id="pause" type="checkbox"> 暂停视觉反馈</label></div>
+  <p>拖动猫猫只会转身；可连续轻点观察粒子上限，或在动画中撤回。关闭页面、切到后台会清理动效。</p><p><a href="/">回到共享小窝预览</a></p>
+</main>
+<dialog id="panel"><div id="panel-content"><h2>一小份，慢慢送到面前</h2><p>沿用现有食物图，不新增模型或贴图。</p><div id="dish"></div><button id="serve-food">送给猫猫</button><button id="close-panel">关闭</button></div></dialog>
+<script type="module">
+import '/src/interaction-feedback.css';
+import '/src/feeding.css';
+import {createInteractionFeedback} from '/src/interaction-feedback.js';
+import {createCatModel} from '/src/cat-model.js';
+import {foodArt} from '/src/feeding-ui.js';
+const $=id=>document.getElementById(id);
+let counter=0, lastOperation=null;
+const feedback=createInteractionFeedback({canPresent:()=>!$('pause').checked,reducedMotion:()=> $('reduce').checked || matchMedia('(prefers-reduced-motion: reduce)').matches});
+const cat=createCatModel({container:$('cat'),assetBase:'/api/pet-model/mage-cat-v1',reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,onReady(){ $('status').textContent='可以轻点互动了，示意操作不会写入存档。'; },onError(){ $('status').textContent='模型暂不可用，按钮与动效仍可预览。'; }});
+const state={hunger:70,mood:90,energy:85,sleeping:false};
+$('dish').innerHTML=foodArt('fish','dish-food');
+function action(type){
+  const operationId=`motion-demo-${++counter}`;lastOperation=operationId;
+  if(type==='collect') feedback.collect({origin:$('reward').getBoundingClientRect(),target:$('target'),artwork:'/assets/growth-hearts/v1/candy.webp',operationId});
+  else{ cat.react(type,state);feedback.care(type,{operationId,foodMarkup:foodArt('fish')}); }
+  $('status').textContent=`${{pet:'摸摸爱心',feed:'投喂入场',play:'柔光星点',collect:'奖励吸入'}[type]} · ${$('reduce').checked ? '减少动态模式，文字直接回应' : '仅播放视觉示意'}`;
+}
+for(const button of document.querySelectorAll('[data-demo]'))button.addEventListener('click',()=>action(button.dataset.demo));
+$('cat').addEventListener('click',()=>{if(!cat.consumeTap()){cat.react('touch',state);feedback.care('touch');}});
+$('open-panel').addEventListener('click',()=>{$('panel').showModal();feedback.panel($('panel-content'));});
+$('serve-food').addEventListener('click',()=>{$('panel').close();action('feed');});
+$('close-panel').addEventListener('click',()=>$('panel').close());
+$('cancel').addEventListener('click',()=>{feedback.rollback(lastOperation);cat.cancelReaction(state);$('status').textContent='当前效果已撤回，示意状态没有变化。';});
+for(const name of ['pause','reduce'])$(name).addEventListener('change',()=>{feedback.clear();cat.setPaused(document.hidden || $('reduce').checked || $('pause').checked);$('status').textContent=$('reduce').checked?'减少动态效果：按钮与文字直接回应，不播放粒子和飞行。':'视觉偏好已更新。';});
+document.addEventListener('visibilitychange',()=>cat.setPaused(document.hidden));
+window.addEventListener('pagehide',()=>{feedback.clear();cat.setPaused(true);});
+if(import.meta.hot)import.meta.hot.dispose(()=>{feedback.destroy();cat.destroy();});
+</script>
+</html>

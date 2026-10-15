@@ -2,6 +2,7 @@ import { initialState, normalizeState, reduceAction, FOODS, foodCooldownMs, leve
 import { publicGameHub } from '../src/minigames.js';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { demoLocalStorage } from './storage.js';
+import { TOUCH_GAMES, TOUCH_DURATION, touchComputerEvents } from '../src/minigames-touch-rules.js';
 
 export const DEMO_ROOM = 'dddddddddddddddddddddddddddd5174';
 const clone = value => structuredClone(value);
@@ -63,7 +64,7 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
         s.collection.stats={feed:10000,pet:10000,play:10000,sleep:10000,pair:10000}; s.collection.foods=Object.keys(FOODS);
         s.collection.wins={rps:10000,memory:10000,gomoku:10000};
         s.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:20,play:10,sleep:3}};
-        replace(s); return '已解锁全部成长阶段和图鉴邀请条件';
+        replace(s); return '已解锁全部成长阶段和基础图鉴邀请条件；编号 25–36 按已解锁日记卡片开放';
       }
       if (kind === 'clear-limits') { const s=clone(record.state); s.careLimits=initialState(now()).careLimits; s.sleeping=false; s.hunger=s.mood=s.energy=96; s.needsUpdatedAt=now(); replace(s); return '每日次数、冷却和体力已恢复，仅影响演示'; }
       if (kind === 'portion') {
@@ -87,6 +88,17 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
       const step=m.game==='rps' ? m.rounds.length:m.step;
       let next;
       if(m.status==='waiting')next={type:'game-join',gameId:m.id};
+      else if(TOUCH_GAMES.includes(m.game)){
+        const player=m.players.findIndex(p=>p.id===actor.id),a=m.arcade,run=a.runs[player];
+        if(player<0)return false;
+        if(a.stage==='ready'){if(a.ready[player])return false;next={type:'game-arcade-ready',gameId:m.id};}
+        else{
+          if(a.stage!=='running'||now()<a.startAt||run.finished)return false;
+          const until=Math.min(TOUCH_DURATION[m.game],now()-a.startAt);
+          const events=touchComputerEvents(m.game,a.seed,'normal').filter(e=>e[0]>run.elapsed&&e[0]<=until);
+          next={type:'game-arcade-input',gameId:m.id,seq:run.seq,until,events};
+        }
+      }
       else if(m.phase==='reveal') { if(now()<m.revealUntil)return false; next={type:'game-next',gameId:m.id,step}; }
       else {
         const player=m.players.findIndex(player=>player.id===actor.id);

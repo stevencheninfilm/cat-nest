@@ -69,7 +69,10 @@ test('five and twelve victories unlock the new cats even after the daily growth 
     assert.equal(canInviteCat('scout',state.collection,1),n>=5);
     assert.equal(canInviteCat('biscuit',state.collection,1),n>=12);
     const notices=events.observe(state);
-    assert.deepEqual(notices,n===5?[{type:'cat-unlocked',id:'scout'}]:n===12?[{type:'cat-unlocked',id:'biscuit'}]:[]);
+    const expected=n===5?[{type:'cat-unlocked',id:'scout'}]:n===12?[{type:'cat-unlocked',id:'biscuit'}]:[];
+    // Each finished duo game adds a diary card, alongside the adoption card.
+    if(n>=2 && n<=35 && (n+1)%3===0)expected.push({type:'cat-unlocked',id:COLLECTION_CATS[24+(n+1)/3-1].id});
+    assert.deepEqual(notices,expected);
   }
   assert.equal(state.history.length,40);
   assert.equal(state.collection.wins.rps,45,'victories outlive the bounded diary');
@@ -96,7 +99,7 @@ test('new portraits remain gray before invitation and the first scene is the lar
   assert.match(html,/data-scene-id="station"/);
   assert.match(html,/石头剪刀布累计获胜 5 局/);
   assert.match(html,/book-cat-sprite is-game-cat undiscovered/);
-  assert.equal(COLLECTION_CATS.length,24);
+  assert.equal(COLLECTION_CATS.length,36);
   for(const action of [{type:'game-finish',winner:0},{type:'invite-cat',catId:'scout',wins:5}])assert.equal(sanitizeAction(action),null);
 });
 

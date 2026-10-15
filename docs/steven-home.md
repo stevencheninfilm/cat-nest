@@ -7,5 +7,3 @@
 - Evian 的原固定房间和 `evian:` 命名空间保持不变，继续与 Steven 使用同一套功能资源。
 - 构建生成 `dist/steven/index.html` 与 `dist/evian/index.html`，两者通过 base 引用同一份应用资源；公共 dist/index.html 只包含跳转，不加载个人小窝。
 - 本地统一复用 127.0.0.1:5174，个人小窝预览在 `/steven/`，公共首页进入 `/test/`。
-
-2026-10-15：所有存档入口已统一为一份应用构建，测试入口不再独立构建。今后以 `shared-save-architecture.md` 为架构与发布约束，原房间及缓存绑定继续保留。

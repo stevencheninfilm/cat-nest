@@ -2,14 +2,14 @@ import { normalizeMemoryJournal } from './memory-journal.js';
 import { memoryJournalPanel, memoryCardPanel, memoryPresentation } from './memory-journal-ui.js';
 import { createMemoryCard } from './memory-card.js';
 
-export function createDiaryController({root,getState,saving=()=>false,dispatch,toast=()=>{}}) {
+export function createDiaryController({root,getState,saving=()=>false,dispatch,toast=()=>{},supplemental=()=>''}) {
   let tab='moments',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,pending=null,message='',progressTimer=null;
   const state=()=>getState();
   const journal=()=>normalizeMemoryJournal(state().diary,state());
   const selectedEntry=()=>journal().entries.find(e=>e.id===selected);
   const canShare=()=>{try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[new File([''], '纪念卡.png',{type:'image/png'})]});}catch{return false;}};
   function cleanCard(){generation++;if(url)URL.revokeObjectURL(url);url=blob=null;error='';}
-  function panel() { if(!progressTimer)progressTimer=setInterval(()=>{if(root.closest('dialog')?.open&&root.dataset.view==='diary'&&tab==='locked'&&!selected)refresh();},30_000);const e=selectedEntry();return e?memoryCardPanel(e,{url,error,canShare:canShare()}):memoryJournalPanel(state(),{tab,filter,page,saving:saving(),message}); }
+  function panel() { if(!progressTimer)progressTimer=setInterval(()=>{if(root.closest('dialog')?.open&&root.dataset.view==='diary'&&tab==='locked'&&!selected)refresh();},30_000);const e=selectedEntry();return e?memoryCardPanel(e,{url,error,canShare:canShare()}):memoryJournalPanel(state(),{tab,filter,page,saving:saving(),message})+supplemental(); }
   function draw() {
     if(root.dataset.view!=='diary')return;
     const scroll=root.closest('dialog')?.scrollTop||0,active=document.activeElement;

@@ -58,10 +58,16 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now, homeId
           if (duplicate.event.actor.id!==actor.id || JSON.stringify(duplicate.event.action)!==JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT','操作编号已用于其他操作。',409);
           return {...publicRoom(room),event:publicGameEvent(duplicate.event),duplicate:true};
         }
+        const invitation=room.state.collection?.sceneInvited?.find(record=>record.operationId===operationId)
+          || room.state.collection?.invited?.find(record=>record.operationId===operationId);
+        if(invitation) {
+          if(action.type!=='invite-cat' || action.catId!==invitation.id || actor.id!==invitation.actorId || (action.sceneId||'station')!==(invitation.sceneId||'station')) throw new StorageError('OPERATION_CONFLICT','操作编号已用于其他操作。',409);
+          return {...publicRoom(room),event:{operationId,action,actor},duplicate:true};
+        }
         const produced=room.state.pendingGrowth.find(r=>r.id===operationId) || room.claimedGrowth.find(r=>r.id===operationId);
         if(action.type==='game-create' && (room.state.pendingGrowth.some(r=>r.id===`game:${operationId}`) || room.claimedGrowth.some(r=>r.id===`game:${operationId}`))) throw new StorageError('OPERATION_CONFLICT','操作编号已用于已结算的小游戏。',409);
         if (produced) {
-          if (produced.actorId!==actor.id || produced.kind!==action.type || action.type==='feed' && produced.food!==action.food) throw new StorageError('OPERATION_CONFLICT','操作编号已用于其他操作。',409);
+          if (produced.actorId!==actor.id || produced.kind!==action.type || produced.furniture!==action.furniture || action.type==='feed' && produced.food!==action.food) throw new StorageError('OPERATION_CONFLICT','操作编号已用于其他操作。',409);
           return {...publicRoom(room),event:{operationId,action,actor},duplicate:true};
         }
         const at=now(), info=careActionInfo(room.state,action,actor.id,at);

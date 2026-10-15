@@ -174,7 +174,8 @@ test('simultaneous partner feeds across server instances save both actions and a
   assert.equal(saved.state.love, starting.love + 35 + 45 + 10);
   assert.equal(saved.state.xp, starting.xp);
   assert.equal(saved.state.pendingGrowth.length, 2);
-  assert.equal(saved.state.pendingGrowth.reduce((sum, reward) => sum + reward.amount, 0), 110);
+  const expected = saved.state.pendingGrowth[0].food === 'chicken' ? [38.5, 71.5] : [49.5, 58.5];
+  assert.deepEqual(saved.state.pendingGrowth.map(reward => reward.amount), expected, 'the second feed receives the full bonus after the first restores energy');
   assert.deepEqual(saved.state.pendingGrowth.map(reward => reward.id).sort(), [male.operationId, female.operationId].sort());
   assert.equal(saved.state.feedingWindow.bonusClaimed, true);
   assert.deepEqual(saved.state.feedRecords.map(record => record.actorId).sort(), ['partner-female', 'partner-male']);

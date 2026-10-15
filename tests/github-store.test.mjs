@@ -152,6 +152,27 @@ test('concurrent invitations from two store instances keep one cat and one diary
   assert.equal(saved.state.history.filter(item=>item.text==='邀请斑斑加入猫猫庭院').length,1);
 });
 
+test('per-scene invitation receipts persist independently and prevent replay after journal rollover', async()=>{
+  const mock=mockGitHub(),store=makeStore(mock,{now:()=>CARE_START}),room=await store.createRoom();
+  const file=mock.files.get(room.roomId);file.room.state.collection.stats.pet=5;file.sha='scene-invite-qualified-sha';
+  const visit=(sceneId,id=`scene-invite-${sceneId}`)=>({...invite('bandit',id),action:{type:'invite-cat',catId:'bandit',sceneId}});
+  const garden=await store.applyAction(room.roomId,visit('garden'));
+  assert.equal(garden.state.collection.invited.length,1);
+  assert.equal(garden.state.collection.sceneInvited.length,1);
+  const station=await store.applyAction(room.roomId,visit('station'));
+  assert.equal(station.state.collection.invited.length,1);
+  assert.equal(station.state.collection.sceneInvited.length,2);
+  const stored=mock.files.get(room.roomId);stored.room.operations=[];stored.sha='scene-invite-rollover-sha';
+  const restarted=makeStore(mock,{now:()=>CARE_START}),writes=mock.calls.filter(call=>call.method==='PUT').length;
+  const replay=await restarted.applyAction(room.roomId,visit('garden'));
+  assert.equal(replay.duplicate,true);
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length,writes);
+  assert.deepEqual(replay.state.collection,station.state.collection);
+  await assert.rejects(restarted.applyAction(room.roomId,visit('station','scene-invite-garden')),error=>error.code==='OPERATION_CONFLICT');
+  await assert.rejects(restarted.applyAction(room.roomId,visit('garden','scene-invite-second-garden')),error=>error.code==='CAT_ALREADY_INVITED');
+  await assert.rejects(restarted.applyAction(room.roomId,visit('snow')),error=>error.code==='CAT_SCENE_UNAVAILABLE');
+});
+
 test('a corrupt persisted collection ledger fails closed before any save can erase it', async () => {
   const mock=mockGitHub();
   const store=makeStore(mock,{now:()=>CARE_START});

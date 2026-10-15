@@ -32,4 +32,4 @@
 - 模拟 409 拒绝：临时显示 89.3，响应后恢复 86 和原来的两颗气泡，错误原因可见。
 - 浏览器截图：`/private/tmp/cat-nest-optimistic-pending.png`、`/private/tmp/cat-nest-optimistic-rollback.png`。验收仅使用虚构数据，未写入线上存档。
 
-追加到第二版后的完整隔离回归：308 项通过，0 失败、0 跳过；包含真实本机 PostgreSQL 与模拟 AI，生产构建通过。平台免费部署仍暂停，尚未上线。
+第二版精确补丁位于 `/private/tmp/cat-v2-optimistic-20261014/optimistic-v2.patch`，校验清单为同目录 `manifest.json`。第二版加补丁的独立快照再次通过 49 项专项回归（0 跳过）和 Node 22 生产构建；日志为同目录 `regression.log`、`build.log`。补丁不包含其他聊天尚未完成的小游戏、本地预览配置或图鉴入场改动。

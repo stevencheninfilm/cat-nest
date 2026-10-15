@@ -6,4 +6,9 @@
 
 Node 22.23.3 回归：490 项通过、0 失败、1 项真实 PostgreSQL 环境测试跳过。覆盖 29 分 59 秒不扣、30 分钟各扣 1、60 分钟各扣 2、24 小时离线各扣 48、刷新/归一化不重复扣减和计时不被无关操作重置。生产构建及 Steven/Evian/Todd/test 共用产物检查通过。本机监测的只读状态推导测试另有 11 项通过，监测接口不发布到公网。
 
-发布记录待线上验证后补充。
+## 线上发布
+
+- 提交：`6ef9698c664a250a9535f1ce16fb033247450cb3`；tree：`ea16452d536ea14eb5e6d1fe76bd4ce8ad64d319`。主分支由 `c8c4974` 正常快进，没有强制覆盖或纳入其他进行中修改。
+- Render 部署：`dep-db8k7pl9fdbs73dr77rg`，2026-10-15 21:22:33 UTC live，准确提交的版本清单及健康接口均为 200，判官存储仍为 PostgreSQL、`durable=true`；部署开始后未查到 error 日志。
+- GitHub Pages：[运行 38809933255](https://github.com/stevencheninfilm/cat-nest/actions/runs/38809933255)，测试、构建、发布成功；版本清单指向准确提交。四个入口返回 200，HTML 哈希均为 `60267447507d28dd2008c85dd80b92c5b177dbcb5d6c05cf6c3348f041763b7c`，共同加载 `assets/index-DEqY59K-.js`。
+- 线上测试入口详情已核对“每 30 分钟：饱饱下降 1 点、开心下降 1 点、活力下降 1 点”，离线规则和倒计时同步为 30 分钟；截图 `needs-decay-30min-live.png`。未操作个人存档或领取成长气泡。

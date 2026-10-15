@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createArcadeController } from '../src/minigames-arcade-client.js';
+import { createArcadeRun } from '../src/minigames-arcade-rules.js';
+import { teaserTarget } from '../src/minigames-touch-rules.js';
+import { createMemoryStorage } from '../demo/storage.js';
+
+test('a quick drag keeps its final position after throttling, while cancel and suspend never append an endpoint',t=>{
+  const start=Date.UTC(2026,9,15);let time=start+100,visible=true;
+  t.mock.method(Date,'now',()=>time);t.mock.timers.enable({apis:['setTimeout']});
+  const previous=new Map(['document','requestAnimationFrame','cancelAnimationFrame'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+  const listeners=new Map(),documentListeners=new Map(),nodes=new Map();
+  function node(){return {textContent:'',dataset:{},style:{},classList:{toggle(){},add(){},remove(){}},setAttribute(){},getBoundingClientRect:()=>({left:0,top:0,width:310,height:310}),focus(){},setPointerCapture(){}};}
+  const stage=node();stage.querySelector=selector=>{if(!nodes.has(selector))nodes.set(selector,node());return nodes.get(selector);};stage.querySelectorAll=()=>[];
+  const root={querySelector:selector=>selector==='[data-arcade-id]'?stage:selector==='[data-touch-surface]'?stage.querySelector(selector):null,querySelectorAll:()=>[],addEventListener:(type,listener)=>{const list=listeners.get(type)||[];list.push(listener);listeners.set(type,list);}};
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{hidden:false,addEventListener:(type,listener)=>documentListeners.set(type,listener)}});
+  Object.defineProperty(globalThis,'requestAnimationFrame',{configurable:true,value:()=>1});
+  Object.defineProperty(globalThis,'cancelAnimationFrame',{configurable:true,value:()=>{}});
+  const storage=createMemoryStorage(),run=createArcadeRun('teaser',42),m={id:'touch-drag-client',game:'teaser',status:'active',players:[{id:'partner-male'}],scores:[0,0],arcade:{stage:'running',seed:42,startAt:start,runs:[run]}};
+  let lastFrame;
+  const controller=createArcadeController({root,getMatch:()=>m,getClientId:()=> 'partner-male',isSaving:()=>true,isConnected:()=>true,isVisible:()=>visible,dispatch:()=>{throw Error('saving cannot send another checkpoint');},storage,onFrame:value=>{lastFrame=value;}});
+  t.after(()=>{controller.suspend();for(const [key,descriptor]of previous)if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];});
+  time=start-2500;controller.sync();
+  assert.equal(stage.querySelector('[data-arcade-countdown]').hidden,false);
+  assert.equal(stage.querySelector('[data-arcade-countdown-number]').textContent,'3');
+  assert.equal(lastFrame.enabled,false,'input waits for the central countdown to finish');
+  time=start+100;controller.sync();
+  assert.equal(stage.querySelector('[data-arcade-countdown]').hidden,true);
+  const surface=node(),target=teaserTarget(42,0),far=target.x>16?target.x-12:target.x+12;
+  const emit=(type,x,y)=>{const event={pointerId:1,isPrimary:true,button:0,clientX:x*10,clientY:y*10,target:{closest:selector=>selector==='[data-touch-surface]'?surface:null},preventDefault(){}};for(const listener of listeners.get(type)||[])listener(event);};
+  const saved=()=>JSON.parse(storage.getItem('catnest.arcade.touch-drag-client.partner-male'));
+  emit('pointerdown',far,target.y);time+=10;emit('pointerup',target.x,target.y);
+  assert.equal(stage.querySelector('[data-arcade-score]').textContent,0);
+  time+=65;t.mock.timers.tick(65);
+  assert.equal(stage.querySelector('[data-arcade-score]').textContent,10,'the final point reaches the paw target');
+  assert.equal(lastFrame.game,'teaser');
+  assert.equal(lastFrame.run.score,10,'the real home cat receives immediate local feedback');
+  assert.equal(lastFrame.enabled,true);
+  assert.equal(m.arcade.runs[0].score,0,'visual feedback does not mutate the authoritative save');
+  assert.equal(saved().queue.length,2);
+  visible=false;documentListeners.get('keydown')({key:'ArrowRight',target:{matches:()=>false},preventDefault(){throw Error('a closed game must not consume keyboard input');}});assert.equal(saved().queue.length,2);visible=true;
+  time+=100;emit('pointerdown',far,target.y);emit('pointercancel',target.x,target.y);
+  const count=saved().queue.length;time+=100;t.mock.timers.tick(100);assert.equal(saved().queue.length,count);
+  time+=100;emit('pointerdown',far,target.y);time+=10;emit('pointerup',target.x,target.y);
+  controller.suspend();const suspended=saved().queue.length;time+=100;t.mock.timers.tick(100);assert.equal(saved().queue.length,suspended);
+});

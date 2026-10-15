@@ -1,6 +1,6 @@
 import Peer from 'peerjs';
 import { FOODS, validPendingGrowth } from './state.js';
-import { validCollectionCatId } from './cat-collection.js';
+import { validCollectionCatId, validCollectionSceneId } from './cat-collection.js';
 
 /**
  * Two-person, host-authoritative rooms over PeerJS/WebRTC.
@@ -44,6 +44,7 @@ export function validateAction(value) {
   }
   if (value.type === 'claim-growth' && keys.length === 2 && keys.includes('rewardId') && typeof value.rewardId === 'string' && REWARD_PATTERN.test(value.rewardId)) return { type: 'claim-growth', rewardId: value.rewardId };
   if (value.type === 'invite-cat' && keys.length === 2 && keys.includes('catId') && validCollectionCatId(value.catId)) return { type:'invite-cat', catId:value.catId };
+  if (value.type === 'invite-cat' && keys.length === 3 && keys.includes('catId') && keys.includes('sceneId') && validCollectionCatId(value.catId) && validCollectionSceneId(value.sceneId)) return {type:'invite-cat',catId:value.catId,sceneId:value.sceneId};
   return null;
 }
 

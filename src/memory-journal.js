@@ -28,6 +28,11 @@ function validEntry(e) {
   if(e.kind==='fun')return Number.isInteger(e.variant) && e.variant>=0 && e.variant<12 && validMemoryId(e.sourceId) && e.id===`fun:${memoryDay(e.at)}`;
   return typeof e.text==='string' && e.text.length>0 && e.text.length<=200 && !/[\u0000-\u001f\u007f]/.test(e.text) && e.id.startsWith('legacy:');
 }
+/** Count actual unlocked timeline cards once; favorites and locked previews add nothing. */
+export function unlockedMemoryCardCount(value) {
+  if(value?.version!==1 || !Array.isArray(value.entries))return 0;
+  return new Set(value.entries.filter(validEntry).map(entry=>entry.id)).size;
+}
 export function validMemoryJournal(value) {
   if(!plain(value) || value.version!==1 || !time(value.adoptedAt) || !Array.isArray(value.entries) || !Array.isArray(value.favorites) || Object.keys(value).some(k=>!['version','adoptedAt','entries','favorites'].includes(k)))return false;
   const ids=new Set(),favorites=new Set();

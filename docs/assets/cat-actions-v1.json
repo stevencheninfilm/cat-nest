@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "generator": "Built-in image_gen",
+  "sourceImageInputs": [],
+  "dimensions": {
+    "atlas": { "width": 1254, "height": 1254, "alpha": true },
+    "header": { "width": 2172, "height": 724, "alpha": true }
+  },
+  "assets": {
+    "atlas": "src/assets/cat-actions/v1/action-atlas.png",
+    "header": "src/assets/cat-actions/v1/palette-header.png"
+  },
+  "grid": {
+    "columns": 3,
+    "rows": 3,
+    "order": [
+      "idle",
+      "walk",
+      "run",
+      "attack",
+      "special_attack",
+      "hit",
+      "death",
+      "turn_left",
+      "turn_right"
+    ]
+  },
+  "prompts": {
+    "atlasPrompt": "Use case: stylized-concept.\nAsset type: ONE production transparent PNG sprite atlas for a cozy cat-care game's action picker. Strict 3 columns by 3 rows, equal square cells, 1536 by 1536 composition. One coordinated UI atlas.\nPrimary request: nine ORIGINAL full-body action portraits of the same adorable charcoal-black magical kitten. Soft polished 3D storybook illustration. Rounded chibi proportions, warm amber eyes, tiny coral triangle nose, pink blush, soft fur, short deep lavender wizard hat with a simple cream crescent ornament and muted gold ribbon; lavender neckerchief. Small wooden wand with a warm golden round star tip. Original character design, not a replica of an existing licensed game asset. Keep identity and clothing identical in all nine cells.\nExact grid order, read left to right:\nRow 1 col 1 IDLE: sitting upright calmly, paws together, soft peaceful smile, small wand at side.\nRow 1 col 2 WALK: clear side-three-quarter walking pose, one front paw and opposite hind paw lifted, relaxed face.\nRow 1 col 3 RUN: joyful energetic bounding run, all four limbs in a readable forward-leaning action silhouette, hat flowing backward.\nRow 2 col 1 ATTACK: playful wand swipe sideways, determined face, one simple golden curved motion stroke.\nRow 2 col 2 SPECIAL ATTACK: proudly raises wand overhead, delighted face, three tiny golden magical stars around wand, no large effects.\nRow 2 col 3 HIT: surprised flinch backwards, wide shocked eyes, paws close to chest, tiny surprise spark. No injury, no pain, no violence.\nRow 3 col 1 DEATH: harmless theatrical pretend fainting, lying sideways with closed eyes, relaxed paws and one tiny floating dizzy star; cute acting, peaceful, alive and unharmed.\nRow 3 col 2 TURN LEFT: turns its head and body to its own left (toward image right), one small curved arrow sweeping in that direction.\nRow 3 col 3 TURN RIGHT: mirror orientation turns its head and body to its own right (toward image left), one small curved arrow sweeping in that direction.\nComposition: identical scale in each cell, centered at exact cell centers, entire kitten with hat, ears, feet, wand and tiny effects contained within its cell. Leave at least 45 pixels transparent padding within each square. Silhouettes fill about 80% of cell. No overlap. Clearly different poses, legible at 48 pixels.\nLighting: soft warm studio light, gentle rim highlights so charcoal fur remains readable on a transparent glass interface. Warm lavender and amber accents, premium cozy mobile game illustration.\nBackground: truly transparent alpha throughout. No checkerboard, no background plates, no cells drawn, no grid, no borders, no UI, no labels, no text, no numbers, no watermark, no scenery.",
+    "headerPrompt": "Use case: stylized-concept.\nAsset type: ONE transparent wide UI header illustration, about 3:1 landscape composition, for a compact glass popup in a warm cozy cat-care game. This is decorative artwork behind live HTML UI, not a screenshot and not a complete UI.\nPrimary request: an ORIGINAL small charcoal-black kitten's magical play corner in soft polished 3D storybook illustration, warm lavender and muted amber palette. Right third: a tiny lavender wizard hat with simple cream crescent ornament resting beside a short wooden star-tipped wand and a little golden paw-print charm. A gentle curved trail of 4 very small soft golden stars sweeps from the rightmost objects toward the center. Restrained glints and delicate cream sparkles. No character, no cat body.\nComposition: all meaningful art grouped into the far right 40% of the canvas, the left 60% completely empty transparent for a heading placed later in code. Artwork contained, with airy padding, no broad opaque glow. Subtle enough to sit atop a frosted glass panel. Readable at 230 pixels wide by 65 pixels high.\nBackground: truly transparent alpha, no checkerboard, no solid rectangle, no panel, no UI controls, no border, no cards, no text, no labels, no logos, no watermark."
+  },
+  "notes": "Original text-only UI illustrations. The licensed Fab model, textures and package artwork were not supplied to image generation. Alpha is preserved; the live UI remains HTML/CSS."
+}

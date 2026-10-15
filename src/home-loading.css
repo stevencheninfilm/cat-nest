@@ -1,0 +1,14 @@
+.home-loading{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);z-index:30;display:flex;flex-direction:column;align-items:center;gap:9px;width:min(218px,94%);padding:18px 17px 16px;border:1px solid #ffffff55;border-radius:24px;background:linear-gradient(145deg,#e2e5e861,#adb4bb38);box-shadow:inset 0 1px 0 #ffffff52,0 6px 22px #3038400d;-webkit-backdrop-filter:blur(8px) saturate(.15) brightness(1.1);backdrop-filter:blur(8px) saturate(.15) brightness(1.1);text-align:center;color:#444c53}
+.home-loading[hidden],.home-loading [hidden]{display:none}
+.home-loading-icon{display:grid;place-items:center;width:39px;height:39px;border-radius:50%;background:#ffffff30;font-size:25px;line-height:1;box-shadow:inset 0 1px 1px #ffffff40;animation:home-loading-hourglass 3s ease-in-out infinite}
+.home-loading-title{font-size:14px;font-weight:800;line-height:1.45}
+.home-loading-detail{margin:0;font-size:10px;line-height:1.75;color:#505860}
+.home-loading-track{width:100%;height:7px;margin-top:3px;overflow:hidden;border-radius:8px;background:#bdc3c94d;box-shadow:inset 0 1px 2px #626b751f,inset 0 -1px 0 #fff8}
+.home-loading-track>i{display:block;width:40%;height:100%;border-radius:inherit;background:linear-gradient(#ffda8c,#efb958);box-shadow:inset 0 1px 1px #fff9;animation:home-loading-travel 1.8s ease-in-out infinite}
+.home-loading-retry{min-height:40px;margin:1px 0 -5px;padding:9px 16px;border-radius:13px;background:#f4f6f84d;color:#535b63;font-size:12px;font-weight:700;box-shadow:inset 0 0 0 1px #b7bdc54a}
+.home-loading[data-state=error] .home-loading-icon{animation:none;color:#858c92}
+.scene.is-home-loading>.cat-button{opacity:.3;pointer-events:none}
+.scene.is-home-loading>.cat-button::after{visibility:hidden}
+@keyframes home-loading-hourglass{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes home-loading-travel{0%{transform:translateX(-115%)}100%{transform:translateX(365%)}}
+@media(prefers-reduced-motion:reduce){.home-loading-icon,.home-loading-track>i{animation:none}.home-loading-track>i{transform:translateX(75%)}}

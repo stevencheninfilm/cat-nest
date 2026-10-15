@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCloudRoom } from '../src/cloud.js';
 import { createCollectionEvents } from '../src/catbook-events.js';
+import { memoryHash } from '../src/memory-journal.js';
 import { COLLECTION_CATS } from '../src/cat-collection.js';
 import { initialState, reduceAction, levelStartXp, levelInfo, FOODS } from '../src/state.js';
 
@@ -12,7 +13,28 @@ const deferred=()=>{let resolve;const promise=new Promise(yes=>resolve=yes);retu
 const flush=async()=>{for(let i=0;i<25;i++)await Promise.resolve();};
 const seedInvites=(state,count)=>{state.collection.invited=COLLECTION_CATS.slice(0,count).map(cat=>({id:cat.id,at:Date.now(),operationId:`cloud-seed-${cat.id}`,actorId:actor.id}));return state;};
 
+test('inviting an already collected cat to another scene waits for confirmation and celebrates once',async t=>{
+  const base=seedInvites(initialState(),1),h=harness(t,base);await h.room.start();
+  h.room.dispatch({type:'invite-cat',catId:'bandit',sceneId:'garden'});
+  assert.equal(h.display().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
+  const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
+  assert.equal(h.confirmed().collection.invited.length,1);
+  assert.equal(h.confirmed().collection.sceneInvited[0].sceneId,'garden');
+  assert.deepEqual(h.notifications,[{type:'cat-arrived',id:'bandit',sceneId:'garden'}]);
+});
+
+test('a failed cross-scene invitation leaves the cat absent and never shows an arrival',async t=>{
+  const base=seedInvites(initialState(),1),h=harness(t,base);await h.room.start();
+  h.room.dispatch({type:'invite-cat',catId:'bandit',sceneId:'garden'});
+  h.ack.resolve(response({error:{code:'STORAGE_WRITE_FAILED',message:'尚未确认保存'}},503));await flush();
+  assert.equal(h.confirmed().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
+  assert.equal(h.confirmed().collection.invited.length,1);
+});
+
 function harness(t,base) {
+  // Keep unrelated daily random vignettes out of these cloud-confirmation fixtures.
+  let operation=0;
+  t.mock.method(globalThis.crypto,'randomUUID',()=>{let id;do{id=`cloud-care-operation-${++operation}`;}while(memoryHash(id)%5===0);return id;});
   const ack=deferred(), requests=[], notifications=[], sources=[];
   const events=createCollectionEvents(base);
   let display=base, confirmed=base;
@@ -47,7 +69,7 @@ function harness(t,base) {
   return {room,ack,requests,notifications,sources,accepted,display:()=>display,confirmed:()=>confirmed};
 }
 
-test('daily feeding waits for confirmed cloud state before unlocking a new daily cat',async t=>{
+test('daily feeding waits for confirmed cloud state before unlocking the daily cats',async t=>{
   const base=seedInvites(initialState(),1);base.careLimits.counts.feed=9;base.collection.stats.feed=9;base.collection.achievements.daily.feed=9;
   const h=harness(t,base);await h.room.start();h.room.dispatch({type:'feed',food:'water'});
   assert.equal(h.display().collection.achievements.daily.feed,10);
@@ -111,4 +133,27 @@ test('a confirmed fourth invitation produces one entrance followed by the scene 
   assert.equal(h.display().collection.invited.length,3);assert.deepEqual(h.notifications,[]);
   const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
   assert.deepEqual(h.notifications,[{type:'cat-arrived',id:'callie'},{type:'scene-unlocked',id:'western'}]);
+});
+
+function twoDiaryCards() {
+  const state=initialState();
+  state.diary.entries.push({id:'first:feed',kind:'first',occasion:'feed',at:state.updatedAt,catName:'糯米',photo:'hungry'});
+  return state;
+}
+
+test('a third diary card unlocks No.25 only after cloud confirmation and HTTP/SSE retries never count twice',async t=>{
+  const base=twoDiaryCards(),h=harness(t,base);await h.room.start();
+  h.room.dispatch({type:'pet'});
+  assert.equal(h.confirmed().diary.entries.length,2);assert.deepEqual(h.notifications,[]);
+  const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
+  assert.ok(h.confirmed().diary.entries.some(entry=>entry.id==='first:pet'));
+  assert.deepEqual(h.notifications,[{type:'cat-unlocked',id:'porter'}]);
+  h.sources[0].emit('state',saved);assert.equal(h.notifications.length,1);
+});
+
+test('rejected care does not unlock No.25 or change the two confirmed diary cards',async t=>{
+  const base=twoDiaryCards(),h=harness(t,base);await h.room.start();h.room.dispatch({type:'pet'});
+  h.ack.resolve(response({error:{code:'CARE_COOLDOWN',message:'请稍后再试'}},409));await flush();
+  assert.equal(h.confirmed().diary.entries.length,2);assert.equal(h.display().diary.entries.length,2);
+  assert.deepEqual(h.notifications,[]);
 });

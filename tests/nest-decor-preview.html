@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>小窝装修 · 独立验收</title>
+<style>*{box-sizing:border-box}body{margin:0;font:12px system-ui;background:#ead9c1}button{font:inherit;border:0;cursor:pointer}.qa-controls{position:fixed;z-index:101;left:12px;bottom:8px;display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid #fff9;border-radius:12px;background:#fff9eeda;box-shadow:0 2px 12px #7b59331a;color:#8b715b;font-size:8px;backdrop-filter:blur(9px)}.qa-controls button{font:inherit;padding:4px 6px;border:1px solid #dcc7ad;border-radius:7px;background:#fffbf1;color:inherit}.qa-controls output{max-width:140px;overflow:hidden;white-space:nowrap}@media(max-width:600px){.qa-controls{bottom:auto;top:72px;font-size:7px;left:18px;padding:3px 5px}.qa-controls output{display:none}}</style>
+<div id="world"></div><aside class="qa-controls"><span>独立示例 · 不写真实小窝</span><button id="actor">切换为女方</button><button id="reset">复位示例</button><output id="summary"></output></aside>
+<script type="module">
+import '/src/world-experience.css';
+import {createWorldExperience}from'/src/world-experience.js';
+import {initialState,normalizeState,reduceAction}from'/src/state.js';
+import {nestItem}from'/src/nest-decor.js';
+const key='catnest.nest-decoration-qa-v1';let role='male',world;
+const seed=()=>({...initialState(),coins:5000,mood:55,energy:40,hunger:70});
+let state;try{state=normalizeState(JSON.parse(sessionStorage.getItem(key))||seed());}catch{state=seed();}
+function render(){world?.setState(state);document.getElementById('summary').textContent=`${state.coins} 币 · 开心 ${state.mood} · 活力 ${state.energy}`;sessionStorage.setItem(key,JSON.stringify(state));}
+function dispatch(action){const next=reduceAction(state,action,{id:`partner-${role}`,name:role==='male'?'男方':'女方'},Date.now(),crypto.randomUUID());if(!next)return false;state=next;render();return true;}
+world=createWorldExperience({container:document.getElementById('world'),modelAssetBase:'/api/pet-model/mage-cat-v1',getPetState:()=>state,getSaveStatus:()=>({phase:'local'}),onDecorAction:dispatch,onFurnitureUse:id=>{const item=nestItem(id);return item?.care?dispatch({type:item.care,furniture:id}):false;},onBack(){location.href='/';}});
+document.getElementById('actor').onclick=()=>{role=role==='male'?'female':'male';document.getElementById('actor').textContent=role==='male'?'切换为女方':'切换为男方';};
+document.getElementById('reset').onclick=()=>{state=seed();render();};render();world.open({decorate:true});
+</script></html>

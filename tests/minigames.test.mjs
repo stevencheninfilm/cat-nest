@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
-import { initialState, reduceAction, validPendingGrowth } from '../src/state.js';
+import { initialState, levelStartXp, reduceAction, validPendingGrowth } from '../src/state.js';
 import { GAMES, gameDay, publicGameHub, validGameHub, sanitizeGameAction } from '../src/minigames.js';
 import { createGitHubStore } from '../server/github-store.mjs';
 import { createPetServer } from '../server/pet-server.mjs';
@@ -12,11 +12,12 @@ import { createLocalPreviewStore, PREVIEW_HOME } from '../scripts/local-pet-prev
 import { minigamesPanel } from '../src/minigames-ui.js';
 import { chooseComputerGomoku, chooseComputerCard } from '../src/minigames-computer.js';
 import { chooseExtraComputer, createExtraBoard, connect4Cell, extraWinningMoves, lineWinner } from '../src/minigames-extra.js';
+import { TOUCH_GAMES, CAT_PLAY_UNLOCK_LEVEL } from '../src/minigames-touch-rules.js';
 
 const START=Date.UTC(2026,9,14,12), alice={id:'client-one',name:'男方'}, bob={id:'client-two',name:'女方'};
 let gameSerial=0;
 function session(game,mode='duo',supplied) {
-  let state=supplied || initialState(START), clock=START, serial=0;
+  let state=supplied || {...initialState(START),...(TOUCH_GAMES.includes(game)?{xp:levelStartXp(CAT_PLAY_UNLOCK_LEVEL)}:{})}, clock=START, serial=0;
   const apply=(action,actor=alice)=>{
     const next=reduceAction(state,action,actor,clock++,`game-operation-${++gameSerial}`);
     assert.ok(next,JSON.stringify(action)); state=next;
@@ -93,7 +94,7 @@ test('clients cannot submit results or arbitrary experience, and legacy saves ac
   const html=minigamesPanel({state:s.state,clientId:alice.id,lobby:false});assert.match(html,/猫猫翻牌/);assert.match(html,/十六张卡片/);assert.doesNotMatch(html,/secret|deck/);
 });
 
-test('all six games offer solo and computer play immediately, with no second human or forged bot identity',()=>{
+test('all unlocked games offer solo and computer play without a second human or forged bot identity',()=>{
   for(const game of Object.keys(GAMES))for(const mode of ['solo','computer']) {
     const s=session(game,mode),m=s.state.games.match;
     assert.equal(m.status,'active');assert.equal(m.players.length,mode==='computer'?2:1);
@@ -102,7 +103,7 @@ test('all six games offer solo and computer play immediately, with no second hum
     assert.equal(reduceAction(s.state,{type:'game-cancel',gameId:m.id},{id:'computer-cat',name:'电脑猫猫'},START+1000,'forged-computer-role'),null);
   }
   const html=minigamesPanel({state:initialState(START),clientId:alice.id});
-  assert.equal((html.match(/data-game-select=/g)||[]).length,6);
+  assert.equal((html.match(/data-game-select=/g)||[]).length,Object.keys(GAMES).length);
   for(const game of Object.keys(GAMES)) {
     assert.match(html,new RegExp(`data-game-select="${game}"`));
     const picker=minigamesPanel({state:initialState(START),clientId:alice.id,selectedGame:game});
