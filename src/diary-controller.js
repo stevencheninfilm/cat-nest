@@ -3,13 +3,13 @@ import { memoryJournalPanel, memoryCardPanel, memoryPresentation } from './memor
 import { createMemoryCard } from './memory-card.js';
 
 export function createDiaryController({root,getState,saving=()=>false,dispatch,toast=()=>{}}) {
-  let tab='moments',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,pending=null,message='';
+  let tab='moments',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,pending=null,message='',progressTimer=null;
   const state=()=>getState();
   const journal=()=>normalizeMemoryJournal(state().diary,state());
   const selectedEntry=()=>journal().entries.find(e=>e.id===selected);
   const canShare=()=>{try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[new File([''], '纪念卡.png',{type:'image/png'})]});}catch{return false;}};
   function cleanCard(){generation++;if(url)URL.revokeObjectURL(url);url=blob=null;error='';}
-  function panel() { const e=selectedEntry();return e?memoryCardPanel(e,{url,error,canShare:canShare()}):memoryJournalPanel(state(),{tab,filter,page,saving:saving(),message}); }
+  function panel() { if(!progressTimer)progressTimer=setInterval(()=>{if(root.closest('dialog')?.open&&root.dataset.view==='diary'&&tab==='locked'&&!selected)refresh();},30_000);const e=selectedEntry();return e?memoryCardPanel(e,{url,error,canShare:canShare()}):memoryJournalPanel(state(),{tab,filter,page,saving:saving(),message}); }
   function draw() {
     if(root.dataset.view!=='diary')return;
     const scroll=root.closest('dialog')?.scrollTop||0,active=document.activeElement;
@@ -23,7 +23,7 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
       const saved=journal().favorites.includes(pending.id)===pending.favorite;
       message=saved?(pending.favorite?'已加入共同收藏 ♡':'已取消收藏，纪念仍保留在时光轴'):'收藏还未保存成功，请稍后重试';pending=null;
     }
-    const key=JSON.stringify([state().diary,state().history,saving(),message]);
+    const key=JSON.stringify([tab==='locked'?Math.floor(Date.now()/30_000):null,state().diary,state().history,state().xp,state().coupleCare,state().feedingWindow,state().games?.match,saving(),message]);
     if(key!==signature){signature=key;draw();}
   }
   async function prepare(id) {
@@ -54,5 +54,5 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
       catch(failure){if(failure.name!=='AbortError')toast('暂时无法直接分享，可以先保存图片');}
     }
   });
-  return {panel,refresh,open(nextFilter='all'){tab='moments';filter=['together','fun','growth'].includes(nextFilter)?nextFilter:'all';page=0;selected=null;cleanCard();},close(){selected=null;pending=null;message='';signature='';cleanCard();}};
+  return {panel,refresh,open(nextFilter='all'){tab='moments';filter=['together','fun','growth'].includes(nextFilter)?nextFilter:'all';page=0;selected=null;cleanCard();},close(){clearInterval(progressTimer);progressTimer=null;selected=null;pending=null;message='';signature='';cleanCard();}};
 }
