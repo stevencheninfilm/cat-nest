@@ -1,0 +1,11 @@
+import { build } from 'vite';
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+await build({configFile:`${root}demo/vite.config.mjs`});
+await cp(`${root}demo/model`,`${root}dist-demo/model`,{recursive:true});
+await mkdir(`${root}dist/test`,{recursive:true});
+await cp(`${root}dist-demo`,`${root}dist/test`,{recursive:true});
+const manifest=JSON.parse(await readFile(`${root}demo/snapshot.json`,'utf8'));
+await writeFile(`${root}dist/test/version.json`,JSON.stringify({version:manifest.version,sourceDate:manifest.createdAt,environment:'isolated-browser-demo',data:'local-browser-only',ai:'preset-fixtures'},null,2));
+console.log('Independent demo built at dist/test/; production entry unchanged.');
