@@ -93,3 +93,13 @@ test('photo timeline, favorite empty state and sharing preview remain accessible
   assert.match(memoryPresentation(state.diary.entries[0]).description,/<猫>/);
   const ctx={measureText:text=>({width:[...text].length*10})};assert.deepEqual(wrapMemoryText(ctx,'陪你一起成长',30),['陪你一','起成长']);
 });
+
+test('new-owner adoption records the actual naming time and cat name while restoring established adoption dates',()=>{
+  const original=initialState(START);
+  const adopted=reduceAction(original,{type:'adopt-cat',name:'团团',appearance:original.appearance},male,START+10000,'adopt-diary');
+  assert.equal(adopted.diary.adoptedAt,START+10000);
+  assert.equal(adopted.diary.entries.find(e=>e.id==='adoption').catName,'团团');
+  assert.equal(adopted.diary.entries.find(e=>e.id==='adoption').at,adopted.homeBond.adoptedAt);
+  const withoutDiary={...adopted};delete withoutDiary.diary;
+  assert.equal(normalizeMemoryJournal(undefined,withoutDiary,START+20000,START).adoptedAt,START+10000);
+});
