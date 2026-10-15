@@ -54,7 +54,7 @@ function anniversaryTimes(adoptedAt,now) {
 /** Optional, permanent ledger. Old state fields are never replaced or reseeded. */
 export function normalizeMemoryJournal(value,state={},now=Date.now(),adoptedAt) {
   const known=[state.updatedAt,...(state.history||[]).map(e=>e?.at),...(state.coupleCare?.records||[]).map(e=>e?.at)].filter(v=>time(v)&&v<=now);
-  const start=time(adoptedAt) ? adoptedAt : known.length ? Math.min(...known) : now;
+  const start=time(state.homeBond?.adoptedAt) ? state.homeBond.adoptedAt : time(adoptedAt) ? adoptedAt : known.length ? Math.min(...known) : now;
   const next=plain(value)&&value.version===1&&time(value.adoptedAt)
     ? {version:1,adoptedAt:value.adoptedAt,entries:[],favorites:[]}
     : emptyMemoryJournal(start,state);
