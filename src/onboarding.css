@@ -17,3 +17,5 @@
 
 .onboarding-portrait .expression-portrait{display:block;width:52px;height:52px;margin:auto}.partner-update.is-invitation .partner-update-copy b{font-size:9px}
 @media(max-height:680px){.onboarding-portrait .expression-portrait{width:38px;height:38px}}
+
+.onboarding-dialog[data-step="care"]::backdrop,.onboarding-dialog[data-step="claim"]::backdrop{backdrop-filter:none;background:#3e2d2210}

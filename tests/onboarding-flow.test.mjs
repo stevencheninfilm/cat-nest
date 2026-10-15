@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOnboarding } from '../src/onboarding.js';
+import { createOnboarding, invitationMarkup, invitationModel } from '../src/onboarding.js';
 import { initialState, reduceAction } from '../src/state.js';
 import { HOME_ENTRIES } from '../src/home-context.js';
 import { createMemoryStorage } from '../demo/storage.js';
@@ -58,4 +58,12 @@ test('an adoption completed by the other owner is synchronized instead of overwr
   const h=setup(t);h.guide.start();h.submit('小白');h.guide.fail('小窝已更新');
   h.context.state=reduceAction(h.context.state,{type:'adopt-cat',name:'伙伴的名字',appearance:h.context.state.appearance},{id:'partner-female',name:'女方'},1800000000001,'partner-adoption');
   const before=h.requests.length;h.submit('小白');assert.equal(h.requests.length,before);assert.match(h.dialog.innerHTML,/伙伴刚刚给小猫取好了名字/);assert.match(h.dialog.innerHTML,/value="伙伴的名字"/);
+});
+
+test('a cooling-down pet action is presented as play and completed binding has one clear next action',t=>{
+  const h=setup(t,{established:true});h.context.canCare=type=>type==='play';h.guide.start();h.submit('老朋友');
+  assert.match(h.dialog.innerHTML,/逗逗小猫/);h.click('care');assert.equal(h.requests.at(-1).type,'play');
+  const both={...h.context.state,homeBond:{version:1,adoptedAt:null,owners:[{id:'partner-male',joinedAt:1},{id:'partner-female',joinedAt:1}]}};
+  const summary=invitationMarkup(invitationModel({...h.context,state:both}),{isTest:true,finished:true});
+  assert.match(summary,/两位主人已加入/);assert.doesNotMatch(summary,/data-onboarding="simulate"|data-onboarding="copy"/);
 });
