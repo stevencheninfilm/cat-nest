@@ -1,3 +1,4 @@
+import { emptyHomeBond, normalizeHomeBond, joinHome, isNewPet } from './home-bond.js';
 import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
 import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare, recordCollectionVictory, recordCollectionAchievements } from './cat-collection.js';
 import { petNeeds, growthRewardAmount, addGrowthExperience, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
@@ -154,7 +155,7 @@ function feedRecords(value, now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), diary:emptyMemoryJournal(now), updatedAt: now };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), diary:emptyMemoryJournal(now), homeBond:emptyHomeBond(), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -187,6 +188,7 @@ export function normalizeState(value, now = Date.now()) {
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
     next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
   }
+  next.homeBond = normalizeHomeBond(value.homeBond,next);
   return next;
 }
 function careInfo(current, action, actorId, now) {
@@ -295,6 +297,14 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   if(action.type==='diary-favorite') {
     const diary=favoriteMemory(current.diary,action.memoryId,action.favorite);
     return diary ? {...current,diary,updatedAt:now} : null;
+  }
+  if (action.type === 'join-home' || action.type === 'adopt-cat') {
+    const bond = joinHome(current,actor?.id,now);
+    if (!bond) return null;
+    if (action.type === 'join-home') return { ...current, homeBond:bond, updatedAt:now };
+    if (!isNewPet(current) || typeof action.name !== 'string' || !action.name.trim() || [...action.name.trim()].length > 16 || /[\u0000-\u001f\u007f]/.test(action.name) || !validAppearance(action.appearance)) return null;
+    bond.adoptedAt=now;
+    return normalizeState({...current,name:action.name.trim(),appearance:{...action.appearance},homeBond:bond,diary:{...emptyMemoryJournal(now,{name:action.name.trim()}),favorites:current.diary.favorites.filter(id=>id==='adoption')},updatedAt:now,history:[{text:`给小猫取名「${action.name.trim()}」，一起回家啦`,actor:cleanName(actor?.name),at:now}]},now);
   }
   const { boostCount, multiplier } = petNeeds(current, now);
   const care = careInfo(current, action, actor?.id, now);
