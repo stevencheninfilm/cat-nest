@@ -13,32 +13,12 @@ panel.setAttribute('aria-label','独立演示控制台');
 panel.innerHTML=`<div class="demo-console-heading"><div><small>CAT NEST · DEMO 2026.10.15</small><h2>随时带朋友来看看</h2></div><button data-demo="close" aria-label="关闭演示控制台">×</button></div>
 <p class="demo-intro">伙伴是模拟玩家，法庭使用虚构示例。进度仅本次体验有效，刷新或重新进入会恢复默认。</p>
 <div class="demo-shortcuts"><button data-shortcut="feeding">🍽️ 喂食</button><button data-shortcut="appearance">🎨 装扮</button><button data-shortcut="stages">💛 成长</button><button data-shortcut="games">🎲 小游戏</button><button data-shortcut="shared-care">💑 双人照顾</button><button data-shortcut="collection">🐈 猫猫图鉴</button><button data-shortcut="diary">📔 日记</button></div>
-<section><h3>一分钟看效果</h3><div class="demo-buttons"><button data-demo="unlock">解锁所有成长与图鉴</button><button data-demo="relay">伙伴摸摸 · 你来逗猫</button><button data-demo="feed">伙伴喂一份慕斯</button><button data-demo="portion">食物剩余 25%</button><button data-demo="court">查看示例判词</button><button data-demo="clear-limits">恢复体力与互动次数</button></div><p class="demo-status" role="status" id="demo-status">演示与正式存档完全隔离。</p></section>
+<section><h3>一分钟看效果</h3><div class="demo-buttons"><button data-demo="new-home">从第一次养猫开始</button><button data-demo="unlock">解锁所有成长与图鉴</button><button data-demo="relay">伙伴摸摸 · 你来逗猫</button><button data-demo="feed">伙伴喂一份慕斯</button><button data-demo="portion">食物剩余 25%</button><button data-demo="court">查看示例判词</button><button data-demo="clear-limits">恢复体力与互动次数</button></div><p class="demo-status" role="status" id="demo-status">演示与正式存档完全隔离。</p></section>
 <label class="demo-row">示例判词效果<select id="demo-ruling"><option value="similar">共同调整</option><option value="a_more">猫爪方责任较重</option><option value="b_more">鱼干方责任较重</option><option value="undetermined">等待补充证据</option><option value="boundaries">边界优先</option></select></label>
 <section><h3>响应调试</h3><label class="demo-row">模拟接口延迟<select id="demo-latency"><option value="0">即时</option><option value="650" selected>650 ms</option><option value="2500">2.5 秒 · 观察先动后存</option><option value="6000">6 秒 · 慢速网络</option></select></label><div class="demo-buttons"><button data-demo="reject">下一次操作失败 · 验证回退</button><button data-demo="offline">模拟断线</button><button data-demo="presence">模拟伙伴离开</button><button data-demo="logs">导出接口诊断</button></div><p class="demo-small">调试使用与正式版相同的互动、动画和请求队列逻辑。模拟接口不写入正式 GitHub 存档，也不调用付费 AI。双人小游戏由模拟伙伴自动接招。</p><pre id="demo-log" aria-label="最近演示接口记录"></pre></section>
 <footer><button data-demo="guide">重新查看指引</button><button data-demo="reset">重置演示进度</button><small>宠物模型：Nekueda · Mage Cat · 已购授权运行素材</small></footer>`;
-const welcome=document.createElement('dialog');
-welcome.className='demo-welcome'; welcome.setAttribute('aria-labelledby','demo-welcome-title');
-welcome.innerHTML=`<button class="demo-welcome-close" type="button" data-welcome-close aria-label="关闭新手指引">×</button>
-<span class="demo-welcome-paw" aria-hidden="true">🐾</span><p class="demo-welcome-kicker">WELCOME TO CAT NEST</p>
-<h2 id="demo-welcome-title">来，陪小猫玩一会儿</h2><p class="demo-welcome-intro">第一次来？跟着这三步，轻松看遍小窝。</p>
-<ol class="demo-welcome-steps">
-<li><span aria-hidden="true">1</span><div><strong>选一位主人，走进小窝</strong><p>男方、女方都可以，演示伙伴会陪你一起养猫。</p></div></li>
-<li><span aria-hidden="true">2</span><div><strong>和小猫打个招呼</strong><p>摸摸、逗猫、喂食，再点爱心气泡收下成长。</p></div></li>
-<li class="demo-welcome-highlight"><span aria-hidden="true">✦</span><div><strong>底部金色按钮，打开全部玩法</strong><p>找到「演示控制台」，一键解锁图鉴、体验小游戏和示例判词，也能测试延迟与失败回退。</p></div></li>
-</ol><p class="demo-welcome-note">这是独立演示，放心体验，不会影响正式小窝。</p>
-<button class="demo-welcome-start" type="button" data-welcome-start autofocus>选好身份，开始体验 <span aria-hidden="true">→</span></button>`;
-document.body.append(badge,panel,welcome);
-function openWelcome() {
-  panel.close();
-  const choosingRole=document.querySelector('#modal[open] [data-couple-role]');
-  welcome.querySelector('[data-welcome-start]').innerHTML=`${choosingRole ? '选好身份，开始体验':'继续体验小窝'} <span aria-hidden="true">→</span>`;
-  welcome.showModal();
-}
-function finishWelcome() { demoPreferences.setItem('welcome','done'); welcome.close(); }
-welcome.querySelector('[data-welcome-start]').addEventListener('click',finishWelcome);
-welcome.querySelector('[data-welcome-close]').addEventListener('click',finishWelcome);
-welcome.addEventListener('cancel',event=>{event.preventDefault();finishWelcome();});
+document.body.append(badge,panel);
+function openWelcome(){panel.close();window.dispatchEvent(new CustomEvent('catnest:onboarding',{detail:{restart:true}}));}
 const note=text=>panel.querySelector('#demo-status').textContent=text;
 badge.addEventListener('click',()=>{ panel.showModal(); updateLog(); });
 panel.addEventListener('click',event=>{if(event.target===panel)panel.close();});
@@ -54,6 +34,7 @@ panel.addEventListener('click',event=>{
   const action=target.dataset.demo, role=JSON.parse(demoLocalStorage.getItem('catnest.role') || '"male"');
   if(action==='close'){panel.close();return;}
   if(action==='guide'){openWelcome();return;}
+  if(action==='new-home'){if(!demoLocalStorage.getItem('catnest.role')){note('先选择一位主人，再开始新手体验。');return;}note(demoEngine.scenario('new-home',role));openWelcome();return;}
   if(action==='reject'){demoEngine.controls.rejectNext=true;note('已设置下一次请求失败。关闭控制台，点击气泡、摸摸或喂食，观察即时动画和失败回退。');return;}
   if(action==='offline'){demoEngine.setOffline(!demoEngine.controls.offline);target.textContent=demoEngine.controls.offline?'恢复网络':'模拟断线';note(demoEngine.controls.offline?'演示网络已断开。恢复后会自动核对并继续保存。':'演示网络已恢复。');return;}
   if(action==='presence'){demoEngine.controls.partnerOnline=!demoEngine.controls.partnerOnline;demoEngine.presence();target.textContent=demoEngine.controls.partnerOnline?'模拟伙伴离开':'模拟伙伴回家';note('伙伴在线状态已更新。');return;}
@@ -82,4 +63,4 @@ function addModalEntry() {
   const entry=document.createElement('button');entry.dataset.demoConsoleEntry='';entry.className='demo-modal-entry';entry.textContent='✦ 演示控制台 · 全部玩法';entry.addEventListener('click',()=>{panel.showModal();updateLog();});modal.append(entry);
 }
 if(modal){new MutationObserver(addModalEntry).observe(modal,{childList:true,attributes:true,attributeFilter:['open']});addModalEntry();}
-if(demoPreferences.getItem('welcome')!=='done')openWelcome();
+// First-time guidance belongs to the shared application, without a second welcome modal.

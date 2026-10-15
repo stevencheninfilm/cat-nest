@@ -14,7 +14,7 @@ if (home.id === 'main') {
   if(home.isTest) {
     const [{initializeDemoVisit},transport,storage]=await Promise.all([import('../demo/visit.js'),import('../demo/transport.js'),import('../demo/storage.js')]);
     initializeDemoVisit(window);
-    testAdapter={apiBase:transport.DEMO_ORIGIN,fetch:transport.demoFetch,eventSourceFactory:url=>new transport.DemoEventSource(url),localStorage:storage.demoLocalStorage,sessionStorage:storage.demoSessionStorage};
+    testAdapter={apiBase:transport.DEMO_ORIGIN,fetch:transport.demoFetch,eventSourceFactory:url=>new transport.DemoEventSource(url),localStorage:storage.demoLocalStorage,sessionStorage:storage.demoSessionStorage,guidePreferences:storage.demoPreferences,actions:{invitePartner:role=>transport.demoEngine.scenario('join',role)}};
   }
   const localPreview=Boolean(import.meta.env.DEV && import.meta.env.VITE_LOCAL_PET_PREVIEW);
   const apiBase=import.meta.env.VITE_API_URL || (localPreview || location.hostname.endsWith('.onrender.com') ? location.origin : '');
