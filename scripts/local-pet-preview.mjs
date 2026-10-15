@@ -8,10 +8,12 @@ import { sanitizeAction, sanitizeActor, publicRoom, StorageError } from '../serv
 import { initialState, normalizeState, reduceAction, careActionInfo } from '../src/state.js';
 import { publicGameEvent, validGameHub } from '../src/minigames.js';
 
+import { EVIAN_ROOM_ID, homeContext, initialHomeState } from '../src/home-context.js';
+
 export const PREVIEW_HOME = '00000000000000000000000000005174';
 /** Development-only file storage. No extra listener, credentials, GitHub call,
  * or production save is involved. The existing Vite listener carries HTTP/SSE. */
-export function createLocalPreviewStore({ file, legacyFile, now=Date.now } = {}) {
+export function createLocalPreviewStore({ file, legacyFile, now=Date.now, homeId=PREVIEW_HOME, seedState=initialState } = {}) {
   let queue = Promise.resolve();
   const migration=legacyFile?(async()=>{
     await mkdir(dirname(file),{recursive:true});
@@ -22,12 +24,12 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now } = {})
     try {
       await migration;
       const room = JSON.parse(await readFile(file,'utf8'));
-      if (!room || room.roomId !== PREVIEW_HOME || !Number.isSafeInteger(room.revision) || !validGameHub(room.state?.games,{privateState:true}) || !Array.isArray(room.operations) || !Array.isArray(room.claimedGrowth)) throw new Error('invalid preview save');
+      if (!room || room.roomId !== homeId || !Number.isSafeInteger(room.revision) || !validGameHub(room.state?.games,{privateState:true}) || !Array.isArray(room.operations) || !Array.isArray(room.claimedGrowth)) throw new Error('invalid preview save');
       return room;
     } catch (error) {
       if (error.code !== 'ENOENT') throw new StorageError('PREVIEW_STORAGE_ERROR','本地预览存档暂不可用，原记录没有被覆盖。');
       const at=now();
-      return { version:1, roomId:PREVIEW_HOME, revision:0, state:initialState(at), operations:[], claimedGrowth:[], createdAt:at, updatedAt:at };
+      return { version:1, roomId:homeId, revision:0, state:seedState(at), operations:[], claimedGrowth:[], createdAt:at, updatedAt:at };
     }
   }
   async function persist(room) {
@@ -40,11 +42,11 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now } = {})
     configured:true,
     storage:'local-preview',
     async getRoom(roomId) {
-      if (roomId !== PREVIEW_HOME) throw new StorageError('ROOM_NOT_FOUND','本地预览小窝不存在。',404);
+      if (roomId !== homeId) throw new StorageError('ROOM_NOT_FOUND','本地预览小窝不存在。',404);
       return publicRoom(await load());
     },
     async applyAction(roomId,input) {
-      if (roomId !== PREVIEW_HOME) throw new StorageError('ROOM_NOT_FOUND','本地预览小窝不存在。',404);
+      if (roomId !== homeId) throw new StorageError('ROOM_NOT_FOUND','本地预览小窝不存在。',404);
       const action=sanitizeAction(input?.action), actor=sanitizeActor(input?.clientId,input?.name), operationId=input?.operationId;
       if (!action || !actor || typeof operationId !== 'string' || !/^[a-zA-Z0-9_.:-]{8,180}$/.test(operationId)) throw new StorageError('INVALID_ACTION','操作内容无效。',400);
       const result=queue.catch(()=>{}).then(async()=>{
@@ -85,12 +87,14 @@ export function localPetPreview({ root, enabled }) {
       // Watching a save can reload the page and interrupt the next bot turn.
       const folder=`cat-nest-preview-${createHash('sha256').update(root).digest('hex').slice(0,16)}`;
       const handle=createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'home.json'),legacyFile:resolve(root,'.cat-preview','home.json')}),coupleRoomId:PREVIEW_HOME,serveStatic:false,pollMs:2000});
+      const evianHandle=createPetHandler({store:createLocalPreviewStore({file:resolve(tmpdir(),folder,'evian.json'),homeId:EVIAN_ROOM_ID,seedState:at=>initialHomeState(homeContext('/evian/'),at)}),coupleRoomId:EVIAN_ROOM_ID,serveStatic:false,pollMs:2000});
       server.middlewares.use((request,response,next)=>{
         const path=new URL(request.url || '/','http://localhost').pathname;
         if (!['/api/couple/home','/api/health'].includes(path) && !path.startsWith('/api/rooms/')) return next();
-        handle(request,response).then(handled=>{if(!handled)next();}).catch(next);
+        const selected=path===`/api/rooms/${EVIAN_ROOM_ID}` || path.startsWith(`/api/rooms/${EVIAN_ROOM_ID}/`) ? evianHandle : handle;
+        selected(request,response).then(handled=>{if(!handled)next();}).catch(next);
       });
-      server.httpServer?.once('close',handle.close);
+      server.httpServer?.once('close',()=>{handle.close();evianHandle.close();});
     },
   };
 }

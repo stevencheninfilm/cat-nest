@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { localModelPreview, localModelUrl } from './scripts/local-model-preview.mjs';
 import { localPetPreview } from './scripts/local-pet-preview.mjs';
+import { namedHomeEntry } from './scripts/named-home-entry.mjs';
 const root = fileURLToPath(new URL('./', import.meta.url));
 const modelDirectory = fileURLToPath(new URL('./artifacts/licensed/mage-cat/processed/', import.meta.url));
 const apiProxy = {
@@ -18,7 +19,7 @@ export default defineConfig(({ command, mode }) => {
   const modelUrl = localModelUrl({ command, directory:modelDirectory, configuredUrl:process.env.VITE_MODEL_URL || env.VITE_MODEL_URL });
   return {
   base: './',
-  plugins: [localModelPreview({ directory:modelDirectory }),localPetPreview({root,enabled:localPet})],
+  plugins: [namedHomeEntry(),localModelPreview({ directory:modelDirectory }),localPetPreview({root,enabled:localPet})],
   define: { ...(modelUrl ? { 'import.meta.env.VITE_MODEL_URL':JSON.stringify(modelUrl) } : {}), 'import.meta.env.VITE_LOCAL_PET_PREVIEW':JSON.stringify(localPet) },
   server: {
     port: 5173,

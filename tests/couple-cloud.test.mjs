@@ -156,3 +156,40 @@ test('canonical role name cannot be changed and committed live actions animate o
   h.sources[0].emit('presence', [{ id: 'partner-male', name: '男方' }, { id: 'partner-female', name: '女方' }]);
   assert.deepEqual(h.observed.presence.at(-1).map(member => member.name), ['男方', '女方']);
 });
+
+test('a named couple home ignores other cached room IDs and reconnects both roles to its fixed save',async t=>{
+  const id='6858d44c3a9ce3b77ea7c5334b4acd02';
+  const h=harness(t,request=>{
+    assert.equal(request.url,`https://cloud.example.test/api/rooms/${id}`);
+    assert.equal(request.method,'GET');
+    return response({...saved(0),roomId:id,state:{coins:1200,xp:0,love:0,history:[]}});
+  });
+  for(const coupleRole of ['male','female','male']) {
+    const client=h.create({coupleRole,homeRoomId:id,roomId:HOME});await client.start();
+    assert.equal(h.rooms.at(-1),id);
+    assert.match(h.sources.at(-1).url,new RegExp(`/api/rooms/${id}/events`));
+    assert.equal(h.observed.states.at(-1).coins,1200);client.destroy();
+  }
+  assert.ok(h.requests.every(request=>request.method==='GET'));
+});
+
+test('a named home never falls back to the original home or creates a save on a missing or mismatched response',async t=>{
+  const id='6858d44c3a9ce3b77ea7c5334b4acd02';
+  let data;const h=harness(t,()=>data);
+  for(const result of [response({error:{message:'存档暂不可用'}},404),response(saved())]) {
+    data=result;const before=h.requests.length;const client=h.create({homeRoomId:id});await client.start();
+    assert.equal(h.observed.statuses.at(-1).phase,'error');assert.equal(h.rooms.length,0);
+    assert.equal(h.sources.length,0);assert.equal(client.dispatch({type:'pet'}),false);
+    assert.equal(h.requests.length,before+1);assert.equal(h.requests.at(-1).url,`https://cloud.example.test/api/rooms/${id}`);
+    client.destroy();
+  }
+});
+
+test('invalid named home configuration fails before any network request',async t=>{
+  const h=harness(t,()=>{throw new Error('must not fetch');});
+  for(const homeRoomId of ['',null,'../rooms','0'.repeat(31)]) {
+    const client=h.create({homeRoomId});await client.start();
+    assert.equal(h.observed.statuses.at(-1).phase,'error');assert.equal(h.requests.length,0);
+    client.destroy();
+  }
+});

@@ -20,6 +20,7 @@ import { createNeedsFeedback } from './pet-needs-feedback.js';
 import { COUPLE_ROLES, normalizeCoupleRole, getCoupleProfile } from './couple-profile.js';
 import { presenceForRole, homePresence, rolePicker, connectionSummary } from './couple-presence-ui.js';
 import { createCloudRoom } from './cloud';
+import { homeContext, homeStorageKey, initialHomeState } from './home-context.js';
 import { createCatSpeech } from './cat-speech.js';
 import { catTemperament } from './cat-behavior.js';
 import { resolveInteraction, getInteractionHint } from './interaction-mode';
@@ -40,8 +41,10 @@ const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles,
 const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const $ = s => document.querySelector(s);
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
-function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private browsing can disable storage */ } }
+const home = homeContext(location.pathname);
+if (home.id === 'evian') document.title = 'Evian · 猫猫小窝';
+function read(key, fallback) { try { return JSON.parse(localStorage.getItem(homeStorageKey(key,home))) ?? fallback; } catch { return fallback; } }
+function save(key, value) { try { localStorage.setItem(homeStorageKey(key,home), JSON.stringify(value)); } catch { /* private browsing can disable storage */ } }
 const params = new URLSearchParams(location.search);
 // A remembered role is only a hint; every visit begins with an explicit choice.
 let coupleRole = normalizeCoupleRole(read('catnest.role', null));
@@ -49,8 +52,8 @@ let roleEntered = false;
 let profile = getCoupleProfile(coupleRole) || { name:'请选择身份' };
 let clientId = profile.clientId || '';
 const cachedRoom = read('catnest.couple.room', null) || read('catnest.room', null);
-let roomId = /^[a-f0-9]{32}$/.test(cachedRoom || '') ? cachedRoom : 'couple-local';
-let state = normalizeState(read(`catnest.state.${roomId}`, initialState()));
+let roomId = home.roomId || (/^[a-f0-9]{32}$/.test(cachedRoom || '') ? cachedRoom : 'couple-local');
+let state = normalizeState(read(`catnest.state.${roomId}`, initialHomeState(home)));
 let confirmedState = state;
 const cleanUrl = new URL(location.href);
 cleanUrl.searchParams.delete('room');
@@ -89,7 +92,7 @@ const claimOrigins = new Map();
 $('#app').innerHTML = `
 <main class="nest" aria-label="猫猫小窝养成游戏">
   <div class="room-backdrop"></div><div class="warm-overlay"></div><div class="sun-dust" aria-hidden="true"></div>
-  <header class="topbar"><a class="brand" href="./" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small>A LITTLE HOME, A LOT OF LOVE</small></span></a><div class="topbar-actions"><button class="companion-entry" data-companion-enter aria-label="沉浸陪伴，隐藏全部界面" title="隐藏全部界面，安静陪猫猫">${icon('eye-off')}<span>沉浸陪伴</span></button><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></div></header>
+  <header class="topbar"><a class="brand" href="${home.href}" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small>A LITTLE HOME, A LOT OF LOVE</small></span></a><div class="topbar-actions"><button class="companion-entry" data-companion-enter aria-label="沉浸陪伴，隐藏全部界面" title="隐藏全部界面，安静陪猫猫">${icon('eye-off')}<span>沉浸陪伴</span></button><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></div></header>
   <div class="wallet" aria-label="养成资源"><div class="currency"><span class="coin-icon">${icon('paw-print')}</span><strong id="coins">1,200</strong><span class="currency-label">猫爪币</span></div><div class="currency"><span class="heart-icon">${icon('heart')}</span><strong id="love">86</strong><span class="currency-label">亲密度</span></div><button class="currency level-currency" data-open="stages" aria-label="查看全部成长阶段"><span class="level-heart" data-live-growth-heart></span><strong id="top-level">Lv.1</strong><span class="currency-label">成长</span></button></div>
   <button class="together" data-open="roles" aria-label="查看双方在线状态和切换身份"><span class="together-presence" id="together-presence"></span><span class="together-link" id="together-cta">进入 ›</span></button>
   <div class="scene"><div class="speech-bubble" id="speech" role="status" aria-live="polite" aria-atomic="true" hidden><span class="speech-speaker" aria-hidden="true">${icon('paw-print')}<span class="speech-name"></span><span class="speech-dots"><i></i><i></i><i></i></span></span><span class="speech-text" aria-hidden="true"><span class="speech-content"></span></span><span class="sr-only speech-announcement"></span></div><button class="cat-button" id="cat" aria-label="摸摸糯米"><img class="kitten" src="./assets/kitten.webp" alt="坐在暖暖房间里的橘色小猫糯米" fetchpriority="high" draggable="false"/></button><button class="model-status" id="retry-cat-model" disabled aria-live="polite">小猫正在回家…</button><div class="cat-shadow"></div><div id="particles" aria-hidden="true"></div><div class="growth-rewards" id="growth-rewards" role="group" aria-label="待领取的成长气泡"></div></div>
@@ -403,7 +406,7 @@ function startCloud() {
   const pending = read(pendingKey, []);
   pendingCloudActions = pending.length;
   pendingGrowthClaims = new Set(pending.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId));
-  cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, initialState:state, storageLabel:localPetPreview ? '本地联机预览':'GitHub 云端',
+  cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, ...(home.roomId ? {homeRoomId:home.roomId} : {}), initialState:state, storageLabel:localPetPreview ? '本地联机预览':'GitHub 云端',
     pending, optimisticReducer:reduceAction, onRollback:rollbackReaction,
     onRoom(id) { roomId=id; save('catnest.couple.room',id); save('catnest.room',id); },
     onState(next, metadata) {

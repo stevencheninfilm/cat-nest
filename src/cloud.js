@@ -7,6 +7,7 @@ export function createCloudRoom(options) {
   const base = apiBase.replace(/\/$/, '');
   const coupleMode = Object.hasOwn(options, 'coupleRole');
   const profile = getCoupleProfile(coupleRole);
+  const homeRoomId = options.homeRoomId;
   let room = /^[a-f0-9]{32}$/.test(roomId || '') ? roomId : null;
   let queue = [...pending];
   let revision = -1;
@@ -127,12 +128,17 @@ export function createCloudRoom(options) {
       onSaveStatus({phase:'error',message:'尚未选择身份，云端存档没有被修改'});
       return;
     }
+    if (homeRoomId !== undefined && (!coupleMode || typeof homeRoomId !== 'string' || !/^[a-f0-9]{32}$/.test(homeRoomId))) {
+      onStatus({phase:'error',role:'cloud',message:'小窝存档配置无效，请联系维护者'});
+      onSaveStatus({phase:'error',message:'原存档没有被修改'});
+      return;
+    }
     onStatus({phase:'connecting',role:'cloud',message:'正在唤醒云端小窝，首次连接可能需要约一分钟…'});
     onSaveStatus({phase:'loading',message:`正在读取 ${storageLabel}存档…`});
     try {
-      const data = coupleMode ? await request('/api/couple/home') : room ? await request(`/api/rooms/${room}`) : await request('/api/rooms', {method:'POST',body:JSON.stringify({name:me.name,initialState})});
+      const data = coupleMode ? await request(homeRoomId ? `/api/rooms/${homeRoomId}` : '/api/couple/home') : room ? await request(`/api/rooms/${room}`) : await request('/api/rooms', {method:'POST',body:JSON.stringify({name:me.name,initialState})});
       if (destroyed) return;
-      if (coupleMode && (typeof data?.roomId !== 'string' || !/^[a-f0-9]{32}$/.test(data.roomId) || !data.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) {
+      if (coupleMode && ((homeRoomId !== undefined && data?.roomId !== homeRoomId) || typeof data?.roomId !== 'string' || !/^[a-f0-9]{32}$/.test(data.roomId) || !data.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) {
         throw new Error('共同小窝存档暂不可用，原存档没有被修改');
       }
       room=data.roomId; onRoom(room); apply(data);
