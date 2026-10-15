@@ -470,12 +470,14 @@ function dispatch(action) {
   initializeCatbook();
   if (cloudConfigured) {
     if (!cloud || status.phase !== 'online' || !cloud.dispatch(action)) { toast('正在连接演示小窝，连上后就可以继续照顾小猫'); return false; }
+    if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
     actionLocked = true; setTimeout(() => actionLocked = false, 650); return true;
   }
   const actor = { id:clientId, name:profile.name };
   const next = reduceAction(state, action, actor, Date.now(), crypto.randomUUID());
   if (!next) { toast('这次互动暂时不能完成，请稍后再试'); updateCareControls(); return false; }
   state = next; render(); react(action, actor);
+  if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
   return true;
 }
