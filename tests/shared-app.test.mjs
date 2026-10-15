@@ -16,6 +16,8 @@ test('all save data is scoped, preserving Steven and Evian existing keys exactly
   const namespaces=HOME_ENTRIES.filter(home=>!home.isTest).map(home=>scopedStorage(raw,home));
   const keys=['catnest.role','catnest.state.original','catnest.pending.couple.male','catnest.pending.couple.female','catnest.food','catnest.sound','catnest.couple.seen','catcourt.session.case','catcourt.draft.case'];
   for(const key of keys) {
+    namespaces.forEach((storage,index)=>storage.setItem(key,`isolated-${index}`));
+    namespaces.forEach((storage,index)=>assert.equal(storage.getItem(key),`isolated-${index}`));
     namespaces[0].setItem(key,'Steven-original');namespaces[1].setItem(key,'Evian-original');
     assert.equal(namespaces[0].getItem(key),'Steven-original');assert.equal(namespaces[1].getItem(key),'Evian-original');
     assert.equal(raw.getItem(key),'Steven-original');assert.equal(raw.getItem(`evian:${key}`),'Evian-original');
@@ -26,7 +28,7 @@ test('all save data is scoped, preserving Steven and Evian existing keys exactly
 
 test('a future save adds only configuration and receives no other save cache or pending writes',()=>{
   const additional={id:'new-friends',label:'新朋友',source:'room',roomId:'e'.repeat(32),storagePrefix:'new-friends:'};
-  assert.equal(validateHomes([...HOME_ENTRIES,additional]).length,4);
+  assert.equal(validateHomes([...HOME_ENTRIES,additional]).length,HOME_ENTRIES.length+1);
   const raw=createMemoryStorage(),original=scopedStorage(raw,HOME_ENTRIES[0]),fresh=scopedStorage(raw,additional);
   original.setItem('catnest.pending.couple.male','original-pending');
   assert.equal(fresh.getItem('catnest.pending.couple.male'),null);
@@ -71,7 +73,7 @@ test('build verification rejects drifted entry HTML and copied per-save bundles'
   const html='<head><base href="../"><script type="module" src="./assets/entry.js"></script></head>';
   await mkdir(join(dir,'assets'));await writeFile(join(dir,'assets/entry.js'),'one app');
   for(const {id} of HOME_ENTRIES){await mkdir(join(dir,id));await writeFile(join(dir,id,'index.html'),html);}
-  assert.deepEqual((await verifySharedBuild(dir)).entries,['steven','evian','test']);
+  assert.deepEqual((await verifySharedBuild(dir)).entries,HOME_ENTRIES.map(home=>home.id));
   for(const origin of ['https://stevencheninfilm.com/cat-nest/','https://cat-nest-api.onrender.com/'])for(const {id} of HOME_ENTRIES){
     const base=new URL('../',`${origin}${id}/`);
     assert.equal(new URL('./assets/entry.js',base).href,`${origin}assets/entry.js`);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { homeContext, homeStorageKey, initialHomeState, EVIAN_ROOM_ID } from '../src/home-context.js';
+import { homeContext, homeTitle, homeStorageKey, initialHomeState, EVIAN_ROOM_ID } from '../src/home-context.js';
 import { createLocalPreviewStore, PREVIEW_HOME } from '../scripts/local-pet-preview.mjs';
 import { namedHomeHtml, namedHomeEntry } from '../scripts/named-home-entry.mjs';
 
@@ -78,4 +78,29 @@ test('Steven uses the original home and unchanged browser keys while keeping nav
   const home=homeContext(path);assert.equal(home.id,'steven');assert.equal(home.roomId,null);assert.equal(home.href,'./steven/');
  }
  assert.equal(homeContext('/steven/other/').id,'unknown');
+});
+
+test('Todd uses its own permanent room, title and storage namespace',()=>{
+  const todd=homeContext('/todd/');
+  for(const path of ['/todd','/cat-nest/todd/','/cat-nest/todd/index.html'])assert.equal(homeContext(path),todd);
+  assert.equal(homeTitle(todd),'Todd 猫猫小窝');
+  assert.equal(homeTitle(homeContext('/steven/')),'Steven 猫猫小窝');
+  assert.equal(homeTitle(homeContext('/evian/')),'Evian · 猫猫小窝');
+  assert.equal(todd.source,'room');assert.notEqual(todd.roomId,EVIAN_ROOM_ID);
+  for(const key of ['catnest.role','catnest.state.saved','catnest.pending.couple.male','catnest.couple.seen','catcourt.session.case','catcourt.draft.case'])assert.equal(homeStorageKey(key,todd),`todd:${key}`);
+  const state=initialHomeState(todd,1_800_000_000_000);
+  assert.deepEqual([state.coins,state.xp,state.love],[1200,0,0]);
+  assert.deepEqual(state.history,[]);assert.deepEqual(state.pendingGrowth,[]);assert.deepEqual(state.homeBond.owners,[]);
+});
+
+test('Todd saves spending once and reloading never refills its starting balance',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'todd-save-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const home=homeContext('/todd/'),now=()=>1_800_000_000_000;
+  const options={file:join(dir,'todd.json'),homeId:home.roomId,seedState:at=>initialHomeState(home,at),now};
+  const store=createLocalPreviewStore(options);
+  assert.equal((await store.getRoom(home.roomId)).state.coins,1200);
+  await store.applyAction(home.roomId,{operationId:'todd-drink-test',clientId:'partner-male',name:'男方',action:{type:'feed',food:'water'}});
+  const reopened=createLocalPreviewStore(options);
+  assert.equal((await reopened.getRoom(home.roomId)).state.coins,1195);
+  await assert.rejects(()=>reopened.getRoom(EVIAN_ROOM_ID),error=>error.code==='ROOM_NOT_FOUND');
 });

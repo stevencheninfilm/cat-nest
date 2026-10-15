@@ -8,6 +8,7 @@ export function validateHomes(entries) {
   for(const item of entries) {
     if(!item || !/^[a-z][a-z0-9-]{0,39}$/.test(item.id) || ['assets','api','model','index','404'].includes(item.id) || ids.has(item.id))throw new Error('存档网址无效或重复');
     if(typeof item.label!=='string' || !item.label.trim() || !['couple','room','test'].includes(item.source))throw new Error('存档配置无效');
+    if(item.title!==undefined && (typeof item.title!=='string' || !item.title.trim()))throw new Error('存档标题无效');
     if(typeof item.storagePrefix!=='string' || prefixes.has(item.storagePrefix) || (item.id==='steven' ? item.storagePrefix!=='' : item.storagePrefix!==`${item.id}:`))throw new Error('存档缓存空间无效或重复');
     if(item.source==='couple') { if(item.id!=='steven' || item.roomId!==null)throw new Error('原存档绑定不可替换'); original++; }
     else if(!/^[a-f0-9]{32}$/.test(item.roomId) || rooms.has(item.roomId))throw new Error('存档房间无效或重复');
@@ -19,6 +20,9 @@ export function validateHomes(entries) {
 }
 export const HOME_ENTRIES=Object.freeze(validateHomes(homes).map(item=>Object.freeze({...item,href:`./${item.id}/`,isTest:item.source==='test'})));
 export const EVIAN_ROOM_ID=HOME_ENTRIES.find(item=>item.id==='evian').roomId;
+export function homeTitle(context) {
+  return context.title || (context.id==='steven' ? `${context.label} 猫猫小窝` : `${context.label} · 猫猫小窝`);
+}
 const main=Object.freeze({id:'main',href:'./',roomId:null,storagePrefix:''});
 const unknown=Object.freeze({id:'unknown',href:'./',roomId:null,storagePrefix:null});
 

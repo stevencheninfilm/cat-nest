@@ -1,4 +1,4 @@
-import { homeContext } from './home-context.js';
+import { homeContext, homeTitle } from './home-context.js';
 import { createHomeRuntime, setAppRuntime } from './app-runtime.js';
 
 const home = homeContext(location.pathname);
@@ -20,7 +20,7 @@ if (home.id === 'main') {
   const apiBase=import.meta.env.VITE_API_URL || (localPreview || location.hostname.endsWith('.onrender.com') ? location.origin : '');
   const browserStorage=name=>{try{return globalThis[name];}catch{return null;}};
   setAppRuntime(createHomeRuntime({home,apiBase,courtApiBase:import.meta.env.VITE_COURT_API_URL || apiBase,localPreview,localStorage:browserStorage('localStorage'),sessionStorage:browserStorage('sessionStorage'),testAdapter}));
-  document.title=home.id==='steven' ? `${home.label} 猫猫小窝` : `${home.label} · 猫猫小窝`;
+  document.title=homeTitle(home);
   document.documentElement.dataset.home=home.id;
   await import('./main.js');
   if(home.isTest)await import('../demo/controls.js');
