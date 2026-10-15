@@ -3,6 +3,7 @@ import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, r
 import { petNeeds, growthRewardAmount, addGrowthExperience, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { GAMES, emptyGameHub, normalizeGameHub, reduceGameHub } from './minigames.js';
 import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple-care.js';
+import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, favoriteMemory } from './memory-journal.js';
 
 export const FOODS = {
   snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 6 },
@@ -153,7 +154,7 @@ function feedRecords(value, now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), updatedAt: now };
+  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), diary:emptyMemoryJournal(now), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -180,6 +181,7 @@ export function normalizeState(value, now = Date.now()) {
   next.pendingGrowth = normalizePendingGrowth(value.pendingGrowth);
   next.games = normalizeGameHub(value.games,now);
   next.coupleCare = normalizeCoupleCare(value.coupleCare, now);
+  next.diary = normalizeMemoryJournal(value.diary, next, now);
   next.careLimits = normalizeCareLimits(value.careLimits, now);
   next.collection = normalizeCollection(value.collection, { ...next, savedBoostCount, careLimits:validCareLimits(value.careLimits) ? value.careLimits : next.careLimits }, FOODS);
   if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
@@ -290,6 +292,10 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   now = validTime(now) ? now : 0;
   if (!action || typeof action !== 'object') return null;
   const current = normalizeState(state, now);
+  if(action.type==='diary-favorite') {
+    const diary=favoriteMemory(current.diary,action.memoryId,action.favorite);
+    return diary ? {...current,diary,updatedAt:now} : null;
+  }
   const { boostCount, multiplier } = petNeeds(current, now);
   const care = careInfo(current, action, actor?.id, now);
   if (!care.allowed) return null;
@@ -313,6 +319,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       next.history = next.history.slice(0,40);
     }
     recordCollectionAchievements(next.collection,{boostCount,careCounts:next.careLimits.counts});
+    next.diary=recordMemoryJournal(current.diary,{before:current,after:next,action,actorId:actor?.id,now,id:rewardId});
     return normalizeState(next,now);
   }
   switch (action.type) {
@@ -378,6 +385,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   next.coupleCare = recordCoupleCare(next.coupleCare, action, actor?.id, now, rewardId, { isWake:care.isWake, feedingWindow:next.feedingWindow });
   next.history.unshift({ text, actor: cleanName(actor?.name).slice(0, 16), at: next.updatedAt });
   next.history = next.history.slice(0, 40);
+  next.diary=recordMemoryJournal(current.diary,{before:current,after:next,action,actorId:actor?.id,now,id:rewardId,levelBefore:levelInfo(current.xp).level,levelAfter:levelInfo(next.xp).level});
   return normalizeState(next, now);
 }
 /** Cumulative growth required to reach a level, shared with stage progress. */
