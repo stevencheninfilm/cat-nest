@@ -1,0 +1,164 @@
+{
+  "tool": "built-in image_gen",
+  "version": 1,
+  "created": "2026-10-15",
+  "purpose": "Independent commemorative illustrations selected by memory theme; artwork is not an actual historical photograph.",
+  "encoding": {
+    "format": "WebP",
+    "width": 960,
+    "height": 640,
+    "quality": 84
+  },
+  "assets": [
+    {
+      "id": "adoption",
+      "file": "src/assets/memory-journal/v1/adoption.webp",
+      "source": "exec-e368ef0e-b98a-44cd-9d99-928f53a0221f.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten stands at an open little wooden doorway with a small wicker travel basket and a folded cream blanket. Two welcoming human hands, one pale blue cuff and one dusty rose cuff, gently wait near the kitten at floor level. The kitten looks curious and safe, discovering its new home. Soft sunrise welcome, tiny house plant."
+    },
+    {
+      "id": "growth",
+      "file": "src/assets/memory-journal/v1/growth.webp",
+      "source": "exec-9d2ed238-04e5-4a94-86b0-ebfd5c8ca24f.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten proudly sits beside ONE glossy plump orange jelly heart on a small cream pedestal, a few tiny gold glints, delicate ribbon. Warm proud milestone feeling, restrained sparkle, not a large trophy or poster. A soft height-mark notch on a wooden post but no numbers or letters."
+    },
+    {
+      "id": "pet",
+      "file": "src/assets/memory-journal/v1/pet.webp",
+      "source": "exec-05128344-06ec-4fac-ac0d-3aebcb67506b.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. One human hand with a cream sleeve gently strokes the kitten's head; eyes closed, relaxed cheeks, tiny front paws tucked on a soft cream sofa cushion. The purple hat sits slightly tilted, still on its head. Intimate tender moment, cat and hand fully readable."
+    },
+    {
+      "id": "feed",
+      "file": "src/assets/memory-journal/v1/feed.webp",
+      "source": "exec-8b8ee1c4-05b7-4b6f-82d3-badf2b7feff6.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten happily leans over a little ceramic food bowl on a gingham mat, with a neatly plated morsel of salmon and fresh water beside it. A single human hand with a pale blue cuff sets down the bowl. Cozy kitchen corner, tiny joyful ritual."
+    },
+    {
+      "id": "anniversary",
+      "file": "src/assets/memory-journal/v1/anniversary.webp",
+      "source": "exec-5e1b73e1-81ef-4bbd-bbf4-716b2d677b29.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. An anniversary afternoon: the kitten sits beside a small unlit heart-shaped keepsake ornament and a tiny wrapped gift on a cream table. Two human hands, one blue cuff and one dusty rose cuff, tie a ribbon together. A vase with one daisy, warm celebratory but quiet light. No cake candles or text."
+    },
+    {
+      "id": "play",
+      "file": "src/assets/memory-journal/v1/play.webp",
+      "source": "exec-90c4469c-840e-4f87-b9a5-0607f754b9f3.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten playfully reaches one front paw toward a feather wand held by a human hand. Whole kitten visible in a small mid-hop, plum hat tilted, a woven rug in a softly lit room. Lively but gentle, no motion blur."
+    },
+    {
+      "id": "sleep",
+      "file": "src/assets/memory-journal/v1/sleep.webp",
+      "source": "exec-93487fab-163d-4d9b-8e4b-ffc8ce359e5f.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten curled into a round cozy shape in a woven basket bed, purple wizard hat resting safely beside its head, one paw under cheek. Soft lilac blanket, moonlight and one warm bedside lamp, relaxed sleeping face. Tender bedtime scene."
+    },
+    {
+      "id": "dress",
+      "file": "src/assets/memory-journal/v1/dress.webp",
+      "source": "exec-2f7525bd-fcaf-44d0-8b98-0d04da34819e.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten admires its purple cape and crescent hat in a small oval mirror. A neat ribbon and folded little cloth on a stool, soft cream dressing corner. The reflection must correctly belong to the same kitten. Happy modest new outfit moment."
+    },
+    {
+      "id": "name",
+      "file": "src/assets/memory-journal/v1/name.webp",
+      "source": "exec-b7426409-cdc7-47da-8526-5585b7b4208d.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. A human hand gently fastens a small blank heart-shaped brass name tag onto the kitten's purple neckerchief. The kitten looks upward with trusting amber eyes; a blank little stationery card on the floor. No letters or text on the tag or stationery."
+    },
+    {
+      "id": "duo-meal",
+      "file": "src/assets/memory-journal/v1/duo-meal.webp",
+      "source": "exec-17b4b5f7-3fa7-4b23-a638-f2a1bc9e424e.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten sits at its little dining mat between two small ceramic bowls being set down together by two hands, one blue sleeve from the left and one dusty rose sleeve from the right. One bowl contains a neat meal and the other water. Two people caring for ONE kitten. Warm shared meal ritual."
+    },
+    {
+      "id": "duo-relay",
+      "file": "src/assets/memory-journal/v1/duo-relay.webp",
+      "source": "exec-11142386-c9df-47d2-a480-405c4a1d466e.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. One hand in a blue sleeve gently strokes the kitten's back while a second hand in a dusty rose sleeve holds a small feather wand nearby. The kitten happily reaches for the feather on a woven rug. Clear sense of two people taking turns caring together, only ONE kitten."
+    },
+    {
+      "id": "duo-goodnight",
+      "file": "src/assets/memory-journal/v1/duo-goodnight.webp",
+      "source": "exec-07146d1b-1afd-4b70-98a3-8bde586955c6.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. Two human hands, one blue sleeve and one dusty rose sleeve, gently tuck a cream blanket around the sleepy kitten in its basket bed. Purple crescent hat on the bedside stool. Warm bedside lamp and quiet violet dusk, intimate shared goodnight."
+    },
+    {
+      "id": "duo-game",
+      "file": "src/assets/memory-journal/v1/duo-game.webp",
+      "source": "exec-6264f736-ee0e-4e15-89bb-f954b61bf7b6.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten sits watching a small wooden tabletop game with simple round blue and rose tokens. Two human hands with blue and rose sleeves place tokens from opposite sides. No complex chess rules, no text or numbers. Playful togetherness, softly lit little home."
+    },
+    {
+      "id": "fun-tail",
+      "file": "src/assets/memory-journal/v1/fun-tail.webp",
+      "source": "exec-03adab80-8614-49ca-861c-2156a46c4aa0.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten sitting in three-quarter rear view on a cream rug, turning its head to look curiously at its own tail curled into a question-mark shape. Entire silhouette, tail and amber eyes readable, warm sunny corner."
+    },
+    {
+      "id": "fun-purr",
+      "file": "src/assets/memory-journal/v1/fun-purr.webp",
+      "source": "exec-cf91ee8e-63b0-4067-8b70-6578018fdf44.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten lies contentedly on a cream knitted cushion beside a resting human hand, eyes softly closed, face blissful, front paws making tiny biscuits. Hat relaxed beside its ears, honey soft light. Visually express a quiet purr with pose only, no drawn symbols."
+    },
+    {
+      "id": "fun-patrol",
+      "file": "src/assets/memory-journal/v1/fun-patrol.webp",
+      "source": "exec-3f57d624-96cc-4707-a958-ab3047555417.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten proudly patrols a tiny hallway with its head up and one front paw lifted, walking past a wicker basket and neatly lined slippers. Full body, small cozy home, confident charming explorer."
+    },
+    {
+      "id": "fun-paw",
+      "file": "src/assets/memory-journal/v1/fun-paw.webp",
+      "source": "exec-244d7411-550e-4f06-9250-c45c59a2ae2e.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten presses its one tiny front paw gently into a human open palm on a cream table, like a small promise or paw stamp. Pink paw pads subtly visible, amber eyes attentive and loving. No ink marks or text."
+    },
+    {
+      "id": "fun-stars",
+      "file": "src/assets/memory-journal/v1/fun-stars.webp",
+      "source": "exec-94950ce7-bad8-4b1b-8dd4-f6a052ccaa1c.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten looks up at a very small floating golden star above its purple crescent hat, one paw lifted in wonder. Window at quiet twilight, subtle golden reflections in amber eyes, only two tiny light motes, no extravagant effects."
+    },
+    {
+      "id": "fun-snuggle",
+      "file": "src/assets/memory-journal/v1/fun-snuggle.webp",
+      "source": "exec-77beb8ce-ee72-4451-b0c5-2601e04a985b.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten nestles affectionately against two resting human hands, blue and dusty rose cuffs barely visible, cheek leaning against a finger. Full round kitten seated on a sofa cushion, eyes nearly closed. Warm tender cuddling."
+    },
+    {
+      "id": "fun-cloud",
+      "file": "src/assets/memory-journal/v1/fun-cloud.webp",
+      "source": "exec-a4134772-c2b1-45ed-ad28-5d8565572ee3.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten curled round as a fluffy little cloud on a thick cream cushion beside a window, purple hat tipped gently over one ear, tail tucked round paws. Diffuse cloudy daylight, soft airy ivory setting, whole body."
+    },
+    {
+      "id": "fun-guard",
+      "file": "src/assets/memory-journal/v1/fun-guard.webp",
+      "source": "exec-9f980a4b-7383-46f4-866d-e4cae99701e4.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten sits at a low windowsill beside the home doorway, patiently looking toward the entrance as if waiting for its people to return. Small warm lamp and one pair of slippers nearby, reassuring evening mood."
+    },
+    {
+      "id": "fun-whiskers",
+      "file": "src/assets/memory-journal/v1/fun-whiskers.webp",
+      "source": "exec-05f12e41-28b6-450f-8816-dcc0fa89d924.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten curiously sniffs a tiny loose feather floating just in front of its whiskers, nose raised, one paw poised. Medium full-body composition on a cream rug, warm daylight, lively delicate curiosity."
+    },
+    {
+      "id": "fun-slow",
+      "file": "src/assets/memory-journal/v1/fun-slow.webp",
+      "source": "exec-e65840cc-bc9f-4a9e-bded-798d5723e868.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten stretches lazily on a sunlit window bench beside an open blank book and a ceramic tea cup beyond reach. Quiet afternoon, peaceful unhurried scene, full stretched little body, gentle golden light."
+    },
+    {
+      "id": "fun-seat",
+      "file": "src/assets/memory-journal/v1/fun-seat.webp",
+      "source": "exec-542fbdc4-f409-42be-a42e-a1cff3bec861.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten sits snugly in the small gap between two cream sofa cushions beside a person's relaxed hand and sleeve. Looking up contentedly, tail curled around paws, cozy favorite seat, warm muted lilac and oatmeal textiles."
+    },
+    {
+      "id": "fun-pocket",
+      "file": "src/assets/memory-journal/v1/fun-pocket.webp",
+      "source": "exec-b19198be-e2b3-4c33-850f-346d0119fcce.png",
+      "prompt": "Use case: illustration-story. Asset type: individual landscape commemorative photograph illustration for a compact Chinese virtual-pet memory timeline. Create ONE coherent scene only. The main character is the same tiny round fluffy charcoal-black kitten, amber eyes, pink nose, plum purple soft wizard hat with a small gold crescent and gold ribbon, matching purple neckerchief. Premium softly rendered 3D storybook style, tactile short fur, warm cream paper palette, apricot sunlight, gentle depth, natural expressions. Medium-wide composition, show the full little kitten and meaningful props; keep all focal action inside the center 70 percent so it remains readable in a small square thumbnail AND wide photo crop. A warmly furnished miniature home, simplified background, believable paw anatomy. No text, letters, numbers, watermark, frame, UI, split panels or collage. The kitten cuddles a tiny cream cloth pouch tied with a simple plum ribbon between its paws, beside a little collection of a feather and smooth pebble. A visual metaphor for saving gentle memories. Quiet warm light, no letters or drawings."
+    }
+  ]
+}
