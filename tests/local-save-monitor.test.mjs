@@ -31,10 +31,10 @@ test('monitor lists all registered homes and excludes temporary test saves from 
   const calls=[],service=createMonitorService({fetchImpl:cloudFake({calls}),now:()=>at});
   const snapshot=await service.snapshot();
   assert.deepEqual(snapshot.entries.map(home=>home.id),HOME_ENTRIES.map(home=>home.id));
-  assert.deepEqual(snapshot.entries.filter(home=>home.status==='ready').map(home=>home.id),['steven','evian','todd']);
+  assert.deepEqual(snapshot.entries.filter(home=>home.status==='ready').map(home=>home.id),HOME_ENTRIES.filter(home=>!home.isTest).map(home=>home.id));
   const testHome=snapshot.entries.find(home=>home.id==='test');
   assert.equal(testHome.status,'temporary');assert.equal(testHome.level,undefined);
-  assert.equal(calls.filter(call=>call.url.includes('/api/rooms/')).length,2);
+  assert.equal(calls.filter(call=>call.url.includes('/api/rooms/')).length,HOME_ENTRIES.filter(home=>home.source==='room').length);
   assert.ok(calls.every(call=>call.options.method==='GET' && !call.options.body && !call.options.headers.Authorization));
   assert.equal(snapshot.version.synced,true);
   assert.ok(snapshot.entries.find(home=>home.id==='todd').coins===1200);

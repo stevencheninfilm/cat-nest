@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { homeContext, homeTitle, homeStorageKey, initialHomeState, EVIAN_ROOM_ID } from '../src/home-context.js';
+import { HOME_ENTRIES, homeContext, homeTitle, homeStorageKey, initialHomeState, EVIAN_ROOM_ID } from '../src/home-context.js';
 import { createLocalPreviewStore, PREVIEW_HOME } from '../scripts/local-pet-preview.mjs';
 import { namedHomeHtml, namedHomeEntry } from '../scripts/named-home-entry.mjs';
 
@@ -93,14 +93,26 @@ test('Todd uses its own permanent room, title and storage namespace',()=>{
   assert.deepEqual(state.history,[]);assert.deepEqual(state.pendingGrowth,[]);assert.deepEqual(state.homeBond.owners,[]);
 });
 
-test('Todd saves spending once and reloading never refills its starting balance',async t=>{
-  const dir=await mkdtemp(join(tmpdir(),'todd-save-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));
-  const home=homeContext('/todd/'),now=()=>1_800_000_000_000;
-  const options={file:join(dir,'todd.json'),homeId:home.roomId,seedState:at=>initialHomeState(home,at),now};
+for(const home of HOME_ENTRIES.filter(home=>home.source==='room')) {
+test(`${home.label} resolves only its own entry and storage namespace`,()=>{
+  for(const path of [`/${home.id}`,`/${home.id}/`,`/cat-nest/${home.id}/`,`/cat-nest/${home.id}/index.html`])assert.equal(homeContext(path),home);
+  assert.equal(homeContext(`/${home.id}/other/`).id,'unknown');
+  assert.equal(homeTitle(home),home.title || `${home.label} · 猫猫小窝`);
+  for(const key of ['catnest.role','catnest.room','catnest.state.saved','catnest.pending.couple.male','catnest.pending.couple.female','catnest.couple.seen','catcourt.session.case','catcourt.draft.case'])assert.equal(homeStorageKey(key,home),`${home.id}:${key}`);
+  const state=initialHomeState(home,1_800_000_000_000);
+  assert.deepEqual([state.coins,state.xp,state.love],[1200,0,0]);
+  assert.deepEqual(state.history,[]);assert.deepEqual(state.pendingGrowth,[]);assert.deepEqual(state.homeBond.owners,[]);
+});
+
+test(`${home.label} saves spending once and reloading never refills its starting balance`,async t=>{
+  const dir=await mkdtemp(join(tmpdir(),`${home.id}-save-test-`));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const now=()=>1_800_000_000_000;
+  const options={file:join(dir,`${home.id}.json`),homeId:home.roomId,seedState:at=>initialHomeState(home,at),now};
   const store=createLocalPreviewStore(options);
   assert.equal((await store.getRoom(home.roomId)).state.coins,1200);
-  await store.applyAction(home.roomId,{operationId:'todd-drink-test',clientId:'partner-male',name:'男方',action:{type:'feed',food:'water'}});
+  await store.applyAction(home.roomId,{operationId:`${home.id}-drink-test`,clientId:'partner-male',name:'男方',action:{type:'feed',food:'water'}});
   const reopened=createLocalPreviewStore(options);
   assert.equal((await reopened.getRoom(home.roomId)).state.coins,1195);
-  await assert.rejects(()=>reopened.getRoom(EVIAN_ROOM_ID),error=>error.code==='ROOM_NOT_FOUND');
+  for(const other of HOME_ENTRIES.filter(other=>other.roomId && other.roomId!==home.roomId))await assert.rejects(()=>reopened.getRoom(other.roomId),error=>error.code==='ROOM_NOT_FOUND');
 });
+}

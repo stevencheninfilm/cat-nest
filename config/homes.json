@@ -2,5 +2,6 @@
   { "id": "steven", "label": "Steven", "source": "couple", "roomId": null, "storagePrefix": "" },
   { "id": "evian", "label": "Evian", "source": "room", "roomId": "6858d44c3a9ce3b77ea7c5334b4acd02", "storagePrefix": "evian:" },
   { "id": "test", "label": "测试调试", "source": "test", "roomId": "dddddddddddddddddddddddddddd5174", "storagePrefix": "test:" },
-  { "id": "todd", "label": "Todd", "title": "Todd 猫猫小窝", "source": "room", "roomId": "76fbcefe6426efcd661ea7c6501aed54", "storagePrefix": "todd:" }
+  { "id": "todd", "label": "Todd", "title": "Todd 猫猫小窝", "source": "room", "roomId": "76fbcefe6426efcd661ea7c6501aed54", "storagePrefix": "todd:" },
+  { "id": "xiao", "label": "Xiao", "title": "Xiao 猫猫小窝", "source": "room", "roomId": "73fff1fa6740fd673e7383e79ff82d37", "storagePrefix": "xiao:" }
 ]
