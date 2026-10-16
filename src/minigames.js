@@ -39,6 +39,7 @@ export function sanitizeGameAction(value) {
 }
 export function validGameHub(hub, { privateState = false } = {}) {
   if (!hub || !integer(hub.day) || !integer(hub.earned,GAME_DAILY_LIMIT)) return false;
+  if(hub.localReceipts!==undefined&&(!Array.isArray(hub.localReceipts)||hub.localReceipts.some(r=>!r||Object.keys(r).sort().join(',')!=='actorId,id,reward'||!id(r.id)||!actorId(r.actorId)||!integer(r.reward,15))||new Set(hub.localReceipts.map(r=>r.id)).size!==hub.localReceipts.length))return false;
   const m = hub.match;
   if (m === null) return true;
   if (!m || !id(m.id) || !Object.hasOwn(GAMES,m.game) || !Object.hasOwn(GAME_MODES,m.mode) || !['waiting','active','finished','cancelled'].includes(m.status) || !integer(m.step) || !integer(m.createdAt) || !integer(m.updatedAt) || !integer(m.turn,1) || !integer(m.reward,15) || ![-1,0,1,null].includes(m.winner)) return false;
@@ -83,6 +84,7 @@ export function publicGameHub(hub) {
 }
 export function publicGameEvent(event) {
   const next = structuredClone(event);
+  if(next?.action?.type==='game-local-finish'&&next.action.session)next.action={type:'game-local-finish',sessionId:next.action.session.id};
   if (next?.action?.type === 'game-move') delete next.action.move;
   if(next?.action?.type==='game-arcade-input')delete next.action.events;
   return next;

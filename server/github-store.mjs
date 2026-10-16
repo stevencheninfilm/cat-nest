@@ -4,6 +4,7 @@ import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, vali
 import { validAppearance } from '../src/mage-cat-config.js';
 import { validCollection, validCollectionCatId, validCollectionSceneId, collectionSceneInvitation, canInviteCat } from '../src/cat-collection.js';
 import { sanitizeGameAction, validGameHub, publicGameHub, publicGameEvent, emptyGameHub } from '../src/minigames.js';
+import { sanitizeLocalGameAction, localGameReceipt, validLocalEvent } from '../src/minigames-local-rules.js';
 import { validCoupleCare } from '../src/couple-care.js';
 import { validMemoryJournal, normalizeMemoryJournal, validMemoryId } from '../src/memory-journal.js';
 import { validNest, sanitizeNestAction, validFurnitureCare } from '../src/nest-decor.js';
@@ -21,6 +22,7 @@ export class StorageError extends Error {
 
 export function sanitizeAction(value) {
   if (!plain(value)) return null;
+  if(value.type==='game-local-finish')return sanitizeLocalGameAction(value);
   if (typeof value.type==='string' && value.type.startsWith('nest-')) return sanitizeNestAction(value);
   if (typeof value.type === 'string' && value.type.startsWith('game-')) return sanitizeGameAction(value);
   const keys = Object.keys(value);
@@ -171,10 +173,11 @@ export function createGitHubStore({
       delete withoutGrowth.state.pendingGrowth;
       delete withoutGrowth.claimedGrowth;
       delete withoutGrowth.state.diary;
+      if(withoutGrowth.state.games)withoutGrowth.state.games={...withoutGrowth.state.games,localReceipts:[]};
       if (withoutGrowth.state.coupleCare) withoutGrowth.state.coupleCare = { ...withoutGrowth.state.coupleCare, moments:[] };
       if (Buffer.byteLength(JSON.stringify(withoutGrowth), 'utf8') * 4 / 3 > 350_000) throw new Error();
       for (const operation of room.operations) {
-        if (!plain(operation) || typeof operation.id !== 'string' || !OPERATION_ID.test(operation.id) || !plain(operation.event) || operation.event.operationId !== operation.id || !sanitizeAction(operation.event.action) || !sanitizeActor(operation.event.actor?.id, operation.event.actor?.name)) throw new Error();
+        if (!plain(operation) || typeof operation.id !== 'string' || !OPERATION_ID.test(operation.id) || !plain(operation.event) || operation.event.operationId !== operation.id || (!sanitizeAction(operation.event.action)&&!validLocalEvent(operation.event.action)) || !sanitizeActor(operation.event.actor?.id, operation.event.actor?.name)) throw new Error();
       }
       // Migrate only the new optional ledger; preserve the original save fields.
       room.state.collection ??= normalizeState(room.state, now()).collection;
@@ -225,13 +228,19 @@ export function createGitHubStore({
       return withLock(id, async () => {
         for (let attempt = 0; attempt < maxRetries; attempt += 1) {
           const { room, sha } = await read(id);
+          const journalAction=action.type==='game-local-finish'?localGameReceipt(action):action;
           const duplicate = room.operations.find(operation => operation.id === operationId);
           if (duplicate) {
-            if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+            if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(journalAction)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event: publicGameEvent(duplicate.event), duplicate: true };
           }
+          if(action.type==='game-local-finish'){
+            const receipt=room.state.games.localReceipts?.find(r=>r.id===action.session.id);
+            if(receipt){if(receipt.actorId!==actor.id)throw new StorageError('OPERATION_CONFLICT','这个对局编号已用于另一位玩家。',409);return {...publicRoom(room),event:{operationId,action:journalAction,actor},duplicate:true};}
+            if(room.state.games.match?.id===action.session.id||room.state.pendingGrowth?.some(r=>r.id===`game:${action.session.id}`)||room.claimedGrowth.some(r=>r.id===`game:${action.session.id}`))throw new StorageError('OPERATION_CONFLICT','这个对局编号已经使用。',409);
+          }
           const invitation = room.state.collection?.sceneInvited?.find(record=>record.operationId===operationId) || room.state.collection?.invited.find(record => record.operationId === operationId);
-          if (action.type === 'game-create' && (room.state.pendingGrowth?.some(reward => reward.id === `game:${operationId}`) || room.claimedGrowth.some(reward => reward.id === `game:${operationId}`))) throw new StorageError('OPERATION_CONFLICT','这个操作编号已用于已结算的小游戏。',409);
+          if (action.type === 'game-create' && (room.state.games.localReceipts?.some(r=>r.id===operationId)||room.state.pendingGrowth?.some(reward => reward.id === `game:${operationId}`) || room.claimedGrowth.some(reward => reward.id === `game:${operationId}`))) throw new StorageError('OPERATION_CONFLICT','这个操作编号已用于已结算的小游戏。',409);
           if (invitation) {
             if (invitation.actorId !== actor.id || action.type !== 'invite-cat' || action.catId !== invitation.id || (action.sceneId || 'station') !== (invitation.sceneId || 'station')) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event:{ operationId, action, actor }, duplicate:true };
@@ -259,7 +268,7 @@ export function createGitHubStore({
           if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
           if (!reduced && action.type === 'invite-cat') throw new StorageError('CAT_SCENE_UNAVAILABLE', '这个庭院尚未开放，或这位猫友会在其他庭院相遇。', 409);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
-          const event = { operationId, action, actor };
+          const event = { operationId, action:journalAction, actor };
           const claimedGrowth = action.type === 'claim-growth'
             ? [...room.claimedGrowth, copy(room.state.pendingGrowth.find(reward => reward.id === action.rewardId))]
             : room.claimedGrowth;

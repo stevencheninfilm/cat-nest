@@ -30,6 +30,7 @@ COPY --from=build /app/src/catbook-game-sprites.js ./src/catbook-game-sprites.js
 COPY --from=build /app/src/catbook-reference-sprites.js ./src/catbook-reference-sprites.js
 COPY --from=build /app/src/pet-needs.js ./src/pet-needs.js
 COPY --from=build /app/src/minigames.js ./src/minigames.js
+COPY --from=build /app/src/minigames-local-rules.js ./src/minigames-local-rules.js
 COPY --from=build /app/src/minigames-computer.js ./src/minigames-computer.js
 COPY --from=build /app/src/minigames-extra.js ./src/minigames-extra.js
 COPY --from=build /app/src/minigames-arcade.js ./src/minigames-arcade.js

@@ -3,9 +3,10 @@ import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
 import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare, recordCollectionVictory, recordCollectionAchievements } from './cat-collection.js';
 import { CAT_SCENES, sceneAllowsCat, collectionSceneProgress } from './catbook-scenes.js';
 import { petNeeds, growthRewardAmount, addGrowthExperience, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
-import { GAMES, emptyGameHub, normalizeGameHub, reduceGameHub } from './minigames.js';
+import { GAMES, emptyGameHub, normalizeGameHub, reduceGameHub, GAME_DAILY_LIMIT } from './minigames.js';
 import { TOUCH_GAMES, catPlayUnlocked } from './minigames-touch-rules.js';
 import { isFeatureUnlocked } from './feature-unlocks.js';
+import { replayLocalGame, sanitizeLocalGameAction } from './minigames-local-rules.js';
 import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple-care.js';
 import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, favoriteMemory } from './memory-journal.js';
 import { emptyNest, normalizeNest, nestActionResult, nestItem, validFurnitureCare } from './nest-decor.js';
@@ -333,13 +334,26 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   let growth = 0;
   let text;
   if (typeof action.type === 'string' && action.type.startsWith('game-')) {
+    let hub,m;
+    if(action.type==='game-local-finish'){
+      const local=sanitizeLocalGameAction(action);
+      if(!local||TOUCH_GAMES.includes(local.session.game)&&!catPlayUnlocked(levelInfo(current.xp).level)||(current.games.localReceipts?.some(r=>r.id===local.session.id)||current.games.match?.id===local.session.id||current.pendingGrowth.some(r=>r.id===`game:${local.session.id}`)))return null;
+      const completed=replayLocalGame(local.session,{id:rewardActorId,name:cleanName(actor?.name)},now);
+      if(completed?.match?.status!=='finished')return null;
+      hub=normalizeGameHub(current.games,now);m=completed.match;
+      m.reward=m.arcade?.rewardEligible===false?0:Math.min(GAMES[m.game].xp,GAME_DAILY_LIMIT-hub.earned);
+      hub.earned+=m.reward;
+      hub.localReceipts=[...(hub.localReceipts||[]),{id:m.id,actorId:rewardActorId,reward:m.reward}];
+      // Independent local sessions never overwrite an existing shared match.
+    }else{
     if (action.type === 'game-create' && TOUCH_GAMES.includes(action.game) && !catPlayUnlocked(levelInfo(current.xp).level)) return null;
     if (action.type === 'game-create' && current.pendingGrowth.some(reward => reward.id === `game:${rewardId}`)) return null;
-    const hub = reduceGameHub(current.games,action,{ id:rewardActorId, name:cleanName(actor?.name) },now,rewardId);
+    hub = reduceGameHub(current.games,action,{ id:rewardActorId, name:cleanName(actor?.name) },now,rewardId);
     if (!hub) return null;
+    m=hub.match;
+    }
     next.games = hub;
-    const m = hub.match;
-    if (m.status === 'finished' && current.games.match?.status !== 'finished') {
+    if (m.status === 'finished' && (action.type==='game-local-finish'||current.games.match?.status !== 'finished')) {
       recordCollectionVictory(next.collection, m);
       if (m.reward > 0) next.pendingGrowth.push({ id:`game:${m.id}`, kind:'game', game:m.game, amount:m.reward, actorId:rewardActorId, actor:cleanName(actor?.name), at:now });
       next.history.unshift({ text:`${m.mode === 'duo' ? '一起完成':'完成'}${GAMES[m.game].name}${m.reward ? `，生成${m.reward}点成长气泡待领取`:m.arcade?.rewardEligible===false?'，本局未达到成长条件':'，今日小游戏成长已达上限'}`, actor:cleanName(actor?.name), at:now });

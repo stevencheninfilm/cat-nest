@@ -6,6 +6,7 @@ import { resolve, dirname } from 'node:path';
 import { createPetHandler } from '../server/pet-server.mjs';
 import { sanitizeAction, sanitizeActor, publicRoom, StorageError } from '../server/github-store.mjs';
 import { initialState, normalizeState, reduceAction, careActionInfo } from '../src/state.js';
+import { localGameReceipt } from '../src/minigames-local-rules.js';
 import { publicGameEvent, validGameHub } from '../src/minigames.js';
 
 import { HOME_ENTRIES, initialHomeState } from '../src/home-context.js';
@@ -52,11 +53,16 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now, homeId
       const action=sanitizeAction(input?.action), actor=sanitizeActor(input?.clientId,input?.name), operationId=input?.operationId;
       if (!action || !actor || typeof operationId !== 'string' || !/^[a-zA-Z0-9_.:-]{8,180}$/.test(operationId)) throw new StorageError('INVALID_ACTION','操作内容无效。',400);
       const result=queue.catch(()=>{}).then(async()=>{
-        const room=await load();
+        const room=await load(),journalAction=action.type==='game-local-finish'?localGameReceipt(action):action;
         const duplicate=room.operations.find(op=>op.id===operationId);
         if (duplicate) {
-          if (duplicate.event.actor.id!==actor.id || JSON.stringify(duplicate.event.action)!==JSON.stringify(action)) throw new StorageError('OPERATION_CONFLICT','操作编号已用于其他操作。',409);
+          if (duplicate.event.actor.id!==actor.id || JSON.stringify(duplicate.event.action)!==JSON.stringify(journalAction)) throw new StorageError('OPERATION_CONFLICT','操作编号已用于其他操作。',409);
           return {...publicRoom(room),event:publicGameEvent(duplicate.event),duplicate:true};
+        }
+        if(action.type==='game-local-finish'){
+          const receipt=room.state.games.localReceipts?.find(r=>r.id===action.session.id);
+          if(receipt){if(receipt.actorId!==actor.id)throw new StorageError('OPERATION_CONFLICT','对局编号已用于其他玩家。',409);return {...publicRoom(room),event:{operationId,action:journalAction,actor},duplicate:true};}
+          if(room.state.games.match?.id===action.session.id||room.state.pendingGrowth.some(r=>r.id===`game:${action.session.id}`)||room.claimedGrowth.some(r=>r.id===`game:${action.session.id}`))throw new StorageError('OPERATION_CONFLICT','对局编号已使用。',409);
         }
         const invitation=room.state.collection?.sceneInvited?.find(record=>record.operationId===operationId)
           || room.state.collection?.invited?.find(record=>record.operationId===operationId);
@@ -75,7 +81,7 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now, homeId
         const next=reduceAction(room.state,action,actor,at,operationId);
         if (!next) throw new StorageError('ACTION_REJECTED','对局或小窝已更新，请按最新状态操作。',409);
         if (action.type==='claim-growth') room.claimedGrowth.push(room.state.pendingGrowth.find(r=>r.id===action.rewardId));
-        const event={operationId,action,actor};
+        const event={operationId,action:journalAction,actor};
         room.state=normalizeState(next,at); room.revision++; room.updatedAt=at;
         room.operations=[...room.operations,{id:operationId,event}].slice(-100);
         await persist(room);

@@ -30,6 +30,8 @@ import { FEATURE_UNLOCKS, featureStatus } from './feature-unlocks.js';
 import { featureLockPanel, updateFeatureEntry } from './feature-unlocks-ui.js';
 import { createUiFrameBatch } from './ui-frame-batch.js';
 import { gamePanelSignature, keepArcadeBoard, computerTurnDelay, paintGameSelection } from './minigames-panel-state.js';
+import { createLocalGames } from './minigames-local-client.js';
+import { createGamePreload } from './minigames-preload.js';
 import { createInteractionFeedback } from './interaction-feedback.js';
 import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole } from 'lucide';
 import { FOODS, FEEDING_BONUS, initialState, normalizeState, reduceAction, levelInfo, careActionInfo } from './state';
@@ -180,10 +182,19 @@ const needsFeedback = createNeedsFeedback({ root:$('.needs'), canAnimate:() =>
   roleEntered && !document.hidden && !$('.nest').hidden && !companion.active,
 });
 const interactionFeedback = createInteractionFeedback();
-const arcadeController=createArcadeController({root:$('#modal-content'),getMatch:()=>state.games.match,getClientId:()=>clientId,isSaving:careSaving,isConnected:()=>!cloudConfigured||status.phase==='online',dispatch,storage:runtime.sessionStorage,isVisible:()=>$('#modal').open&&$('#modal-content').dataset.view==='games'});
-homeCat=createHomeCatInteractions({nest:$('.nest'),scene:$('.scene'),cat:$('#cat'),getState:()=>state,getClientId:()=>clientId,getModel:()=>catModel,
-  canInteract:()=>{if(!roleEntered){openModal('roles');return false;}return !document.hidden&&!$('.nest').hidden&&!$('#modal').open&&!actionLocked;},
-  isCompanion:()=>companion.active,isSaving:careSaving,isConnected:()=>!cloudConfigured||status.phase==='online',getSaveStatus:()=>saveStatus,
+let queuedLocalGames=new Set();
+const preloadGames=createGamePreload();
+const localGames=createLocalGames({storage:runtime.localStorage,getActor:()=>({id:clientId,name:profile.name}),getConfirmedState:()=>cloudConfigured?confirmedState:state,
+  canUpload:()=>roleEntered&&(!cloudConfigured||coupleSnapshotReady&&status.phase==='online'),isQueued:id=>queuedLocalGames.has(id),
+  submit:action=>dispatch(action),onChange:()=>cloudUi.request('games'),notice:message=>toast(message)});
+function gameState(){return localGames.state(state);}
+function gameSaving(){return !localGames.active&&careSaving();}
+function gameConnected(){return localGames.active||!cloudConfigured||status.phase==='online';}
+function homeGameState(){const current=gameState();return localGames.active?current:{...current,games:{...current.games,match:null}};}
+const arcadeController=createArcadeController({root:$('#modal-content'),getMatch:()=>gameState().games.match,getClientId:()=>clientId,isSaving:gameSaving,isConnected:gameConnected,dispatch,storage:runtime.sessionStorage,isVisible:()=>$('#modal').open&&$('#modal-content').dataset.view==='games'});
+homeCat=createHomeCatInteractions({nest:$('.nest'),scene:$('.scene'),cat:$('#cat'),getState:homeGameState,getClientId:()=>clientId,getModel:()=>catModel,
+  getLocalStatus:()=>localGames.status(),canInteract:()=>{if(!roleEntered){openModal('roles');return false;}return !document.hidden&&!$('.nest').hidden&&!$('#modal').open&&!actionLocked;},
+  isCompanion:()=>companion.active,isSaving:()=>false,isConnected:()=>true,getSaveStatus:()=>saveStatus,
   storage:runtime.sessionStorage,dispatch,toast,
   onPet(){
     nestLife.interrupt();
@@ -310,7 +321,7 @@ function render() {
   diary.refresh();
 }
 function renderHomeLoading() {
-  updateHomeLoading($('#home-loading'), { entered:roleEntered, configured:cloudConfigured, phase:status.phase, snapshotReady:coupleSnapshotReady, modelPhase:catModelPhase });
+  updateHomeLoading($('#home-loading'), { entered:roleEntered, configured:cloudConfigured&&!localGames.active, phase:status.phase, snapshotReady:coupleSnapshotReady, modelPhase:catModelPhase });
 }
 function renderConnection({panels=true}={}) {
   if(panels)diary.refresh();
@@ -529,7 +540,9 @@ function careNotice(key, message) {
 function dispatch(action) {
   if (!roleEntered) { openModal('roles'); return false; }
   if(action?.type==='game-create'&&TOUCH_GAMES.includes(action.game)&&!catPlayUnlocked(levelInfo(state.xp).level)){toast(`猫猫达到 Lv.${CAT_PLAY_UNLOCK_LEVEL} 后解锁陪玩`);return false;}
-  if (action?.type?.startsWith('game-') && careSaving()) return false;
+  if(action?.type==='game-create'&&action.mode!=='duo'||localGames.handles(action))return localGames.dispatch(action);
+  if(action?.type==='game-create'&&action.mode==='duo'&&!localGames.exit())return false;
+  if (action?.type?.startsWith('game-') && action.type!=='game-local-finish' && careSaving()) return false;
   if (actionLocked && !['claim-growth','invite-cat'].includes(action?.type) && !action?.type?.startsWith('game-') && !action?.type?.startsWith('nest-')) return false;
   if (!action) {
     if (careSaving()) { careNotice('pending', '上一份陪伴正在保存，稍等一下 ♡'); return false; }
@@ -573,6 +586,7 @@ const cloudUi=createUiFrameBatch(flags=>{
   if(full){render();renderHomeLoading();}
   if(flags.has('connection'))renderConnection({panels:!full});
   else if(flags.has('pending')&&!full){refreshFeedingSheet();updateCareControls();renderGrowth();catbook?.render();refreshGames();}
+  else if(flags.has('games')&&!full)refreshGames();
 });
 function startCloud() {
   if (!roleEntered || !cloudConfigured) return;
@@ -583,23 +597,23 @@ function startCloud() {
   const pendingKey = `catnest.pending.${runtime.pendingScope}.${chosenRole}`;
   const pending = read(pendingKey, []);
   pendingCloudActions = pending.length;
+  queuedLocalGames=new Set(pending.filter(item=>item.action?.type==='game-local-finish').map(item=>item.action.session.id));
   pendingGrowthClaims = new Set(pending.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId));
   cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, ...(home.roomId ? {homeRoomId:home.roomId} : {}), initialState:state, storageLabel:runtime.storageLabel,
     fetchImpl:runtime.fetch,eventSourceFactory:runtime.eventSourceFactory,
     pending, optimisticReducer:reduceAction, onRollback:rollbackReaction,
     onRoom(id) { roomId=id; save('catnest.couple.room',id); save('catnest.room',id); coupleExperience.reset({ role:chosenRole, roomId:id }); },
     onState(next, metadata) {
-      arcadeController.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);
-      homeCat?.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);
+      if(!localGames.active){arcadeController.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);homeCat?.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);}
       const confirmed=metadata?.confirmedState||next;
       confirmedState=normalizeState(confirmed);state=next===confirmed?confirmedState:normalizeState(next);
-      coupleSnapshotReady=true;
+      coupleSnapshotReady=true;localGames.reconcile();
       if (!receivedNeedsState) { needsFeedback.reset(petNeeds(state)); receivedNeedsState=true; }
       cloudUi.request('state');
     },
     onAction(...args){cloudUi.afterPaint(()=>react(...args));},
     onPresence(next) { members=next; presenceKnown=true; coupleExperience.presence(next, status.phase === 'online'); cloudUi.request('connection'); },
-    onStatus(next) { if (next.phase !== 'online') { presenceKnown=false; coupleExperience.presence([], false); } status=next; cloudUi.request('connection'); },
+    onStatus(next) { if (next.phase !== 'online') { presenceKnown=false; coupleExperience.presence([], false); } status=next; cloudUi.request('connection');localGames.pump(); },
     onSaveStatus(next) {
       saveStatus=next;
       if (next.phase==='error') {
@@ -614,7 +628,7 @@ function startCloud() {
       }
       cloudUi.request('connection');
     },
-    onPending(queue) { pendingCloudActions=queue.length; pendingGrowthClaims=new Set(queue.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId)); gamePendingAction=queue.find(item=>item.action?.type==='game-move')?.action||null;save(pendingKey,queue);cloudUi.request('pending'); },
+    onPending(queue) { queuedLocalGames=new Set(queue.filter(item=>item.action?.type==='game-local-finish').map(item=>item.action.session.id));pendingCloudActions=queue.length; pendingGrowthClaims=new Set(queue.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId)); gamePendingAction=queue.find(item=>item.action?.type==='game-move')?.action||null;save(pendingKey,queue);cloudUi.request('pending'); },
   });
   cloud.start();
 }
@@ -629,9 +643,11 @@ function enterRole(role) {
   closeModal(); renderConnection();
   catSpeech.start();
   if (changed || !cloud || status.phase !== 'online') startCloud();
+  localGames.resume();
   if (params.has('court') || params.get('mode') === 'judge') { params.delete('court'); params.delete('mode'); showCourt(); }
 }
 function openModal(view, options = {}) {
+  if(view==='games'){void preloadGames();localGames.warm();localGames.resume();}
   if(roleEntered&&Object.hasOwn(FEATURE_UNLOCKS,view)&&!requireFeature(view))return;
   if(view==='actions'){catPaletteTab='actions';view='expressions';}
   else if(view==='expressions'&&!currentFeatureStatus('actions').unlocked)catPaletteTab='expressions';
@@ -694,27 +710,28 @@ function openModal(view, options = {}) {
   updateFeedingSaveStatus();
   updateModelPause();
 }
-function gameOptions() { return { state, clientId, saving:careSaving(), multiplayer:cloudConfigured, connected:cloudConfigured ? status.phase === 'online' : true, lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, pendingAction:gamePendingAction, localPreview:!cloudConfigured || localPetPreview }; }
+function gameOptions() { const localStatus=localGames.status();return { state:gameState(), clientId, saving:gameSaving(), multiplayer:cloudConfigured, connected:gameConnected(), lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, pendingAction:localGames.active?null:gamePendingAction, localPreview:!cloudConfigured || localPetPreview, localMode:localGames.active, localPlayable:true, settlementPending:localStatus.unconfirmed, localPendingCount:localStatus.pending, duoConnected:!cloudConfigured||status.phase==='online' }; }
 function refreshGames() {
-  homeCat?.sync();
+  if(localGames.active){arcadeController.serverTime(Date.now());homeCat?.serverTime(Date.now());}
+  localGames.pump();homeCat?.sync();
   scheduleComputerTurn();
   clearTimeout(gameBoundaryTimer);
   if (!$('#modal').open || $('#modal-content').dataset.view !== 'games') {arcadeController.suspend();return;}
-  const deadline=state.games.match?.revealUntil;
-  if(state.games.match?.status==='active'&&state.games.match.phase==='reveal'&&deadline>Date.now())gameBoundaryTimer=setTimeout(refreshGames,deadline-Date.now()+1);
-  const selection = `${state.games.match?.id}:${state.games.match?.step}`;
+  const game=gameState(),deadline=game.games.match?.revealUntil;
+  if(game.games.match?.status==='active'&&game.games.match.phase==='reveal'&&deadline>Date.now())gameBoundaryTimer=setTimeout(refreshGames,deadline-Date.now()+1);
+  const selection = `${game.games.match?.id}:${game.games.match?.step}`;
   if (selection !== gameSelectionStep) { gameSelectionStep=selection; gameSelectedCell=null; }
-  const current=state.games.match;
+  const current=game.games.match;
   // Reuse every running arcade board, not just the three cat activities.
   if(keepArcadeBoard({match:current,previousId:gameRenderedId,lobby:gameLobby,board:$('#modal-content').querySelector('[data-arcade-id]')})){arcadeController.sync();return;}
   const options=gameOptions(),signature=gamePanelSignature(options);
-  if(signature===gameLastSignature){if(!gameLobby&&gameRenderedSelection!==gameSelectedCell){paintGameSelection($('#modal-content'),current,clientId,gameSelectedCell,careSaving()||cloudConfigured&&status.phase!=='online');gameRenderedSelection=gameSelectedCell;}arcadeController.sync();return;}
+  if(signature===gameLastSignature){if(!gameLobby&&gameRenderedSelection!==gameSelectedCell){paintGameSelection($('#modal-content'),current,clientId,gameSelectedCell,gameSaving()||!gameConnected());gameRenderedSelection=gameSelectedCell;}arcadeController.sync();return;}
   gameLastSignature=signature;
   gameRenderedSelection=gameSelectedCell;
   const content = minigamesPanel(options);
   if (content === gameLastMarkup) {arcadeController.sync();return;}
   gameLastMarkup=content;
-  const matchId = state.games.match?.id || '';
+  const matchId = game.games.match?.id || '';
   const changedMatch = gameRenderedId !== matchId;
   gameRenderedId=matchId;
   const focus = document.activeElement;
@@ -729,6 +746,7 @@ function refreshGames() {
 }
 function clearComputerTurn() { clearTimeout(computerTurnTimer); computerTurnTimer=null; computerTurnKey=''; }
 function scheduleComputerTurn() {
+  if(localGames.active){clearComputerTurn();return;}
   const match=state.games.match;
   if (!$('#modal').open || $('#modal-content').dataset.view!=='games' || match?.status!=='active' || match.mode!=='computer' || match.game==='rps' || match.turn!==1 || match.players[0].id!==clientId || cloudConfigured && status.phase!=='online') { clearComputerTurn(); return; }
   if(careSaving()) { clearComputerTurn(); return; }
@@ -899,12 +917,13 @@ document.addEventListener('click', event => {
   }
   if (el.disabled) return;
   if (el.hasAttribute('data-home-loading-retry')) { startCloud(); return; }
+  if(el.hasAttribute('data-local-game-retry')){localGames.retry();return;}
   if (el.hasAttribute('data-game-copy')) { copyGameLink(); return; }
   if (el.hasAttribute('data-game-lobby')) { gameLobby=true; gameSelectedGame=null; gameSelectedCell=null; refreshGames(); $('#modal').scrollTop=0; return; }
   if (el.dataset.gameSelect) { gameLobby=true; gameSelectedGame=el.dataset.gameSelect; refreshGames(); $('#modal').scrollTop=0; return; }
   if (el.hasAttribute('data-game-open')) { gameLobby=false; refreshGames(); return; }
-  if (el.dataset.gameCreate) { const difficulty=el.dataset.gameDifficulty||$('#game-computer-difficulty')?.value;gameAction({type:'game-create',game:el.dataset.gameCreate,mode:el.dataset.gameMode,previousId:state.games.match?.id ?? null,...(difficulty&&el.dataset.gameMode==='computer'?{difficulty}:{})}); return; }
-  const match = state.games.match;
+  if (el.dataset.gameCreate) { const difficulty=el.dataset.gameDifficulty||$('#game-computer-difficulty')?.value;gameAction({type:'game-create',game:el.dataset.gameCreate,mode:el.dataset.gameMode,previousId:(el.dataset.gameMode==='duo'?state:gameState()).games.match?.id ?? null,...(difficulty&&el.dataset.gameMode==='computer'?{difficulty}:{})}); return; }
+  const match = gameState().games.match;
   if (match && el.hasAttribute('data-game-join')) { gameAction({type:'game-join',gameId:match.id}); return; }
   if (match && el.hasAttribute('data-game-cancel')) { gameAction({type:'game-cancel',gameId:match.id}); return; }
   if (match && el.hasAttribute('data-game-next')) { gameAction({type:'game-next',gameId:match.id,step:match.game === 'rps' ? match.rounds.length : match.step}); return; }
@@ -986,8 +1005,8 @@ document.addEventListener('click', event => {
 document.addEventListener('submit', event => {
   event.preventDefault(); const form = event.target;
   if (form.hasAttribute('data-game-guess')) {
-    const match=state.games.match, input=form.elements.namedItem('guess'), move=Number(input?.value);
-    if (match?.game==='guess' && match.status==='active' && match.players[match.turn]?.id===clientId && !careSaving() && input?.value && Number.isInteger(move) && move>=match.low && move<=match.high) gameAction({type:'game-move',gameId:match.id,step:match.step,move});
+    const match=gameState().games.match, input=form.elements.namedItem('guess'), move=Number(input?.value);
+    if (match?.game==='guess' && match.status==='active' && match.players[match.turn]?.id===clientId && !gameSaving() && input?.value && Number.isInteger(move) && move>=match.low && move<=match.high) gameAction({type:'game-move',gameId:match.id,step:match.step,move});
     return;
   }
   const name = new FormData(form).get('name')?.trim();
@@ -1086,5 +1105,9 @@ $('.nest').addEventListener('pointerdown',()=>nestLife.interrupt(),{passive:true
 nestLife.tick();
 import('./growth-heart.js').then(({ createGrowthHeartRenderer }) => createGrowthHeartRenderer()).catch(() => { /* Keep the glossy fallback if 3D rendering is unavailable. */ });
 window.addEventListener('pagehide', () => { clearTimeout(coupleFeedbackTimer); clearTimeout(coupleHeartsTimer); $('.nest').classList.remove('duo-celebrating'); });
-window.addEventListener('pagehide', () => { cloudUi.flush();clearTimeout(gameBoundaryTimer);homeCat?.dismiss();nestLife.interrupt();arcadeController.suspend();needsFeedback.reset(petNeeds(state)); clearComputerTurn(); cloud?.destroy(); catModel?.setPaused(true); catSpeech.stop(); });
+window.addEventListener('pagehide', () => { localGames.pause();cloudUi.flush();clearTimeout(gameBoundaryTimer);homeCat?.dismiss();nestLife.interrupt();arcadeController.suspend();needsFeedback.reset(petNeeds(state)); clearComputerTurn(); cloud?.destroy(); catModel?.setPaused(true); catSpeech.stop(); });
 window.addEventListener('pageshow', e => { if (e.persisted) { if (roleEntered && cloudConfigured) startCloud(); if (roleEntered) catSpeech.start(); updateModelPause(); } });
+
+document.addEventListener('visibilitychange',()=>document.hidden?localGames.pause():localGames.resume());
+window.addEventListener('online',()=>localGames.retry());
+document.addEventListener('pointerdown',event=>{if(event.target.closest('[data-open=games]'))void preloadGames();},{passive:true});

@@ -35,3 +35,5 @@
 .game-dialog .memory-card.is-opening{background:#fff1d5;box-shadow:inset 0 0 0 2px #cfac76;transform:scale(.96)}
 .game-move-feedback{min-height:20px;margin:10px 0;color:#8b7151;text-align:center;font-size:11px}
 @media(hover:none){.game-tile:hover .game-tile-cover{transform:none;box-shadow:0 2px 5px #86624415}}
+
+.game-local-save{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:8px 0;color:#8b6c51;font-size:11px}.game-local-save button{padding:4px 9px;min-height:30px;border:1px solid #d8b78e;border-radius:12px;background:#fff5e4;color:inherit;font:inherit}
