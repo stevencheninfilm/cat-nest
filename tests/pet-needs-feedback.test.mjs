@@ -44,7 +44,7 @@ test('care feedback uses actual capped increases, eases to the target and then d
   assert.equal(f.deltas.hunger.textContent,'+5');
   assert.equal(f.deltas.mood.textContent,'');
   assert.equal(f.deltas.mood.hidden,true,'feeding does not invent a mood increase');
-  assert.equal(f.deltas.energy.textContent,'+10');
+  assert.equal(f.deltas.energy.textContent,'+8');
   assert.equal(f.numbers.hunger.textContent,'95');
   f.advance(160);
   assert.ok(Number(f.numbers.hunger.textContent)>95 && Number(f.numbers.hunger.textContent)<100);
@@ -70,7 +70,7 @@ test('play shows each positive and negative change, and repeated cloud confirmat
   const after=reduceAction(before,{type:'play'},{id:'partner-male',name:'男方'},at,'need-feedback-playing');
   f.feedback.update(petNeeds(before,at));
   f.feedback.update(petNeeds(after,at));
-  assert.deepEqual(NEED_KEYS.map(key=>f.deltas[key].textContent),['−1','+2','−2']);
+  assert.deepEqual(NEED_KEYS.map(key=>f.deltas[key].textContent),['−1','+5','−2']);
   assert.match(f.deltas.energy.className,/is-negative/);
   assert.match(f.deltas.mood.className,/is-positive/);
   const effects=f.motions.length, timerIds=[...f.timers.keys()];
@@ -79,7 +79,7 @@ test('play shows each positive and negative change, and repeated cloud confirmat
   assert.equal(f.motions.length,effects);
   assert.deepEqual([...f.timers.keys()],timerIds);
   f.advance(2700);
-  assert.deepEqual(NEED_KEYS.map(key=>f.numbers[key].textContent),['59','72','88']);
+  assert.deepEqual(NEED_KEYS.map(key=>f.numbers[key].textContent),['59','75','88']);
   assert.ok(NEED_KEYS.every(key=>f.deltas[key].hidden));
 });
 

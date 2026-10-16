@@ -670,15 +670,15 @@ test('energy recovery is saved once across store restarts and keeps working afte
   await assert.rejects(store.applyAction(room.roomId,operation('exhausted-sleep-energy','sleep')),error=>error.code==='DAILY_CARE_LIMIT');
   const water={...operation('energy-water-source'),action:{type:'feed',food:'water'}};
   const recovered=await store.applyAction(room.roomId,water);
-  assert.equal(recovered.state.energy,88);
+  assert.equal(recovered.state.energy,86);
   assert.equal(recovered.state.pendingGrowth[0].amount,6);
   assert.equal(recovered.state.careLimits.counts.feed,1);
   const restarted=makeStore(mock,{now:()=>time});
   const replay=await restarted.applyAction(room.roomId,water);
   assert.equal(replay.duplicate,true);
-  assert.equal(replay.state.energy,88);
+  assert.equal(replay.state.energy,86);
   const read=await makeStore(mock,{now:()=>time}).getRoom(room.roomId);
-  assert.equal(read.state.energy,88);
+  assert.equal(read.state.energy,86);
   assert.equal(read.state.careLimits.counts.sleep,3);
   const next=await restarted.applyAction(room.roomId,operation('energy-recovered-growth'));
   assert.equal(next.state.pendingGrowth[1].amount,3.9);

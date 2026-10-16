@@ -24,7 +24,7 @@ test('a tired cat rests in random mode without rolling an impossible play', () =
   assert.deepEqual(resolveInteraction('random', tired, () => { throw new Error('must not roll while tired'); }), { type: 'sleep' });
   const after = reduceAction(tired, resolveInteraction('random', tired));
   assert.equal(after.sleeping, true);
-  assert.equal(after.energy, 47);
+  assert.equal(after.energy, 42);
   assert.equal(after.history.length, 1);
 });
 

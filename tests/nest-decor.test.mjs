@@ -54,7 +54,7 @@ test('furniture care uses the existing quota, needs, cooperation and permanent g
   assert.equal(act(pet,{type:'pet'}),null);assert.equal(careActionInfo(pet,{type:'pet',furniture:'sofa'},male.id,at).allowed,false);
   assert.equal(act(s,{type:'sleep',furniture:'cushion'}),null,'unowned or stored objects cannot give care');
   const stored=act(s,{type:'nest-store',item:'sofa'});assert.equal(act(stored,{type:'pet',furniture:'sofa'}),null);
-  const sleep=act(s,{type:'sleep',furniture:'bed'},male,'nest-bed-care-0001');assert.equal(sleep.sleeping,true);assert.equal(sleep.energy,80);
+  const sleep=act(s,{type:'sleep',furniture:'bed'},male,'nest-bed-care-0001');assert.equal(sleep.sleeping,true);assert.equal(sleep.energy,75);
   const wake=act(sleep,{type:'sleep',furniture:'bed'},male,'nest-bed-wake-0001');assert.equal(wake.sleeping,false);assert.equal(wake.pendingGrowth.length,1);
   const claimed=act(pet,{type:'claim-growth',rewardId:pet.pendingGrowth[0].id},male,'nest-care-claim-001');assert.ok(claimed.xp>pet.xp);assert.equal(claimed.pendingGrowth.length,0);
 });

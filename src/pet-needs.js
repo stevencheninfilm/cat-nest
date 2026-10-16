@@ -5,9 +5,9 @@ export const NEED_KEYS = Object.freeze(['hunger', 'mood', 'energy']);
 export const NEED_LABELS = Object.freeze({ hunger:'饱饱', mood:'开心', energy:'活力' });
 export const CARE_NEED_EFFECTS = Object.freeze({
   feed:Object.freeze({ mood:0 }),
-  pet:Object.freeze({ mood:1 }),
-  play:Object.freeze({ hunger:-1, mood:2, energy:-2 }),
-  sleep:Object.freeze({ energy:40 }),
+  pet:Object.freeze({ mood:3 }),
+  play:Object.freeze({ hunger:-1, mood:5, energy:-2 }),
+  sleep:Object.freeze({ energy:35 }),
 });
 export const PLAY_ENERGY_COST = -CARE_NEED_EFFECTS.play.energy;
 
