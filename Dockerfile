@@ -16,6 +16,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 COPY --from=build /app/scripts/court-archive.mjs ./scripts/court-archive.mjs
 COPY --from=build /app/src/state.js ./src/state.js
+COPY --from=build /app/src/feature-unlocks.js ./src/feature-unlocks.js
 COPY --from=build /app/src/home-bond.js ./src/home-bond.js
 COPY --from=build /app/src/memory-journal.js ./src/memory-journal.js
 COPY --from=build /app/src/couple-profile.js ./src/couple-profile.js

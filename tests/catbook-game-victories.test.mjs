@@ -62,7 +62,7 @@ test('memory and gomoku victories advance their own lifetime achievements',()=>{
 });
 
 test('five and twelve victories unlock the new cats even after the daily growth reward cap',()=>{
-  let state=initialState(now);state.games.earned=50;
+  let state={...initialState(now),xp:120};state.games.earned=50;
   const events=createCollectionEvents(state);
   for(let n=1;n<=45;n++) {
     state=finishRps(session('rps','duo',state));
@@ -133,7 +133,7 @@ test('cloud victory confirmation, retry and failed writes preserve exactly one v
 test('the server checks game victories before accepting a new game-cat invitation',async()=>{
   const mock=mockStorage(),store=createGitHubStore({token:'fake-token',repository:'test/victories',fetchImpl:mock.fetchImpl,now:()=>now});
   const room=await store.createRoom(),file=mock.files.get(room.roomId);
-  file.room.state.collection.wins.rps=4;file.sha='four-victories';
+  file.room.state.xp=120;file.room.state.collection.wins.rps=4;file.sha='four-victories';
   const invite={operationId:'victory-scout-invitation',clientId:alice.id,name:alice.name,action:{type:'invite-cat',catId:'scout'}};
   await assert.rejects(store.applyAction(room.roomId,invite),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
   file.room.state.collection.wins.rps=5;file.sha='five-victories';

@@ -14,7 +14,7 @@ const careAction=type=>type==='feed'?{type,food:'water'}:{type};
 
 for(const [type,target,id] of [['feed',10,'toast'],['play',10,'sprout'],['pet',10,'mint'],['sleep',3,'luna']]) {
   test(`${type} needs ${target} accepted actions in one Shanghai day, and remains unlocked after midnight`,()=>{
-    let state=initialState(start);const events=createCollectionEvents(state);
+    let state={...initialState(start),xp:120};const events=createCollectionEvents(state);
     const cooldown=type==='feed'?FOOD_COOLDOWN_MS.water:CARE_LIMITS[type].cooldownMs;
     for(let index=0;index<target;index++) {
       const at=start+index*cooldown,prior=structuredClone(state);
@@ -123,6 +123,7 @@ function memoryStore(){const files=new Map();let sequence=0,fail=false;return {f
 test('a failed cloud write cannot unlock a dress cat, and confirmed retries invite once',async()=>{
   const mock=memoryStore(),store=createGitHubStore({token:'fake',repository:'test/achievements',fetchImpl:mock.fetchImpl,now:()=>start});
   const room=await store.createRoom(),events=createCollectionEvents(room.state);
+  mock.files.get(room.roomId).room.state.xp=120;
   const request={operationId:'cloud-achievement-dress',clientId:actor.id,name:actor.name,action:{type:'dress',appearance:{...room.state.appearance,body:1}}};
   mock.fail=true;await assert.rejects(store.applyAction(room.roomId,request));assert.equal(mock.files.get(room.roomId).room.state.collection.achievements.dress,0);
   mock.fail=false;const saved=await store.applyAction(room.roomId,request);
@@ -137,7 +138,7 @@ test('a failed cloud write cannot unlock a dress cat, and confirmed retries invi
 test('the server applies verified legacy achievement migration before checking an invitation',async()=>{
   const mock=memoryStore(),store=createGitHubStore({token:'fake',repository:'test/achievements',fetchImpl:mock.fetchImpl,now:()=>start});
   const room=await store.createRoom(),file=mock.files.get(room.roomId);delete file.room.state.collection.achievements;
-  file.room.state.appearance.clothes=1;file.sha='legacy-changed-outfit';
+  file.room.state.xp=120;file.room.state.appearance.clothes=1;file.sha='legacy-changed-outfit';
   const saved=await store.applyAction(room.roomId,{operationId:'legacy-achievement-invite',clientId:actor.id,name:actor.name,action:{type:'invite-cat',catId:'velvet'}});
   assert.equal(saved.state.collection.achievements.dress,1);assert.equal(saved.state.collection.invited[0].id,'velvet');
 });

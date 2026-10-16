@@ -54,6 +54,46 @@ export function growthBubbles(rewards = [], options = {}) {
   return `${side('left', [0, 2], hint)}${side('right', [1, 3], more)}`;
 }
 
+/** Keep unchanged bubble nodes and decoded artwork alive during rapid claims. */
+export function createGrowthBubbleView(root) {
+  let slots = [], signatures = [], elements = null, more;
+  return {
+    render(rewards = [], options = {}) {
+      if (!rewards.length) {
+        if (elements) root.replaceChildren();
+        slots = []; signatures = []; elements = null; more = null; return;
+      }
+      if (!elements) {
+        const side = (name, indices, footer) => `<div class="growth-side growth-side-${name}" role="group" aria-label="小猫${name === 'left' ? '左' : '右'}侧成长气泡">${indices.map(index => `<div class="growth-side-slot" data-growth-slot="${index}"></div>`).join('')}${footer}</div>`;
+        root.innerHTML = side('left', [0, 2], '<span class="growth-tap-hint">点击气泡<br/>收下成长</span>') + side('right', [1, 3], '<button class="growth-more" data-open="growth" hidden><strong></strong><span>更多成长</span></button>');
+        elements = Array.from({length:4}, (_, index) => root.querySelector(`[data-growth-slot="${index}"]`));
+        more = root.querySelector('.growth-more');
+      }
+      slots = growthSideSlots(rewards, slots);
+      slots.forEach((reward, index) => {
+        const signature = reward ? JSON.stringify([reward.id,reward.amount,reward.kind,reward.food,reward.game,reward.actor,reward.boosted,reward.boostCount,options.stage?.id]) : '';
+        if (signatures[index] !== signature) {
+          elements[index].innerHTML = reward ? rewardButton(reward, options) : '';
+          signatures[index] = signature;
+        }
+        if (!reward) return;
+        const button = elements[index].querySelector('button');
+        const claiming = reward.id === options.claimingRewardId || options.pendingRewardIds?.has(reward.id);
+        const disabled = Boolean(options.blocked || claiming);
+        if (button.disabled !== disabled) button.disabled = disabled;
+        const label = elements[index].querySelector('.growth-label'), text = claiming ? '领取中…' : growthLabel(reward);
+        if (label.textContent !== text) label.textContent = text;
+      });
+      more.hidden = rewards.length <= 4;
+      if (!more.hidden) {
+        const count = more.querySelector('strong'), text = `+${rewards.length - 4}`;
+        if (count.textContent !== text) count.textContent = text;
+        more.setAttribute('aria-label', `查看全部 ${rewards.length} 个待领取成长气泡`);
+      }
+    },
+  };
+}
+
 export function growthTray(rewards = [], options = {}) {
   const pageSize = 12;
   const pageCount = Math.max(1, Math.ceil(rewards.length / pageSize));

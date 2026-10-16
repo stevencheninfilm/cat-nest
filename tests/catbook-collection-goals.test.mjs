@@ -12,7 +12,7 @@ const now=Date.UTC(2026,9,15),actor={id:'partner-male',name:'男方'};
 const cohort=COLLECTION_CATS.slice(24,36);
 const receipt=cat=>({id:cat.id,at:now,operationId:`diary-goal-seed-${cat.id}`,actorId:actor.id});
 function withCards(count) {
-  const state=initialState(now);
+  const state={...initialState(now),xp:270}; // Diary is available from Lv.3.
   state.diary=emptyMemoryJournal(now);
   state.diary.entries=formalMemoryEntries(now).slice(0,count);
   return normalizeState(state,now);

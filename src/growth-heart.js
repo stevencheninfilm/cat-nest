@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { getGrowthStageById } from './growth-stages.js';
+import { observeGrowthArtwork, visibleGrowthFallbacks } from './growth-heart-observer.js';
 
 // Wide, rounded lobes and a soft point match the approved heart references.
 // The lower half stays broad instead of tapering into a thin V.
@@ -57,6 +58,7 @@ export function createGrowthHeartRenderer() {
   let frame = 0, lastPaint = 0, failed = false, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const targets = new Map();
   const artworks = new Map();
+  let hasFallbacks = false;
 
   function initialize() {
     if (renderer || failed) return;
@@ -164,49 +166,30 @@ export function createGrowthHeartRenderer() {
 
   function scan() {
     targets.clear();
-    for (const image of document.querySelectorAll('.growth-heart-art')) {
-      image.parentElement.classList.toggle('has-artwork',image.complete && image.naturalWidth>0);
-    }
-    for (const canvas of document.querySelectorAll('.growth-heart-canvas')) {
-      if (!canvas.getClientRects().length) continue;
-      const image = canvas.parentElement.querySelector('.growth-heart-art');
-      if (image && (!image.complete || image.naturalWidth>0)) continue;
-      const rect = canvas.getBoundingClientRect();
-      if (rect.bottom<0 || rect.top>innerHeight || rect.right<0 || rect.left>innerWidth) continue;
+    hasFallbacks = [...document.querySelectorAll('.growth-heart-canvas')].some(canvas => {
+      const image=canvas.parentElement.querySelector('.growth-heart-art');
+      return !image || image.complete && image.naturalWidth===0;
+    });
+    for (const canvas of visibleGrowthFallbacks(document,{width:innerWidth,height:innerHeight})) {
       const context = canvas.getContext('2d');
       if (context) targets.set(canvas,context);
     }
     if (!frame && targets.size && !document.hidden) frame=requestAnimationFrame(paint);
     if (!targets.size && frame) { cancelAnimationFrame(frame); frame=0; }
   }
-  let scanScheduled=false;
-  const observer = new MutationObserver(() => {
-    if (scanScheduled) return;
-    scanScheduled=true;
-    queueMicrotask(() => { scanScheduled=false; scan(); });
-  });
-  observer.observe(document.body,{ childList:true, subtree:true });
-  // Dialog visibility can change without replacing its contents.
-  const dialogs = new MutationObserver(scan);
-  for (const dialog of document.querySelectorAll('dialog')) dialogs.observe(dialog,{attributes:true,attributeFilter:['open']});
+  const observer = observeGrowthArtwork({scan,needsLayout:()=>hasFallbacks});
   function pause() { cancelAnimationFrame(frame); frame=0; }
-  function resume() { scan(); }
-  function motionChanged(event) { reduced=event.matches; pause(); scan(); }
+  function motionChanged(event) { reduced=event.matches; pause(); observer.schedule(); }
   const preference=matchMedia('(prefers-reduced-motion: reduce)');
   preference.addEventListener('change',motionChanged);
-  function visibilityChanged() { document.hidden ? pause() : resume(); }
-  function imageSettled(event) { if (event.target.matches?.('.growth-heart-art')) scan(); }
-  document.addEventListener('load',imageSettled,true); document.addEventListener('error',imageSettled,true);
+  function visibilityChanged() { if (document.hidden) pause(); }
   document.addEventListener('visibilitychange',visibilityChanged);
-  document.addEventListener('scroll',scan,true);
-  window.addEventListener('resize',scan);
-  window.addEventListener('pagehide',pause); window.addEventListener('pageshow',resume);
-  scan();
+  window.addEventListener('pagehide',pause);
+  observer.schedule();
   return { dispose() {
-    pause(); observer.disconnect(); dialogs.disconnect(); preference.removeEventListener('change',motionChanged);
-    document.removeEventListener('visibilitychange',visibilityChanged); document.removeEventListener('scroll',scan,true);
-    document.removeEventListener('load',imageSettled,true); document.removeEventListener('error',imageSettled,true);
-    window.removeEventListener('resize',scan); window.removeEventListener('pagehide',pause); window.removeEventListener('pageshow',resume);
+    pause(); observer.dispose(); preference.removeEventListener('change',motionChanged);
+    document.removeEventListener('visibilitychange',visibilityChanged);
+    window.removeEventListener('pagehide',pause);
     for (const group of artworks.values()) group.traverse(child => { child.material?.dispose(); if (child.isMesh && child.geometry!==smoothGeometry && child.geometry!==gemGeometry) child.geometry.dispose(); });
     environment?.dispose(); smoothGeometry?.dispose(); gemGeometry?.dispose(); renderer?.dispose();
   } };

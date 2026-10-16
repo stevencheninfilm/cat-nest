@@ -20,6 +20,9 @@ export function touchSurfaceMarkup(game,{home=false}={}){
   return `<div class="touch-game-scene">${content}<p class="touch-feedback" data-touch-feedback role="status" aria-live="polite">${TOUCH_INFO[game].hint}</p><p class="touch-goal" data-touch-goal></p></div>`;
 }
 const text=(node,value)=>{if(node&&node.textContent!==value)node.textContent=value;};
+const animations=new WeakMap();
+const position=(node,x,y)=>{const left=`${x}%`;if(node.style.left!==left)node.style.left=left;if(y!==undefined){const top=`${y}%`;if(node.style.top!==top)node.style.top=top;}};
+const attr=(node,key,value)=>{if(node.getAttribute?.(key)!==value)node.setAttribute(key,value);};
 export function touchStatusText(game,run,elapsed){
   if(game==='teaser')return `追到 ${run.hits} 次 · 跟上下一枚爪印`;
   if(game==='treats')return `接到 ${run.caught} 条小鱼 · 碰到 ${run.bumps} 片叶子`;
@@ -33,22 +36,22 @@ export function drawTouchGame(stage,game,run,elapsed,seed,enabled){
   let key,message;
   if(game==='teaser'){
     const slot=Math.min(29,Math.floor(elapsed/1500)),target=teaserTarget(seed,slot),p=touchPoint(run.point);
-    const targetNode=stage.querySelector('[data-touch-target]');targetNode.style.left=`${target.x/31*100}%`;targetNode.style.top=`${target.y/31*100}%`;targetNode.classList.toggle('is-caught',run.hitSlots.includes(slot));
-    for(const selector of ['[data-touch-wand]','[data-touch-kitten]']){const node=stage.querySelector(selector);node.style.left=`${p.x/31*100}%`;node.style.top=`${p.y/31*100}%`;}
+    const targetNode=stage.querySelector('[data-touch-target]');position(targetNode,target.x/31*100,target.y/31*100);targetNode.classList.toggle('is-caught',run.hitSlots.includes(slot));
+    for(const selector of ['[data-touch-wand]','[data-touch-kitten]']){const node=stage.querySelector(selector);position(node,p.x/31*100,p.y/31*100);}
     key=`${run.hits}`;message=run.hits?'追到啦！小猫扑了一下 · +10 分':'按住羽毛，划过发光的爪印';
   }else if(game==='treats'){
-    const catcher=stage.querySelector('[data-touch-catcher]');catcher.style.left=`${run.basket/31*100}%`;
-    stage.querySelector('[data-touch-surface]').setAttribute('aria-valuenow',String(run.basket));
+    const catcher=stage.querySelector('[data-touch-catcher]');position(catcher,run.basket/31*100);
+    attr(stage.querySelector('[data-touch-surface]'),'aria-valuenow',String(run.basket));
     const current=Math.floor((elapsed-800)/1000);
-    stage.querySelectorAll('[data-treat-drop]').forEach((node,n)=>{const index=current-n,d= index>=0&&index<29?treatDrop(seed,index):null,progress=d?(elapsed-d.spawn)/1200:-1;node.hidden=!d||progress<0||progress>=1||index<=run.resolved;if(!node.hidden){node.style.left=`${d.x/31*100}%`;node.style.top=`${8+progress*69}%`;node.classList.toggle('is-leaf',d.leaf);}});
+    stage.querySelectorAll('[data-treat-drop]').forEach((node,n)=>{const index=current-n,d= index>=0&&index<29?treatDrop(seed,index):null,progress=d?(elapsed-d.spawn)/1200:-1;node.hidden=!d||progress<0||progress>=1||index<=run.resolved;if(!node.hidden){position(node,d.x/31*100,8+progress*69);node.classList.toggle('is-leaf',d.leaf);}});
     key=`${run.caught}:${run.missed}:${run.bumps}`;message=run.bumps&&previous?.split(':')[2]!==String(run.bumps)?'是叶子呀，挪开一点再接 · −2 分':run.caught&&previous?.split(':')[0]!==String(run.caught)?'接到小鱼！猫猫好开心 · +10 分':run.missed?'差一点，再接下一条小鱼':'左右拖动猫猫，接小鱼、躲叶子';
   }else{
     const round=Math.min(7,Math.floor(elapsed/5000)),phase=elapsed%5000,target=hiddenToyCell(seed,round),peek=phase<TOY_PEEK_MS,solved=run.solved.includes(round),tries=run.attempted.filter(n=>Math.floor(n/6)===round).length;
     const waiting=solved||phase>=4800||tries>=2;
     text(stage.querySelector('[data-touch-peek]'),solved?'✓ 找到啦！等下一轮':peek?`① 记住位置 · ${Math.ceil((TOY_PEEK_MS-phase)/1000)} 秒`:waiting?'这一轮结束，看看小鱼在哪':'② 点软垫寻找 · 还可试 '+(2-tries)+' 次');
-    stage.querySelectorAll('[data-arcade-move]').forEach((node,n)=>{const tried=run.attempted.includes(round*6+n);node.classList.toggle('is-revealed',(peek||waiting)&&n===target);node.classList.toggle('is-memory-target',peek&&n===target);node.classList.toggle('is-empty',tried&&n!==target);node.disabled=!enabled||peek||waiting||tried;node.setAttribute('aria-label',`第 ${n+1} 个软垫${peek&&n===target?'，小鱼在这里':tried?n===target?'，找到小鱼':'，空空的':''}`);});
+    stage.querySelectorAll('[data-arcade-move]').forEach((node,n)=>{const tried=run.attempted.includes(round*6+n);node.classList.toggle('is-revealed',(peek||waiting)&&n===target);node.classList.toggle('is-memory-target',peek&&n===target);node.classList.toggle('is-empty',tried&&n!==target);const disabled=!enabled||peek||waiting||tried;if(node.disabled!==disabled)node.disabled=disabled;attr(node,'aria-label',`第 ${n+1} 个软垫${peek&&n===target?'，小鱼在这里':tried?n===target?'，找到小鱼':'，空空的':''}`);});
     const rounds=stage.querySelector('[data-touch-rounds]');const stamp=`${round}:${run.solved.join(',')}`;if(rounds.dataset.stamp!==stamp){rounds.dataset.stamp=stamp;rounds.innerHTML=Array.from({length:8},(_,n)=>`<i class="${run.solved.includes(n)?'is-found':n===round?'is-current':''}">${run.solved.includes(n)?'✓':n+1}</i>`).join('');}
     key=`${round}:${peek}:${run.found}:${run.wrong}`;message=solved?'找到小鱼玩具！猫猫好开心 · +10 分':peek?'看发光的位置，记住小鱼在哪个软垫下面':tries===1?'这里空空的，再点一次刚才藏小鱼的软垫':tries>=2?'小鱼在这里，下一轮再来试试':'小鱼盖住了！点刚才发光的那个软垫';
   }
-  if(previous!==key){stage.dataset.touchFeedback=key;text(feedback,message);feedback.classList.remove('is-pop');if(previous!==undefined){void feedback.offsetWidth;feedback.classList.add('is-pop');}}
+  if(previous!==key){stage.dataset.touchFeedback=key;text(feedback,message);if(previous!==undefined&&feedback.animate){animations.get(feedback)?.cancel();animations.set(feedback,feedback.animate([{opacity:.6,transform:'translateY(2px)'},{opacity:1,transform:'none'}],{duration:180}));}}
 }

@@ -7,7 +7,7 @@ import { createInvitationSwipe } from './catbook-invitation-swipe.js';
 import { levelInfo } from './state.js';
 import { createCatDialogue, catSpeechMarkup, CAT_DIALOGUE_PAIRS } from './catbook-dialogue.js';
 
-export function createCatbook({ container, getState, getAvailability, onAction, onBack, initialScene='station', onSceneChange }) {
+export function createCatbook({ container, getState, getAvailability, onAction, onBack, initialScene='station', onSceneChange, canOpen=()=>true }) {
   let tab='book', catId='bandit', sceneId=initialScene, panel=null, detailOrigin=null;
   let trigger=null, drag=null, yardTap=null, petTap=null, blockCatClickUntil=0;
   let presentation=null, ownInvitation=null, ownInvitationSaving=false, sceneRevealAt=0;
@@ -351,5 +351,5 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   if(typeof ResizeObserver !== 'undefined') new ResizeObserver(resizeCamera).observe(container);
   else window.addEventListener('resize',resizeCamera);
   document.addEventListener('visibilitychange',()=>{if(document.hidden) {invitationSwipe.cancel();stopPresentation({pauseAll:true});}else if(!container.hidden) render();});
-  return { render, open() { if(!walkingImage.src) walkingImage.src=new URL('../public/assets/catbook/walking-cats.png',import.meta.url).href; if(!gameWalkingImage.src) gameWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/game-walking-v1.png`; if(!achievementWalkingImage.src) achievementWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/achievement-walking-v1.png`; if(!referenceWalkingImage.src) referenceWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/reference-walking-v1.png`; panel=null; detailOrigin=null; invitationNoticeRequested=true; container.hidden=false; render(); container.querySelector('[data-catbook-back]').focus({preventScroll:true}); }, close() { invitationSwipe.cancel(); dialogue.clear(); cancelPetTap(); stopPresentation({pause:true}); panel=null; container.querySelector('dialog[open]')?.close(); container.hidden=true; } };
+  return { render, open() { if(!canOpen())return false;if(!walkingImage.src) walkingImage.src=new URL('../public/assets/catbook/walking-cats.png',import.meta.url).href; if(!gameWalkingImage.src) gameWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/game-walking-v1.png`; if(!achievementWalkingImage.src) achievementWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/achievement-walking-v1.png`; if(!referenceWalkingImage.src) referenceWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/reference-walking-v1.png`; panel=null; detailOrigin=null; invitationNoticeRequested=true; container.hidden=false; render(); container.querySelector('[data-catbook-back]').focus({preventScroll:true}); }, close() { invitationSwipe.cancel(); dialogue.clear(); cancelPetTap(); stopPresentation({pause:true}); panel=null; container.querySelector('dialog[open]')?.close(); container.hidden=true; } };
 }

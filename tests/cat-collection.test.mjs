@@ -11,7 +11,7 @@ import { formalMemoryEntries } from './memory-fixtures.mjs';
 const start=Date.UTC(2026,9,14,0);
 const actor={ id:'partner-male', name:'男方' };
 const act=(state, action, now=start, id=`collection-${action.type}-${now}`) => reduceAction(state, action, actor, now, id);
-const starter=()=>{const state=initialState(start);state.collection.stats.pet=5;return state;};
+const starter=()=>{const state={...initialState(start),xp:levelStartXp(2)};state.collection.stats.pet=5;return state;};
 const completed=()=>{const state=initialState(start);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.collection.wins={rps:12,memory:12,gomoku:12};state.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:10,play:10,sleep:3}};state.xp=levelStartXp(120);return state;};
 
 test('each achievement counts accepted care once, while retries, rejected actions, and waking award nothing', () => {
@@ -72,7 +72,7 @@ test('the pair achievement requires an actual shared feeding reward and never re
 });
 
 test('invitation requires its achievement, preserves all resources, and stays collected after reload', () => {
-  const before=initialState(start);
+  const before={...initialState(start),xp:levelStartXp(2)};
   assert.equal(act(before,{type:'invite-cat',catId:'bolt'}),null);
   assert.equal(act(before,{type:'invite-cat',catId:'unknown-cat'}),null);
   let met=before;
@@ -108,7 +108,7 @@ test('every cat requires every condition, including the starter and the compound
     else state.collection.stats[metric === 'care' ? 'pet' : metric]=target-(below?1:0);
   };
   for(const cat of COLLECTION_CATS) {
-    const state=initialState(start);
+    const state={...initialState(start),xp:levelStartXp(2)};
     for(const requirement of cat.requirements) setRequirement(state,requirement,false,cat.id);
     for(const requirement of cat.requirements) {
       const below=structuredClone(state);setRequirement(below,requirement,true,cat.id);

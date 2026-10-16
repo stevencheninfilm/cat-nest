@@ -60,6 +60,9 @@ export function createCloudRoom(options) {
     const previousXp = authoritativeState?.xp;
     if (event) previews.delete(event.operationId);
     if (acknowledgement) previews.delete(acknowledgement.operationId);
+    // HTTP and live receipts often deliver the same confirmed revision. Keep
+    // queue acknowledgement, but do not normalize and redraw that snapshot twice.
+    if (data.revision === revision && event && seen.has(event.operationId) && !preview) return;
     const changed = data.revision >= revision;
     if (changed) { revision=data.revision; authoritativeState=data.state; }
     if (changed || preview) publishState();

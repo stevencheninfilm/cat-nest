@@ -34,6 +34,7 @@ test('legacy migration uses the real room creation date, reads without writing, 
 });
 test('two saves never share memories or favorites, and a replayed favorite is acknowledged only once',async()=>{
   const f=fixture(),store=f.store(),a=await store.createRoom(),b=await store.createRoom();
+  for(const id of [a.roomId,b.roomId]){const file=f.files.get(id);file.room.state.xp=270;file.sha+='-lv3';}
   const before=structuredClone(f.files.get(b.roomId).room);
   const first=await store.applyAction(a.roomId,favorite('adoption',true)),writes=f.writes;
   const again=await f.store().applyAction(a.roomId,favorite('adoption',true));
@@ -45,7 +46,7 @@ test('two saves never share memories or favorites, and a replayed favorite is ac
 });
 test('concurrent favorites merge through CAS instead of dropping a partner favorite',async()=>{
   const f=fixture(),a=f.store(),b=f.store(),created=await a.createRoom();
-  const state=f.files.get(created.roomId).room.state;
+  const state=f.files.get(created.roomId).room.state;state.xp=270;f.files.get(created.roomId).sha+='-lv3';
   state.diary.entries.push({id:'level:2',kind:'level',level:2,at:NOW,catName:'糯米',photo:'happy'});
   await Promise.all([a.applyAction(created.roomId,favorite('adoption',true,'memory-favorite-first')),b.applyAction(created.roomId,{...favorite('level:2',true,'memory-favorite-second'),clientId:'partner-female',name:'女方'})]);
   const saved=await f.store().getRoom(created.roomId);assert.deepEqual(new Set(saved.state.diary.favorites),new Set(['adoption','level:2']));assert.equal(saved.revision,2);

@@ -139,6 +139,22 @@ test('live acknowledgement, duplicate SSE and an older POST response preserve th
   assert.deepEqual(h.observed.pending.at(-1), []);
 });
 
+test('duplicate HTTP and live claim receipts do not republish the same snapshot or add growth twice', async t => {
+  const base = reduceAction(initialState(), { type:'pet' }, male, Date.now(), 'rapid-claim-reward'), ack = deferred();
+  const h = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : ack.promise);
+  await h.room.start(); h.room.dispatch({type:'claim-growth',rewardId:'rapid-claim-reward'});
+  const item=h.requests.at(-1).body, saved=reduceAction(base,item.action,male,Date.now(),item.operationId), data=receipt(item,saved);
+  h.sources[0].emit('action',data);
+  const updates=h.observed.states.length;
+  for(let i=0;i<100;i++)h.sources[0].emit('action',data);
+  assert.equal(h.observed.states.length,updates);
+  ack.resolve(response(data));await flush();
+  assert.equal(h.observed.states.length,updates,'HTTP acknowledgement drains the queue without redrawing the live receipt');
+  assert.deepEqual(h.latest(),saved);assert.equal(h.latest().xp,base.xp+base.pendingGrowth[0].amount);
+  assert.deepEqual(h.observed.pending.at(-1),[]);
+  assert.equal(h.observed.actions.filter(event=>!event.optimistic).length,1);
+});
+
 test('a simultaneous winning partner claim replaces our preview without restoring an already-collected bubble', async t => {
   const base = reduceAction(initialState(), { type:'pet' }, male, Date.now(), 'shared-claim-reward'), ack = deferred();
   const action = { type:'claim-growth', rewardId:'shared-claim-reward' }, winnerId = 'winning-partner-claim';

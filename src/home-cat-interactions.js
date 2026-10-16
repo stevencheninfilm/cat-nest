@@ -17,6 +17,9 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
   const match=()=>getState().games.match;
   const visible=()=>!destroyed&&Boolean(session)&&!nest.hidden&&!document.querySelector('dialog[open]');
   const controller=createArcadeController({root:stage,getMatch:match,getClientId,isSaving,isConnected,dispatch,storage,isVisible:visible,onFrame:frame});
+  let frameSurface=null,frameArea=null,frameTransform='';
+  const resizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>{frameArea=null;}):null;
+  listen(window,'resize',()=>{frameArea=null;});
   function closeChoices(){choices.hidden=true;nest.classList.remove('home-cat-choosing');entry.setAttribute('aria-expanded','false');}
   const unlocked=()=>catPlayUnlocked(levelInfo(getState().xp).level);
   function renderAccess(){const allowed=unlocked(),key=String(allowed);if(key===accessKey)return;accessKey=key;entry.dataset.locked=String(!allowed);entry.setAttribute('aria-disabled',String(!allowed));entry.setAttribute('aria-label',allowed?'陪玩，和猫猫在小窝一起玩':`陪玩，Lv.${CAT_PLAY_UNLOCK_LEVEL} 解锁`);entry.title=allowed?'和猫猫玩逗猫棒、接零食、找玩具':`猫猫达到 Lv.${CAT_PLAY_UNLOCK_LEVEL} 后解锁陪玩`;entry.innerHTML=`${catActionPortrait('run')}${allowed?'':'<span class="home-cat-play-lock" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><rect x="3.5" y="7" width="9" height="7" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V4.5a2.5 2.5 0 0 1 5 0V7" stroke="currentColor" stroke-width="1.5"/></svg></span>'}<small>陪玩${allowed?'':`<em>Lv.${CAT_PLAY_UNLOCK_LEVEL} 解锁</em>`}</small>`;if(!allowed)closeChoices();}
@@ -58,10 +61,14 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
   }
   function frame({game,run,enabled}){
     if(!session)return;
-    const surface=stage.querySelector('[data-touch-surface]'),area=surface?.getBoundingClientRect();
-    if(game==='teaser'&&area){const p=touchPoint(run.point);cat.style.transform=`translate(${(p.x/31-.5)*area.width}px,${(p.y/31-.55)*area.height}px) scale(.65)`;}
-    else if(game==='treats'&&area)cat.style.transform=`translate(${(run.basket/31-.5)*area.width}px,0) scale(.68)`;
-    else if(game==='hide-toy')cat.style.transform='translateY(-25%) scale(.58)';
+    const surface=stage.querySelector('[data-touch-surface]');
+    if(surface!==frameSurface){resizeObserver?.disconnect();frameSurface=surface;frameArea=null;frameTransform='';if(surface)resizeObserver?.observe(surface);}
+    if(surface&&!frameArea)frameArea=surface.getBoundingClientRect();
+    const area=frameArea;let transform='';
+    if(game==='teaser'&&area){const p=touchPoint(run.point);transform=`translate(${(p.x/31-.5)*area.width}px,${(p.y/31-.55)*area.height}px) scale(.65)`;}
+    else if(game==='treats'&&area)transform=`translate(${(run.basket/31-.5)*area.width}px,0) scale(.68)`;
+    else if(game==='hide-toy')transform='translateY(-25%) scale(.58)';
+    if(transform&&transform!==frameTransform){frameTransform=transform;cat.style.transform=transform;}
     const point=game==='teaser'?run.point:run.basket;
     if(enabled&&point!==lastPoint&&Date.now()-lastMotion>1400){lastMotion=Date.now();lastPoint=point;if(game==='teaser')getModel()?.playAction('walk');}
     if(run.score>lastScore){onVisual(game==='teaser'?'play':game==='treats'?'feed':'pet');}
@@ -101,5 +108,5 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
   listen(document,'pointerdown',event=>{if(!event.target.closest('.home-cat-choices,#cat,#cat-play'))closeChoices();});
   listen(document,'keydown',event=>{if(event.key==='Escape'&&!choices.hidden){event.preventDefault();closeChoices();}});
   renderAccess();
-  return {sync,start,closeChoices,serverTime:controller.serverTime,get canRotate(){return !destroyed&&!session&&!pending&&!tutorial;},get active(){return Boolean(session||pending||tutorial);},dismiss(){if(pending||session||tutorial)reset();else closeChoices();},destroy(){destroyed=true;reset();for(const d of disposers)d();entry.remove();choices.remove();stage.remove();}};
+  return {sync,start,closeChoices,serverTime:controller.serverTime,get canRotate(){return !destroyed&&!session&&!pending&&!tutorial;},get active(){return Boolean(session||pending||tutorial);},dismiss(){if(pending||session||tutorial)reset();else closeChoices();},destroy(){destroyed=true;reset();resizeObserver?.disconnect();for(const d of disposers)d();entry.remove();choices.remove();stage.remove();}};
 }

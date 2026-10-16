@@ -49,6 +49,7 @@ const invite = (catId, operationId='collection-invite-operation', clientId='clie
 test('the server requires starter care and both increased food-achievement conditions before writing', async()=>{
   const mock=mockGitHub(), store=makeStore(mock,{now:()=>CARE_START}), room=await store.createRoom();
   const file=mock.files.get(room.roomId), writes=mock.calls.filter(call=>call.method==='PUT').length;
+  file.room.state.xp=levelStartXp(2);
   await assert.rejects(store.applyAction(room.roomId,invite('bandit')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
   file.room.state.collection.stats.feed=53;file.room.state.collection.foods=Object.keys(FOODS);file.sha='food-count-below-sha';
   await assert.rejects(store.applyAction(room.roomId,invite('gozer')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
@@ -90,6 +91,7 @@ test('cat invitations migrate legacy care, enforce achievements, and persist bef
   const mock=mockGitHub();
   const store=makeStore(mock,{now:()=>CARE_START});
   const room=await store.createRoom();
+  mock.files.get(room.roomId).room.state.xp=levelStartXp(2);
   await assert.rejects(store.applyAction(room.roomId,invite('bolt')),error=>error.code==='CAT_ACHIEVEMENT_REQUIRED');
   const file=mock.files.get(room.roomId);
   delete file.room.state.collection;
@@ -117,6 +119,7 @@ test('invitation receipts prevent replay after a lost acknowledgment and operati
   const mock=mockGitHub();
   const store=makeStore(mock,{now:()=>CARE_START});
   const room=await store.createRoom();
+  mock.files.get(room.roomId).room.state.xp=levelStartXp(2);
   mock.files.get(room.roomId).room.state.collection.stats.pet=5;
   mock.files.get(room.roomId).sha='starter-care-qualified-sha';
   mock.controls.loseAcknowledgment=true;
@@ -140,6 +143,7 @@ test('concurrent invitations from two store instances keep one cat and one diary
   const first=makeStore(mock,{now:()=>CARE_START});
   const second=makeStore(mock,{now:()=>CARE_START});
   const room=await first.createRoom();
+  mock.files.get(room.roomId).room.state.xp=levelStartXp(2);
   mock.files.get(room.roomId).room.state.collection.stats.pet=5;
   mock.files.get(room.roomId).sha='concurrent-starter-qualified-sha';
   const results=await Promise.allSettled([

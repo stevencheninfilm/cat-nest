@@ -25,6 +25,11 @@ import './interaction-feedback.css';
 import './world-experience.css';
 import './nest-decor.css';
 import './nest-life.css';
+import './feature-unlocks.css';
+import { FEATURE_UNLOCKS, featureStatus } from './feature-unlocks.js';
+import { featureLockPanel, updateFeatureEntry } from './feature-unlocks-ui.js';
+import { createUiFrameBatch } from './ui-frame-batch.js';
+import { gamePanelSignature, keepArcadeBoard, computerTurnDelay, paintGameSelection } from './minigames-panel-state.js';
 import { createInteractionFeedback } from './interaction-feedback.js';
 import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole } from 'lucide';
 import { FOODS, FEEDING_BONUS, initialState, normalizeState, reduceAction, levelInfo, careActionInfo } from './state';
@@ -49,7 +54,7 @@ import { nestItem, nestLevel, nestActionResult } from './nest-decor.js';
 import { WORLD_EXPLORATION_ENABLED, WORLD_LOCK_MESSAGE } from './feature-availability.js';
 import { feedingHome, feedingSheet, feedingButtonContent, countdown, updateFoodPortions, foodArt } from './feeding-ui';
 import { careQuotaText, careStatusText, careBlockedMessage, careRuleText } from './care-ui.js';
-import { growthBubbles, growthTray, growthLabel, jellyHeartMarkup } from './growth-ui.js';
+import { createGrowthBubbleView, growthTray, growthLabel, jellyHeartMarkup } from './growth-ui.js';
 import { growthStageForXp, getGrowthStageById, stageStyle, growthUpgrade } from './growth-stages.js';
 import { growthStagesPanel, growthUpgradePanel } from './growth-stage-ui.js';
 import { APPEARANCE_OPTIONS, normalizeAppearance, MAGE_CAT_VERSION, MAGE_CAT_AUTHOR } from './mage-cat-config.js';
@@ -94,7 +99,7 @@ let catModel = null;
 let homeCat = null;
 let catModelPhase = 'loading';
 let catExpression = 'auto';
-let catPaletteTab = 'expressions';
+let catPaletteTab = 'expressions',catPaletteLevel=null;
 let catbook = null;
 let world = null, worldOpening = false;
 let appearanceDraft=normalizeAppearance(state.appearance),appearanceTab='body',appearanceSubmitting=false;
@@ -114,8 +119,10 @@ let actionLocked = false;
 let pendingCloudActions = 0;
 let pendingGrowthClaims = new Set();
 let toastTimer;
-let gameLobby = true, gameSelectedGame = null, gameSelectedCell = null, gameSelectionStep = null, gameLastMarkup = '', gameRenderedId = '';
+let gameLobby = true, gameSelectedGame = null, gameSelectedCell = null, gameSelectionStep = null, gameLastMarkup = '', gameLastSignature = '', gameRenderedId = '', gamePendingAction = null, gameBoundaryTimer;
 let computerTurnTimer = null, computerTurnKey = '';
+let computerAttemptKey='',computerAttemptAt=0;
+let gameRenderedSelection=null;
 let careFeedbackKey = '', careFeedbackAt = 0;
 let growthPage = 0, claimingRewardId = null, growthGlowTimer;
 let stagePreviewId = null, pendingUpgrade = null, upgradeTimer, lastCelebratedStage = 0;
@@ -229,16 +236,38 @@ const coupleExperience = createCoupleExperience({
     toast(message);
   },
 });
-const diary = createDiaryController({root:$('#modal-content'),getState:()=>cloudConfigured?confirmedState:state,saving:careSaving,dispatch,toast,supplemental:()=>nestLife.diary()});
+const diary = createDiaryController({root:$('#modal-content'),canOpen:()=>currentFeatureStatus('diary').unlocked,lockedPanel:()=>featureLockPanel('diary'),getState:()=>cloudConfigured?confirmedState:state,saving:careSaving,dispatch,toast,supplemental:()=>nestLife.diary()});
+const growthBubbleView = createGrowthBubbleView($('#growth-rewards'));
 renderIcons();
+function currentFeatureStatus(feature) {
+  return featureStatus(feature,{level:levelInfo(state.xp).level,confirmedLevel:levelInfo(confirmedState.xp).level,cloud:cloudConfigured,ready:!cloudConfigured||coupleSnapshotReady});
+}
+function requireFeature(feature) {
+  if(!roleEntered){openModal('roles');return false;}
+  const access=currentFeatureStatus(feature);if(!access.unlocked)toast(access.message);return access.unlocked;
+}
+function expressionPanel() {
+  catPaletteLevel=levelInfo(cloudConfigured?confirmedState.xp:state.xp).level;
+  return catExpressionsPanel(catPaletteTab,{level:catPaletteLevel});
+}
+function updateFeatureEntries() {
+  for(const [feature,label]of [['collection','猫猫图鉴'],['diary','猫猫日记'],['expressions','小猫表情与动作']])updateFeatureEntry($(`[data-open="${feature}"]`),currentFeatureStatus(feature),label);
+  const view=$('#modal-content').dataset.view;
+  if(roleEntered&&$('#modal').open&&['diary','expressions'].includes(view)&&!currentFeatureStatus(view).unlocked)closeModal();
+  if(roleEntered&&$('#modal').open&&view==='expressions'&&catPaletteLevel!==levelInfo(cloudConfigured?confirmedState.xp:state.xp).level){$('#modal-content').innerHTML=expressionPanel();positionExpressionsPanel();}
+}
+let renderedSkin='';
 function render() {
   const level = levelInfo(state.xp);
   const stage = growthStageForXp(state.xp);
   // Every device derives the same skin from the authoritative saved XP.
+  if(renderedSkin!==stage.id){
+  renderedSkin=stage.id;
   for (const declaration of stageStyle(stage).split(';')) {
     const separator = declaration.indexOf(':');
     const property = declaration.slice(0, separator), value = declaration.slice(separator + 1);
     document.documentElement.style.setProperty(property,value);
+  }
   }
   for (const element of document.querySelectorAll('[data-live-growth-heart]')) {
     if (element.dataset.stage !== stage.id) { element.innerHTML=jellyHeartMarkup(stage); element.dataset.stage=stage.id; }
@@ -274,6 +303,7 @@ function render() {
   refreshStagesPanel();
   refreshFeedingSheet();
   updateCareControls();
+  updateFeatureEntries();
   catbook?.render();
   refreshGames();
   renderCoupleCare();
@@ -282,11 +312,12 @@ function render() {
 function renderHomeLoading() {
   updateHomeLoading($('#home-loading'), { entered:roleEntered, configured:cloudConfigured, phase:status.phase, snapshotReady:coupleSnapshotReady, modelPhase:catModelPhase });
 }
-function renderConnection() {
-  diary.refresh();
+function renderConnection({panels=true}={}) {
+  if(panels)diary.refresh();
   world?.refreshSaveStatus();
   renderHomeLoading();
-  refreshGames();
+  updateFeatureEntries();
+  if(panels)refreshGames();
   const options = presenceOptions();
   const together = COUPLE_ROLES.every(role => presenceForRole(role, options).state === 'online');
   $('.together').classList.toggle('connected', together);
@@ -312,12 +343,7 @@ function renderConnection() {
   if (roleStatus) roleStatus.textContent = connectionSummary({ ...options, savePhase:saveStatus.phase });
   const retry = $('#retry-cloud');
   if (retry) retry.hidden = !['error','offline','full'].includes(status.phase);
-  refreshFeedingSheet();
-  updateCareControls();
-  renderFeedingHome();
-  renderGrowth();
-  catbook?.render();
-  renderCoupleCare();
+  if(panels){refreshFeedingSheet();updateCareControls();renderFeedingHome();renderGrowth();catbook?.render();renderCoupleCare();}
   onboarding?.sync();
 }
 function presenceOptions() { return { members, phase:status.phase, configured:cloudConfigured, entered:roleEntered, known:presenceKnown, selectedRole:coupleRole, binding:coupleSnapshotReady?homeBinding(confirmedState):null }; }
@@ -383,7 +409,7 @@ function renderGrowth() {
   if (claimingRewardId && !rewards.some(reward => reward.id === claimingRewardId)) claimingRewardId = null;
   const options = { blocked:cloudConfigured && status.phase !== 'online', claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(state.xp) };
   const signature = JSON.stringify([rewards.map(({id,amount,kind,food,game,boosted,boostCount}) => [id,amount,kind,food,game,boosted,boostCount]), options.blocked, claimingRewardId, [...pendingGrowthClaims].sort(), options.stage.id]);
-  if (signature !== growthHomeSignature) { $('#growth-rewards').innerHTML = growthBubbles(rewards, options); growthHomeSignature = signature; }
+  if (signature !== growthHomeSignature) { growthBubbleView.render(rewards, options); growthHomeSignature = signature; }
   if ($('#modal').open && $('#modal-content').dataset.view === 'growth') {
     const focusedId = document.activeElement?.dataset.growthReward;
     const scroll = $('#modal').scrollTop;
@@ -511,6 +537,8 @@ function dispatch(action) {
     careNotice(`${nearest.type}:${nearest.info.reason}`, careBlockedMessage(nearest.type, nearest.info));
     return false;
   }
+  const gated=action.type==='invite-cat'?'collection':action.type==='diary-favorite'?'diary':null;
+  if(gated&&!requireFeature(gated))return false;
   const care = careActionInfo(state, action, clientId);
   if(action.type.startsWith('nest-')){const result=nestActionResult(state,action,{id:clientId,name:profile.name});if(!result.ok){toast(result.reason);return false;}}
   if (action.type === 'invite-cat' && careSaving()) { careNotice('pending', '正在保存上一份陪伴，稍等一下再邀请 ♡'); return false; }
@@ -540,6 +568,12 @@ function dispatch(action) {
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
   return true;
 }
+const cloudUi=createUiFrameBatch(flags=>{
+  const full=flags.has('state');
+  if(full){render();renderHomeLoading();}
+  if(flags.has('connection'))renderConnection({panels:!full});
+  else if(flags.has('pending')&&!full){refreshFeedingSheet();updateCareControls();renderGrowth();catbook?.render();refreshGames();}
+});
 function startCloud() {
   if (!roleEntered || !cloudConfigured) return;
   cloud?.destroy(); members=[]; presenceKnown=false; coupleSnapshotReady=false;
@@ -557,14 +591,15 @@ function startCloud() {
     onState(next, metadata) {
       arcadeController.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);
       homeCat?.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);
-      confirmedState=normalizeState(metadata?.confirmedState || next); state=normalizeState(next);
+      const confirmed=metadata?.confirmedState||next;
+      confirmedState=normalizeState(confirmed);state=next===confirmed?confirmedState:normalizeState(next);
       coupleSnapshotReady=true;
       if (!receivedNeedsState) { needsFeedback.reset(petNeeds(state)); receivedNeedsState=true; }
-      render(); renderHomeLoading();
+      cloudUi.request('state');
     },
-    onAction:react,
-    onPresence(next) { members=next; presenceKnown=true; coupleExperience.presence(next, status.phase === 'online'); renderConnection(); },
-    onStatus(next) { if (next.phase !== 'online') { presenceKnown=false; coupleExperience.presence([], false); } status=next; renderConnection(); },
+    onAction(...args){cloudUi.afterPaint(()=>react(...args));},
+    onPresence(next) { members=next; presenceKnown=true; coupleExperience.presence(next, status.phase === 'online'); cloudUi.request('connection'); },
+    onStatus(next) { if (next.phase !== 'online') { presenceKnown=false; coupleExperience.presence([], false); } status=next; cloudUi.request('connection'); },
     onSaveStatus(next) {
       saveStatus=next;
       if (next.phase==='error') {
@@ -577,9 +612,9 @@ function startCloud() {
         }
         appearanceSubmitting=false; refreshAppearanceSheet(); toast(next.message);
       }
-      renderConnection();
+      cloudUi.request('connection');
     },
-    onPending(queue) { pendingCloudActions=queue.length; pendingGrowthClaims=new Set(queue.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId)); save(pendingKey,queue); refreshFeedingSheet(); updateCareControls(); renderGrowth(); catbook?.render(); refreshGames(); },
+    onPending(queue) { pendingCloudActions=queue.length; pendingGrowthClaims=new Set(queue.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId)); gamePendingAction=queue.find(item=>item.action?.type==='game-move')?.action||null;save(pendingKey,queue);cloudUi.request('pending'); },
   });
   cloud.start();
 }
@@ -597,6 +632,9 @@ function enterRole(role) {
   if (params.has('court') || params.get('mode') === 'judge') { params.delete('court'); params.delete('mode'); showCourt(); }
 }
 function openModal(view, options = {}) {
+  if(roleEntered&&Object.hasOwn(FEATURE_UNLOCKS,view)&&!requireFeature(view))return;
+  if(view==='actions'){catPaletteTab='actions';view='expressions';}
+  else if(view==='expressions'&&!currentFeatureStatus('actions').unlocked)catPaletteTab='expressions';
   if (view === 'nest' && !WORLD_EXPLORATION_ENABLED) { toast(WORLD_LOCK_MESSAGE); return; }
   homeCat?.dismiss();
   if(view==='diary' && $('#modal-content').dataset.view!=='diary')diary.open(options.diaryFilter);
@@ -623,7 +661,7 @@ function openModal(view, options = {}) {
   $('#modal').classList.toggle('shared-care-sheet', view === 'shared-care');
   $('#modal').classList.toggle('diary-dialog', view === 'diary');
   $('#modal').classList.toggle('game-dialog', view === 'games');
-  if (view === 'games') { gameLastMarkup=''; gameRenderedId=''; }
+  if (view === 'games') { gameLastMarkup='';gameLastSignature='';gameRenderedId=''; }
   $('#modal').classList.toggle('feeding-sheet', view === 'feeding');
   $('#modal').classList.toggle('stage-sheet', ['stages','stage-upgrade'].includes(view));
   $('.nest').classList.toggle('feeding-open', view === 'feeding');
@@ -637,7 +675,7 @@ function openModal(view, options = {}) {
     stages: () => growthStagesPanel(state.xp, stagePreviewId),
     'stage-upgrade': () => pendingUpgrade ? growthUpgradePanel(pendingUpgrade,state.xp) : growthStagesPanel(state.xp),
     appearance: () => appearanceSheet(),
-    expressions: () => catExpressionsPanel(catPaletteTab),
+    expressions: () => expressionPanel(),
     feeding: () => feedingSheet(feedingSheetOptions()),
     roles: () => rolePicker({...presenceOptions(),state:cloudConfigured?confirmedState:state,ready:roleEntered&&coupleSnapshotReady,invitedRole,newVisitor:!returningOwner}),
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
@@ -656,17 +694,24 @@ function openModal(view, options = {}) {
   updateFeedingSaveStatus();
   updateModelPause();
 }
-function gameOptions() { return { state, clientId, saving:careSaving(), multiplayer:cloudConfigured, connected:cloudConfigured ? status.phase === 'online' : true, lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, localPreview:!cloudConfigured || localPetPreview }; }
+function gameOptions() { return { state, clientId, saving:careSaving(), multiplayer:cloudConfigured, connected:cloudConfigured ? status.phase === 'online' : true, lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, pendingAction:gamePendingAction, localPreview:!cloudConfigured || localPetPreview }; }
 function refreshGames() {
   homeCat?.sync();
   scheduleComputerTurn();
+  clearTimeout(gameBoundaryTimer);
   if (!$('#modal').open || $('#modal-content').dataset.view !== 'games') {arcadeController.suspend();return;}
+  const deadline=state.games.match?.revealUntil;
+  if(state.games.match?.status==='active'&&state.games.match.phase==='reveal'&&deadline>Date.now())gameBoundaryTimer=setTimeout(refreshGames,deadline-Date.now()+1);
   const selection = `${state.games.match?.id}:${state.games.match?.step}`;
   if (selection !== gameSelectionStep) { gameSelectionStep=selection; gameSelectedCell=null; }
-  const content = minigamesPanel(gameOptions());
   const current=state.games.match;
-  // Keep pointer capture and the playfield alive while input checkpoints save.
-  if(!gameLobby&&current?.id===gameRenderedId&&TOUCH_GAMES.includes(current.game)&&current.status==='active'&&current.arcade.stage==='running'&&$('#modal-content').querySelector('[data-arcade-id]')){gameLastMarkup=content;arcadeController.sync();return;}
+  // Reuse every running arcade board, not just the three cat activities.
+  if(keepArcadeBoard({match:current,previousId:gameRenderedId,lobby:gameLobby,board:$('#modal-content').querySelector('[data-arcade-id]')})){arcadeController.sync();return;}
+  const options=gameOptions(),signature=gamePanelSignature(options);
+  if(signature===gameLastSignature){if(!gameLobby&&gameRenderedSelection!==gameSelectedCell){paintGameSelection($('#modal-content'),current,clientId,gameSelectedCell,careSaving()||cloudConfigured&&status.phase!=='online');gameRenderedSelection=gameSelectedCell;}arcadeController.sync();return;}
+  gameLastSignature=signature;
+  gameRenderedSelection=gameSelectedCell;
+  const content = minigamesPanel(options);
   if (content === gameLastMarkup) {arcadeController.sync();return;}
   gameLastMarkup=content;
   const matchId = state.games.match?.id || '';
@@ -695,8 +740,9 @@ function scheduleComputerTurn() {
     computerTurnTimer=null;computerTurnKey='';
     const current=state.games.match;
     if(!$('#modal').open || $('#modal-content').dataset.view!=='games' || !current || `${current.id}:${current.step}:${current.phase==='reveal'?'game-next':'game-bot'}`!==key || current.status!=='active' || careSaving())return;
+    computerAttemptKey=key;computerAttemptAt=Date.now();
     dispatch({type,gameId:current.id,step:current.step});
-  },match.phase==='reveal'?1400:850);
+  },computerTurnDelay(match,Date.now(),computerAttemptKey===key?computerAttemptAt:undefined));
 }
 function gameAction(action) {
   gameSelectedCell=null;
@@ -773,8 +819,8 @@ function updateCareControls(now = Date.now()) {
 }
 const careClock = setInterval(() => {
   nestLife.tick();
-  refreshGames();
   if (document.hidden) return;
+  refreshGames();
   updateCareControls();
   renderNeeds();
   renderFeedingHome();
@@ -816,6 +862,7 @@ function renderCatBehavior(behavior) {
   catRhythm.innerHTML=`${catExpressionPortrait(behavior.mood,'expression-entry-face')}<small>表情</small>`;
   catRhythm.title=`${behavior.periodLabel}：${behavior.label}`;
   catRhythm.setAttribute('aria-label', `表情，当前${name}，点击切换猫咪表情`);
+  updateFeatureEntry(catRhythm,currentFeatureStatus('expressions'),`表情，当前${name}，点击切换猫咪表情`);
 }
 async function initializeCatModel() {
   catModel?.destroy(); catModelPhase='loading'; renderHomeLoading();
@@ -892,21 +939,25 @@ document.addEventListener('click', event => {
   }
   if (el.id==='retry-cat-model'){initializeCatModel();return;}
   if (el.dataset.catPaletteTab) {
+    if(!requireFeature('expressions'))return;
     catPaletteTab=el.dataset.catPaletteTab==='actions'?'actions':'expressions';
-    $('#modal-content').innerHTML=catExpressionsPanel(catPaletteTab);renderIcons();positionExpressionsPanel();
+    $('#modal-content').innerHTML=expressionPanel();renderIcons();positionExpressionsPanel();
     $(`[data-cat-palette-tab="${catPaletteTab}"]`).focus({preventScroll:true});
     return;
   }
   if (el.dataset.catAnimation && catAction(el.dataset.catAnimation)) {
+    if(!requireFeature('actions'))return;
     closeModal();catModel?.playAction(el.dataset.catAnimation);
     return;
   }
   if (el.dataset.expressionChoice!==undefined) {
+    if(!requireFeature('expressions'))return;
     const expression=normalizeCatExpression(el.dataset.expressionChoice);
     closeModal();catModel?.setExpression(expression);
     return;
   }
   if (el.hasAttribute('data-expression-greet')) {
+    if(!requireFeature('expressions'))return;
     closeModal();
     catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');
     return;
@@ -989,6 +1040,7 @@ function initializeCatbook() {
   if (!catbook) catbook = createCatbook({
     container:catbookContainer,
     getState:() => cloudConfigured ? confirmedState : state,
+    canOpen:()=>currentFeatureStatus('collection').unlocked,
     getAvailability:() => ({ saving:careSaving(), connected:!cloudConfigured || status.phase === 'online' }),
     onAction:dispatch,
     initialScene:read('catnest.catbook.scene', 'station'),
@@ -1001,6 +1053,7 @@ function initializeCatbook() {
   });
 }
 function showCatbook() {
+  if(!requireFeature('collection'))return;
   homeCat?.dismiss();
   interactionFeedback.clear();
   companion.exit();
@@ -1033,5 +1086,5 @@ $('.nest').addEventListener('pointerdown',()=>nestLife.interrupt(),{passive:true
 nestLife.tick();
 import('./growth-heart.js').then(({ createGrowthHeartRenderer }) => createGrowthHeartRenderer()).catch(() => { /* Keep the glossy fallback if 3D rendering is unavailable. */ });
 window.addEventListener('pagehide', () => { clearTimeout(coupleFeedbackTimer); clearTimeout(coupleHeartsTimer); $('.nest').classList.remove('duo-celebrating'); });
-window.addEventListener('pagehide', () => { homeCat?.dismiss();nestLife.interrupt();arcadeController.suspend();needsFeedback.reset(petNeeds(state)); clearComputerTurn(); cloud?.destroy(); catModel?.setPaused(true); catSpeech.stop(); });
+window.addEventListener('pagehide', () => { cloudUi.flush();clearTimeout(gameBoundaryTimer);homeCat?.dismiss();nestLife.interrupt();arcadeController.suspend();needsFeedback.reset(petNeeds(state)); clearComputerTurn(); cloud?.destroy(); catModel?.setPaused(true); catSpeech.stop(); });
 window.addEventListener('pageshow', e => { if (e.persisted) { if (roleEntered && cloudConfigured) startCloud(); if (roleEntered) catSpeech.start(); updateModelPause(); } });

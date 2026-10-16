@@ -28,3 +28,10 @@
 
 @media(max-width:420px){#modal.game-dialog{padding:22px 14px 16px;border-radius:22px}.game-heading{gap:10px}.game-heading-icon{width:50px;height:50px}.game-heading-icon img{width:46px;height:46px}.game-heading h2{font-size:22px}.game-catalog{column-gap:10px;row-gap:19px}.game-tile-cover{border-radius:15px}.game-tile strong{font-size:10px}.game-tile-play{min-width:52px;padding:2px 7px}.game-mode-picker>button{gap:9px;padding:12px 10px}.game-mode-symbol{width:30px;height:30px;font-size:21px}.memory-board{gap:7px}.memory-card .cat-sprite{width:48px;height:48px}.game-match-heading h2{font-size:21px}}
 @media(prefers-reduced-motion:reduce){.game-dialog *{transition:none!important}}
+
+/* Immediate submitted-choice feedback; rewards still await a saved result. */
+.game-dialog button,.home-cat-session button{touch-action:manipulation}
+.game-dialog .game-move-pending{outline:2px solid #b58e60;outline-offset:-3px;opacity:1!important;background-color:#fff1d5}
+.game-dialog .memory-card.is-opening{background:#fff1d5;box-shadow:inset 0 0 0 2px #cfac76;transform:scale(.96)}
+.game-move-feedback{min-height:20px;margin:10px 0;color:#8b7151;text-align:center;font-size:11px}
+@media(hover:none){.game-tile:hover .game-tile-cover{transform:none;box-shadow:0 2px 5px #86624415}}

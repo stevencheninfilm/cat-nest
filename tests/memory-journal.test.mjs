@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, reduceAction, normalizeState } from '../src/state.js';
+import { initialState, reduceAction, normalizeState, levelStartXp } from '../src/state.js';
 import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, validMemoryJournal, memoryHash, memoryDays, nextMemoryAnniversary } from '../src/memory-journal.js';
 import { memoryJournalPanel, memoryCardPanel, memoryPresentation } from '../src/memory-journal-ui.js';
 import { wrapMemoryText } from '../src/memory-card.js';
@@ -64,7 +64,7 @@ test('a finished two-player game becomes one lasting shared memory without recor
   assert.equal(recordMemoryJournal(diary,args).entries.filter(e=>e.kind==='game').length,1);
 });
 test('shared favorites use explicit idempotent values and never grant growth, spend coins, add care history or delete memories',()=>{
-  const state=initialState(START),next=reduceAction(state,{type:'diary-favorite',memoryId:'adoption',favorite:true},male,START+10,'favorite-first');
+  const state={...initialState(START),xp:levelStartXp(3)},next=reduceAction(state,{type:'diary-favorite',memoryId:'adoption',favorite:true},male,START+10,'favorite-first');
   assert.deepEqual(next.diary.favorites,['adoption']);assert.deepEqual([next.coins,next.xp,next.love],[state.coins,state.xp,state.love]);
   assert.deepEqual(next.history,state.history);assert.deepEqual(next.careLimits,state.careLimits);assert.deepEqual(next.pendingGrowth,state.pendingGrowth);
   const again=reduceAction(next,{type:'diary-favorite',memoryId:'adoption',favorite:true},female,START+11,'favorite-again');

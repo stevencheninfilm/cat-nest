@@ -5,6 +5,7 @@ import { CAT_SCENES, sceneAllowsCat, collectionSceneProgress } from './catbook-s
 import { petNeeds, growthRewardAmount, addGrowthExperience, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { GAMES, emptyGameHub, normalizeGameHub, reduceGameHub } from './minigames.js';
 import { TOUCH_GAMES, catPlayUnlocked } from './minigames-touch-rules.js';
+import { isFeatureUnlocked } from './feature-unlocks.js';
 import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple-care.js';
 import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, favoriteMemory } from './memory-journal.js';
 import { emptyNest, normalizeNest, nestActionResult, nestItem, validFurnitureCare } from './nest-decor.js';
@@ -157,6 +158,9 @@ function feedRecords(value, now) {
   }
   return records.slice(0, 2);
 }
+function normalizeFeedingWindow(value,now) {
+  return value&&validTime(value.startedAt)&&value.startedAt<=now+60_000?{startedAt:value.startedAt,bonusClaimed:value.bonusClaimed===true}:null;
+}
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
   return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), homeBond:emptyHomeBond(), diary:emptyMemoryJournal(now), nest:emptyNest(), updatedAt: now };
@@ -189,9 +193,7 @@ export function normalizeState(value, now = Date.now()) {
   next.coupleCare = normalizeCoupleCare(value.coupleCare, now);
   next.careLimits = normalizeCareLimits(value.careLimits, now);
   next.collection = normalizeCollection(value.collection, { ...next, savedBoostCount, careLimits:validCareLimits(value.careLimits) ? value.careLimits : next.careLimits }, FOODS);
-  if (value.feedingWindow && validTime(value.feedingWindow.startedAt) && value.feedingWindow.startedAt <= now + 60_000) {
-    next.feedingWindow = { startedAt: value.feedingWindow.startedAt, bonusClaimed: value.feedingWindow.bonusClaimed === true };
-  }
+  next.feedingWindow = normalizeFeedingWindow(value.feedingWindow,now);
   next.homeBond = normalizeHomeBond(value.homeBond,next);
   next.diary = normalizeMemoryJournal(value.diary, next, now);
   return next;
@@ -227,9 +229,12 @@ function careInfo(current, action, actorId, now) {
 /** Read-only availability shared by the UI and the authoritative server reducer. */
 export function careActionInfo(state, action, actorId, now = Date.now()) {
   now = validTime(now) ? now : 0;
-  // This selector reads only the care ledger. Unbounded saved rewards should
-  // never be validated or copied by the UI's per-second countdown refresh.
-  return careInfo(normalizeState(state && typeof state === 'object' ? { ...state, pendingGrowth: [] } : state, now), action, actorId, now);
+  // Countdowns never need to copy games, rewards, collections or the diary.
+  if (!Object.hasOwn(CARE_LIMITS, action?.type)) return careInfo(null, action, actorId, now);
+  return careInfo({ sleeping:state?.sleeping === true,
+    careLimits:normalizeCareLimits(state?.careLimits, now),
+    feedRecords:action.type === 'feed' ? feedRecords(state?.feedRecords, now) : [],
+  }, action, actorId, now);
 }
 function recordCare(state, type, actorId, now, food) {
   state.careLimits.counts[type] += 1;
@@ -247,12 +252,11 @@ function recordCare(state, type, actorId, now, food) {
  */
 export function feedingInfo(state, actorId, now = Date.now()) {
   now = validTime(now) ? now : 0;
-  const normalized = normalizeState(state && typeof state === 'object' ? { ...state, pendingGrowth: [] } : state, now);
-  const window = normalized.feedingWindow;
+  const window = normalizeFeedingWindow(state?.feedingWindow,now);
   const windowStartedAt = window?.startedAt ?? null;
   const windowEndsAt = window ? window.startedAt + FEEDING_WINDOW_MS : null;
   const windowActive = Boolean(window && now >= window.startedAt && now < windowEndsAt);
-  const records = normalized.feedRecords.map(record => {
+  const records = feedRecords(state?.feedRecords,now).map(record => {
     const expiresAt = record.at + foodCooldownMs(record.food);
     const active = now >= record.at && now < expiresAt;
     return { ...record, expiresAt, remainingMs: active ? expiresAt - now : 0, active, isMine: record.actorId === actorId, inCurrentWindow: windowActive && now >= record.at && record.at >= windowStartedAt };
@@ -299,6 +303,8 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   now = validTime(now) ? now : 0;
   if (!action || typeof action !== 'object') return null;
   const current = normalizeState(state, now);
+  const feature=action.type==='invite-cat'?'collection':action.type==='diary-favorite'?'diary':null;
+  if(feature&&!isFeatureUnlocked(feature,levelInfo(current.xp).level))return null;
   if(action.type==='diary-favorite') {
     const diary=favoriteMemory(current.diary,action.memoryId,action.favorite);
     return diary ? {...current,diary,updatedAt:now} : null;

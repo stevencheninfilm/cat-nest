@@ -50,6 +50,7 @@
 .growth-side .growth-orb{width:44px;height:50px}
 .growth-side .growth-orb>.growth-heart{height:45px;inset:-3px 0 auto;font-size:38px;line-height:1.1}
 .growth-side .growth-heart-fallback{padding:3px}
+.growth-side .growth-more[hidden]{display:none}
 .growth-side .growth-orb strong{left:0;right:0;bottom:4px;font-size:13px}
 .growth-side .growth-label{max-width:50px;margin-top:3px;font-size:8px;line-height:1.35;overflow:hidden;text-overflow:ellipsis}
 .growth-side .growth-glint{width:10px;height:10px}.growth-side .growth-glint-b{width:7px;height:7px}

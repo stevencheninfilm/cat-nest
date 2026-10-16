@@ -1,0 +1,11 @@
+/* Lock badges must not override the floating expression button's position. */
+.catbook-entry{position:relative}
+.feature-lock-badge{position:absolute;z-index:2;top:-4px;right:-10px;display:block;white-space:nowrap;padding:3px 5px;border:1px solid #ddc29c;border-radius:9px;background:#fff5e3;color:#8c6848;font-size:9px;font-style:normal;font-weight:700;line-height:12px;letter-spacing:0;pointer-events:none;box-shadow:0 2px 5px #76523314}
+.feature-lock-badge[hidden]{display:none}
+.catbook-entry .feature-lock-badge{top:0;right:0}
+.cat-rhythm .feature-lock-badge{top:-8px;right:-16px;font-size:8px}
+.is-level-locked>.nav-icon,.side-actions .is-level-locked>span{filter:saturate(.35);opacity:.75}
+.feature-lock-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:150px;padding:20px 12px;text-align:center;border:1px solid #ead7bc;border-radius:16px;background:#fff7e9;color:#8a6549}
+.feature-lock-card>span{font-size:25px}.feature-lock-card>strong{font-size:14px;line-height:1.6}.feature-lock-card p{margin:0;font-size:11px;line-height:1.8}.feature-lock-card small{font-size:10px;line-height:1.7;color:#a68b6e}
+.expression-sheet .feature-lock-card{flex:1 1 auto;min-height:110px;margin-top:8px}
+.expression-tabs .is-level-locked{color:#aa8b6a}.expression-tabs .is-level-locked small{opacity:1;font-size:8px}

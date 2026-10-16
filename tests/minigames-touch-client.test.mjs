@@ -37,10 +37,40 @@ test('a quick drag keeps its final position after throttling, while cancel and s
   assert.equal(lastFrame.run.score,10,'the real home cat receives immediate local feedback');
   assert.equal(lastFrame.enabled,true);
   assert.equal(m.arcade.runs[0].score,0,'visual feedback does not mutate the authoritative save');
-  assert.equal(saved().queue.length,2);
+  t.mock.timers.tick(100);assert.equal(saved().queue.length,2);
   visible=false;documentListeners.get('keydown')({key:'ArrowRight',target:{matches:()=>false},preventDefault(){throw Error('a closed game must not consume keyboard input');}});assert.equal(saved().queue.length,2);visible=true;
   time+=100;emit('pointerdown',far,target.y);emit('pointercancel',target.x,target.y);
-  const count=saved().queue.length;time+=100;t.mock.timers.tick(100);assert.equal(saved().queue.length,count);
+  t.mock.timers.tick(100);const count=saved().queue.length;time+=100;t.mock.timers.tick(100);assert.equal(saved().queue.length,count);
   time+=100;emit('pointerdown',far,target.y);time+=10;emit('pointerup',target.x,target.y);
   controller.suspend();const suspended=saved().queue.length;time+=100;t.mock.timers.tick(100);assert.equal(saved().queue.length,suspended);
+});
+
+test('100 drag events stay visual between scoring ticks, measure geometry once, and persist on backgrounding',t=>{
+  const start=Date.UTC(2026,9,15);let time=start+100,lastFrame,frame,writes=0,measurements=0;
+  t.mock.method(Date,'now',()=>time);t.mock.timers.enable({apis:['setTimeout']});
+  const previous=new Map(['document','requestAnimationFrame','cancelAnimationFrame'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+  const listeners=new Map(),documentListeners=new Map(),nodes=new Map();
+  const node=()=>({textContent:'',dataset:{},style:{},classList:{toggle(){},add(){},remove(){}},setAttribute(){},focus(){},setPointerCapture(){}});
+  const stage=node();stage.querySelector=selector=>{if(!nodes.has(selector))nodes.set(selector,node());return nodes.get(selector);};stage.querySelectorAll=()=>[];
+  const surface={...node(),getBoundingClientRect:()=>{measurements++;return {left:0,top:0,width:310,height:310};}};
+  const root={querySelector:selector=>selector==='[data-arcade-id]'?stage:selector==='[data-touch-surface]'?surface:null,querySelectorAll:()=>[],addEventListener:(type,fn)=>{const list=listeners.get(type)||[];list.push(fn);listeners.set(type,list);}};
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{hidden:false,addEventListener:(type,listener)=>documentListeners.set(type,listener)}});
+  Object.defineProperty(globalThis,'requestAnimationFrame',{configurable:true,value:fn=>{frame=fn;return 1;}});
+  Object.defineProperty(globalThis,'cancelAnimationFrame',{configurable:true,value:()=>{}});
+  const memory=createMemoryStorage(),storage={getItem:key=>memory.getItem(key),removeItem:key=>memory.removeItem(key),setItem(key,value){writes++;memory.setItem(key,value);}};
+  const m={id:'fluidity-drag',game:'treats',status:'active',players:[{id:'partner-male'}],scores:[0,0],arcade:{stage:'running',seed:42,startAt:start,runs:[createArcadeRun('treats',42)]}};
+  const controller=createArcadeController({root,getMatch:()=>m,getClientId:()=> 'partner-male',isSaving:()=>true,isConnected:()=>true,dispatch:()=>assert.fail('saving cannot send'),storage,onFrame:value=>{lastFrame=value;}});
+  t.after(()=>{controller.suspend();for(const [key,descriptor]of previous)if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];});
+  const emit=(type,x)=>{const event={pointerId:1,isPrimary:true,button:0,clientX:x*10,clientY:200,target:{closest:selector=>selector==='[data-touch-surface]'?surface:null},preventDefault(){}};for(const listener of listeners.get(type)||[])listener(event);};
+  controller.sync();emit('pointerdown',0);
+  for(let n=0;n<100;n++){time=start+100+n/5;emit('pointermove',31*n/99);frame();}
+  assert.equal(lastFrame.run.basket,31,'the displayed catcher follows the latest pointer, not the 60ms scoring tick');
+  assert.equal(lastFrame.run.inputs,1);assert.equal(lastFrame.run.score,0);assert.equal(m.arcade.runs[0].basket,16,'saved source stays untouched');
+  assert.equal(measurements,1);assert.equal(writes,0,'pointer handlers never synchronously stringify the input queue');
+  document.hidden=true;documentListeners.get('visibilitychange')();assert.equal(writes,1);
+  const saved=JSON.parse(memory.getItem('catnest.arcade.fluidity-drag.partner-male'));
+  assert.deepEqual(saved.queue,[[100,0]],'only accepted scoring events enter the durable replay log');
+  document.hidden=false;documentListeners.get('visibilitychange')();
+  assert.equal(lastFrame.run.basket,0,'resume returns to the accepted position, not an unrecorded preview');
+  assert.equal(lastFrame.run.inputs,1);assert.equal(lastFrame.enabled,true);
 });
