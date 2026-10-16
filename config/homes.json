@@ -4,5 +4,6 @@
   { "id": "test", "label": "测试调试", "source": "test", "roomId": "dddddddddddddddddddddddddddd5174", "storagePrefix": "test:" },
   { "id": "todd", "label": "Todd", "title": "Todd 猫猫小窝", "source": "room", "roomId": "76fbcefe6426efcd661ea7c6501aed54", "storagePrefix": "todd:" },
   { "id": "xiao", "label": "Xiao", "title": "Xiao 猫猫小窝", "source": "room", "roomId": "73fff1fa6740fd673e7383e79ff82d37", "storagePrefix": "xiao:" },
-  { "id": "oliver", "label": "Oliver", "title": "Oliver 猫猫小窝", "source": "room", "roomId": "6ae006798e006f5e1957e4acb9aa5c50", "storagePrefix": "oliver:" }
+  { "id": "oliver", "label": "Oliver", "title": "Oliver 猫猫小窝", "source": "room", "roomId": "6ae006798e006f5e1957e4acb9aa5c50", "storagePrefix": "oliver:" },
+  { "id": "ky", "label": "KY", "title": "KY 猫猫小窝", "source": "room", "roomId": "21109b432176705c805d714573974807", "storagePrefix": "ky:" }
 ]
