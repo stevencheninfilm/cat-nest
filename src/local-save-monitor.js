@@ -1,3 +1,4 @@
+import { formatAffection } from './affection.js';
 import './local-save-monitor.css';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -31,7 +32,7 @@ function homeCard(home) {
     <div class="pet-overview"><div><span class="small-label">${escape(home.name)}${home.sleeping ? ' · 休息中':''}</span><strong class="level-number"><small>Lv.</small>${number(home.level.level)}</strong></div><div class="coin-total"><span class="coin-icon" aria-hidden="true">✦</span><strong>${number(home.coins)}</strong><small>猫爪币</small></div></div>
     <div class="xp-caption"><span>等级进度</span><strong>${number(home.level.progress)} <span>/ ${number(home.level.target)}</span></strong></div><div class="xp-track" role="progressbar" aria-label="等级进度" aria-valuemin="0" aria-valuemax="${home.level.target}" aria-valuenow="${home.level.progress}"><span style="width:${progress}%"></span></div>
     <div class="pet-needs">${Object.entries(home.needs).map(([key,value])=>`<div class="need ${value<30 ? 'low':''}"><span>${label[key]}</span><strong>${number(value)}<small>/100</small></strong><div><i style="width:${value}%"></i></div></div>`).join('')}</div>
-    <div class="home-small-stats"><span>已领取成长<strong>${number(home.xp)}</strong></span><span>亲密度<strong>${number(home.love)}</strong></span><span>图鉴入住<strong>${number(home.cats)}</strong></span><span>待领取<strong class="pending-amount">${number(home.pending.count)} 个<small> +${number(home.pending.amount)}</small></strong></span></div>
+    <div class="home-small-stats"><span>已领取成长<strong>${number(home.xp)}</strong></span><span>亲密度<strong>${formatAffection(home.love)}</strong></span><span>图鉴入住<strong>${number(home.cats)}</strong></span><span>待领取<strong class="pending-amount">${number(home.pending.count)} 个<small> +${number(home.pending.amount)}</small></strong></span></div>
     <div class="home-meals">${home.meals.map(meal=>`<span><b>${escape(meal.label)}</b><span class="${meal.fed ? 'fed':''}">${meal.fed ? '本轮已喂':meal.food ? '上餐未结束':'本轮未喂'}</span><small>${meal.food ? `${escape(meal.food)} · ${Math.max(0,Math.ceil((meal.expiresAt-Date.now())/60_000))} 分钟`:'餐盘空空'}</small></span>`).join('')}</div>
     <footer class="home-card-footer"><span>照顾者 ${home.owners.filter(owner=>owner.joined).length}/2 · 修订 ${number(home.revision)}</span><time title="最后保存时间">${date(home.updatedAt)}</time></footer>
   </article>`;
