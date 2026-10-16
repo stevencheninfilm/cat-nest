@@ -9,8 +9,8 @@ import {createDiaryController} from '../src/diary-controller.js';
 import {initialState,normalizeState,reduceAction,levelStartXp,levelInfo} from '../src/state.js';
 
 const now=Date.UTC(2026,9,15),actor={id:'partner-male',name:'男方'};
-test('features unlock exactly at levels 2, 3, 5 and 6, including fractional XP boundaries',()=>{
-  assert.deepEqual(Object.fromEntries(Object.entries(FEATURE_UNLOCKS).map(([id,r])=>[id,r.level])),{collection:2,diary:3,expressions:5,actions:6});
+test('features unlock exactly at levels 2, 3, 4 and 6, including fractional XP boundaries',()=>{
+  assert.deepEqual(Object.fromEntries(Object.entries(FEATURE_UNLOCKS).map(([id,r])=>[id,r.level])),{collection:2,diary:3,expressions:4,actions:6});
   for(const [feature,{level}]of Object.entries(FEATURE_UNLOCKS)){
     const threshold=levelStartXp(level);
     assert.equal(isFeatureUnlocked(feature,levelInfo(threshold-.1).level),false,feature);
@@ -41,9 +41,9 @@ test('locked entry keeps a clickable level explanation and reuses its badge when
   assert.equal(children[0],badge);assert.equal(children.length,1);assert.equal(badge.hidden,true);assert.equal(attrs.get('aria-disabled'),'false');assert.equal(attrs.get('aria-label'),'猫猫日记');assert.equal(classes.has('is-level-locked'),false);
 });
 
-test('Lv.5 opens expressions while actions remain a lock card until Lv.6',()=>{
-  const defaultPanel=catExpressionsPanel();assert.match(defaultPanel,/Lv\.5 解锁/);assert.doesNotMatch(defaultPanel,/data-expression-choice=/);
-  const expressions=catExpressionsPanel('expressions',{level:5});
+test('Lv.4 opens expressions while actions remain a lock card until Lv.6',()=>{
+  const defaultPanel=catExpressionsPanel();assert.match(defaultPanel,/Lv\.4 解锁/);assert.doesNotMatch(defaultPanel,/data-expression-choice=/);
+  const expressions=catExpressionsPanel('expressions',{level:4});
   assert.equal((expressions.match(/data-expression-choice=/g)||[]).length,CAT_EXPRESSIONS.length);
   assert.match(expressions,/🔒 Lv\.6/);
   const lockedActions=catExpressionsPanel('actions',{level:5});assert.match(lockedActions,/小猫动作在 Lv\.6 解锁/);assert.doesNotMatch(lockedActions,/data-cat-animation=|data-expression-greet/);
