@@ -6,6 +6,7 @@ import { CAT_SCENES, sceneAllowsCat, sceneCatPlacement } from '../src/catbook-sc
 import { CAT_SILHOUETTES } from '../src/catbook-silhouettes.js';
 import { catbookMarkup } from '../src/catbook-ui.js';
 import { initialState, levelStartXp, FOODS } from '../src/state.js';
+import { formalMemoryEntries } from './memory-fixtures.mjs';
 
 const start=Date.UTC(2026,9,15);
 const lockedIds=html=>[...html.matchAll(/data-book-locked-cat="([^"]+)"/g)].map(match=>match[1]);
@@ -17,6 +18,7 @@ function completed() {
   state.collection.foods=Object.keys(FOODS);
   state.collection.wins={rps:12,memory:12,gomoku:12};
   state.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:10,play:10,sleep:3}};
+  state.diary.entries=formalMemoryEntries(start);
   return state;
 }
 const invite=cat=>({id:cat.id,at:start,operationId:`silhouette-${cat.id}`,actorId:'silhouette-test'});
@@ -69,12 +71,11 @@ test('mixed collections partition scene residents into owned cats and silhouette
 
 test('silhouettes and their invited counterparts use exactly the same scale, pose and landing anchor',()=>{
   const state=completed();
-  state.collection.invited=COLLECTION_CATS.slice(0,8).map(invite);
+  state.collection.invited=COLLECTION_CATS.map(invite);
   for(const scene of CAT_SCENES) for(const cat of COLLECTION_CATS.filter(cat=>sceneAllowsCat(scene,cat))) {
     const unowned=structuredClone(state);
     unowned.collection.invited=unowned.collection.invited.filter(record=>record.id !== cat.id);
-    // Garden and station are free; gated scenes are already covered by the partition test.
-    if(scene.min) continue;
+    // Enough confirmed friends remain to inspect every gated scene with this cat absent.
     const locked=catbookMarkup(invitedEverywhere(unowned),{sceneId:scene.id}).match(new RegExp(`data-book-locked-cat="${cat.id}"[^>]*style="([^"]+)"`))[1];
     unowned.collection.invited.push(invite(cat));
     const visible=catbookMarkup(invitedEverywhere(unowned),{sceneId:scene.id}).match(new RegExp(`class="book-yard-cat[^>]*data-book-cat="${cat.id}"[^>]*style="([^"]+)"`))[1];

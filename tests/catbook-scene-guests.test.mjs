@@ -49,9 +49,10 @@ test('station guests are never given a hidden landing or an entrance route in ot
 
 test('Onyx can settle beside the garden lantern without allowing the other new cats in',()=>{
   const garden=CAT_SCENES.find(scene=>scene.id === 'garden'), cat=COLLECTION_CATS.find(cat=>cat.id === 'onyx');
-  const state=allOwned();
-  state.collection.invited=state.collection.invited.filter(record=>record.id === 'onyx');
-  const html=catbookMarkup(invitedEverywhere(state),{sceneId:'garden',catId:'onyx'});
+  const state=invitedEverywhere(allOwned());
+  state.collection.sceneInvited=state.collection.sceneInvited.filter(record=>record.sceneId !== 'garden' || record.id === 'onyx');
+  const html=catbookMarkup(state,{sceneId:'garden',catId:'onyx'});
+  assert.match(html,/data-scene-id="garden"/);
   assert.deepEqual(visitorIds(html),['onyx']);
   assert.equal(catArrivalScene(garden,cat),garden);
   assert.match(html,/可在猫猫车站、日式庭院相遇/);
@@ -70,8 +71,8 @@ test('a new cat invited from another yard has station instructions and a valid s
 
 test('an empty yard guides players to invite a friend to the current scene',()=>{
   const state=allOwned();
-  state.collection.invited=state.collection.invited.filter(cat=>cat.id === 'mochi');
-  const html=catbookMarkup(invitedEverywhere(state),{sceneId:'garden',catId:'mochi'});
+  const html=catbookMarkup(state,{sceneId:'garden',catId:'mochi'});
+  assert.match(html,/data-scene-id="garden"/);
   assert.deepEqual(visitorIds(html),[]);
   assert.match(html,/data-book-cat="bandit">[\s\S]*?邀请斑斑来日式庭院/);
   assert.match(html,/已经在猫猫车站等你啦/,'station residency is visible in the cat detail');

@@ -99,7 +99,7 @@ export const CAT_SCENES = Object.freeze([
     stationSpot(63.2,45.4,4.3,5.3,'黄色猫猫旁的围墙木栏上'), stationSpot(60.5,87,5.1,6,'树桩右下的草地上'),
     stationSpot(91.2,34.5,4.3,5.5,'红屋露台上'), stationSpot(35.5,33.5,4.6,5.4,'电车高台上'),
   ], extraSlots:referenceSceneSlots.station },
-  { id:'garden', asset:'garden-portrait', name:'日式庭院', subtitle:'把小日子过成花园', min:0, icon:'leaf', ratio:'863 / 1823', slots:[
+  { id:'garden', asset:'garden-portrait', name:'日式庭院', subtitle:'十位猫友，庭院初相逢', min:10, icon:'leaf', ratio:'863 / 1823', slots:[
     spot(65.5,78,24,'树桩上'), spot(29,35.7,20,'左侧高台上'),
     spot(78,28.7,20,'最高的猫爬架上'), spot(32.5,57,12,'抓柱旁'),
     spot(75.2,39.4,10,'右侧猫窝里'), spot(23,75.8,20,'红色软台上',{ toy:true }),
@@ -107,7 +107,7 @@ export const CAT_SCENES = Object.freeze([
     spot(43,79,18,'木廊上',{ toy:true }), spot(44.6,44.7,15,'左侧台面上'),
     spot(73.5,49,18,'右侧圆台上'), spot(83.5,67,16,'骰子猫窝顶上'),
   ], extraSlots:{onyx:spot(30,86,16,'石灯右侧的草地上'),maple:spot(69,23.2,15,'池塘中央的石头上'),...referenceSceneSlots.garden} },
-  { id:'western', asset:'western-portrait', name:'西部露台', subtitle:'四位猫友的小聚会', min:4, icon:'sun', ratio:'863 / 1822', slots:[
+  { id:'western', asset:'western-portrait', name:'西部露台', subtitle:'十五位猫友的露台小聚', min:15, icon:'sun', ratio:'863 / 1822', slots:[
     spot(52,34.5,18,'骰子猫窝顶上'), spot(66.8,49.3,18,'圆形小台上'),
     spot(76.7,25.3,20,'高处的台面上'), spot(78,60.8,11.5,'抓柱旁'),
     spot(74,35.1,10,'高处猫窝里'), spot(22,52.5,20,'露台上',{ toy:true }),
@@ -115,7 +115,7 @@ export const CAT_SCENES = Object.freeze([
     spot(33,60,20,'逗猫棒旁',{ toy:true }), spot(90,44.8,14,'右侧猫窝顶上'),
     spot(92,55.4,14,'右侧圆台上'), spot(16,69,19,'软软的猫床里'),
   ], extraSlots:referenceSceneSlots.western },
-  { id:'snow', asset:'snow-portrait', name:'暖暖雪庭', subtitle:'八位猫友，一场暖雪', min:8, icon:'snow', ratio:'863 / 1823', slots:[
+  { id:'snow', asset:'snow-portrait', name:'暖暖雪庭', subtitle:'二十位猫友，一场暖雪', min:20, icon:'snow', ratio:'863 / 1823', slots:[
     spot(58,60,21,'小伞下面'), spot(38,59,16,'小伞下面'),
     spot(70,29.5,19,'雪庭高台上'), spot(44.5,44,13,'窗边',{ motion:'stretch', name:'背对着伸个懒腰' }),
     spot(14.5,56.4,9.5,'橙色猫窝里'), spot(28,71.4,22,'红色软垫上',{ toy:true }),

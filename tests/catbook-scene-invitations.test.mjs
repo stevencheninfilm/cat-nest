@@ -14,17 +14,18 @@ import { createLocalPreviewStore, PREVIEW_HOME } from '../scripts/local-pet-prev
 
 const now=Date.UTC(2026,9,15),actor={id:'invite-tester',name:'猫友'};
 const invite=(state,catId,sceneId,operationId=`visit-${sceneId}-${catId}`)=>reduceAction(state,{type:'invite-cat',catId,sceneId},actor,now,operationId);
-const prepared=()=>{const state=initialState(now);state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);return state;};
+const prepared=()=>{const state=initialState(now);state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);state.collection.wins={rps:12,memory:12,gomoku:12};state.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:10,play:10,sleep:3}};return state;};
+const withFriends=(state,count=10,exclude)=>{state.collection.invited=COLLECTION_CATS.filter(cat=>cat.id!==exclude).slice(0,count).map(cat=>({id:cat.id,at:now,operationId:`prior-friend-${cat.id}`,actorId:actor.id}));return state;};
 
 test('first invitation collects once in its actual scene and each later scene needs a free invitation',()=>{
-  const base=prepared(),before=structuredClone(base);
+  const base=withFriends(prepared(),10,'bandit'),before=structuredClone(base);
   let state=invite(base,'bandit','garden');
-  assert.equal(state.collection.invited.length,1);
+  assert.equal(state.collection.invited.length,11);
   assert.ok(collectionSceneInvitation(state.collection,'bandit','garden'));
   assert.equal(collectionSceneInvitation(state.collection,'bandit','station'),null,'a first garden invitation never creates a station visit');
   assert.equal(invite(state,'bandit','garden'),null);
   state=invite(state,'bandit','station');
-  assert.equal(state.collection.invited.length,1);
+  assert.equal(state.collection.invited.length,11);
   assert.equal(state.collection.sceneInvited.length,2);
   assert.equal(state.xp,base.xp);assert.equal(state.coins,base.coins);
   assert.deepEqual(state.collection.stats,base.collection.stats);
@@ -35,13 +36,13 @@ test('first invitation collects once in its actual scene and each later scene ne
 });
 
 test('legacy collection receipts retain station visits without automatically inviting cats elsewhere',()=>{
-  const state=prepared();
-  state.collection.invited=[{id:'bandit',at:now,operationId:'legacy-bandit-invite',actorId:actor.id}];
+  const state=withFriends(prepared());
+  state.collection.invited[0]={id:'bandit',at:now,operationId:'legacy-bandit-invite',actorId:actor.id};
   const before=structuredClone(state.collection);
   assert.ok(collectionSceneInvitation(state.collection,'bandit','station'));
   assert.equal(collectionSceneInvitation(state.collection,'bandit','garden'),null);
   const next=invite(state,'bandit','garden');
-  assert.equal(next.collection.invited.length,1);
+  assert.equal(next.collection.invited.length,10);
   assert.ok(collectionSceneInvitation(next.collection,'bandit','station'));
   assert.ok(collectionSceneInvitation(next.collection,'bandit','garden'));
   assert.deepEqual(state.collection,before);
@@ -50,7 +51,7 @@ test('legacy collection receipts retain station visits without automatically inv
 
 test('scene gates and allowed residents are checked on the reducer and both transport validators',()=>{
   const state=prepared();
-  for(const sceneId of ['unknown','snow','western']) assert.equal(invite(state,'bandit',sceneId),null);
+  for(const sceneId of ['unknown','garden','snow','western']) assert.equal(invite(state,'bandit',sceneId),null);
   assert.equal(invite(state,'scout','garden'),null);
   for(const validate of [sanitizeAction,validateAction]) {
     const action={type:'invite-cat',catId:'bandit',sceneId:'garden'};
@@ -59,23 +60,37 @@ test('scene gates and allowed residents are checked on the reducer and both tran
     assert.equal(validate({...action,free:true}),null);
   }
   let next=state;
-  for(const cat of COLLECTION_CATS.slice(0,8)) next=invite(next,cat.id,'station');
+  for(const cat of COLLECTION_CATS.slice(0,20)) next=invite(next,cat.id,'station');
   assert.ok(invite(next,'bandit','snow'));
   const progress=collectionSceneProgress(CAT_SCENES.find(scene=>scene.id==='snow'),next.collection,120).current;
   next=invite(next,'bandit','garden');
   assert.equal(collectionSceneProgress(CAT_SCENES.find(scene=>scene.id==='snow'),next.collection,120).current,progress);
 });
 
+test('the shared reducer rejects direct yard invitations below 10/15/20 and accepts them at the exact gate',()=>{
+  assert.deepEqual(CAT_SCENES.map(scene=>[scene.id,scene.min]),[['station',0],['garden',10],['western',15],['snow',20]]);
+  for(const [sceneId,count] of [['garden',10],['western',15],['snow',20]]) {
+    const below=withFriends(prepared(),count-1),at=withFriends(prepared(),count);
+    const before=structuredClone(below);
+    assert.equal(invite(below,'bandit',sceneId),null,`${sceneId} below gate`);
+    assert.deepEqual(below,before,'a rejected direct request leaves the save unchanged');
+    const entered=invite(at,'bandit',sceneId);
+    assert.ok(collectionSceneInvitation(entered.collection,'bandit',sceneId),`${sceneId} at gate`);
+    assert.equal(entered.collection.invited.length,count,'re-inviting to a new yard does not count as another friend');
+    assert.deepEqual([entered.xp,entered.coins],[at.xp,at.coins]);
+  }
+});
+
 test('scene receipts reject duplicates, foreign cats, invalid scenes and conflicting permanent operation IDs',()=>{
-  const state=invite(prepared(),'bandit','garden'),record=state.collection.sceneInvited[0];
-  for(const records of [[record,record],[{...record,id:'bolt'}],[{...record,sceneId:'other'}],[{...record,extra:true}],[{...record,actorId:'another-actor'}]]) {
+  const state=invite(withFriends(prepared(),10,'bandit'),'bandit','garden'),record=state.collection.sceneInvited[0];
+  for(const records of [[record,record],[{...record,id:'pearl'}],[{...record,sceneId:'other'}],[{...record,extra:true}],[{...record,actorId:'another-actor'}]]) {
     assert.equal(validCollection({...state.collection,sceneInvited:records},Object.keys(FOODS)),false);
   }
   assert.equal(invite(state,'bandit','station',record.operationId),null);
 });
 
 test('a later scene arrival is observed once without inflating the collection or replaying on reload',()=>{
-  let state=invite(prepared(),'bandit','station');
+  let state=withFriends(prepared());
   const events=createCollectionEvents(state);
   state=invite(state,'bandit','garden');
   assert.deepEqual(events.observe(state),[{type:'cat-arrived',id:'bandit',sceneId:'garden'}]);
@@ -84,7 +99,7 @@ test('a later scene arrival is observed once without inflating the collection or
 });
 
 test('catalog stays collected while the current scene silhouette and invitation remain available',()=>{
-  const state=invite(prepared(),'bandit','station');
+  const state=withFriends(prepared());
   const html=catbookMarkup(state,{catId:'bandit',sceneId:'garden'});
   assert.match(html,/data-book-locked-cat="bandit"/);
   assert.match(html,/查看斑斑的场景邀请，尚未来访/);
@@ -112,14 +127,14 @@ test('every allowed scene invitation survives normalization at the maximum ledge
 
 test('shared local preview also recognizes permanent scene receipts after the short journal is gone',async t=>{
   const dir=await mkdtemp(join(tmpdir(),'catbook-scene-invites-'));t.after(()=>rm(dir,{recursive:true,force:true}));
-  const file=join(dir,'home.json'),store=createLocalPreviewStore({file,now:()=>now,seedState:prepared});
+  const file=join(dir,'home.json'),store=createLocalPreviewStore({file,now:()=>now,seedState:()=>withFriends(prepared(),10,'bandit')});
   const action={type:'invite-cat',catId:'bandit',sceneId:'garden'};
   const input={action,operationId:'local-scene-garden',clientId:actor.id,name:actor.name};
   await store.applyAction(PREVIEW_HOME,input);
   const stored=JSON.parse(await readFile(file,'utf8'));stored.operations=[];await writeFile(file,JSON.stringify(stored));
   const reopened=createLocalPreviewStore({file,now:()=>now});
   const replay=await reopened.applyAction(PREVIEW_HOME,input);
-  assert.equal(replay.duplicate,true);assert.equal(replay.state.collection.invited.length,1);
+  assert.equal(replay.duplicate,true);assert.equal(replay.state.collection.invited.length,11);
   assert.equal(replay.state.collection.sceneInvited.length,1);
   await assert.rejects(reopened.applyAction(PREVIEW_HOME,{...input,action:{...action,sceneId:'station'}}),error=>error.code==='OPERATION_CONFLICT');
 });
