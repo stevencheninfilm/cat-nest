@@ -153,6 +153,12 @@ $('#app').innerHTML = `
 </main>
 <dialog id="modal"><button class="modal-close round-button" id="modal-close" aria-label="关闭弹窗">${icon('x')}</button><div class="modal-content" id="modal-content"></div></dialog>
 <div class="toast" id="toast" role="status"></div>`;
+// Long names can wrap without covering the kitten or moving labels off the growth bar.
+if (typeof ResizeObserver === 'function') {
+  new ResizeObserver(([entry]) => {
+    if (entry.contentRect.height > 0) $('.nest').style.setProperty('--home-status-height', `${Math.ceil(entry.contentRect.height)}px`);
+  }).observe($('.pet-card'));
+}
 if (!WORLD_EXPLORATION_ENABLED) {
   for (const button of document.querySelectorAll('[data-world-enter], [data-open="nest"]')) {
     button.setAttribute('aria-disabled', 'true');

@@ -6,26 +6,26 @@
 }
 .nest:not(.is-companion) .pet-card {
   top: auto; bottom: var(--home-status-bottom); left: 20%; right: 20%;
-  height: var(--home-status-height); padding: 0;
+  height: auto; padding: 0;
   border: 0; border-radius: 0; background: none; box-shadow: none;
   backdrop-filter: none; text-align: center;
 }
-.nest .pet-card .pet-title { justify-content: center; height: 21px; gap: 0; }
-.nest .pet-card .pet-name { position: relative; justify-content: center; max-width: calc(100% - 56px); min-height: 24px; gap: 0; padding-inline: 14px; }
-.nest .pet-card .pet-name strong { min-width: 0; font-size: 16px; line-height: 21px; max-width: 130px; text-shadow: 0 1px 2px #fff9ed; }
+.nest .pet-card .pet-title { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 21px; height: auto; gap: 8px; }
+.nest .pet-card .pet-name { position: relative; justify-content: center; min-width: 0; max-width: 100%; min-height: 24px; gap: 0; padding: 0 14px 0 0; }
+.nest .pet-card .pet-name strong { min-width: 0; max-width: none; font-size: 16px; line-height: 21px; letter-spacing: 0; white-space: normal; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; text-shadow: 0 1px 2px #fff9ed; }
 .nest .pet-card .pet-name svg { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; opacity: .6; }
 .nest .pet-card .level-badge { display: contents; }
 .nest .pet-card .level-badge-heart { display: none; }
 .nest .pet-card #level {
-  position: absolute; top: 13px; left: -5px; z-index: 3;
+  position: absolute; top: auto; bottom: 19px; left: -5px; z-index: 3;
   width: 44px; height: 44px; margin: 0; display: grid; place-items: center;
   background: none; color: #fffaf2; font-size: 12px; font-weight: 900;
   text-shadow: 0 1px 2px #a76b3d44; pointer-events: none;
 }
-.nest .pet-card .xp-row { position: static; height: 24px; gap: 0; margin-top: 5px; }
+.nest .pet-card .xp-row { position: relative; height: 24px; gap: 0; margin-top: 14px; }
 .nest .pet-card .xp-row > svg,
 .nest .pet-card .xp-stage-heart {
-  position: absolute; top: 13px; left: -5px; z-index: 2;
+  position: absolute; top: -13px; left: -5px; z-index: 2;
   width: 44px; height: 44px; margin: 0;
   fill: #ffb95e; color: #ffdc9a; filter: drop-shadow(0 2px 3px #b878342e);
 }
@@ -35,7 +35,7 @@
 }
 .nest .pet-card #xp-bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--stage-a, #f5b476), var(--stage-b, #e8a061)); box-shadow: none; }
 .nest .pet-card #xp {
-  position: absolute; top: 26px; left: 32px; right: 0; height: 24px;
+  position: absolute; top: 0; left: 32px; right: 0; height: 24px;
   display: grid; place-items: center; width: auto; margin: 0;
   color: #fffdf7; font-size: 11px; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #7f5f3c40;
@@ -96,14 +96,14 @@
   .nest .together-avatars > span { height: 19px; width: 19px; font-size: 8px; }
   .nest .together-link { font-size: 8px; }
   .nest:not(.is-companion):not(.feeding-open) .scene { top: max(23%, 132px); height: calc(100% - var(--home-status-bottom) - var(--home-status-height) - 8px - max(23%, 132px)); }
-  .nest .pet-card .pet-title { height: 18px; }
+  .nest .pet-card .pet-title { min-height: 18px; }
   .nest .pet-card .pet-name strong { font-size: 14px; line-height: 18px; }
-  .nest .pet-card .xp-row { margin-top: 2px; height: 22px; }
+  .nest .pet-card .xp-row { margin-top: 12px; height: 22px; }
   .nest .pet-card .progress-track { height: 22px; }
-  .nest .pet-card #xp { top: 20px; height: 22px; }
-  .nest .pet-card #level,
+  .nest .pet-card #xp { height: 22px; }
+  .nest .pet-card #level { bottom: 13px; }
   .nest .pet-card .xp-row > svg,
-  .nest .pet-card .xp-stage-heart { top: 9px; }
+  .nest .pet-card .xp-stage-heart { top: -11px; }
   .nest .pet-card .mode-selector { top: -4px; }
   .nest .pet-card .needs { margin-top: 3px; height: 10px; line-height: 10px; }
   .nest .feeding-preview .home-shared-dish > .food-dish { height: 22px; bottom: 20px; }

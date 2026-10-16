@@ -10,15 +10,14 @@
 .need-delta[hidden]{display:none}
 .need-delta.is-positive{color:#4e6c3c}
 .need-delta.is-negative{color:#896349}
-.nest .pet-card .needs-boost{position:absolute;top:-7px;right:-10px;z-index:4;isolation:isolate;display:inline-flex;align-items:center;gap:4px;height:28px;padding:3px 9px;border:0;border-radius:16px;background:linear-gradient(145deg,#fffbed,#e8efd9);box-shadow:0 2px 4px #5f744524;white-space:nowrap;font-size:12px;line-height:1;font-weight:700;color:#577343;text-shadow:0 1px 0 #fff8}
+.nest .pet-card .needs-boost{position:relative;top:auto;right:auto;z-index:4;isolation:isolate;display:inline-flex;align-items:center;gap:4px;height:28px;padding:3px 9px;border:0;border-radius:16px;background:linear-gradient(145deg,#fffbed,#e8efd9);box-shadow:0 2px 4px #5f744524;white-space:nowrap;font-size:12px;line-height:1;font-weight:700;color:#577343;text-shadow:0 1px 0 #fff8}
 .nest .pet-card .needs-boost::before{content:'';position:absolute;inset:0;z-index:-1;border:solid transparent;border-width:0 14px;border-image-source:url('./assets/growth-bonus/v1/pistachio-glass.webp');border-image-slice:0 64 fill;border-image-repeat:stretch;pointer-events:none}
 .nest .pet-card .needs-boost>strong{font-size:14px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.3px;color:#43622f}
 .nest .pet-card .needs-boost{cursor:pointer}
 .nest .pet-card .needs-boost:hover{filter:brightness(1.04)}
 .nest .pet-card .needs-boost:focus-visible{outline:2px solid #6e8b4d;outline-offset:3px}
 .nest .pet-card .needs-boost.is-inactive>strong{color:#8e8266}
-.nest .pet-card:has(.needs-boost:not([hidden])) .pet-name{max-width:calc(100% - 136px);padding-inline:12px}
-@media(max-height:680px){.nest{--home-status-height:66px}.nest .pet-card .needs{height:20px;line-height:16px;margin-top:4px}.nest .pet-card .needs-boost{top:-10px}}
+@media(max-height:680px){.nest{--home-status-height:66px}.nest .pet-card .needs{height:20px;line-height:16px;margin-top:4px}}
 .needs-boost[hidden]{display:none!important}
 .need-detail{--need-ink:#946327;--need-soft:#f5e8c7;--need-filter:sepia(.75) saturate(1.25);text-align:left;color:#795d43}
 .need-detail-mood{--need-ink:#986474;--need-soft:#f4e3e8;--need-filter:hue-rotate(255deg) saturate(.85)}
