@@ -1,6 +1,16 @@
-import { COLLECTION_CATS, collectionCatProgress, collectionSceneInvitations } from './cat-collection.js';
-import { CAT_SCENES, collectionSceneProgress, sceneCatPlacement } from './catbook-scenes.js';
+import { COLLECTION_CATS, collectionCatProgress, collectionSceneInvitations, collectionSceneInvitation } from './cat-collection.js';
+import { CAT_SCENES, collectionSceneProgress, sceneCatPlacement, sceneAllowsCat } from './catbook-scenes.js';
 import { levelInfo } from './state.js';
+
+/** A map-entry reminder is derived from the confirmed save, never an unlock or a receipt. */
+export function sceneInvitationNotice(state, sceneId) {
+  const scene=CAT_SCENES.find(option=>option.id===sceneId),level=levelInfo(state.xp).level;
+  if(!scene || !collectionSceneProgress(scene,state.collection,level,state.diary).complete) return null;
+  const cat=COLLECTION_CATS.find(cat=>sceneAllowsCat(scene,cat)
+    && collectionCatProgress(cat,state.collection,level,state.diary).complete
+    && !collectionSceneInvitation(state.collection,cat.id,scene.id));
+  return cat ? {type:'scene-invite-ready',id:cat.id,sceneId:scene.id,collected:state.collection.invited.some(record=>record.id===cat.id)} : null;
+}
 
 /** Track confirmed snapshots only. Repeated saves and reconnects do not replay rewards. */
 export function createCollectionEvents(initialState) {
