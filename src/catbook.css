@@ -248,6 +248,7 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 .book-reward-copy>button,.book-reward-actions>button{display:flex;align-items:center;gap:7px;min-height:36px;background:#a3b778;border:1px solid #fffbe9;border-radius:13px;padding:7px 11px;color:#fffcec;font-size:10px;font-weight:800;margin-top:8px;box-shadow:0 2px 0 #81975933}
 .book-reward-copy>button svg,.book-reward-actions>button svg{width:13px;height:13px}
 .book-reward-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:7px;flex-wrap:wrap}
+[data-book-invitation-carousel]{touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .book-reward-actions>button{margin-top:0;flex-shrink:0}
 .book-invite-switcher{text-align:center}.book-invite-switcher>small{font-size:10px;letter-spacing:0;font-weight:600;color:#849068;margin:0}
 .book-invite-pager{display:flex;align-items:center;justify-content:center;gap:1px}
