@@ -3,13 +3,23 @@ import { CAT_SCENES, collectionSceneProgress, sceneCatPlacement, sceneAllowsCat 
 import { levelInfo } from './state.js';
 
 /** A map-entry reminder is derived from the confirmed save, never an unlock or a receipt. */
-export function sceneInvitationNotice(state, sceneId) {
+export function sceneInvitationNotice(state, sceneId, {catId=null,step=0}={}) {
   const scene=CAT_SCENES.find(option=>option.id===sceneId),level=levelInfo(state.xp).level;
   if(!scene || !collectionSceneProgress(scene,state.collection,level,state.diary).complete) return null;
-  const cat=COLLECTION_CATS.find(cat=>sceneAllowsCat(scene,cat)
+  const available=COLLECTION_CATS.filter(cat=>sceneAllowsCat(scene,cat)
     && collectionCatProgress(cat,state.collection,level,state.diary).complete
     && !collectionSceneInvitation(state.collection,cat.id,scene.id));
-  return cat ? {type:'scene-invite-ready',id:cat.id,sceneId:scene.id,collected:state.collection.invited.some(record=>record.id===cat.id)} : null;
+  if(!available.length) return null;
+  let index=available.findIndex(cat=>cat.id===catId);
+  if(index<0) {
+    // If a partner confirmed this cat meanwhile, continue with the next remaining friend.
+    const previous=COLLECTION_CATS.findIndex(cat=>cat.id===catId);
+    index=available.findIndex(cat=>cat.index>previous);
+    if(index<0) index=0;
+  }
+  index=((index+(Number.isInteger(step) ? step : 0))%available.length+available.length)%available.length;
+  const cat=available[index];
+  return {type:'scene-invite-ready',id:cat.id,sceneId:scene.id,collected:state.collection.invited.some(record=>record.id===cat.id),index,total:available.length};
 }
 
 /** Track confirmed snapshots only. Repeated saves and reconnects do not replay rewards. */

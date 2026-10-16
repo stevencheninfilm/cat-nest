@@ -73,7 +73,7 @@ test('entering every unlocked map can remind existing saves about that map witho
   assert.equal(sceneInvitationNotice(state,'station'),null,'legacy friends already visited the station');
   for(const sceneId of ['garden','western','snow']) {
     const notice=sceneInvitationNotice(state,sceneId);
-    assert.deepEqual(notice,{type:'scene-invite-ready',id:'bandit',sceneId,collected:true});
+    assert.deepEqual(notice,{type:'scene-invite-ready',id:'bandit',sceneId,collected:true,index:0,total:sceneId==='garden' ? 14 : 12});
     assert.deepEqual(sceneInvitationNotice(state,sceneId),notice,'revisiting a map can show the reminder again');
   }
   assert.deepEqual(events.observe(state),[],'a reminder is not a new achievement or an arrival');
@@ -117,4 +117,51 @@ test('map-entry cards keep the familiar UI and name the destination for both old
   assert.match(freshHtml,/曦曦可以邀请啦！/);
   assert.match(freshHtml,/正等你邀请到猫猫车站/);
   assert.match(freshHtml,/undiscovered/);
+});
+
+test('invitation cards cycle in both directions and preserve the selected cat across repeated snapshots',()=>{
+  const state=prepared(),before=structuredClone(state);
+  const first=sceneInvitationNotice(state,'garden');
+  const second=sceneInvitationNotice(state,'garden',{catId:first.id,step:1});
+  assert.deepEqual([second.id,second.index,second.total],['bolt',1,14]);
+  const last=sceneInvitationNotice(state,'garden',{catId:first.id,step:-1});
+  assert.deepEqual([last.id,last.index,last.total],['maple',13,14]);
+  assert.equal(sceneInvitationNotice(state,'garden',{catId:last.id,step:1}).id,first.id);
+  assert.equal(sceneInvitationNotice(state,'garden',{catId:second.id,step:-1}).id,first.id);
+  assert.deepEqual(sceneInvitationNotice(structuredClone(state),'garden',{catId:second.id}),second);
+  assert.deepEqual(state,before);
+});
+
+test('a confirmed invitation advances from the selected middle or last cat, with counts local to that map',()=>{
+  const base=prepared();
+  let selected=sceneInvitationNotice(base,'garden',{catId:'bolt'});
+  const saved=reduceAction(base,{type:'invite-cat',catId:'bolt',sceneId:'garden'},actor,now,'carousel-middle');
+  const next=sceneInvitationNotice(saved,'garden',{catId:selected.id});
+  assert.deepEqual([next.id,next.index,next.total],['breezy',1,13]);
+  assert.equal(sceneInvitationNotice(saved,'snow',{catId:'bolt'}).id,'bolt');
+  assert.equal(sceneInvitationNotice(saved,'snow').total,12);
+  const savedLast=reduceAction(base,{type:'invite-cat',catId:'maple',sceneId:'garden'},actor,now,'carousel-last');
+  assert.equal(sceneInvitationNotice(savedLast,'garden',{catId:'maple'}).id,'bandit');
+});
+
+test('partner receipts remove earlier cards without changing the selected friend, then advance if that friend is invited',()=>{
+  let state=prepared();
+  state=reduceAction(state,{type:'invite-cat',catId:'bandit',sceneId:'garden'},actor,now,'carousel-partner-first');
+  assert.deepEqual([sceneInvitationNotice(state,'garden',{catId:'bolt'}).id,sceneInvitationNotice(state,'garden',{catId:'bolt'}).index],['bolt',0]);
+  state=reduceAction(state,{type:'invite-cat',catId:'bolt',sceneId:'garden'},actor,now,'carousel-partner-selected');
+  assert.equal(sceneInvitationNotice(state,'garden',{catId:'bolt'}).id,'breezy');
+});
+
+test('multiple invitation cards show light pagination and remaining count, while a single card omits navigation',()=>{
+  const html=collectionNoticeMarkup(sceneInvitationNotice(prepared(),'garden',{catId:'bolt'}));
+  assert.match(html,/还有 14 只可邀请/);
+  assert.match(html,/上一只可邀请猫猫/);assert.match(html,/下一只可邀请猫猫/);
+  assert.match(html,/第 2 只，共 14 只/);
+  const state=initialState(now);state.collection.achievements.boost=3;
+  const single=collectionNoticeMarkup(sceneInvitationNotice(state,'station'));
+  assert.match(single,/还有 1 只可邀请/);
+  assert.doesNotMatch(single,/data-book-reward-step/);
+  const saved=structuredClone(state);
+  saved.collection.invited.push({id:'sunshine',at:now,actorId:actor.id,operationId:'carousel-only-cat'});
+  assert.equal(sceneInvitationNotice(saved,'station',{catId:'sunshine'}),null);
 });
