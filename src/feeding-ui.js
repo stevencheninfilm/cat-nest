@@ -1,4 +1,5 @@
-import { FOODS, feedingInfo, careActionInfo } from './state.js';
+import { formatAffection } from './affection.js';
+import { FOODS, FEEDING_BONUS, feedingInfo, careActionInfo } from './state.js';
 import { COUPLE_ROLES } from './couple-profile.js';
 import { foodRemainingPortion } from './food-portions.js';
 import { countdown, foodDurationText, careStatusText, careRuleText } from './care-ui.js';
@@ -35,7 +36,7 @@ export function updateFoodPortions(root, now = Date.now()) {
 export function foodPreview(id) {
   id = selectedMeal(id);
   const food = FOODS[id];
-  return `${foodArt(id)}<span class="food-preview-copy"><small>准备喂食 · 尚未上桌</small><strong>${food.name}</strong><span>♡ +${food.love} <i>·</i> 活力 +${food.energy} <i>·</i> ${food.cost} 猫爪币</span><em>点这里，挑一份喜欢的 <b>›</b></em></span>`;
+  return `${foodArt(id)}<span class="food-preview-copy"><small>准备喂食 · 尚未上桌</small><strong>${food.name}</strong><span>♡ +${formatAffection(food.love)} <i>·</i> 活力 +${food.energy} <i>·</i> ${food.cost} 猫爪币</span><em>点这里，挑一份喜欢的 <b>›</b></em></span>`;
 }
 function roleRecord(info, role, clientId) {
   // Stable identities are the normal path. Legacy two-person records remain
@@ -111,12 +112,12 @@ export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'al
     <div class="feeding-tabs" role="tablist" aria-label="喂食页面"><button id="food-menu-tab" role="tab" data-feeding-tab="menu" aria-controls="food-menu-panel" aria-selected="${tab === 'menu'}">挑选食物 <span>${Object.keys(FOODS).length}</span></button><button id="food-pair-tab" role="tab" data-feeding-tab="pair" aria-controls="food-pair-panel" aria-selected="${tab === 'pair'}">喂养详情${completed ? ' ✓' : ''}</button></div>
     <section id="food-menu-panel" role="tabpanel" aria-labelledby="food-menu-tab" ${tab === 'menu' ? '' : 'hidden'}>
       <div class="food-filters" role="group" aria-label="食物分类">${filters.map(([id, label]) => `<button data-food-category="${id}" aria-pressed="${category === id}">${label}</button>`).join('')}</div>
-      <div class="pantry-grid" role="group" aria-label="选择喂食的食物">${Object.entries(FOODS).filter(([id]) => category === 'all' || FOOD_DETAILS[id]?.category === category).map(([id, item]) => `<button class="pantry-item ${id === selectedFood ? 'selected' : ''}" data-food="${id}" aria-pressed="${id === selectedFood}" aria-label="${item.name}，成长气泡加${growthRewardAmount(item.love, needs.boostCount)}，亲密度加${item.love}，活力加${item.energy}，${item.cost}猫爪币，冷却${foodDurationText(id)}"><span class="pantry-love"><span>成长 +${growthRewardAmount(item.love, needs.boostCount)}</span><span class="pantry-duration">◷${foodDurationText(id)}</span></span>${foodArt(id)}<strong>${item.name}</strong><span class="pantry-price">✦ ${item.cost}</span><span class="pantry-selected" aria-hidden="true">♥</span></button>`).join('')}</div>
+      <div class="pantry-grid" role="group" aria-label="选择喂食的食物">${Object.entries(FOODS).filter(([id]) => category === 'all' || FOOD_DETAILS[id]?.category === category).map(([id, item]) => `<button class="pantry-item ${id === selectedFood ? 'selected' : ''}" data-food="${id}" aria-pressed="${id === selectedFood}" aria-label="${item.name}，成长气泡加${growthRewardAmount(item.love, needs.boostCount)}，亲密度加${formatAffection(item.love)}，活力加${item.energy}，${item.cost}猫爪币，冷却${foodDurationText(id)}"><span class="pantry-love"><span>成长 +${growthRewardAmount(item.love, needs.boostCount)}</span><span class="pantry-duration">◷${foodDurationText(id)}</span></span>${foodArt(id)}<strong>${item.name}</strong><span class="pantry-price">✦ ${item.cost}</span><span class="pantry-selected" aria-hidden="true">♥</span></button>`).join('')}</div>
     </section>
     <section id="food-pair-panel" role="tabpanel" aria-labelledby="food-pair-tab" ${tab === 'pair' ? '' : 'hidden'}>
       <div class="pair-intro"><strong>${completed ? '这一轮，你们的心意都到啦' : '一人一份，都是对小猫的偏爱'}</strong><span>${info.windowActive ? '每人的食物时间各自计算，记录会一直保留' : '首次喂养后，开启 4 小时双人小任务'}</span></div>
       <div class="feeders-grid">${pairSlots(info, clientId, members)}</div>
-      <p class="pair-bonus ${completed ? 'earned' : ''}">${completed ? '♥ 本轮双人喂养已完成' : pairCare.allowed ? '♥ 本轮两人各喂一次，额外获得 10 亲密度和成长气泡' : '♥ 今日双人奖励已达上限，本轮喂养仍可完成'}<small data-care-status="pair">${careStatusText('pair', pairCare)}</small></p>
+      <p class="pair-bonus ${completed ? 'earned' : ''}">${completed ? '♥ 本轮双人喂养已完成' : pairCare.allowed ? `♥ 本轮两人各喂一次，额外获得 ${formatAffection(FEEDING_BONUS)} 亲密度和 ${FEEDING_BONUS} 点成长气泡` : '♥ 今日双人奖励已达上限，本轮喂养仍可完成'}<small data-care-status="pair">${careStatusText('pair', pairCare)}</small></p>
     </section>
     <footer class="feeding-footer"><p class="feeding-care-status" data-care-status="feed">${careStatusText('feed', care)}</p><button class="serve-food" id="serve-food" ${serve.disabled ? 'disabled' : ''}>${serve.content}</button><p class="feeding-growth-hint">喂后点击爱心气泡，成长值才会入账<br/>${needs.boosted ? `已含状态 ×${needs.multiplier} 加成` : '当前基础成长 ×1.0'} · 双人额外奖励另计</p><div class="feeding-balance"><span>✦ ${state.coins.toLocaleString('en-US')} 猫爪币</span><details class="feeding-rules"><summary>喂养规则</summary><p class="feeding-care-rule">小窝共享${careRuleText('feed')} · 北京时间 0 点重置次数</p></details></div><small class="feeding-save-status" id="feeding-save-status" aria-live="polite"></small></footer>`;
 }

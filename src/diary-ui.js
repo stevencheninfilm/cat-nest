@@ -1,3 +1,4 @@
+import { affectionHistoryText } from './affection.js';
 import { COUPLE_ROLES } from './couple-profile.js';
 
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
@@ -24,7 +25,7 @@ export function diaryTimeline(history, { now = Date.now() } = {}) {
     return `<section class="diary-day" data-diary-date="${key}" aria-label="${key}的陪伴记录"><header class="diary-day-heading"><div><h3>${label}</h3><span>${caption}</span></div><small>${moments.length} 条记录</small></header><div class="diary-day-events">${moments.map(item => {
       const role = COUPLE_ROLES.find(profile => profile.name === item.actor)?.id || 'other';
       const time = new Date(item.at);
-      return `<article class="diary-event" data-diary-role="${role}"><time class="diary-time" datetime="${time.toISOString()}">${time.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' })}</time><span class="diary-marker" aria-hidden="true"></span><div class="diary-event-content"><b class="diary-actor">${escape(item.actor)}</b><p>${escape(item.text)}</p></div></article>`;
+      return `<article class="diary-event" data-diary-role="${role}"><time class="diary-time" datetime="${time.toISOString()}">${time.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' })}</time><span class="diary-marker" aria-hidden="true"></span><div class="diary-event-content"><b class="diary-actor">${escape(item.actor)}</b><p>${escape(affectionHistoryText(item.text))}</p></div></article>`;
     }).join('')}</div></section>`;
   }).join('')}</div>`;
 }
