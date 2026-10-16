@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
-import { CARE_LIMITS, FOODS, initialState, reduceAction } from '../src/state.js';
+import { CARE_LIMITS, FOODS, initialState, reduceAction, levelStartXp } from '../src/state.js';
+import { COLLECTION_CATS } from '../src/cat-collection.js';
 
 function mockGitHub() {
   const files = new Map();
@@ -154,13 +155,16 @@ test('concurrent invitations from two store instances keep one cat and one diary
 
 test('per-scene invitation receipts persist independently and prevent replay after journal rollover', async()=>{
   const mock=mockGitHub(),store=makeStore(mock,{now:()=>CARE_START}),room=await store.createRoom();
-  const file=mock.files.get(room.roomId);file.room.state.collection.stats.pet=5;file.sha='scene-invite-qualified-sha';
+  const file=mock.files.get(room.roomId),state=file.room.state;
+  state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);
+  state.collection.invited=COLLECTION_CATS.slice(1,11).map(cat=>({id:cat.id,at:CARE_START,operationId:`prior-garden-friend-${cat.id}`,actorId:'client-one'}));
+  file.sha='scene-invite-qualified-sha';
   const visit=(sceneId,id=`scene-invite-${sceneId}`)=>({...invite('bandit',id),action:{type:'invite-cat',catId:'bandit',sceneId}});
   const garden=await store.applyAction(room.roomId,visit('garden'));
-  assert.equal(garden.state.collection.invited.length,1);
+  assert.equal(garden.state.collection.invited.length,11);
   assert.equal(garden.state.collection.sceneInvited.length,1);
   const station=await store.applyAction(room.roomId,visit('station'));
-  assert.equal(station.state.collection.invited.length,1);
+  assert.equal(station.state.collection.invited.length,11);
   assert.equal(station.state.collection.sceneInvited.length,2);
   const stored=mock.files.get(room.roomId);stored.room.operations=[];stored.sha='scene-invite-rollover-sha';
   const restarted=makeStore(mock,{now:()=>CARE_START}),writes=mock.calls.filter(call=>call.method==='PUT').length;

@@ -93,11 +93,11 @@ test('locked red silhouettes and their detail explain diary progress and remain 
 });
 
 test('scene progress and selection use the same diary-card context as invitation rules',()=>{
-  const before=withCards(11);before.collection.invited=cohort.slice(0,4).map(receipt);
-  const after=withCards(12);after.collection.invited=structuredClone(before.collection.invited);
-  const western=CAT_SCENES.find(scene=>scene.id==='western'),events=createCollectionEvents(before);
-  assert.equal(collectionSceneProgress(western,before.collection,1,before.diary).current,3);
-  assert.equal(collectionScene('western',after.collection,1,after.diary).id,'western');
-  assert.equal(collectionSceneProgress(western,after.collection,1,after.diary).current,4);
-  assert.deepEqual(events.observe(after),[{type:'scene-unlocked',id:'western'}]);
+  const before=withCards(29);before.collection.invited=cohort.slice(0,10).map(receipt);
+  const after=withCards(30);after.collection.invited=structuredClone(before.collection.invited);
+  const garden=CAT_SCENES.find(scene=>scene.id==='garden'),events=createCollectionEvents(before);
+  assert.equal(collectionSceneProgress(garden,before.collection,1,before.diary).current,9);
+  assert.equal(collectionScene('garden',after.collection,1,after.diary).id,'garden');
+  assert.equal(collectionSceneProgress(garden,after.collection,1,after.diary).current,10);
+  assert.deepEqual(events.observe(after),[{type:'scene-unlocked',id:'garden'}]);
 });

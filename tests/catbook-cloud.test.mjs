@@ -13,23 +13,24 @@ const deferred=()=>{let resolve;const promise=new Promise(yes=>resolve=yes);retu
 const flush=async()=>{for(let i=0;i<25;i++)await Promise.resolve();};
 const seedInvites=(state,count)=>{state.collection.invited=COLLECTION_CATS.slice(0,count).map(cat=>({id:cat.id,at:Date.now(),operationId:`cloud-seed-${cat.id}`,actorId:actor.id}));return state;};
 const carouselReady=()=>{const state=seedInvites(initialState(),10);state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);return state;};
+const gardenReady=()=>{const base=seedInvites(initialState(),10);base.xp=levelStartXp(120);base.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};base.collection.foods=Object.keys(FOODS);return base;};
 
 test('inviting an already collected cat to another scene waits for confirmation and celebrates once',async t=>{
-  const base=seedInvites(initialState(),1),h=harness(t,base);await h.room.start();
+  const base=gardenReady(),h=harness(t,base);await h.room.start();
   h.room.dispatch({type:'invite-cat',catId:'bandit',sceneId:'garden'});
   assert.equal(h.display().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
   const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
-  assert.equal(h.confirmed().collection.invited.length,1);
+  assert.equal(h.confirmed().collection.invited.length,10);
   assert.equal(h.confirmed().collection.sceneInvited[0].sceneId,'garden');
   assert.deepEqual(h.notifications,[{type:'cat-arrived',id:'bandit',sceneId:'garden'}]);
 });
 
 test('a failed cross-scene invitation leaves the cat absent and never shows an arrival',async t=>{
-  const base=seedInvites(initialState(),1),h=harness(t,base);await h.room.start();
+  const base=gardenReady(),h=harness(t,base);await h.room.start();
   h.room.dispatch({type:'invite-cat',catId:'bandit',sceneId:'garden'});
   h.ack.resolve(response({error:{code:'STORAGE_WRITE_FAILED',message:'尚未确认保存'}},503));await flush();
   assert.equal(h.confirmed().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
-  assert.equal(h.confirmed().collection.invited.length,1);
+  assert.equal(h.confirmed().collection.invited.length,10);
 });
 
 test('invitation pagination advances and decreases once only after the cloud confirms, including repeated live receipts',async t=>{
@@ -138,22 +139,23 @@ test('an optimistic level crossing rejected by the cloud never unlocks the growt
 });
 
 test('a scene crossing in the optimistic preview waits for confirmed care, including existing cat receipts',async t=>{
-  const base=seedInvites(initialState(),12);base.xp=levelStartXp(39);
-  base.collection.stats={feed:30,pet:99,play:49,sleep:30,pair:95};base.collection.foods=Object.keys(FOODS);
+  const base=gardenReady();seedInvites(base,11);base.collection.invited=base.collection.invited.filter(record=>record.id!=='ginger');
+  base.collection.stats.play=49;
   const h=harness(t,base);await h.room.start();h.room.dispatch({type:'play'});
   assert.equal(h.display().collection.stats.play,50);assert.equal(h.confirmed().collection.stats.play,49);
   assert.deepEqual(h.notifications,[]);
   h.ack.resolve(response(h.accepted()));await flush();
-  assert.deepEqual(h.notifications,[{type:'scene-unlocked',id:'western'}]);
+  assert.deepEqual(h.notifications,[{type:'scene-unlocked',id:'garden'}]);
 });
 
-test('a confirmed fourth invitation produces one entrance followed by the scene reward',async t=>{
-  const base=seedInvites(initialState(),3);base.xp=levelStartXp(120);
+test('a confirmed fifteenth invitation produces one entrance followed by the scene reward',async t=>{
+  const base=seedInvites(initialState(),14);base.xp=levelStartXp(120);
   base.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};base.collection.foods=Object.keys(FOODS);
-  const h=harness(t,base);await h.room.start();h.room.dispatch({type:'invite-cat',catId:'callie'});
-  assert.equal(h.display().collection.invited.length,3);assert.deepEqual(h.notifications,[]);
+  base.collection.wins={rps:12,memory:12,gomoku:12};
+  const h=harness(t,base);await h.room.start();h.room.dispatch({type:'invite-cat',catId:'onyx'});
+  assert.equal(h.display().collection.invited.length,14);assert.deepEqual(h.notifications,[]);
   const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
-  assert.deepEqual(h.notifications,[{type:'cat-arrived',id:'callie'},{type:'scene-unlocked',id:'western'}]);
+  assert.deepEqual(h.notifications,[{type:'cat-arrived',id:'onyx'},{type:'scene-unlocked',id:'western'}]);
 });
 
 function twoDiaryCards() {

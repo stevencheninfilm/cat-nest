@@ -17,7 +17,7 @@ test('opening or reloading an existing save produces no retroactive unlocks or e
 });
 
 test('a new achievement produces one unlock, while an invitation produces a separate confirmed entrance',()=>{
-  const state=initialState(now);state.collection.stats.feed=29;
+  const state={...initialState(now),xp:levelStartXp(2)};state.collection.stats.feed=29;
   const events=createCollectionEvents(state);
   assert.deepEqual(events.observe(state),[]);
   state.collection.stats.feed=30;
@@ -34,16 +34,16 @@ test('rejected or pending requests without a changed snapshot never show success
   for(let update=0;update<4;update++) assert.deepEqual(events.observe(state),[]);
 });
 
-test('scene unlocks happen at four and eight confirmed invitations, after the new cat entrance',()=>{
+test('scene unlocks happen at 10, 15 and 20 confirmed invitations, after the new cat entrance',()=>{
   let state=completed();
-  for(const cat of COLLECTION_CATS.slice(0,3)) state=invite(state,cat.id);
-  const events=createCollectionEvents(state);
-  state=invite(state,'callie');
-  assert.deepEqual(events.observe(state),[{type:'cat-arrived',id:'callie'},{type:'scene-unlocked',id:'western'}]);
-  assert.deepEqual(events.observe(state),[]);
-  for(const cat of COLLECTION_CATS.slice(4,7)) {state=invite(state,cat.id);assert.deepEqual(events.observe(state),[{type:'cat-arrived',id:cat.id}]);}
-  state=invite(state,'gabriel');
-  assert.deepEqual(events.observe(state),[{type:'cat-arrived',id:'gabriel'},{type:'scene-unlocked',id:'snow'}]);
+  const events=createCollectionEvents(state),gates=new Map([[10,'garden'],[15,'western'],[20,'snow']]);
+  for(const [index,cat] of COLLECTION_CATS.slice(0,20).entries()) {
+    state=invite(state,cat.id);
+    const expected=[{type:'cat-arrived',id:cat.id}];
+    if(gates.has(index+1))expected.push({type:'scene-unlocked',id:gates.get(index+1)});
+    assert.deepEqual(events.observe(state),expected,`${index+1} confirmed friends`);
+    assert.deepEqual(events.observe(structuredClone(state)),[]);
+  }
 });
 
 test('one shared update may add several cats and scenes without duplicate achievement notices',()=>{
@@ -52,7 +52,7 @@ test('one shared update may add several cats and scenes without duplicate achiev
   for(const cat of COLLECTION_CATS) next=invite(next,cat.id) || next;
   const batch=events.observe(next);
   assert.equal(batch.filter(event=>event.type==='cat-arrived').length,next.collection.invited.length);
-  assert.deepEqual(batch.filter(event=>event.type==='scene-unlocked').map(event=>event.id),['western','snow']);
+  assert.deepEqual(batch.filter(event=>event.type==='scene-unlocked').map(event=>event.id),['garden','western','snow']);
   assert.equal(batch.filter(event=>event.type==='cat-unlocked').length,0);
   assert.deepEqual(events.observe(next),[]);
 });
@@ -68,13 +68,14 @@ test('older snapshots followed by reconnects do not replay already observed cele
 
 test('old owned cats only unlock a new scene when enough increased achievements are really met',()=>{
   let state=completed();for(const cat of COLLECTION_CATS) state=invite(state,cat.id) || state;
-  state.collection.stats={feed:30,pet:99,play:49,sleep:30,pair:95};state.collection.wins={rps:0,memory:0,gomoku:0};state.collection.invited=state.collection.invited.slice(0,12);
-  state.xp=levelStartXp(39);
+  state.collection.invited=state.collection.invited.slice(0,20);
+  state.collection.stats.play=299;state.collection.wins={rps:11,memory:11,gomoku:11};
+  state.collection.achievements.boost=2;state.collection.achievements.daily.play=9;
   const events=createCollectionEvents(state);
   assert.deepEqual(events.observe(state),[]);
-  state.collection.stats.play=50;
+  state.collection.stats.play=300;
   assert.deepEqual(events.observe(state),[{type:'scene-unlocked',id:'western'}]);
-  state.collection.stats.feed=180;state.collection.stats.pet=600;state.collection.stats.play=300;state.collection.stats.pair=96;state.xp=levelStartXp(120);
+  state.collection.wins={rps:12,memory:12,gomoku:12};state.collection.achievements.boost=3;state.collection.achievements.daily.play=10;
   assert.deepEqual(events.observe(state).filter(event=>event.type==='scene-unlocked'),[{type:'scene-unlocked',id:'snow'}]);
   assert.deepEqual(events.observe(structuredClone(state)),[]);
 });

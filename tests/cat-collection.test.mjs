@@ -204,10 +204,12 @@ test('the scene contains exactly the invited cats and requires enough invited ca
   assert.match(full,/data-scene-id="snow"/);
   assert.doesNotMatch(full,/data-book-scene="(?:western|snow)"[^>]*disabled/);
   const atCount=count=>({...state.collection,invited:state.collection.invited.slice(0,count)});
-  assert.equal(collectionScene('western',atCount(3),120).id,'station');
-  assert.equal(collectionScene('western',atCount(4),120).id,'western');
-  assert.equal(collectionScene('snow',atCount(7),120).id,'station');
-  assert.equal(collectionScene('snow',atCount(8),120).id,'snow');
+  assert.equal(collectionScene('garden',atCount(9),120).id,'station');
+  assert.equal(collectionScene('garden',atCount(10),120).id,'garden');
+  assert.equal(collectionScene('western',atCount(14),120).id,'station');
+  assert.equal(collectionScene('western',atCount(15),120).id,'western');
+  assert.equal(collectionScene('snow',atCount(19),120).id,'station');
+  assert.equal(collectionScene('snow',atCount(20),120).id,'snow');
   assert.equal(collectionScene('fake',atCount(12),120).id,'station');
   state.collection.stats={feed:30,pet:99,play:50,sleep:6,pair:12};state.xp=levelStartXp(15);state.collection.wins={rps:0,memory:0,gomoku:0};state.collection.invited=state.collection.invited.slice(0,12);
   assert.equal(collectionScene('western',state.collection,15).id,'station','old receipts cannot bypass the increased scene goals');
@@ -215,8 +217,9 @@ test('the scene contains exactly the invited cats and requires enough invited ca
   assert.equal(collectionScene('snow',state.collection,15).id,'station');
   const legacy=catbookMarkup(state,{sceneId:'snow'});
   assert.match(legacy,/data-scene-id="station"/);
-  assert.match(legacy,/4 位已入住猫友达成进阶陪伴成就（3 \/ 4）/);
-  assert.match(legacy,/8 位已入住猫友达成进阶陪伴成就（3 \/ 8）/);
+  assert.match(legacy,/10 位已入住猫友达成进阶陪伴成就（3 \/ 10）/);
+  assert.match(legacy,/15 位已入住猫友达成进阶陪伴成就（3 \/ 15）/);
+  assert.match(legacy,/20 位已入住猫友达成进阶陪伴成就（3 \/ 20）/);
   assert.equal((legacy.match(/class="book-yard-cat\b/g)||[]).length,12,'all previously owned cats remain in the garden');
 });
 
