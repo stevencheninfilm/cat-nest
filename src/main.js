@@ -250,9 +250,9 @@ function render() {
   $('#pet-name').textContent = state.name;
   $('#catbook-nav-count').textContent = state.collection.invited.length;
   $('#catbook-nav-count').hidden = state.collection.invited.length === 0;
-  $('#cat').setAttribute('aria-label', `和${state.name}互动`);
+  $('#cat').setAttribute('aria-label', state.sleeping ? `轻轻叫醒${state.name}` : `摸摸${state.name}`);
   if (companion.active) $('#cat').removeAttribute('title');
-  else $('#cat').title = state.sleeping?'轻点叫醒猫猫':homeCat?.rotating?'左右滑动，转着看看':'轻点摸摸，按住滑动抚摸猫猫';
+  else $('#cat').title = state.sleeping?'点击叫醒 · 滑动旋转':'点击摸摸 · 滑动旋转';
   $('.kitten').alt = `坐在暖暖房间里的橘色小猫${state.name}`;
   $('#xp').textContent = `${level.progress} / ${level.target}`;
   $('#xp-bar').style.width = `${level.progress / level.target * 100}%`;
@@ -826,7 +826,7 @@ async function initializeCatModel() {
   };
   try {
     const [{ createCatModel },{ createLifePropStage }] = await Promise.all([import('./cat-model.js'),import('./nest-life-props.js')]);
-    catModel = createCatModel({ container: $('#cat'), assetBase:modelAssetBase, clock:()=>nestLife.now(), canRotate:()=>Boolean(homeCat?.rotating), reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, onBehaviorChange:renderCatBehavior,
+    catModel = createCatModel({ container: $('#cat'), assetBase:modelAssetBase, clock:()=>nestLife.now(), canRotate:()=>Boolean(roleEntered&&homeCat?.canRotate&&!actionLocked&&!$('#modal').open), reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, onBehaviorChange:renderCatBehavior,
       decorateScene:createLifePropStage,
       onReady() { catModelPhase='ready'; renderHomeLoading(); $('#retry-cat-model').hidden=true; queueMicrotask(() => { catModel?.setState(state); updateModelPause(); }); },
       onError:failed,

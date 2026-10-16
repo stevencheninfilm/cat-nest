@@ -1,6 +1,4 @@
-.home-cat-controls{position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:2px;padding:3px;border:1px solid #fff8e6b3;border-radius:20px;background:#fff5e386;backdrop-filter:blur(14px);white-space:nowrap;box-shadow:0 3px 12px #825a3320}
-.home-cat-controls button{padding:4px 8px;border-radius:16px;background:transparent;font-size:8px;font-weight:700;color:#956c4d;min-height:23px}
-.home-cat-controls button[aria-pressed=true]{background:#fff8e7c9;color:#795235}
+.home-cat-hint{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:7;margin:0;color:#795b40;font-size:9px;line-height:18px;letter-spacing:.4px;white-space:nowrap;text-shadow:0 1px 5px #fff7df;pointer-events:none;user-select:none}
 .cat-rhythm.home-cat-play{left:7%;right:auto}
 .cat-rhythm.home-cat-play::after{left:auto;right:1px;box-shadow:5px 6px 0 -2px #ffffff65}
 .home-cat-play .action-portrait{width:36px;height:36px;clip-path:inset(1px)}
@@ -9,8 +7,8 @@
 .home-cat-play-lock{position:absolute;right:-2px;bottom:-1px;display:grid;place-items:center;width:17px;height:17px;border:1px solid #fff7e6;border-radius:50%;background:#f8e9d8d9;box-shadow:0 2px 5px #79533420;color:#a28668}
 .home-cat-play-lock svg{width:11px;height:11px}
 .nest .cat-button.has-cat-model::after{display:none}
-.nest[data-home-cat-mode=pet] .cat-button{touch-action:none;cursor:pointer}
-.nest[data-home-cat-mode=pet] .cat-button.is-being-stroked{cursor:grabbing;filter:drop-shadow(0 0 10px #ffedb475)}
+.nest .cat-button{touch-action:none}
+.nest .cat-button.is-rotating{cursor:grabbing}
 .home-cat-choices{position:absolute;top:5%;left:50%;transform:translateX(-50%);width:min(260px,90%);z-index:9;padding:10px;border:1px solid #fff9edcc;border-radius:23px;background:linear-gradient(135deg,#fff9e9b8,#f9e4d387);box-shadow:0 8px 30px #85593424,inset 0 1px #fff9;backdrop-filter:blur(20px)}
 .home-cat-choices::after{content:'';position:absolute;bottom:-6px;left:47%;width:11px;height:11px;transform:rotate(45deg);background:#f9ead9b8;border-right:1px solid #fff9edcc;border-bottom:1px solid #fff9edcc}
 .home-cat-choices>div{display:flex;align-items:center;justify-content:space-between;padding:0 3px 7px;font-size:10px;font-weight:700}
@@ -20,12 +18,12 @@
 .home-cat-choices nav span{font-size:25px;line-height:1.3}.home-cat-choices nav strong{font-size:10px}.home-cat-choices nav small{font-size:8px;opacity:.75}
 .home-cat-choices[hidden],.home-cat-session[hidden]{display:none}
 .nest.home-cat-choosing #speech{visibility:hidden}
-.nest.is-companion .home-cat-controls,.nest.is-companion .home-cat-choices,.nest.feeding-open .home-cat-controls{display:none}
+.nest.is-companion .home-cat-hint,.nest.is-companion .home-cat-choices,.nest.feeding-open .home-cat-hint,.nest.cat-preview-open .home-cat-hint{display:none}
 
 /* The game layer shares the room and its existing 3D cat. */
 .nest.home-playing :is(.side-actions,.wallet,.together,.partner-update,.pet-card,.feeding-preview,.feed-button,.bottom-nav,.growth-rewards,#cat-rhythm,.connection-note){visibility:hidden;pointer-events:none}
 .nest.home-playing .topbar{opacity:.5;pointer-events:none}
-.nest.home-playing .home-cat-controls,.nest.home-playing .home-cat-play,.nest.home-playing #speech,.nest.home-playing .cat-shadow{display:none}
+.nest.home-playing .home-cat-hint,.nest.home-playing .home-cat-play,.nest.home-playing #speech,.nest.home-playing .cat-shadow{display:none}
 .nest.home-playing:not(.is-companion):not(.feeding-open)>.scene{top:24%;left:8%;right:8%;height:48%}
 .nest.home-playing .cat-button{height:100%;pointer-events:none;transform-origin:50% 70%;transition:transform .16s ease-out}
 .home-cat-session,.home-cat-stage,.home-cat-session .touch-game-scene{position:absolute;inset:0;pointer-events:none}
@@ -58,6 +56,6 @@
 .toy-guide-board button{position:relative;aspect-ratio:1.2;min-width:0;padding:0;border-radius:16px;background:#eadbc9;overflow:hidden}.toy-guide-board button:disabled{opacity:1!important}.toy-guide-board button>small{position:absolute;bottom:3px;left:0;right:0;font-size:9px;color:#95795c}.toy-guide-board .is-revealed{box-shadow:inset 0 0 0 2px #c5b179,0 0 12px #fff0af99}.toy-guide-board .is-revealed .touch-pillow{transform:translateY(-85%);opacity:.18}.toy-guide-board .is-revealed .touch-hidden-fish{opacity:1;transform:scale(1)}.toy-guide-board .is-empty .touch-pillow{opacity:.3;transform:rotate(-9deg)}
 .toy-guide-primary,.toy-guide-skip{display:block;width:100%;border-radius:20px;padding:10px 7px;font-size:12px;font-weight:800}.toy-guide-primary{background:linear-gradient(#ffe5a1,#f6c772);border:1px solid #fff8df;color:#805529}.toy-guide-skip{background:transparent;font-size:10px;font-weight:600;padding:8px 5px 0;color:#9a7c5d}
 .home-cat-playing .demo-launcher{display:none}
-@media(max-width:360px){.home-cat-controls button{padding-inline:6px}.home-cat-choices{width:235px}.home-cat-choices nav strong{font-size:9px}.home-cat-session .touch-hide-room{left:13%;right:13%}}
+@media(max-width:360px){.home-cat-choices{width:235px}.home-cat-choices nav strong{font-size:9px}.home-cat-session .touch-hide-room{left:13%;right:13%}}
 @media(max-width:360px){.cat-rhythm.home-cat-play{left:11%;right:auto}}
 @media(prefers-reduced-motion:reduce){.nest.home-playing .cat-button{transition:none}}

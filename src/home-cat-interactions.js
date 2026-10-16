@@ -2,16 +2,15 @@ import { createArcadeController } from './minigames-arcade-client.js';
 import { TOUCH_GAMES, TOUCH_INFO, touchPoint, CAT_PLAY_UNLOCK_LEVEL, catPlayUnlocked } from './minigames-touch-rules.js';
 import { touchSurfaceMarkup, toyGuideMarkup } from './minigames-touch-ui.js';
 import { arcadeCountdownMarkup } from './minigames-arcade-ui.js';
-import { createCatStroke } from './home-cat-gestures.js';
+import { bindCatGestures } from './home-cat-gestures.js';
 import { catActionPortrait } from './cat-actions.js';
 import { levelInfo } from './state.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,getModel,canInteract,isCompanion,isSaving,isConnected,getSaveStatus,storage,dispatch,onPet,onVisual,onClaim,onOpen,onRestore,toast}){
-  let mode='pet',pending=null,session=null,tutorial=null,stamp='',readyRequested=false,lastScore=0,lastPoint='',lastMotion=0,suppressClickUntil=0,destroyed=false,accessKey='';
-  const stroke=createCatStroke(),disposers=[],inertBefore=new Map();
-  const controls=document.createElement('div');controls.className='home-cat-controls';controls.setAttribute('aria-label','直接和猫猫互动');
-  controls.innerHTML='<button data-home-cat-mode="pet" aria-pressed="true">摸摸</button><button data-home-cat-mode="rotate" aria-pressed="false">转着看</button>';scene.append(controls);
+  let pending=null,session=null,tutorial=null,stamp='',readyRequested=false,lastScore=0,lastPoint='',lastMotion=0,destroyed=false,accessKey='';
+  const disposers=[],inertBefore=new Map();
+  const hint=document.createElement('p');hint.className='home-cat-hint';hint.textContent='点击摸摸 · 滑动旋转';hint.setAttribute('aria-hidden','true');scene.append(hint);
   const entry=document.createElement('button');entry.type='button';entry.id='cat-play';entry.className='cat-rhythm home-cat-play';entry.setAttribute('aria-expanded','false');entry.setAttribute('aria-controls','home-cat-choices');scene.append(entry);
   const choices=document.createElement('div');choices.id='home-cat-choices';choices.className='home-cat-choices';choices.hidden=true;choices.setAttribute('role','group');choices.setAttribute('aria-label','在小窝陪猫猫玩');scene.append(choices);
   const stage=document.createElement('section');stage.className='home-cat-session';stage.hidden=true;stage.setAttribute('aria-label','在小窝和猫猫玩');nest.append(stage);
@@ -32,7 +31,6 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
     choices.hidden=false;nest.classList.add('home-cat-choosing');entry.setAttribute('aria-expanded','true');onOpen();
   }
   function closeChoices(){choices.hidden=true;nest.classList.remove('home-cat-choosing');entry.setAttribute('aria-expanded','false');}
-  function setMode(next){mode=next==='rotate'?'rotate':'pet';stroke.cancel();getModel()?.consumeTap();nest.dataset.homeCatMode=mode;cat.title=mode==='rotate'?'左右滑动，转着看看':getState().sleeping?'轻点叫醒猫猫':'轻点摸摸，按住滑动抚摸猫猫';controls.querySelectorAll('[data-home-cat-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.homeCatMode===mode)));closeChoices();}
   function quietHome(value){
     nest.classList.toggle('home-playing',value);document.body.classList.toggle('home-cat-playing',value);
     const elements=nest.querySelectorAll('.side-actions,.wallet,.together,.partner-update,.pet-card,.feeding-preview,.feed-button,.bottom-nav,.topbar,.growth-rewards,#cat-rhythm');
@@ -73,6 +71,7 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
   }
   function sync(){
     if(destroyed)return;
+    hint.textContent=getState().sleeping?'点击叫醒 · 滑动旋转':'点击摸摸 · 滑动旋转';
     renderAccess();
     const m=match();
     if(pending){
@@ -97,19 +96,12 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
     }
     controller.sync();
   }
-  function pet(){if(canInteract())onPet();}
-  listen(cat,'pointerdown',event=>{if(mode!=='pet'||session||pending||tutorial||!canInteract()||event.button!==0)return;if(stroke.begin({id:event.pointerId,x:event.clientX,y:event.clientY,at:performance.now(),primary:event.isPrimary!==false})){cat.setPointerCapture?.(event.pointerId);closeChoices();}});
-  listen(cat,'pointermove',event=>{if(mode!=='pet'||session)return;const value=stroke.move({id:event.pointerId,x:event.clientX,y:event.clientY});if(value?.distance>8){event.preventDefault();cat.classList.add('is-being-stroked');}},{passive:false});
-  const endStroke=event=>{const result=stroke.end({id:event.pointerId,at:performance.now(),cancelled:event.type==='pointercancel'});cat.classList.remove('is-being-stroked');if(result?.moved){suppressClickUntil=performance.now()+500;if(result.stroke)pet();}};
-  listen(cat,'pointerup',endStroke);listen(cat,'pointercancel',endStroke);
-  listen(cat,'click',event=>{event.stopPropagation();if(session||pending||tutorial)return;if(event.detail!==0&&(performance.now()<suppressClickUntil||getModel()?.consumeTap()))return;pet();},true);
-  listen(controls,'click',event=>{const b=event.target.closest('button');if(b?.dataset.homeCatMode)setMode(b.dataset.homeCatMode);});
+  disposers.push(bindCatGestures({cat,canInteract:()=>!session&&!pending&&!tutorial&&canInteract(),onTap:onPet,onStart:closeChoices,consumeModelTap:()=>getModel()?.consumeTap()}));
   listen(entry,'click',()=>{if(choices.hidden)showChoices();else closeChoices();});
   listen(choices,'click',event=>{const b=event.target.closest('button');if(b?.dataset.homeCatGame)start(b.dataset.homeCatGame);else if(b?.hasAttribute('data-home-cat-menu-close'))closeChoices();});
   listen(stage,'click',event=>{const b=event.target.closest('button');if(!b||b.disabled)return;if(b.hasAttribute('data-home-cat-leave'))reset();else if(tutorial&&b.hasAttribute('data-toy-guide-cover')){tutorial={phase:'find',wrong:null};drawTutorial();}else if(tutorial&&tutorial.phase==='find'&&b.dataset.toyGuideCell!==undefined){const cell=Number(b.dataset.toyGuideCell);tutorial=cell===1?{phase:'done',wrong:null}:{phase:'find',wrong:cell};if(cell===1)onVisual('pet');drawTutorial();}else if(tutorial&&b.hasAttribute('data-toy-guide-start'))start('hide-toy',true);else if(b.hasAttribute('data-home-cat-claim')){const reward=getState().pendingGrowth.find(r=>r.id===`game:${session?.id}`);if(reward&&onClaim(reward.id,b))reset();}else if(b.hasAttribute('data-home-cat-end')&&session&&!isSaving()){if(!dispatch({type:'game-cancel',gameId:session.id}))toast('正在保存操作，稍等一下再结束。');}});
-  listen(document,'pointerdown',event=>{if(!event.target.closest('.home-cat-choices,.home-cat-controls,#cat,#cat-play'))closeChoices();});
+  listen(document,'pointerdown',event=>{if(!event.target.closest('.home-cat-choices,#cat,#cat-play'))closeChoices();});
   listen(document,'keydown',event=>{if(event.key==='Escape'&&!choices.hidden){event.preventDefault();closeChoices();}});
-  listen(window,'blur',()=>{stroke.cancel();cat.classList.remove('is-being-stroked');});
-  setMode('pet');renderAccess();
-  return {sync,start,closeChoices,serverTime:controller.serverTime,get rotating(){return mode==='rotate'&&!session&&!pending&&!tutorial;},get active(){return Boolean(session||pending||tutorial);},dismiss(){if(pending||session||tutorial)reset();else closeChoices();},destroy(){destroyed=true;reset();for(const d of disposers)d();controls.remove();entry.remove();choices.remove();stage.remove();}};
+  renderAccess();
+  return {sync,start,closeChoices,serverTime:controller.serverTime,get canRotate(){return !destroyed&&!session&&!pending&&!tutorial;},get active(){return Boolean(session||pending||tutorial);},dismiss(){if(pending||session||tutorial)reset();else closeChoices();},destroy(){destroyed=true;reset();for(const d of disposers)d();hint.remove();entry.remove();choices.remove();stage.remove();}};
 }
