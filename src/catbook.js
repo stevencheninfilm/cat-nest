@@ -1,7 +1,7 @@
 import { catbookMarkup, collectionScene, catArrivalMarkup, collectionNoticeMarkup } from './catbook-ui.js';
 import { canInviteCat, getCollectionCat } from './cat-collection.js';
-import { sceneCatPlacement, catArrivalScene } from './catbook-scenes.js';
-import { createCollectionEvents, catArrivalRoute, CAT_ARRIVAL_MS } from './catbook-events.js';
+import { sceneCatPlacement, catArrivalScene, sceneAllowsCat } from './catbook-scenes.js';
+import { createCollectionEvents, sceneInvitationNotice, catArrivalRoute, CAT_ARRIVAL_MS } from './catbook-events.js';
 import { createYardCamera, isYardPan } from './catbook-camera.js';
 import { levelInfo } from './state.js';
 import { createCatDialogue, catSpeechMarkup, CAT_DIALOGUE_PAIRS } from './catbook-dialogue.js';
@@ -10,6 +10,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   let tab='book', catId='bandit', sceneId=initialScene, panel=null, detailOrigin=null;
   let trigger=null, drag=null, yardTap=null, petTap=null, blockCatClickUntil=0;
   let presentation=null, ownInvitation=null, ownInvitationSaving=false, sceneRevealAt=0;
+  let invitationNotice=null, invitationNoticeRequested=false, invitationNoticeAt=0;
   const events=createCollectionEvents(getState()), rewards=[];
   const dialogue=createCatDialogue();
   const walkingImage=new Image();
@@ -52,6 +53,12 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     if (previousSheet) sheetScroll.set(previousSheet.dataset.bookSheet,previousSheet.querySelector('.book-sheet-scroll').scrollTop);
     sceneId=collectionScene(sceneId,state.collection,levelInfo(state.xp).level,state.diary).id;
     startPresentation();
+    if(invitationNoticeRequested || invitationNotice) {
+      const next=sceneInvitationNotice(state,sceneId);
+      if(next && (invitationNoticeRequested || next.id!==invitationNotice?.id || next.sceneId!==invitationNotice?.sceneId)) invitationNoticeAt=performance.now();
+      invitationNotice=next;
+    }
+    invitationNoticeRequested=false;
     const age=presentation ? performance.now()-presentation.startedAt : 0;
     const arriving=presentation?.event.type === 'cat-arrived';
     const walking=arriving && age < presentation.travelMs;
@@ -74,10 +81,11 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     } else if (restore) {
       (findToken(container,trigger) || container.querySelector('[data-catbook-back]'))?.focus({ preventScroll:true });
     } else findToken(container,focus)?.focus({ preventScroll:true });
-    if(presentation && !presentation.dismissed) {
+    const notice=presentation && !presentation.dismissed ? presentation.event : !panel && !presentation ? invitationNotice : null;
+    if(notice) {
       const layer=document.createElement('div');
       layer.className=`book-reward-layer${panel ? ' in-sheet' : ''}`;
-      layer.innerHTML=collectionNoticeMarkup(presentation.event,{sceneId,settled:arriving && !walking,age});
+      layer.innerHTML=collectionNoticeMarkup(notice,{sceneId,settled:arriving && !walking,age:presentation ? age : performance.now()-invitationNoticeAt});
       if(panel) container.querySelector('dialog[open] .book-sheet-header').after(layer);
       else container.querySelector('.catbook').append(layer);
     }
@@ -89,6 +97,11 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   }
   function startPresentation() {
     if(presentation || document.hidden) return;
+    const state=getState(),current=collectionScene(sceneId,state.collection,levelInfo(state.xp).level,state.diary);
+    // A newly achieved cat in another map is advertised when that map is entered.
+    for(let index=rewards.length-1;index>=0;index--) {
+      if(rewards[index].type === 'cat-unlocked' && !sceneAllowsCat(current,getCollectionCat(rewards[index].id))) rewards.splice(index,1);
+    }
     const index=rewards.findIndex(event=>!panel || event.type !== 'cat-arrived');
     if(index<0) return;
     const event=rewards.splice(index,1)[0];
@@ -96,7 +109,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
       const state=getState(), current=collectionScene(event.sceneId || 'station',state.collection,levelInfo(state.xp).level,state.diary);
       const destination=catArrivalScene(current,getCollectionCat(event.id));
       if(destination.id !== sceneId) {
-        dialogue.clear();sceneId=destination.id;sceneRevealAt=performance.now();onSceneChange?.(sceneId);
+        dialogue.clear();sceneId=destination.id;invitationNoticeRequested=true;sceneRevealAt=performance.now();onSceneChange?.(sceneId);
       }
     }
     const travelMs=event.type === 'cat-arrived' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches ? CAT_ARRIVAL_MS : 0;
@@ -204,18 +217,21 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     const button=event.target.closest('button');
     if (!button || !container.contains(button) || button.disabled) return;
     if(button.hasAttribute('data-book-reward-dismiss')) {
+      invitationNotice=null;
       if(presentation?.event.type === 'cat-arrived') presentation.dismissed=true;
       else stopPresentation();
       render();return;
     }
     if(button.dataset.bookRewardCat) {
+      if(button.dataset.bookRewardInviteScene && button.dataset.bookRewardInviteScene!==sceneId) return;
       const id=button.dataset.bookRewardCat;
+      invitationNotice=null;
       stopPresentation();catId=id;detailOrigin=panel === 'catalog' ? 'catalog' : null;
       trigger={key:'bookOpen',value:'catalog',page:'book',origin:'menu'};
       panel='detail';sheetScroll.set('detail',0);render({heading:true});return;
     }
     if(button.dataset.bookRewardScene) {
-      dialogue.clear();sceneId=button.dataset.bookRewardScene;stopPresentation();sceneRevealAt=performance.now();
+      dialogue.clear();sceneId=button.dataset.bookRewardScene;invitationNoticeRequested=true;stopPresentation();sceneRevealAt=performance.now();
       onSceneChange?.(sceneId);dismiss();return;
     }
     if (button.dataset.bookCat && button.closest('.book-yard-camera') && event.detail > 0 && Date.now() < blockCatClickUntil) return;
@@ -239,7 +255,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
       return;
     }
     if (button.dataset.bookScene) {
-      dialogue.clear();stopPresentation();sceneId=button.dataset.bookScene;sceneRevealAt=performance.now(); onSceneChange?.(sceneId); dismiss(); return;
+      dialogue.clear();stopPresentation();sceneId=button.dataset.bookScene;invitationNoticeRequested=true;sceneRevealAt=performance.now(); onSceneChange?.(sceneId); dismiss(); return;
     }
     if (button.dataset.bookInvite) {
       const state=getState(), availability=getAvailability();
@@ -313,5 +329,5 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   if(typeof ResizeObserver !== 'undefined') new ResizeObserver(resizeCamera).observe(container);
   else window.addEventListener('resize',resizeCamera);
   document.addEventListener('visibilitychange',()=>{if(document.hidden) stopPresentation({pauseAll:true});else if(!container.hidden) render();});
-  return { render, open() { if(!walkingImage.src) walkingImage.src=new URL('../public/assets/catbook/walking-cats.png',import.meta.url).href; if(!gameWalkingImage.src) gameWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/game-walking-v1.png`; if(!achievementWalkingImage.src) achievementWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/achievement-walking-v1.png`; if(!referenceWalkingImage.src) referenceWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/reference-walking-v1.png`; panel=null; detailOrigin=null; container.hidden=false; render(); container.querySelector('[data-catbook-back]').focus({preventScroll:true}); }, close() { dialogue.clear(); cancelPetTap(); stopPresentation({pause:true}); panel=null; container.querySelector('dialog[open]')?.close(); container.hidden=true; } };
+  return { render, open() { if(!walkingImage.src) walkingImage.src=new URL('../public/assets/catbook/walking-cats.png',import.meta.url).href; if(!gameWalkingImage.src) gameWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/game-walking-v1.png`; if(!achievementWalkingImage.src) achievementWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/achievement-walking-v1.png`; if(!referenceWalkingImage.src) referenceWalkingImage.src=`${import.meta.env?.BASE_URL || './'}assets/catbook/reference-walking-v1.png`; panel=null; detailOrigin=null; invitationNoticeRequested=true; container.hidden=false; render(); container.querySelector('[data-catbook-back]').focus({preventScroll:true}); }, close() { dialogue.clear(); cancelPetTap(); stopPresentation({pause:true}); panel=null; container.querySelector('dialog[open]')?.close(); container.hidden=true; } };
 }

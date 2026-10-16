@@ -40,14 +40,14 @@ export function catArrivalMarkup(cat,direction) {
   return `<div class="book-arrival" data-arriving-cat="${cat.id}" aria-hidden="true"><div class="book-arrival-facing" style="--walk-direction:${direction};--walking-baseline:${baseline}%"><span class="book-walking-cat" style="${walk.texture ? `background-image:url('${asset(walk.texture)}');` : ''}aspect-ratio:${walk.ratio};background-size:${walk.backgroundSize};--walk-a:${walk.a};--walk-b:${walk.b}"></span></div></div>`;
 }
 export function collectionNoticeMarkup(event,{sceneId=DEFAULT_CAT_SCENE,settled=false,age=0}={}) {
-  const currentScene=CAT_SCENES.find(scene=>scene.id===(event.type === 'scene-unlocked' ? event.id : sceneId)) || CAT_SCENES[0];
+  const currentScene=CAT_SCENES.find(scene=>scene.id===(event.type === 'scene-unlocked' ? event.id : event.sceneId || sceneId)) || CAT_SCENES[0];
   const cat=getCollectionCat(event.id);
-  const arrived=event.type === 'cat-arrived', unlocked=event.type === 'cat-unlocked';
+  const arrived=event.type === 'cat-arrived', reminder=event.type === 'scene-invite-ready', unlocked=event.type === 'cat-unlocked' || reminder;
   const scene=arrived && cat ? catArrivalScene(currentScene,cat) : currentScene;
   const title=cat ? arrived ? `欢迎${cat.name}来到${scene.name}` : `${cat.name}可以邀请啦！` : `新场景解锁 · ${scene.name}`;
-  const description=cat ? arrived ? settled ? `已经在${sceneCatPlacement(scene,cat).surface}安顿好啦 ♡` : '正在寻找自己的小角落…' : `达成「${cat.achievement}」，新朋友正等着你` : `${scene.min} 位猫友的进阶陪伴成就已达成，去逛逛吧`;
-  const action=unlocked ? `<button data-book-reward-cat="${cat.id}">去邀请 ${bookIcon('paw')}</button>` : !cat ? `<button data-book-reward-scene="${scene.id}">去看看 ${bookIcon(scene.icon)}</button>` : '';
-  const art=cat ? catSprite(cat,unlocked ? 'undiscovered' : '') : `<img src="${asset(scene.asset || scene.id)}" alt=""/>`;
+  const description=cat ? arrived ? settled ? `已经在${sceneCatPlacement(scene,cat).surface}安顿好啦 ♡` : '正在寻找自己的小角落…' : reminder ? event.collected ? `老朋友还没来过${scene.name}，邀请它来做客吧` : `达成「${cat.achievement}」，正等你邀请到${scene.name}` : `达成「${cat.achievement}」，新朋友正等着你` : `${scene.min} 位猫友的进阶陪伴成就已达成，去逛逛吧`;
+  const action=unlocked ? `<button data-book-reward-cat="${cat.id}"${reminder ? ` data-book-reward-invite-scene="${scene.id}"` : ''}>去邀请 ${bookIcon('paw')}</button>` : !cat ? `<button data-book-reward-scene="${scene.id}">去看看 ${bookIcon(scene.icon)}</button>` : '';
+  const art=cat ? catSprite(cat,unlocked && !event.collected ? 'undiscovered' : '') : `<img src="${asset(scene.asset || scene.id)}" alt=""/>`;
   return `<section class="book-reward" aria-label="${arrived ? '新猫猫入场' : '解锁提示'}" style="--reward-age:${-age}ms"><span class="book-reward-art ${cat ? '' : 'is-scene'}">${art}<span class="book-reward-sparkles" aria-hidden="true">${Array.from({length:6},(_,i)=>`<i style="--spark:${i}">✦</i>`).join('')}</span></span><div class="book-reward-copy"><div role="status" aria-live="polite" aria-atomic="true"><small>${arrived ? '新的相遇' : '陪伴的礼物'}</small><strong>${title}</strong><p>${description}</p></div>${action}</div><button class="book-reward-close" data-book-reward-dismiss aria-label="关闭解锁提示">${bookIcon('close')}</button></section>`;
 }
 const dailyLabels={feed:'喂食',pet:'摸摸',play:'逗猫',sleep:'陪小猫入睡'};
