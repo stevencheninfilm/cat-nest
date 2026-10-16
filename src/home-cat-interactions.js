@@ -10,7 +10,6 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,getModel,canInteract,isCompanion,isSaving,isConnected,getSaveStatus,storage,dispatch,onPet,onVisual,onClaim,onOpen,onRestore,toast}){
   let pending=null,session=null,tutorial=null,stamp='',readyRequested=false,lastScore=0,lastPoint='',lastMotion=0,destroyed=false,accessKey='';
   const disposers=[],inertBefore=new Map();
-  const hint=document.createElement('p');hint.className='home-cat-hint';hint.textContent='点击摸摸 · 滑动旋转';hint.setAttribute('aria-hidden','true');scene.append(hint);
   const entry=document.createElement('button');entry.type='button';entry.id='cat-play';entry.className='cat-rhythm home-cat-play';entry.setAttribute('aria-expanded','false');entry.setAttribute('aria-controls','home-cat-choices');scene.append(entry);
   const choices=document.createElement('div');choices.id='home-cat-choices';choices.className='home-cat-choices';choices.hidden=true;choices.setAttribute('role','group');choices.setAttribute('aria-label','在小窝陪猫猫玩');scene.append(choices);
   const stage=document.createElement('section');stage.className='home-cat-session';stage.hidden=true;stage.setAttribute('aria-label','在小窝和猫猫玩');nest.append(stage);
@@ -71,7 +70,6 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
   }
   function sync(){
     if(destroyed)return;
-    hint.textContent=getState().sleeping?'点击叫醒 · 滑动旋转':'点击摸摸 · 滑动旋转';
     renderAccess();
     const m=match();
     if(pending){
@@ -103,5 +101,5 @@ export function createHomeCatInteractions({nest,scene,cat,getState,getClientId,g
   listen(document,'pointerdown',event=>{if(!event.target.closest('.home-cat-choices,#cat,#cat-play'))closeChoices();});
   listen(document,'keydown',event=>{if(event.key==='Escape'&&!choices.hidden){event.preventDefault();closeChoices();}});
   renderAccess();
-  return {sync,start,closeChoices,serverTime:controller.serverTime,get canRotate(){return !destroyed&&!session&&!pending&&!tutorial;},get active(){return Boolean(session||pending||tutorial);},dismiss(){if(pending||session||tutorial)reset();else closeChoices();},destroy(){destroyed=true;reset();for(const d of disposers)d();hint.remove();entry.remove();choices.remove();stage.remove();}};
+  return {sync,start,closeChoices,serverTime:controller.serverTime,get canRotate(){return !destroyed&&!session&&!pending&&!tutorial;},get active(){return Boolean(session||pending||tutorial);},dismiss(){if(pending||session||tutorial)reset();else closeChoices();},destroy(){destroyed=true;reset();for(const d of disposers)d();entry.remove();choices.remove();stage.remove();}};
 }

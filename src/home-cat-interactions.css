@@ -1,4 +1,3 @@
-.home-cat-hint{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:7;margin:0;color:#795b40;font-size:9px;line-height:18px;letter-spacing:.4px;white-space:nowrap;text-shadow:0 1px 5px #fff7df;pointer-events:none;user-select:none}
 .cat-rhythm.home-cat-play{left:7%;right:auto}
 .cat-rhythm.home-cat-play::after{left:auto;right:1px;box-shadow:5px 6px 0 -2px #ffffff65}
 .home-cat-play .action-portrait{width:36px;height:36px;clip-path:inset(1px)}
@@ -18,12 +17,12 @@
 .home-cat-choices nav span{font-size:25px;line-height:1.3}.home-cat-choices nav strong{font-size:10px}.home-cat-choices nav small{font-size:8px;opacity:.75}
 .home-cat-choices[hidden],.home-cat-session[hidden]{display:none}
 .nest.home-cat-choosing #speech{visibility:hidden}
-.nest.is-companion .home-cat-hint,.nest.is-companion .home-cat-choices,.nest.feeding-open .home-cat-hint,.nest.cat-preview-open .home-cat-hint{display:none}
+.nest.is-companion .home-cat-choices{display:none}
 
 /* The game layer shares the room and its existing 3D cat. */
 .nest.home-playing :is(.side-actions,.wallet,.together,.partner-update,.pet-card,.feeding-preview,.feed-button,.bottom-nav,.growth-rewards,#cat-rhythm,.connection-note){visibility:hidden;pointer-events:none}
 .nest.home-playing .topbar{opacity:.5;pointer-events:none}
-.nest.home-playing .home-cat-hint,.nest.home-playing .home-cat-play,.nest.home-playing #speech,.nest.home-playing .cat-shadow{display:none}
+.nest.home-playing .home-cat-play,.nest.home-playing #speech,.nest.home-playing .cat-shadow{display:none}
 .nest.home-playing:not(.is-companion):not(.feeding-open)>.scene{top:24%;left:8%;right:8%;height:48%}
 .nest.home-playing .cat-button{height:100%;pointer-events:none;transform-origin:50% 70%;transition:transform .16s ease-out}
 .home-cat-session,.home-cat-stage,.home-cat-session .touch-game-scene{position:absolute;inset:0;pointer-events:none}

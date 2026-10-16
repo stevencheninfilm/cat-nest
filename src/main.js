@@ -251,8 +251,7 @@ function render() {
   $('#catbook-nav-count').textContent = state.collection.invited.length;
   $('#catbook-nav-count').hidden = state.collection.invited.length === 0;
   $('#cat').setAttribute('aria-label', state.sleeping ? `轻轻叫醒${state.name}` : `摸摸${state.name}`);
-  if (companion.active) $('#cat').removeAttribute('title');
-  else $('#cat').title = state.sleeping?'点击叫醒 · 滑动旋转':'点击摸摸 · 滑动旋转';
+  $('#cat').removeAttribute('title');
   $('.kitten').alt = `坐在暖暖房间里的橘色小猫${state.name}`;
   $('#xp').textContent = `${level.progress} / ${level.target}`;
   $('#xp-bar').style.width = `${level.progress / level.target * 100}%`;
