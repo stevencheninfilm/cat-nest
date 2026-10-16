@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCloudRoom } from '../src/cloud.js';
-import { createCollectionEvents } from '../src/catbook-events.js';
+import { createCollectionEvents, sceneInvitationNotice } from '../src/catbook-events.js';
 import { memoryHash } from '../src/memory-journal.js';
 import { COLLECTION_CATS } from '../src/cat-collection.js';
 import { initialState, reduceAction, levelStartXp, levelInfo, FOODS } from '../src/state.js';
@@ -12,6 +12,7 @@ const snapshot=(state,revision=0,event)=>({roomId,state,revision,...(event?{even
 const deferred=()=>{let resolve;const promise=new Promise(yes=>resolve=yes);return {promise,resolve};};
 const flush=async()=>{for(let i=0;i<25;i++)await Promise.resolve();};
 const seedInvites=(state,count)=>{state.collection.invited=COLLECTION_CATS.slice(0,count).map(cat=>({id:cat.id,at:Date.now(),operationId:`cloud-seed-${cat.id}`,actorId:actor.id}));return state;};
+const carouselReady=()=>{const state=seedInvites(initialState(),10);state.xp=levelStartXp(120);state.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};state.collection.foods=Object.keys(FOODS);return state;};
 
 test('inviting an already collected cat to another scene waits for confirmation and celebrates once',async t=>{
   const base=seedInvites(initialState(),1),h=harness(t,base);await h.room.start();
@@ -29,6 +30,26 @@ test('a failed cross-scene invitation leaves the cat absent and never shows an a
   h.ack.resolve(response({error:{code:'STORAGE_WRITE_FAILED',message:'尚未确认保存'}},503));await flush();
   assert.equal(h.confirmed().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
   assert.equal(h.confirmed().collection.invited.length,1);
+});
+
+test('invitation pagination advances and decreases once only after the cloud confirms, including repeated live receipts',async t=>{
+  const h=harness(t,carouselReady());await h.room.start();
+  const before=sceneInvitationNotice(h.confirmed(),'garden',{catId:'bolt'});
+  h.room.dispatch({type:'invite-cat',catId:'bolt',sceneId:'garden'});
+  assert.deepEqual(sceneInvitationNotice(h.confirmed(),'garden',{catId:'bolt'}),before);
+  const saved=h.accepted();h.ack.resolve(response(saved));await flush();
+  const next=sceneInvitationNotice(h.confirmed(),'garden',{catId:'bolt'});
+  assert.equal(next.id,'breezy');assert.equal(next.total,before.total-1);
+  h.sources[0].emit('action',saved);h.sources[0].emit('state',saved);
+  assert.deepEqual(sceneInvitationNotice(h.confirmed(),'garden',{catId:'bolt'}),next);
+});
+
+test('failed cloud invitations keep the same selected cat and remaining count',async t=>{
+  const h=harness(t,carouselReady());await h.room.start();
+  const before=sceneInvitationNotice(h.confirmed(),'garden',{catId:'bolt'});
+  h.room.dispatch({type:'invite-cat',catId:'bolt',sceneId:'garden'});
+  h.ack.resolve(response({error:{code:'STORAGE_WRITE_FAILED',message:'尚未确认保存'}},503));await flush();
+  assert.deepEqual(sceneInvitationNotice(h.confirmed(),'garden',{catId:'bolt'}),before);
 });
 
 function harness(t,base) {
