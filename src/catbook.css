@@ -245,8 +245,15 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 .book-reward-copy small{display:block;font-size:8px;font-weight:800;letter-spacing:1px;color:#a5ad75;margin-bottom:4px}
 .book-reward-copy strong{display:block;font-size:13px;font-weight:800;line-height:1.5;color:#747e4f}
 .book-reward-copy p{font-size:10px;line-height:1.65;margin:5px 0 0;color:#a2987c}
-.book-reward-copy>button{display:flex;align-items:center;gap:7px;min-height:36px;background:#a3b778;border:1px solid #fffbe9;border-radius:13px;padding:7px 11px;color:#fffcec;font-size:10px;font-weight:800;margin-top:8px;box-shadow:0 2px 0 #81975933}
-.book-reward-copy>button svg{width:13px;height:13px}
+.book-reward-copy>button,.book-reward-actions>button{display:flex;align-items:center;gap:7px;min-height:36px;background:#a3b778;border:1px solid #fffbe9;border-radius:13px;padding:7px 11px;color:#fffcec;font-size:10px;font-weight:800;margin-top:8px;box-shadow:0 2px 0 #81975933}
+.book-reward-copy>button svg,.book-reward-actions>button svg{width:13px;height:13px}
+.book-reward-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:7px;flex-wrap:wrap}
+.book-reward-actions>button{margin-top:0;flex-shrink:0}
+.book-invite-switcher{text-align:center}.book-invite-switcher>small{font-size:10px;letter-spacing:0;font-weight:600;color:#849068;margin:0}
+.book-invite-pager{display:flex;align-items:center;justify-content:center;gap:1px}
+.book-invite-pager>button{display:grid;place-items:center;min-width:34px;min-height:34px;padding:0;border-radius:50%;background:transparent;color:#7d8d5a}
+.book-invite-pager>button:hover{background:#e8edd7}.book-invite-pager>button svg{width:15px;height:15px}
+.book-invite-pager>span{min-width:33px;font-size:10px;color:#7c8669;font-variant-numeric:tabular-nums}
 .book-reward-close{position:absolute;right:0;top:0;width:36px;height:40px;background:transparent;color:#b4a78d;display:grid;place-items:center;border-radius:17px}
 .book-reward-close svg{width:14px;height:14px}
 .book-reward-sparkles{position:absolute;inset:0;pointer-events:none;z-index:2}

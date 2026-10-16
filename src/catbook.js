@@ -20,7 +20,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   const petTapDuration=620;
   const cameras=createYardCamera(), sheetScroll=new Map();
   const token = element => {
-    const key=['bookCat','bookTab','bookScene','bookInvite','bookOpen'].find(key => element?.dataset?.[key]);
+    const key=['bookCat','bookTab','bookScene','bookInvite','bookOpen','bookRewardStep'].find(key => element?.dataset?.[key]);
     const origin=element?.closest('.book-game-menu') ? 'menu' : element?.closest('.book-game-topbar') ? 'top' : element?.closest('.book-yard-camera') ? 'yard' : null;
     return key ? { key, value:element.dataset[key], page:element.dataset.bookPage, origin } : null;
   };
@@ -40,6 +40,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     if(ownInvitationSaving && !availability.saving && !welcomed) { ownInvitation=null;ownInvitationSaving=false; }
     if(welcomed) {
       stopPresentation();
+      invitationNoticeRequested=true;
       panel=null; detailOrigin=null; ownInvitation=null;ownInvitationSaving=false;
       trigger={key:'bookCat',value:welcomed.id,origin:'yard'};
       rewards.splice(rewards.indexOf(welcomed),1); rewards.unshift(welcomed);
@@ -54,7 +55,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     sceneId=collectionScene(sceneId,state.collection,levelInfo(state.xp).level,state.diary).id;
     startPresentation();
     if(invitationNoticeRequested || invitationNotice) {
-      const next=sceneInvitationNotice(state,sceneId);
+      const next=sceneInvitationNotice(state,sceneId,{catId:invitationNotice?.sceneId===sceneId ? invitationNotice.id : null});
       if(next && (invitationNoticeRequested || next.id!==invitationNotice?.id || next.sceneId!==invitationNotice?.sceneId)) invitationNoticeAt=performance.now();
       invitationNotice=next;
     }
@@ -208,6 +209,14 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     petCat(button);renderSpeech();
   }
   function dismiss() { panel=null; detailOrigin=null; render({ restore:true }); }
+  function stepInvitationNotice(step) {
+    if(panel || presentation || !invitationNotice) return;
+    invitationNotice=sceneInvitationNotice(getState(),sceneId,{catId:invitationNotice.id,step});
+    // Keep switching quiet: replace the contents without replaying the gift entrance or sparkles.
+    invitationNoticeAt=performance.now()-1000;
+    render();
+    (container.querySelector(`[data-book-reward-step="${step}"]`) || container.querySelector('[data-book-reward-cat]'))?.focus({preventScroll:true});
+  }
   container.addEventListener('click', event => {
     if (event.target.matches('dialog.book-sheet')) {
       const bounds=event.target.getBoundingClientRect();
@@ -216,6 +225,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     }
     const button=event.target.closest('button');
     if (!button || !container.contains(button) || button.disabled) return;
+    if(button.dataset.bookRewardStep) { stepInvitationNotice(Number(button.dataset.bookRewardStep));return; }
     if(button.hasAttribute('data-book-reward-dismiss')) {
       invitationNotice=null;
       if(presentation?.event.type === 'cat-arrived') presentation.dismissed=true;
@@ -225,7 +235,6 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     if(button.dataset.bookRewardCat) {
       if(button.dataset.bookRewardInviteScene && button.dataset.bookRewardInviteScene!==sceneId) return;
       const id=button.dataset.bookRewardCat;
-      invitationNotice=null;
       stopPresentation();catId=id;detailOrigin=panel === 'catalog' ? 'catalog' : null;
       trigger={key:'bookOpen',value:'catalog',page:'book',origin:'menu'};
       panel='detail';sheetScroll.set('detail',0);render({heading:true});return;
@@ -268,6 +277,9 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   });
   container.addEventListener('cancel', event => { event.preventDefault(); dismiss(); },true);
   container.addEventListener('keydown', event => {
+    if(!event.ctrlKey && !event.metaKey && event.target.closest('[data-book-invitation-carousel]') && ['ArrowLeft','ArrowRight'].includes(event.key)) {
+      event.preventDefault();stepInvitationNotice(event.key==='ArrowLeft' ? -1 : 1);return;
+    }
     if (!event.ctrlKey && !event.metaKey && event.target.dataset.bookTab && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
       event.preventDefault();
       tab=event.key === 'Home' ? 'book' : event.key === 'End' ? 'achievements' : tab === 'book' ? 'achievements' : 'book';
