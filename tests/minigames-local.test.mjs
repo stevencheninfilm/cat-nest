@@ -114,6 +114,19 @@ function solveClientRps(h){
     if(n<2){h.time.advance(180);const m=h.m();assert.equal(h.local.dispatch({type:'game-next',gameId:m.id,step:m.rounds.length}),true);}
   }
 }
+test('a fresh home initializes local games before an identity is selected',()=>{
+  const storage=createMemoryStorage(),h=clientHarness({storage});
+  h.actor={id:'',name:'请选择身份'};
+  assert.doesNotThrow(()=>h.local.pump());h.local.resume();
+  assert.deepEqual(h.local.status(),{pending:0,unconfirmed:false});
+  assert.equal(h.local.state(h.base),h.base);assert.equal(h.local.active,false);
+  h.local.persist();assert.equal(storage.getItem('catnest.local-games.'),null,'unselected identities do not create a save');
+  h.actor=actor;assert.equal(h.local.dispatch({type:'game-create',game:'rps',mode:'solo'}),true);
+  const id=h.m().id;
+  h.actor={id:'partner-female',name:'女方'};assert.equal(h.local.active,false);
+  h.actor=actor;assert.equal(h.m().id,id,'selecting an identity restores only its own board');
+  assert.equal(h.requests.length,0);
+});
 test('offline taps update immediately with zero requests, can start the next session, then save once in the background',()=>{
   const h=clientHarness();h.local.dispatch({type:'game-create',game:'rps',mode:'solo'});const id=h.m().id;
   solveClientRps(h);assert.equal(h.m().status,'finished');assert.equal(h.requests.length,0);assert.equal(h.local.status().unconfirmed,true);assert.equal(h.base.pendingGrowth.length,0);

@@ -6,7 +6,7 @@ export function createLocalGames({storage,getActor,getConfirmedState,submit,canU
   let owner='',data,hub=null,timer=null,persistTimer=null,paused=false;
   const sent=new Set();
   function load(){
-    const actor=getActor();if(actor.id===owner)return;
+    const actor=getActor();if(data && actor.id===owner)return;
     persistNow();clearTimer(timer);timer=null;owner=actor.id;hub=null;data=null;sent.clear();
     try{data=JSON.parse(storage?.getItem(`catnest.local-games.${owner}`)||'null');}catch{}
     if(data?.version!==1||!Array.isArray(data.pending)||data.pending.length>20)data={version:1,current:null,pending:[]};
