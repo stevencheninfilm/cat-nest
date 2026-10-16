@@ -2,7 +2,7 @@
 export const FEATURE_UNLOCKS=Object.freeze({
   collection:Object.freeze({level:2,name:'猫猫图鉴'}),
   diary:Object.freeze({level:3,name:'猫猫日记'}),
-  expressions:Object.freeze({level:5,name:'小猫表情'}),
+  expressions:Object.freeze({level:4,name:'小猫表情'}),
   actions:Object.freeze({level:6,name:'小猫动作'}),
 });
 export function isFeatureUnlocked(feature,level) {
