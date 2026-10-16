@@ -29,8 +29,9 @@ export function createArcadeView(root,clientId){
     const status=stage.querySelector('[data-arcade-status]');
     const statusText=match.status==='cancelled'?'本局已结束':counting?'准备好，马上开始':match.status==='finished'?'本局已结算':run.finished?'已完成，正在同步比分…':TOUCH_GAMES.includes(match.game)?touchStatusText(match.game,run,elapsed):match.game==='snake'?`🐟 ${run.fish} 条鱼 · 碰撞 ${run.crashes} 次`:match.game==='merge2048'?`最大数字 ${run.maxTile} · ${run.moves} 次移动`:match.game==='whack'?`击中 ${run.hits} · 点错 ${run.misses}`:`第 ${Math.min(5,Math.floor(elapsed/5000)+1)} / 5 轮`;
     if(status.textContent!==statusText)status.textContent=statusText;
-    text(get('[data-arcade-sync-status]'),!connected?'连接中，等待恢复同步…':inFlight?'正在同步比分':queued?'操作已暂存，等待同步':'');
-    const enabled=countdown<=0&&!run.finished&&match.status==='active'&&connected;
+    const buffered=match.mode==='duo'&&match.game!=='reaction';
+    text(get('[data-arcade-sync-status]'),!connected?buffered?'操作保存在本机，连上后自动同步':'连接中，等待恢复同步…':inFlight?'正在同步比分':queued?'操作已暂存，等待同步':'');
+    const enabled=countdown<=0&&!run.finished&&match.status==='active'&&(connected||buffered);
     all('button').forEach(b=>{if(b.matches?.('.reaction-pad')||match.game==='hide-toy'&&b.hasAttribute?.('data-arcade-move'))return;if(b.disabled!==!enabled)b.disabled=!enabled;});
     {
       if(TOUCH_GAMES.includes(match.game))drawTouchGame(stage,match.game,run,elapsed,match.arcade.seed,enabled);

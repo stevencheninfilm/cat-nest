@@ -1,4 +1,5 @@
 import { getCoupleProfile } from './couple-profile.js';
+import { duoPreviewable, previewDuoGameAction, redundantDuoTransition } from './minigames-duo-preview.js';
 
 /** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
 export function createCloudRoom(options) {
@@ -16,8 +17,9 @@ export function createCloudRoom(options) {
   let source, poll, retry, destroyed = false, draining = false, ready = false;
   const seen = new Set();
   const previews = new Map();
+  const liveReceipts = new Map();
   const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
-  let authoritativeState = null;
+  let authoritativeState = null, displayedState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
   async function request(path, options = {}) {
     const controller = new AbortController();
@@ -33,17 +35,21 @@ export function createCloudRoom(options) {
     if (!authoritativeState) return;
     if (!optimisticReducer) { onState(authoritativeState); return; }
     let display = authoritativeState, optimistic = false;
+    const pendingGames = [];
     const withdrawn = [];
     for (const item of queue) {
       const preview = previews.get(item.operationId);
       if (!preview?.active) continue;
       // A state-only live snapshot can already contain this care operation.
       if (authoritativeState.pendingGrowth?.some(reward => reward.id === item.operationId)) continue;
-      const next = optimisticReducer(display, item.action, me, preview.at, item.operationId);
-      if (next) { display = next; optimistic = true; }
+      if (seen.has(item.operationId) || redundantDuoTransition(authoritativeState,item.action,me)) continue;
+      const game = duoPreviewable(display,item.action);
+      const next = game ? previewDuoGameAction(display,item.action,me,preview.at,item.operationId) : optimisticReducer(display, item.action, me, preview.at, item.operationId);
+      if (next) { display = next; optimistic = true; if(game)pendingGames.push(item.action); }
       else { preview.active = false; withdrawn.push(item); }
     }
-    onState(display, { confirmedState: authoritativeState, optimistic });
+    displayedState = display;
+    onState(display, { confirmedState: authoritativeState, optimistic, pendingGames });
     for (const item of withdrawn) onRollback(item.action, me, { operationId:item.operationId, reason:'conflict' });
   }
   function rollback(item, error) {
@@ -70,6 +76,7 @@ export function createCloudRoom(options) {
       seen.add(event.operationId); if (seen.size > 200) seen.delete(seen.values().next().value);
       onAction(event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp });
     }
+    if(event)liveReceipts.get(event.operationId)?.(data);
   }
   function saveQueue() { onPending(queue.map(item => ({ ...item }))); }
   async function drain() {
@@ -78,13 +85,24 @@ export function createCloudRoom(options) {
     while (queue.length && !destroyed) {
       onSaveStatus({ phase:'saving', message:'正在保存到云端…' });
       const item=queue[0];
+      if (redundantDuoTransition(authoritativeState,item.action,me)) {
+        previews.delete(item.operationId); queue.shift(); saveQueue(); publishState();
+        onSaveStatus({phase:queue.length?'saving':'saved',message:queue.length?'正在保存到云端…':`已保存到 ${storageLabel}`,at:Date.now()});
+        continue;
+      }
       try {
-        const data=await request(`/api/rooms/${room}/actions`, { method:'POST', body:JSON.stringify(item) });
+        // An SSE receipt already confirms the durable write. Release the next
+        // queued move immediately rather than waiting for its duplicate HTTP
+        // response (which can be much slower on a phone).
+        const live = new Promise(resolve=>liveReceipts.set(item.operationId,resolve));
+        const data=await Promise.race([request(`/api/rooms/${room}/actions`, { method:'POST', body:JSON.stringify(item) }),live]);
+        liveReceipts.delete(item.operationId);
         if (destroyed) break;
         if (optimisticReducer && (!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
         apply(data, item); queue.shift(); saveQueue();
         onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
       } catch (error) {
+        liveReceipts.delete(item.operationId);
         if (destroyed) break;
         // A confirmed live receipt wins over a lost HTTP response.
         if (optimisticReducer && seen.has(item.operationId)) {
@@ -93,7 +111,25 @@ export function createCloudRoom(options) {
           continue;
         }
         if (error.status >= 400 && error.status < 500 && error.status !== 429) {
+          if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {
+            try { apply(await request(`/api/rooms/${room}`)); } catch { /* Fall back to the latest live snapshot. */ }
+            if(destroyed)break;
+            if(redundantDuoTransition(authoritativeState,item.action,me)) {
+              queue.shift(); previews.delete(item.operationId); saveQueue(); publishState();
+              onSaveStatus({phase:queue.length?'saving':'saved',message:queue.length?'正在保存到云端…':`已保存到 ${storageLabel}`,at:Date.now()});
+              continue;
+            }
+          }
           queue.shift(); saveQueue();
+          if(duoPreviewable(authoritativeState,item.action)) {
+            const gameId=item.action.type==='game-create'?item.operationId:item.action.gameId;
+            queue=queue.filter(next=>{
+              const dependent=next.action?.gameId===gameId||next.action?.type==='game-create'&&next.action.previousId===gameId;
+              if(dependent)previews.delete(next.operationId);
+              return !dependent;
+            });
+            saveQueue();
+          }
           rollback(item, error); previews.delete(item.operationId);
           // Another device may have collected the same saved reward while our
           // live stream was interrupted. Reconcile from the cloud immediately;
@@ -105,8 +141,10 @@ export function createCloudRoom(options) {
           onSaveStatus({ phase:'error', message:error.message });
           if (queue.length) continue;
         } else {
-          rollback(item, error);
-          onSaveStatus({ phase:'error', message:optimisticReducer ? '云端保存结果未确认，已恢复显示；将核对并自动重试，请暂时保留本页' : '云端保存失败，将自动重试；请暂时保留本页' });
+          // The game choice remains visibly queued through a temporary outage.
+          // Only a definitive refusal or newer conflicting snapshot undoes it.
+          if(!duoPreviewable(authoritativeState,item.action))rollback(item, error);
+          onSaveStatus({ phase:'error', message:duoPreviewable(authoritativeState,item.action) ? '对局操作已暂存，连接恢复后自动同步，请暂时保留本页' : optimisticReducer ? '云端保存结果未确认，已恢复显示；将核对并自动重试，请暂时保留本页' : '云端保存失败，将自动重试；请暂时保留本页' });
           clearTimeout(retry); retry=setTimeout(drain, 8000);
         }
         break;
@@ -161,8 +199,12 @@ export function createCloudRoom(options) {
       if (!ready || destroyed || queue.length >= 20) return false;
       if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
       const item = {operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action};
+      const game=optimisticReducer&&duoPreviewable(displayedState||authoritativeState,action);
+      if(game&&!previewDuoGameAction(displayedState||authoritativeState,action,me,Date.now(),item.operationId))return false;
+      if(action?.type==='game-arcade-input'&&queue.some(next=>next.action?.type===action.type&&next.action.gameId===action.gameId&&next.action.seq===action.seq))return false;
+      if(action?.type==='game-arcade-sync'&&queue.some(next=>next.action?.type===action.type&&next.action.gameId===action.gameId))return false;
       queue.push(item);
-      if (optimisticReducer && previewTypes.has(action?.type)) previews.set(item.operationId, { at:Date.now(), active:true, animated:false });
+      if (optimisticReducer && (game||previewTypes.has(action?.type))) previews.set(item.operationId, { at:Date.now(), active:true, animated:false });
       saveQueue(); drain();
       if (previews.has(item.operationId)) {
         publishState();

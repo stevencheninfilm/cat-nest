@@ -37,7 +37,7 @@ function resultPanel(m,state,busy,settlementPending=false) {
 function rpsBoard(m,player,busy,now,pending) {
   const active=m.status==='active',round=m.rounds.at(-1),revealing=m.phase==='reveal';
   const hands=[0,1].map(n=>{
-    const hand=revealing&&round?round.hands[n]:m.mode==='solo'&&n===1?m.challengeHand:null;
+    const hand=revealing&&round?round.hands[n]:m.mode==='solo'&&n===1?m.challengeHand:n===player&&pending?.move?pending.move:null;
     const label=hand?handName(hand):m.locked[n]?(m.mode==='computer'&&n===1?'电脑已准备好':'已出手'):'正在想一想';
     return `<div><span>${hand?GAME_HANDS[hand]:m.locked[n]?'🔒':'❔'}</span><small>${label}</small></div>`;
   }).join('<b>VS</b>');
@@ -60,7 +60,7 @@ function memoryBoard(m,player,busy,now,pending) {
   else if(m.mode==='computer'&&m.turn===1)status='电脑猫猫正在翻牌…';
   else if(m.mode==='solo')status=`已找到 ${m.scores[0]} / 8 对，加油呀`;
   else status=`${player===m.turn?'轮到你':'轮到'+esc(m.players[m.turn]?.name)}翻牌 · 配对成功可以继续翻`;
-  const cards=m.cards.map((card,n)=>`<button class="memory-card ${card!==null?'is-face-up':''} ${m.matched[n]?'is-matched':''} ${pending?.move===n?'game-move-pending is-opening':''}" data-game-move="${n}" aria-label="第${n+1}张，${card===null?'未翻开':COLLECTION_CATS[card].name}${m.matched[n]?'，已配对':''}" ${disabled(busy||!active||player!==m.turn||m.phase!=='play'||m.matched[n]||m.flipped.includes(n))}>${card!==null?`${catSprite(COLLECTION_CATS[card])}<small>${COLLECTION_CATS[card].name}</small>`:`<span class="card-paw">${pending?.move===n?'✧':'🐾'}</span><small>${pending?.move===n?'翻开中…':'MEOW'}</small>`}</button>`).join('');
+  const cards=m.cards.map((card,n)=>{const opening=pending?.moves?.includes(n)||pending?.move===n;return `<button class="memory-card ${card!==null?'is-face-up':''} ${m.matched[n]?'is-matched':''} ${opening?'game-move-pending is-opening':''}" data-game-move="${n}" aria-label="第${n+1}张，${card===null?'未翻开':COLLECTION_CATS[card].name}${m.matched[n]?'，已配对':''}" ${disabled(busy||!active||player!==m.turn||m.phase!=='play'||m.matched[n]||m.flipped.includes(n)||m.flipped.length>=2)}>${card!==null?`${catSprite(COLLECTION_CATS[card])}<small>${COLLECTION_CATS[card].name}</small>`:`<span class="card-paw">${opening?'✧':'🐾'}</span><small>${opening?'翻开中…':'MEOW'}</small>`}</button>`;}).join('');
   const nextLabel=m.mode==='solo'?'收起卡片，再试一次':m.mode==='computer'?(m.turn===0?'收起卡片，让电脑来':'收起卡片，轮到你'):'收起卡片，换对方来';
   const next=active&&m.phase==='reveal'?`<button class="primary game-next" data-game-next ${disabled(busy||player<0||now<m.revealUntil)}>${nextLabel}</button>`:'';
   return `<p class="game-turn" role="status">${status}</p><div class="memory-board" aria-label="猫猫翻牌，十六张卡片">${cards}</div>${next}${m.mode==='computer'?'<p class="game-mode-note game-fair-play">电脑只记住翻开过的牌，暗牌对它也保密。</p>':''}`;
@@ -77,12 +77,13 @@ function gomokuBoard(m,player,busy,now,selectedCell) {
   const next=active&&solo&&m.phase==='reveal'?`<button class="primary game-next" data-game-next ${disabled(busy||player<0||now<m.revealUntil)}>下一关</button>`:'';
   return `<p class="game-turn" role="status">${status}</p><div class="gomoku-board" role="group" aria-label="十五乘十五五子棋棋盘">${cells}</div>${confirm}${next}<p class="gomoku-rule">${solo?'每关一手 · 绿色圆圈展示答案 · 完成三关结算':'黑棋先行 · 连成五子即获胜 · 无禁手'}</p>`;
 }
-export function minigamesPanel({ state,clientId,saving=false,connected=true,multiplayer=true,lobby=true,selectedGame=null,selectedCell=null,localPreview=false,pendingAction=null,localMode=false,localPlayable=false,settlementPending=false,localPendingCount=0,duoConnected=connected,now=Date.now() }) {
+export function minigamesPanel({ state,clientId,saving=false,connected=true,multiplayer=true,lobby=true,selectedGame=null,selectedCell=null,localPreview=false,pendingAction=null,pendingActions=[],localMode=false,localPlayable=false,settlementPending=false,localPendingCount=0,duoConnected=connected,now=Date.now() }) {
   const hub=normalizeGameHub(state.games,now),m=hub.match,busy=saving||!connected,touchUnlocked=catPlayUnlocked(levelInfo(state.xp).level);
   const title='<div class="game-heading"><span class="game-heading-icon" aria-hidden="true"><img src="./assets/minigames/game-entry-v1.webp" width="55" height="55" alt="" draggable="false" decoding="async"/></span><h2>猫猫游戏屋</h2></div>';
   const quota=`<div class="game-quota"><span>今日成长</span><div class="game-quota-track" role="progressbar" aria-label="今日小游戏成长" aria-valuemin="0" aria-valuemax="${GAME_DAILY_LIMIT}" aria-valuenow="${hub.earned}"><i style="width:${hub.earned/GAME_DAILY_LIMIT*100}%"></i></div><strong>${hub.earned}<small> / ${GAME_DAILY_LIMIT}</small></strong></div>`;
   const localNotice=localPlayable?`${localPendingCount?`<p class="game-local-save" role="status">${localPendingCount} 局结果待保存 · 不影响继续玩<button data-local-game-retry>重试上传</button></p>`:''}`:'';
-  const connection=localPlayable?`<p class="game-connection" role="status">${localMode?'本机即时运行 · 结束后后台保存':'单人、人机可脱机玩 · 双人需要联网'}</p>${localNotice}`:`<p class="game-connection" role="status">${saving?'正在保存这一回合…':connected?!multiplayer?'单人和电脑可玩 · 双人联机暂不可用':localPreview?'本地联机预览':'已连接小窝 · 实时同步':'正在连接小窝…'}</p>`;
+  const duoPlaying=!localMode&&m?.mode==='duo'&&m.status==='active';
+  const connection=localPlayable?`<p class="game-connection" role="status">${localMode?'本机即时运行 · 结束后后台保存':duoPlaying?duoConnected?'本机即时反馈 · 对局后台同步':'连接恢复中 · 操作暂存在本机':'单人、人机可脱机玩 · 双人需要联网'}</p>${localNotice}`:`<p class="game-connection" role="status">${saving?'正在保存这一回合…':connected?!multiplayer?'单人和电脑可玩 · 双人联机暂不可用':localPreview?'本地联机预览':'已连接小窝 · 实时同步':'正在连接小窝…'}</p>`;
   if(lobby||!m) {
     const running=m&&['waiting','active'].includes(m.status);
     const label=m?.status==='waiting'?`${esc(m.players[0].name)}邀请你玩${GAMES[m.game].name}`:m?.status==='finished'?`${GAMES[m.game].name}已完成`:`${m?GAMES[m.game].name:''}正在进行 · ${m?GAME_MODES[m.mode]:''}`;
@@ -90,8 +91,9 @@ export function minigamesPanel({ state,clientId,saving=false,connected=true,mult
     if(Object.hasOwn(GAMES,selectedGame)){const locked=TOUCH_GAMES.includes(selectedGame)&&!touchUnlocked;return modePicker(selectedGame,{invite:running?invite:'',busy:busy||locked,running,multiplayer,localPlayable,localMode,locked,duoConnected,connection:locked?`<p class="game-turn" role="status">猫猫达到 Lv.${CAT_PLAY_UNLOCK_LEVEL} 后解锁陪玩</p>${connection}`:connection});}
     return catalog({title,quota,invite,connection,touchUnlocked});
   }
-  const pending=pendingGameFeedback(m,pendingAction,clientId);
-  if(pending&&['gomoku','tictactoe','connect4'].includes(m.game))selectedCell=pending.move;
+  const moves=pendingActions.filter(a=>a.type==='game-move'&&a.gameId===m.id),last=moves.at(-1);
+  const pending=last?{move:last.move,moves:moves.map(a=>a.move),message:m.game==='memory'?'已选好卡片，牌面正在同步…':m.game==='rps'?'已锁定出手，等待双方揭晓…':m.game==='guess'?`已猜 ${last.move}，大小提示正在同步…`:'已落子，棋盘正在后台同步…'}:pendingGameFeedback(m,pendingAction,clientId);
+  if(pending&&!last&&['gomoku','tictactoe','connect4'].includes(m.game))selectedCell=pending.move;
   const player=m.players.findIndex(p=>p.id===clientId),active=m.status==='active';
   const header=`<button class="game-back" data-game-lobby>‹ 返回游戏屋</button><div class="game-match-heading"><h2>${GAMES[m.game].emoji} ${GAMES[m.game].name}</h2><span>${GAME_MODES[m.mode]}</span></div>`;
   const players=`<div class="game-players">${[0,1].filter(n=>m.mode!=='solo'||n===0).map(n=>`<div class="game-player ${m.players[n]?.id===clientId?'is-me':''} ${active&&!ARCADE_GAMES.includes(m.game)&&m.game!=='rps'&&n===m.turn?'has-turn':''}"><span>${m.players[n]?.computer?'🤖':n===0?'🐱':'🐾'}</span><strong>${esc(m.players[n]?.name||'等待猫友')} ${m.players[n]?.id===clientId?'<small>你</small>':''}</strong><b>${ARCADE_GAMES.includes(m.game)?`${m.scores[n]} 分`:EXTRA_GAMES.includes(m.game)?extraScoreLabel(m,n):m.game==='gomoku'?(m.mode==='solo'?`已过 ${m.scores[0]} 关`:n===0?'黑棋':'白棋'):`${m.scores[n]} ${m.game==='memory'?'对':m.mode==='solo'?'题':'胜'}`}</b></div>`).join('')}</div>`;

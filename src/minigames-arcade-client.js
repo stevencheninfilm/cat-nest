@@ -3,14 +3,17 @@ import { TOUCH_GAMES, encodeTouchPoint, touchPoint } from './minigames-touch-rul
 import { createArcadeView } from './minigames-arcade-view.js';
 /** Render immediately; submit bounded input logs for authoritative replay. */
 export function createArcadeController({root,getMatch,getClientId,isSaving,isConnected,dispatch,storage,isVisible=()=>true,onFrame=()=>{}}) {
-  let match=null,player=-1,run=null,queue=[],inFlight=null,lastSend=0,lastSync=0,raf=0,offset=0,storageKey='',stamp='',swipe=null;
-  let touchDrag=null,touchEndTimer,viewing=false,persistTimer,visualMove=null;
+  let match=null,player=-1,run=null,queue=[],inFlight=null,lastSend=0,lastSync=0,retryAt=0,raf=0,offset=0,storageKey='',stamp='',swipe=null;
+  let touchDrag=null,touchEndTimer,viewing=false,persistTimer,visualMove=null,lastServerTime=null;
   let dirty=false,checkedTiles=null;
   const cache=storage;
   const now=()=>Date.now()+offset;
+  // Reaction times are verified at server receipt. Other deterministic games
+  // can keep their bounded replay locally through a brief network interruption.
+  const canInput=()=>isConnected()||match?.mode==='duo'&&match.game!=='reaction';
   function persistNow(){clearTimeout(persistTimer);persistTimer=null;if(!dirty||!storageKey||!match)return;dirty=false;try{cache?.setItem(storageKey,JSON.stringify({seq:match.arcade.runs[player].seq,queue,inFlight}));}catch{}}
   function persist(){dirty=true;if(!persistTimer)persistTimer=setTimeout(persistNow,100);}
-  function serverTime(value){if(Number.isSafeInteger(value))offset=value-Date.now();}
+  function serverTime(value){if(Number.isSafeInteger(value)&&value!==lastServerTime){offset=value-Date.now();lastServerTime=value;}}
   function sync() {
     const next=getMatch(),index=next?.players.findIndex(p=>p.id===getClientId())??-1;
     if(!isVisible()||!next||!ARCADE_GAMES.includes(next.game)||index<0||!root.querySelector('[data-arcade-id]')){suspend();return;}
@@ -29,13 +32,13 @@ export function createArcadeController({root,getMatch,getClientId,isSaving,isCon
     draw();
   }
   function input(move) {
-    if(!viewing||!isVisible()||document.hidden||!match||match.status!=='active'||match.arcade.stage!=='running'||!isConnected()||now()<match.arcade.startAt||run.finished||queue.length>=2048)return;
+    if(!viewing||!isVisible()||document.hidden||!match||match.status!=='active'||match.arcade.stage!=='running'||!canInput()||now()<match.arcade.startAt||run.finished||queue.length>=2048)return;
     const elapsed=Math.max(run.elapsed,Math.min(ARCADE_DURATION[match.game],Math.floor(now()-match.arcade.startAt)));
     const event=[elapsed,move];
     if(applyArcadeEvent(match.game,run,event,match.arcade.seed)){queue.push(event);persist();draw();if(match.game==='reaction')flush(true);}
   }
   function flush(force=false) {
-    if(!match||match.status!=='active'||isSaving()||!isConnected()||now()<match.arcade.startAt)return;
+    if(!match||match.status!=='active'||isSaving()||!isConnected()||now()<match.arcade.startAt||Date.now()<retryAt)return;
     if(inFlight){if(Date.now()-inFlight.sentAt<20000)return;inFlight=null;}
     if(!force&&Date.now()-lastSend<2500&&queue.length<12&&!run.finished)return;
     const source=match.arcade.runs[player];
@@ -43,7 +46,7 @@ export function createArcadeController({root,getMatch,getClientId,isSaving,isCon
     const count=Math.min(queue.length,256),events=queue.slice(0,count),until=count<queue.length?events.at(-1)[0]:run.elapsed;
     if(until<=source.elapsed&&!events.length)return;
     inFlight={seq:source.seq,count,sentAt:Date.now()};lastSend=Date.now();dirty=true;persistNow();
-    if(!dispatch({type:'game-arcade-input',gameId:match.id,seq:source.seq,events,until})){inFlight=null;persist();}
+    if(!dispatch({type:'game-arcade-input',gameId:match.id,seq:source.seq,events,until})){inFlight=null;retryAt=Date.now()+500;persist();}
   }
   function frame() {
     raf=0;
@@ -68,7 +71,7 @@ export function createArcadeController({root,getMatch,getClientId,isSaving,isCon
   function suspend(){persistNow();cancelAnimationFrame(raf);clearTimeout(touchEndTimer);raf=0;viewing=false;touchDrag=null;visualMove=null;swipe=null;}
   root.addEventListener('click',event=>{const b=event.target.closest('button');if(!b||b.disabled)return;if(b.hasAttribute('data-arcade-ready')){const m=getMatch();dispatch({type:'game-arcade-ready',gameId:m.id});return;}if(b.hasAttribute('data-arcade-tap'))input(Math.min(4,Math.floor(Math.max(0,now()-match.arcade.startAt)/5000)));else if(b.dataset.arcadeMove!==undefined)input(Number(b.dataset.arcadeMove));});
   document.addEventListener('keydown',event=>{if(!viewing||!isVisible()||!root.querySelector('[data-arcade-id]')||event.target.matches('input,select,textarea'))return;const direction={ArrowUp:0,w:0,ArrowRight:1,d:1,ArrowDown:2,s:2,ArrowLeft:3,a:3}[event.key];if(direction===undefined)return;if(['teaser','treats'].includes(match?.game)){event.preventDefault();if(match.game==='treats'){if(direction===1||direction===3)input(Math.max(0,Math.min(31,run.basket+(direction===1?3:-3))));}else{const p=touchPoint(run.point);input(encodeTouchPoint(p.x+[0,4,0,-4][direction],p.y+[-4,0,4,0][direction]));}}else if(['snake','merge2048'].includes(match?.game)){event.preventDefault();input(direction);}});
-  function dragInput(event){if(!touchDrag||touchDrag.id!==event.pointerId||!match)return;const rect=touchDrag.rect;if(!rect.width||!rect.height)return;const x=(event.clientX-rect.left)/rect.width*31,y=(event.clientY-rect.top)/rect.height*31,move=match.game==='teaser'?encodeTouchPoint(x,y):Math.max(0,Math.min(31,Math.round(x)));if(viewing&&isConnected()&&!run.finished&&queue.length<2048&&now()>=match.arcade.startAt)visualMove=move;input(move);return move;}
+  function dragInput(event){if(!touchDrag||touchDrag.id!==event.pointerId||!match)return;const rect=touchDrag.rect;if(!rect.width||!rect.height)return;const x=(event.clientX-rect.left)/rect.width*31,y=(event.clientY-rect.top)/rect.height*31,move=match.game==='teaser'?encodeTouchPoint(x,y):Math.max(0,Math.min(31,Math.round(x)));if(viewing&&canInput()&&!run.finished&&queue.length<2048&&now()>=match.arcade.startAt)visualMove=move;input(move);return move;}
   root.addEventListener('pointerdown',event=>{const surface=event.target.closest('[data-touch-surface]');if(!surface||event.button!==0||event.isPrimary===false||touchDrag)return;event.preventDefault();clearTimeout(touchEndTimer);touchDrag={id:event.pointerId,node:surface,rect:surface.getBoundingClientRect()};surface.focus({preventScroll:true});surface.setPointerCapture?.(event.pointerId);dragInput(event);});
   root.addEventListener('pointermove',dragInput);
   root.addEventListener('pointerup',event=>{if(touchDrag?.id===event.pointerId){const move=dragInput(event),id=match?.id;touchDrag=null;clearTimeout(touchEndTimer);touchEndTimer=setTimeout(()=>{if(Number.isSafeInteger(move)&&match?.id===id&&root.querySelector('[data-touch-surface]')){visualMove=null;input(move);}},65);}});

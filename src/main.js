@@ -121,7 +121,7 @@ let actionLocked = false;
 let pendingCloudActions = 0;
 let pendingGrowthClaims = new Set();
 let toastTimer;
-let gameLobby = true, gameSelectedGame = null, gameSelectedCell = null, gameSelectionStep = null, gameLastMarkup = '', gameLastSignature = '', gameRenderedId = '', gamePendingAction = null, gameBoundaryTimer;
+let gameLobby = true, gameSelectedGame = null, gameSelectedCell = null, gameSelectionStep = null, gameLastMarkup = '', gameLastSignature = '', gameRenderedId = '', gamePendingAction = null, duoPendingActions = [], gameBoundaryTimer;
 let computerTurnTimer = null, computerTurnKey = '';
 let computerAttemptKey='',computerAttemptAt=0;
 let gameRenderedSelection=null;
@@ -188,10 +188,13 @@ const localGames=createLocalGames({storage:runtime.localStorage,getActor:()=>({i
   canUpload:()=>roleEntered&&(!cloudConfigured||coupleSnapshotReady&&status.phase==='online'),isQueued:id=>queuedLocalGames.has(id),
   submit:action=>dispatch(action),onChange:()=>cloudUi.request('games'),notice:message=>toast(message)});
 function gameState(){return localGames.state(state);}
-function gameSaving(){return !localGames.active&&careSaving();}
-function gameConnected(){return localGames.active||!cloudConfigured||status.phase==='online';}
+// Games have their own per-choice guards and replay queue. An unrelated care
+// save must never freeze a playfield or the next legal game input.
+function gameSaving(){return false;}
+function gameTransportConnected(){return localGames.active||!cloudConfigured||status.phase==='online';}
+function gameConnected(){return gameTransportConnected()||coupleSnapshotReady&&state.games.match?.mode==='duo'&&state.games.match.status==='active';}
 function homeGameState(){const current=gameState();return localGames.active?current:{...current,games:{...current.games,match:null}};}
-const arcadeController=createArcadeController({root:$('#modal-content'),getMatch:()=>gameState().games.match,getClientId:()=>clientId,isSaving:gameSaving,isConnected:gameConnected,dispatch,storage:runtime.sessionStorage,isVisible:()=>$('#modal').open&&$('#modal-content').dataset.view==='games'});
+const arcadeController=createArcadeController({root:$('#modal-content'),getMatch:()=>gameState().games.match,getClientId:()=>clientId,isSaving:gameSaving,isConnected:gameTransportConnected,dispatch,storage:runtime.sessionStorage,isVisible:()=>$('#modal').open&&$('#modal-content').dataset.view==='games'});
 homeCat=createHomeCatInteractions({nest:$('.nest'),scene:$('.scene'),cat:$('#cat'),getState:homeGameState,getClientId:()=>clientId,getModel:()=>catModel,
   getLocalStatus:()=>localGames.status(),canInteract:()=>{if(!roleEntered){openModal('roles');return false;}return !document.hidden&&!$('.nest').hidden&&!$('#modal').open&&!actionLocked;},
   isCompanion:()=>companion.active,isSaving:()=>false,isConnected:()=>true,getSaveStatus:()=>saveStatus,
@@ -517,6 +520,7 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   chime();
 }
 function rollbackReaction(action, actor, { operationId }) {
+  if(action.type?.startsWith('game-')){cloudUi.request('games');return;}
   if(action.type?.startsWith('nest-')){world?.setState(state);return;}
   interactionFeedback.rollback(operationId);
   needsFeedback.reset(petNeeds(state));
@@ -542,7 +546,6 @@ function dispatch(action) {
   if(action?.type==='game-create'&&TOUCH_GAMES.includes(action.game)&&!catPlayUnlocked(levelInfo(state.xp).level)){toast(`猫猫达到 Lv.${CAT_PLAY_UNLOCK_LEVEL} 后解锁陪玩`);return false;}
   if(action?.type==='game-create'&&action.mode!=='duo'||localGames.handles(action))return localGames.dispatch(action);
   if(action?.type==='game-create'&&action.mode==='duo'&&!localGames.exit())return false;
-  if (action?.type?.startsWith('game-') && action.type!=='game-local-finish' && careSaving()) return false;
   if (actionLocked && !['claim-growth','invite-cat'].includes(action?.type) && !action?.type?.startsWith('game-') && !action?.type?.startsWith('nest-')) return false;
   if (!action) {
     if (careSaving()) { careNotice('pending', '上一份陪伴正在保存，稍等一下 ♡'); return false; }
@@ -568,7 +571,8 @@ function dispatch(action) {
   if (action.type === 'play' && petNeeds(state).energy < PLAY_ENERGY_COST) { toast('小猫有点累，先让它休息一下吧'); return false; }
   initializeCatbook();
   if (cloudConfigured) {
-    if (!cloud || status.phase !== 'online' || !cloud.dispatch(action)) { toast('正在连接云端小窝，连上后就可以继续照顾小猫'); return false; }
+    const bufferedGame=action.type.startsWith('game-')&&action.type!=='game-create'&&action.type!=='game-local-finish'&&gameConnected();
+    if (!cloud || status.phase !== 'online'&&!bufferedGame || !cloud.dispatch(action)) { toast(bufferedGame?'操作暂存已满，请稍等后台同步':'正在连接云端小窝，连上后就可以继续照顾小猫'); return false; }
     if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
     actionLocked = true; setTimeout(() => actionLocked = false, 650); return true;
   }
@@ -593,6 +597,7 @@ function startCloud() {
   cloud?.destroy(); members=[]; presenceKnown=false; coupleSnapshotReady=false;
   const chosenRole = coupleRole;
   let receivedNeedsState = false;
+  let clockSnapshot = null;
   needsFeedback.reset(petNeeds(state));
   const pendingKey = `catnest.pending.${runtime.pendingScope}.${chosenRole}`;
   const pending = read(pendingKey, []);
@@ -604,8 +609,9 @@ function startCloud() {
     pending, optimisticReducer:reduceAction, onRollback:rollbackReaction,
     onRoom(id) { roomId=id; save('catnest.couple.room',id); save('catnest.room',id); coupleExperience.reset({ role:chosenRole, roomId:id }); },
     onState(next, metadata) {
-      if(!localGames.active){arcadeController.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);homeCat?.serverTime((metadata?.confirmedState||next)?.games?.match?.arcade?.serverNow);}
       const confirmed=metadata?.confirmedState||next;
+      if(!localGames.active&&confirmed!==clockSnapshot){arcadeController.serverTime(confirmed?.games?.match?.arcade?.serverNow);homeCat?.serverTime(confirmed?.games?.match?.arcade?.serverNow);clockSnapshot=confirmed;}
+      duoPendingActions=metadata?.pendingGames||[];
       confirmedState=normalizeState(confirmed);state=next===confirmed?confirmedState:normalizeState(next);
       coupleSnapshotReady=true;localGames.reconcile();
       if (!receivedNeedsState) { needsFeedback.reset(petNeeds(state)); receivedNeedsState=true; }
@@ -710,7 +716,7 @@ function openModal(view, options = {}) {
   updateFeedingSaveStatus();
   updateModelPause();
 }
-function gameOptions() { const localStatus=localGames.status();return { state:gameState(), clientId, saving:gameSaving(), multiplayer:cloudConfigured, connected:gameConnected(), lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, pendingAction:localGames.active?null:gamePendingAction, localPreview:!cloudConfigured || localPetPreview, localMode:localGames.active, localPlayable:true, settlementPending:localStatus.unconfirmed, localPendingCount:localStatus.pending, duoConnected:!cloudConfigured||status.phase==='online' }; }
+function gameOptions() { const localStatus=localGames.status();return { state:gameState(), clientId, saving:gameSaving(), multiplayer:cloudConfigured, connected:gameConnected(), lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, pendingAction:localGames.active||state.games.match?.mode==='duo'?null:gamePendingAction, pendingActions:localGames.active?[]:duoPendingActions, localPreview:!cloudConfigured || localPetPreview, localMode:localGames.active, localPlayable:true, settlementPending:localStatus.unconfirmed, localPendingCount:localStatus.pending, duoConnected:!cloudConfigured||status.phase==='online' }; }
 function refreshGames() {
   if(localGames.active){arcadeController.serverTime(Date.now());homeCat?.serverTime(Date.now());}
   localGames.pump();homeCat?.sync();
