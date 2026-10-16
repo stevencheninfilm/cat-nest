@@ -10,7 +10,7 @@
 .need-delta[hidden]{display:none}
 .need-delta.is-positive{color:#4e6c3c}
 .need-delta.is-negative{color:#896349}
-.nest .pet-card .needs-boost{position:relative;top:auto;right:auto;z-index:4;isolation:isolate;display:inline-flex;align-items:center;gap:4px;height:28px;padding:3px 9px;border:0;border-radius:16px;background:linear-gradient(145deg,#fffbed,#e8efd9);box-shadow:0 2px 4px #5f744524;white-space:nowrap;font-size:12px;line-height:1;font-weight:700;color:#577343;text-shadow:0 1px 0 #fff8}
+.nest .pet-card .needs-boost{position:absolute;top:0;right:-10px;z-index:4;isolation:isolate;display:inline-flex;align-items:center;gap:4px;height:28px;padding:3px 9px;border:0;border-radius:16px;background:linear-gradient(145deg,#fffbed,#e8efd9);box-shadow:0 2px 4px #5f744524;white-space:nowrap;font-size:12px;line-height:1;font-weight:700;color:#577343;text-shadow:0 1px 0 #fff8}
 .nest .pet-card .needs-boost::before{content:'';position:absolute;inset:0;z-index:-1;border:solid transparent;border-width:0 14px;border-image-source:url('./assets/growth-bonus/v1/pistachio-glass.webp');border-image-slice:0 64 fill;border-image-repeat:stretch;pointer-events:none}
 .nest .pet-card .needs-boost>strong{font-size:14px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.3px;color:#43622f}
 .nest .pet-card .needs-boost{cursor:pointer}

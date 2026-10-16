@@ -1,4 +1,5 @@
 import { formatAffection } from './affection.js';
+import { createPetNameLayout } from './pet-name-layout.js';
 import './onboarding.css';
 import { createOnboarding } from './onboarding.js';
 import { homeBinding } from './home-bond.js';
@@ -153,7 +154,8 @@ $('#app').innerHTML = `
 </main>
 <dialog id="modal"><button class="modal-close round-button" id="modal-close" aria-label="关闭弹窗">${icon('x')}</button><div class="modal-content" id="modal-content"></div></dialog>
 <div class="toast" id="toast" role="status"></div>`;
-// Long names can wrap without covering the kitten or moving labels off the growth bar.
+const petNameLayout = createPetNameLayout({title:$('.pet-title'),button:$('.pet-name'),text:$('#pet-name'),badge:$('.needs-boost')});
+// Keep the kitten clear if an exceptionally long name needs a second line.
 if (typeof ResizeObserver === 'function') {
   new ResizeObserver(([entry]) => {
     if (entry.contentRect.height > 0) $('.nest').style.setProperty('--home-status-height', `${Math.ceil(entry.contentRect.height)}px`);
@@ -297,7 +299,7 @@ function render() {
   $('#love').textContent = formatAffection(state.love);
   $('#top-level').textContent = `Lv.${level.level}`;
   $('#level').textContent = `Lv.${level.level}`;
-  $('#pet-name').textContent = state.name;
+  if ($('#pet-name').textContent !== state.name) { $('#pet-name').textContent = state.name; petNameLayout.update(); }
   $('#catbook-nav-count').textContent = state.collection.invited.length;
   $('#catbook-nav-count').hidden = state.collection.invited.length === 0;
   $('#cat').setAttribute('aria-label', state.sleeping ? `轻轻叫醒${state.name}` : `摸摸${state.name}`);
