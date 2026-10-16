@@ -106,6 +106,13 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     const index=rewards.findIndex(event=>!panel || event.type !== 'cat-arrived');
     if(index<0) return;
     const event=rewards.splice(index,1)[0];
+    if(event.type === 'cat-unlocked') {
+      // Several achievements can complete together; one browsable card covers them all.
+      for(let other=rewards.length-1;other>=0;other--) if(rewards[other].type==='cat-unlocked') rewards.splice(other,1);
+      invitationNotice=sceneInvitationNotice(state,sceneId,{catId:event.id});
+      invitationNoticeRequested=true;
+      return;
+    }
     if(event.type === 'cat-arrived') {
       const state=getState(), current=collectionScene(event.sceneId || 'station',state.collection,levelInfo(state.xp).level,state.diary);
       const destination=catArrivalScene(current,getCollectionCat(event.id));
