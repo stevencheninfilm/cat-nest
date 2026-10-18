@@ -222,10 +222,17 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
   function dismiss() { panel=null; detailOrigin=null; render({ restore:true }); }
   function stepInvitationNotice(step,{focus=true}={}) {
     if(panel || presentation || !invitationNotice) return;
-    invitationNotice=sceneInvitationNotice(getState(),sceneId,{catId:invitationNotice.id,step});
-    // Keep switching quiet: replace the contents without replaying the gift entrance or sparkles.
+    const next=sceneInvitationNotice(getState(),sceneId,{catId:invitationNotice.id,step});
+    if(!next || next.id===invitationNotice.id) return;
+    invitationNotice=next;
+    // Only the new portrait and copy slide in; keep the gift entrance and sparkles settled.
     invitationNoticeAt=performance.now()-1000;
     render();
+    const card=container.querySelector('[data-book-invitation-carousel]');
+    if(card) {
+      card.style.setProperty('--invite-switch-offset',step>0 ? '10px' : '-10px');
+      card.classList.add('is-invite-switching');
+    }
     if(focus) (container.querySelector(`[data-book-reward-step="${step}"]`) || container.querySelector('[data-book-reward-cat]'))?.focus({preventScroll:true});
   }
   container.addEventListener('click', event => {
@@ -298,7 +305,8 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     }
     if (event.key === 'Escape') { event.preventDefault(); cancelPetTap(); if (panel) dismiss(); else onBack(); }
   });
-  // Touch uses native scrolling. Mouse dragging pans without opening a cat.
+  // Own panning on every pointer type. Native touch scrolling can give iOS
+  // an elastic vertical offset while a finger is moving diagonally.
   container.addEventListener('pointerdown', event => {
     const camera=event.target.closest('.book-yard-camera');
     if (!camera) return;
@@ -308,20 +316,22 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     if (event.button !== 0 || !event.isPrimary) return;
     const lockedCat=event.target.closest('[data-book-locked-cat]');
     yardTap=lockedCat ? {id:event.pointerId,button:lockedCat,x:event.clientX,y:event.clientY} : null;
-    if (event.pointerType !== 'mouse') return;
-    drag={ camera, id:event.pointerId, x:event.clientX, y:event.clientY, left:camera.scrollLeft, moved:false };
+    drag={ camera, id:event.pointerId, x:event.clientX, y:event.clientY, left:camera.scrollLeft, moved:false, travelled:false };
   });
   container.addEventListener('pointermove', event => {
     if (yardTap?.id === event.pointerId && Math.hypot(event.clientX-yardTap.x,event.clientY-yardTap.y)>12) yardTap=null;
     if (!drag || drag.id !== event.pointerId || !drag.camera.isConnected) return;
     const dx=event.clientX-drag.x, dy=event.clientY-drag.y;
+    if(Math.hypot(dx,dy)>12) drag.travelled=true;
     if (!drag.moved && !isYardPan(dx,dy)) return;
     if (!drag.moved) { yardTap=null; drag.moved=true; drag.camera.setPointerCapture(event.pointerId); drag.camera.classList.add('is-dragging'); }
+    if(event.cancelable) event.preventDefault();
     drag.camera.scrollLeft=drag.left-dx;
+    drag.camera.scrollTop=0;
   });
   const stopDrag=() => {
     if (!drag) return;
-    if (drag.moved) blockCatClickUntil=Date.now()+200;
+    if (drag.moved || drag.travelled) blockCatClickUntil=Date.now()+200;
     drag.camera.classList.remove('is-dragging'); drag=null;
   };
   container.addEventListener('pointerup',event=>{

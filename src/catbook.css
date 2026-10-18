@@ -1,5 +1,5 @@
 /* Keep the same phone layout on every screen. */
-body.catbook-mode{--book-viewport-height:100vh;background:#343c30;min-width:0;overflow:hidden}
+body.catbook-mode{--book-viewport-height:100vh;position:fixed;inset:0;background:#343c30;min-width:0;overflow:hidden;overscroll-behavior:none}
 @supports(height:100dvh){body.catbook-mode{--book-viewport-height:100dvh}}
 .book-nav-icon{position:relative}
 .catbook-entry .book-nav-icon>.book-cat-sprite{width:49px;height:49px}
@@ -26,7 +26,7 @@ body.catbook-mode #app{display:block;padding:0;height:var(--book-viewport-height
 .book-counter-track i{display:block;height:100%;background:#b0bc87;border-radius:inherit;transition:width .3s}
 .book-garden-layout{display:grid;align-items:start;grid-template-columns:1fr;gap:19px}
 .book-yard-section{position:absolute;inset:0}
-.book-yard-camera{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x;cursor:grab}
+.book-yard-camera{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
 .book-yard-camera::-webkit-scrollbar{display:none}
 .book-yard-camera:focus-visible{outline:2px solid #fff6dc;outline-offset:-5px}
 .book-yard-camera.is-dragging{cursor:grabbing}
@@ -248,7 +248,6 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 .book-reward-copy>button,.book-reward-actions>button{display:flex;align-items:center;gap:7px;min-height:36px;background:#a3b778;border:1px solid #fffbe9;border-radius:13px;padding:7px 11px;color:#fffcec;font-size:10px;font-weight:800;margin-top:8px;box-shadow:0 2px 0 #81975933}
 .book-reward-copy>button svg,.book-reward-actions>button svg{width:13px;height:13px}
 .book-reward-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:7px;flex-wrap:wrap}
-[data-book-invitation-carousel]{touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .book-reward-actions>button{margin-top:0;flex-shrink:0}
 .book-invite-switcher{text-align:center}.book-invite-switcher>small{font-size:10px;letter-spacing:0;font-weight:600;color:#849068;margin:0}
 .book-invite-pager{display:flex;align-items:center;justify-content:center;gap:1px}
@@ -278,3 +277,8 @@ dialog.book-sheet[open]{display:flex;flex-direction:column}
 .book-cat-card.can-invite-here .book-card-status{background:#e1ebc6;color:#647d37;font-size:9px}
 .book-cat-card.can-invite-here .book-card-visit{color:#7d8c52;font-weight:700}
 .book-game-menu>button>.book-menu-invite-ready{color:#657b3b;font-weight:800}
+
+[data-book-invitation-carousel]{touch-action:none;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.book-reward.is-invite-switching .book-reward-art,.book-reward.is-invite-switching .book-reward-copy>[role="status"]{animation:book-invite-switch .2s cubic-bezier(.2,.7,.3,1) both}
+@keyframes book-invite-switch{from{opacity:.5;transform:translateX(var(--invite-switch-offset))}to{opacity:1;transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.book-reward.is-invite-switching .book-reward-art,.book-reward.is-invite-switching .book-reward-copy>[role="status"]{animation:none}}

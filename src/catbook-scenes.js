@@ -61,7 +61,7 @@ const referenceSceneSlots={
   western:referenceSlots([
     [66,87,12,'露台前的空地上'],[52,39.8,10,'骰子猫窝里'],
     [33.5,45.6,9.5,'露台上的纸箱里'],[48,54.9,12,'木露台中间'],
-    [48,74.8,12,'台阶旁的空地上'],[26,83.7,17,'仙人掌右边'],
+    [48,74.8,12,'台阶旁的空地上'],[26,83.7,17,'仙人掌右边',{occluders:[[[130,1600],[130,1516],[137,1502],[144,1487],[154,1476],[165,1469],[176,1467],[187,1470],[198,1477],[207,1487],[213,1502],[216,1530],[216,1562],[195,1600]]]}],
     [48,85,14,'露台前的小路上'],[41,21.5,11,'左侧白色栏杆上'],
     [86.6,49.8,9,'右侧木制猫窝里'],[48,62,9.5,'台阶旁的小纸箱里',{prop:'box'}],
     [80,78.6,10,'三角猫屋里'],[66,21.1,11,'右上方的白色栏杆上'],
@@ -94,10 +94,12 @@ export const CAT_SCENES = Object.freeze([
     stationSpot(47.1,61.7,6,6.8,'绿色沙发上'), stationSpot(65.5,78.2,5.6,7.1,'小伞下面'),
     stationSpot(20,48.4,4.1,6.2,'电车车顶上'), stationSpot(12.5,78.2,4.8,5.9,'电车前的踏台上'),
     stationSpot(69,38.2,4.3,5.8,'红屋左侧的屋檐上'), stationSpot(38.1,83.5,4.9,6.4,'冰激凌右边的草坪上'),
-    stationSpot(78.5,43.6,5,5.7,'红屋檐边'), stationSpot(88.5,74.5,5.4,6.1,'小水桶旁'),
+    stationSpot(78.5,43.6,5,5.7,'红屋檐边',{occluders:[[[1230,390],[1278,390],[1278,465],[1230,465]]]}), stationSpot(88.5,74.5,5.4,6.1,'小水桶旁'),
     stationSpot(58.5,44,4,5.3,'围墙木栏上'), stationSpot(35,45.2,4.6,5.3,'电车车顶上'),
     stationSpot(63.2,45.4,4.3,5.3,'黄色猫猫旁的围墙木栏上'), stationSpot(60.5,87,5.1,6,'树桩右下的草地上'),
-    stationSpot(91.2,34.5,4.3,5.5,'红屋露台上'), stationSpot(35.5,33.5,4.6,5.4,'电车高台上'),
+    stationSpot(91.2,34.5,4.3,5.5,'红屋露台上'), stationSpot(35.5,33.5,4.6,5.4,'电车高台上',{occluders:[
+      [[566,250],[576,253],[525,329],[551,367],[543,371],[516,337],[458,323],[458,315],[516,329]],
+    ]}),
   ], extraSlots:referenceSceneSlots.station },
   { id:'garden', asset:'garden-portrait', name:'日式庭院', subtitle:'十位猫友，庭院初相逢', min:10, icon:'leaf', ratio:'863 / 1823', slots:[
     spot(65.5,78,24,'树桩上'), spot(29,35.7,20,'左侧高台上'),
@@ -155,8 +157,19 @@ function catArtFrame(scene,placement) {
 }
 /** Furniture apertures use source-map pixels and stay fixed while the cat animates. */
 export function sceneCatClipPath(scene, placement) {
-  if(!placement.window && !placement.opening) return null;
+  if(!placement.window && !placement.opening && !placement.occluders) return null;
   const {width,height,left,top}=catArtFrame(scene,placement);
+  if(placement.occluders) {
+    const origin='-15% -15%';
+    const outline=[origin,'115% -15%','115% 115%','-15% 115%',origin];
+    // Walk to each fixed foreground contour and back over the same bridge.
+    // Even-odd fill removes its interior without repainting the background.
+    for(const polygon of placement.occluders) {
+      const points=polygon.map(([x,y])=>`${((x-left)/width*100).toFixed(4)}% ${((y-top)/height*100).toFixed(4)}%`);
+      outline.push(...points,points[0],origin);
+    }
+    return `polygon(evenodd,${outline.join(',')})`;
+  }
   if(placement.opening) {
     const {cx,cy,rx,ry}=placement.opening;
     return `ellipse(${(rx/width*100).toFixed(4)}% ${(ry/height*100).toFixed(4)}% at ${((cx-left)/width*100).toFixed(4)}% ${((cy-top)/height*100).toFixed(4)}%)`;

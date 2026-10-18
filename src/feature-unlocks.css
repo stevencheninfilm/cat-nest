@@ -8,4 +8,5 @@
 .feature-lock-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:150px;padding:20px 12px;text-align:center;border:1px solid #ead7bc;border-radius:16px;background:#fff7e9;color:#8a6549}
 .feature-lock-card>span{font-size:25px}.feature-lock-card>strong{font-size:14px;line-height:1.6}.feature-lock-card p{margin:0;font-size:11px;line-height:1.8}.feature-lock-card small{font-size:10px;line-height:1.7;color:#a68b6e}
 .expression-sheet .feature-lock-card{flex:1 1 auto;min-height:110px;margin-top:8px}
+.cat-preview-sheet.expression-sheet .feature-lock-card{min-height:0;padding:10px;gap:5px;overflow-y:auto;overscroll-behavior:contain}
 .expression-tabs .is-level-locked{color:#aa8b6a}.expression-tabs .is-level-locked small{opacity:1;font-size:8px}

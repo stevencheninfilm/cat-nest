@@ -102,7 +102,7 @@ test('owned sprites and locked silhouettes share the carriage occlusion without 
   const state=allOwned(), before=structuredClone(state);
   const full=catbookMarkup(invitedEverywhere(state),{sceneId:'station'});
   assert.deepEqual(state,before,'rendering never changes confirmed invitations');
-  assert.equal((full.match(/class="book-cat-window"/g)||[]).length,4);
+  assert.equal((full.match(/class="book-cat-window"/g)||[]).length,6);
   for(const id of ['cocoa','gabriel']) {
     const button=full.match(new RegExp(`<button class="book-yard-cat[^>]*data-book-cat="${id}"[^>]*>[\\s\\S]*?</button>`))[0];
     assert.match(button,/><span class="book-cat-window" style="clip-path:polygon\(/);
@@ -110,7 +110,7 @@ test('owned sprites and locked silhouettes share the carriage occlusion without 
   }
   state.collection.invited=[];
   const emptyBefore=structuredClone(state);
-  assert.equal((catbookMarkup(invitedEverywhere(state),{sceneId:'station'}).match(/class="book-cat-window"/g)||[]).length,4);
+  assert.equal((catbookMarkup(invitedEverywhere(state),{sceneId:'station'}).match(/class="book-cat-window"/g)||[]).length,6);
   assert.deepEqual(state,emptyBefore);
   assert.equal((catbookMarkup(invitedEverywhere(before),{sceneId:'garden'}).match(/class="book-cat-window"/g)||[]).length,4);
 });
@@ -167,4 +167,40 @@ test('snow cabinet doors and reflections stay in front of both residents and loc
     }
   }
   assert.deepEqual(state,before);
+});
+
+test('pole, roof frame and cactus cover only their overlapping cat artwork, including locked silhouettes',()=>{
+  const state=allOwned(),before=structuredClone(state);
+  const inside=(points,x,y)=>points.reduce((hit,[ax,ay],index)=>{
+    const [bx,by]=points[(index+1)%points.length];
+    return (ay>y)!==(by>y) && x<(bx-ax)*(y-ay)/(by-ay)+ax ? !hit : hit;
+  },false);
+  for(const [sceneId,id,hidden,visible] of [
+    ['station','maple',[1238,429],[1188,421]],
+    ['station','luna',[532,309],[569,321]],
+    ['western','crinkle',[180,1482],[265,1494]],
+  ]) {
+    const scene=CAT_SCENES.find(scene=>scene.id===sceneId),cat=COLLECTION_CATS.find(cat=>cat.id===id),place=sceneCatPlacement(scene,cat);
+    const clip=sceneCatClipPath(scene,place);
+    assert.match(clip,/^polygon\(evenodd,/);
+    const points=[...clip.matchAll(/(-?[\d.]+)% (-?[\d.]+)%/g)].map(match=>[Number(match[1]),Number(match[2])]);
+    const [worldWidth,worldHeight]=scene.ratio.split('/').map(Number),[poseWidth,poseHeight]=place.ratio.split('/').map(Number);
+    const width=worldWidth*place.size/100,height=width*poseHeight/poseWidth;
+    const left=worldWidth*place.x/100-width/2,top=worldHeight*place.y/100-height*place.baseline/100;
+    const visibleAt=([x,y])=>inside(points,(x-left)/width*100,(y-top)/height*100);
+    assert.equal(visibleAt(hidden),false,`${id} is behind the foreground object`);
+    assert.equal(visibleAt(visible),true,`${id}'s non-overlapping artwork remains visible`);
+    for(const owned of [true,false]) {
+      const snapshot=structuredClone(state);
+      if(!owned) snapshot.collection.invited=snapshot.collection.invited.filter(record=>record.id!==id);
+      const html=catbookMarkup(invitedEverywhere(snapshot),{sceneId});
+      const fragment=html.match(new RegExp(`<button\\b[^>]*class="book-yard-${owned ? 'cat' : 'placeholder'}[^>]*data-book-${owned ? 'cat' : 'locked-cat'}="${id}"[^>]*>[\\s\\S]*?</button>`))[0];
+      assert.ok(fragment.includes(`clip-path:${clip}`));
+      assert.doesNotMatch(fragment.split('>')[0],/clip-path/,'the mask never clips the cat button or its tap target');
+    }
+    for(const other of CAT_SCENES.filter(scene=>scene.id!==sceneId && sceneAllowsCat(scene,cat))) {
+      assert.equal(sceneCatPlacement(other,cat).occluders,undefined,'foreground objects never follow cats to another yard');
+    }
+  }
+  assert.deepEqual(state,before,'depth masks never modify a save');
 });

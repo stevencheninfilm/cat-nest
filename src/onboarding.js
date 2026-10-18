@@ -20,12 +20,12 @@ export function invitationMarkup(model,{isTest=false,copied=false,error='',url='
 }
 
 /** The guide uses ordinary actions and confirmed receipts; it never seeds a room. */
-export function createOnboarding({storage,preferences=storage,home,baseUrl,getContext,dispatch,greet,toast=()=>{},returning=false,isTest=false,testActions,onClose=()=>{}}) {
+export function createOnboarding({storage,preferences=storage,home,baseUrl,getContext,dispatch,greet,toast=()=>{},returning=false,isTest=false,testActions,onClose=()=>{},onComplete=()=>{}}) {
   const dialog=document.createElement('dialog');dialog.className='onboarding-dialog';dialog.setAttribute('aria-labelledby','onboarding-title');
   document.body.append(dialog);
   let role,progress,pending=null,draft='',appearance,created=false,view='guide',error='',copied=false,signature='',joinPending=false,autoQueued=false,lastRole;
   const remember=()=>{if(role&&progress)storage.setItem(`catnest.onboarding.v2.${role}`,JSON.stringify(progress));};
-  const complete=()=>{progress={...progress,step:'done',paused:false};remember();preferences.setItem('onboarding.v2.completed','done');dialog.close();};
+  const complete=()=>{progress={...progress,step:'done',paused:false};remember();preferences.setItem('onboarding.v2.completed','done');dialog.close();onComplete();};
   function model() { return invitationModel(getContext()); }
   function render(force=false) {
     if(!dialog.open&&!force)return;

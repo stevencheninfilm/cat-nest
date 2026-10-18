@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen.imagegen",
+  "delivery": "Eight original generated images; resized and encoded as WebP for the shared application. Original generated PNG files retained in the generated_images directory.",
+  "assets": [
+    {
+      "id": "welcome",
+      "file": "public/assets/game-guide/v1/welcome-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten welcomes two human caretakers represented only by two hands gently meeting its paws at the open door of a cozy little cat home. A small heart above them, houseplants, slippers and a soft round rug. Inviting sense of a shared home and first meeting.",
+      "transparent_background": false
+    },
+    {
+      "id": "care",
+      "file": "public/assets/game-guide/v1/care-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten sits by a cream paw-shaped feeding bowl with fish, chicken and a small water cup; one gentle hand strokes its head. A soft cushion and folded blanket nearby suggest rest. A few tiny floating golden heart bubbles. Focus on feeding, petting and looking after the kitten.",
+      "transparent_background": false
+    },
+    {
+      "id": "games",
+      "file": "public/assets/game-guide/v1/games-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten and a friendly small orange kitten play together on a miniature wooden game table with a simple board of round black and white pieces and a few face-down paw cards. A feather wand and small toy fish nearby. Friendly playful challenge, joyful, no gambling motifs.",
+      "transparent_background": false
+    },
+    {
+      "id": "growth",
+      "file": "public/assets/game-guide/v1/growth-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten gently touches three floating translucent amber and rose heart bubbles above its paw. A tiny wooden stairway with three small potted flowers growing taller sits beside it. Warm magical motes and soft cozy home backdrop. Theme: collecting care hearts and gradually growing together.",
+      "transparent_background": false
+    },
+    {
+      "id": "court",
+      "file": "public/assets/game-guide/v1/court-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten acts as a kind thoughtful judge at a little rounded wood desk with miniature balance scales and a wooden gavel. Two friendly orange and gray kittens sit equally on opposite sides listening to each other, small blank rounded speech bubbles above them. Calm and equal, warm home-like room, compassionate communication.",
+      "transparent_background": false
+    },
+    {
+      "id": "memories",
+      "file": "public/assets/game-guide/v1/memories-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten and an orange kitten sit closely together browsing a beautiful open cream scrapbook on a wooden desk. The pages contain small picture-only memories of pawprints, a feeding bowl, a little house and hearts. Pressed flowers, a heart bookmark and a few scattered illustrated photo cards. Gentle nostalgic sunlight.",
+      "transparent_background": false
+    },
+    {
+      "id": "catbook",
+      "file": "public/assets/game-guide/v1/catbook-v1.webp",
+      "prompt": "Create a finished landscape 3:2 illustration for a Chinese cozy pet game's beginner handbook. Premium soft 3D storybook diorama, tactile felt and clay, warm cream, honey gold, sage green and powder blue, gentle sunlight, generous simple composition, crisp readable silhouettes. Recurring hero: a small adorable charcoal-black kitten with huge amber eyes, white muzzle, blue wizard hat with tiny gold stars, blue cape and gold bell. Absolutely no text, letters, numbers, logos, UI screens or watermarks. One coherent scene, not a collage, no panels. Keep essential subjects within central 80%. The wizard kitten stands beside an open illustrated field guide on a mossy Japanese garden path. Several charming orange, white and gray cats welcome it near a small wood bridge and miniature train station sign shaped like a paw without text. A little blank invitation envelope with a heart seal in the hero's paw. Theme: exploring cat scenes, meeting and inviting friends. Cohesive simple garden diorama.",
+      "transparent_background": false
+    },
+    {
+      "id": "mascot",
+      "file": "public/assets/game-guide/v1/mascot-v1.webp",
+      "prompt": "Use case: game mascot transparent cutout. Generate one adorable small charcoal-black wizard kitten, large amber eyes, white muzzle and paws, blue felt wizard hat with small gold stars, blue cape and gold bell. Full body standing on hind paws, one white front paw raised and pointing gently up and to the right, other paw resting by chest, friendly welcoming smile, head and paws fully within frame. Premium tactile felt / soft 3D storybook toy aesthetic, warm cozy lighting, detailed but clean silhouette. Isolated single character on fully transparent background, no floor or backdrop, no shadow outside character, no text, no letters, no UI or other objects. This will sit at the left edge of a game tutorial speech panel as a helpful narrator.",
+      "transparent_background": true
+    }
+  ]
+}

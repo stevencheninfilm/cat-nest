@@ -143,7 +143,7 @@ export function catbookMarkup(state, { tab='book', catId='bandit', sceneId=DEFAU
   const selectedVisit=collectionSceneInvitation(ledger,selected.id,invitationScene.id);
   const residences = CAT_SCENES.filter(option=>sceneAllowsCat(option,selected));
   const exclusiveScene = residences.length === 1 ? residences[0] : null;
-  const residenceNote = exclusiveScene ? `常驻${exclusiveScene.name} · 邀请后前往车站相遇` : residences.length < CAT_SCENES.length ? `可在${residences.map(option=>option.name).join('、')}相遇` : '';
+  const residenceNote = exclusiveScene ? `常驻${exclusiveScene.name} · 邀请后前往该场景相遇` : residences.length < CAT_SCENES.length ? `可在${residences.map(option=>option.name).join('、')}相遇` : '';
   const [sceneWidth, sceneHeight] = scene.ratio.split('/').map(Number);
   const invitationPending=pendingInvitations.has(`${selected.id}:${invitationScene.id}`);
   const canInvite = selectedProgress.complete && !selectedVisit && !invitationPending && connected;

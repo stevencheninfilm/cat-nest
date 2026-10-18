@@ -9,6 +9,9 @@ export function createYardCamera() {
   const matches=(camera,size)=>frame?.camera === camera && ['width','height','worldWidth'].every(key=>frame[key] === size[key]);
   function remember(camera,sceneId) {
     if(!camera || !sceneId) return;
+    // WebKit can retain a vertical offset after focus or elastic scrolling,
+    // even though only the horizontal axis belongs to the map camera.
+    if(camera.scrollTop!==0) camera.scrollTop=0;
     const size=bounds(camera);
     // A resize may clamp scrollLeft before ResizeObserver runs. Keep the last
     // deliberate position instead of treating that clamp as a new camera move.
@@ -25,6 +28,7 @@ export function createYardCamera() {
   return {
     remember, restore,
     resize(camera,sceneId) {
+      if(camera.scrollTop!==0) camera.scrollTop=0;
       if(matches(camera,bounds(camera))) return false;
       restore(camera,sceneId);
       return true;

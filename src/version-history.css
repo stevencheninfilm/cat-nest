@@ -1,0 +1,72 @@
+.version-history-dialog {
+  width: min(100% - 24px, 540px);
+  max-width: 540px;
+  max-height: min(90svh, 960px);
+  padding: 0;
+  overscroll-behavior: contain;
+  scrollbar-color: #cfb394 transparent;
+  background: radial-gradient(ellipse at 90% 0, #f9dfbf77, transparent 45%), #fff9ef;
+}
+.version-history-dialog .modal-close { position: sticky; top: 14px; float: right; margin: 14px 14px -46px 0; z-index: 3; width: 32px; height: 32px; }
+.version-history-dialog .modal-content { text-align: left; }
+.version-history-heading { position: relative; padding: 28px 24px 24px; text-align: center; }
+.version-back { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; padding: 0 10px; border-radius: 12px; background: transparent; color: #96704e; font-size: 24px; }
+.version-back span { font-size: 11px; font-weight: 800; }
+.version-history-heading > .version-back { position: absolute; left: 12px; top: 10px; }
+.version-history-mark { display: block; width: 52px; height: 52px; margin: 28px auto 14px; border: 1px solid #fffdf6; border-radius: 19px; background: linear-gradient(145deg, #f7dfb4, #efcfa2); box-shadow: 0 5px 12px #a87a4320; color: #fffaf0; font-size: 32px; line-height: 52px; }
+.version-eyebrow { margin: 0; color: #b08d69; font-size: 8px; font-weight: 900; letter-spacing: 2.2px; }
+.version-history-heading h2 { margin: 8px 0 9px; font-size: 25px; color: #805638; }
+.version-history-heading > p:last-child { margin: 0; font-size: 11px; line-height: 1.8; color: #a48a72; }
+.version-timeline { list-style: none; margin: 0; padding: 0 19px 4px 31px; }
+.version-milestone { position: relative; padding: 0 0 22px 19px; border-left: 1px solid #e7d5bc; }
+.version-milestone:last-child { border-left-color: transparent; padding-bottom: 0; }
+.version-milestone::before { content: ''; position: absolute; left: -5px; top: 20px; width: 9px; height: 9px; border: 2px solid #fff9ef; border-radius: 50%; background: #d4b48b; box-shadow: 0 0 0 1px #e7d5bc; }
+.version-milestone.is-latest::before { background: #8eaa7a; box-shadow: 0 0 0 3px #e6eddd; }
+.version-milestone article { min-width: 0; border: 1px solid #eddfca; border-radius: 21px; padding: 18px 16px 16px; background: #fffdf8a8; box-shadow: 0 5px 15px #9a70480a; }
+.version-milestone.is-latest article { background: linear-gradient(145deg, #f3f6e9, #fffdf5 65%); border-color: #dbe3cb; }
+.version-date { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; color: #a48b73; font-size: 9px; }
+.version-date time { font-variant-numeric: tabular-nums; letter-spacing: .6px; }
+.version-date > span { border-radius: 7px; background: #f2e7d6; padding: 4px 7px; font-size: 9px; font-weight: 800; color: #aa835b; }
+.is-latest .version-date > span { background: #e5ecd7; color: #718654; }
+.version-milestone h3 { margin: 12px 0 8px; font-size: 17px; line-height: 1.6; letter-spacing: .2px; color: #805638; }
+.version-intro { margin: 0; font-size: 11px; line-height: 1.9; color: #a08368; }
+.version-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 13px 0 11px; }
+.version-tags span { padding: 5px 8px; border: 1px solid #e9d9c4; border-radius: 8px; font-size: 9px; color: #a17b53; background: #fcf4e7; }
+.is-latest .version-tags span { color: #7d8d5e; border-color: #dfe5d2; background: #f1f4e8; }
+.version-changes { padding: 0 0 0 15px; margin: 0; font-size: 10px; line-height: 1.95; color: #967a61; }
+.version-changes li + li { margin-top: 7px; }
+.version-changes li::marker { color: #cead83; font-size: 8px; }
+.version-gallery-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 5px; margin: 18px 0 10px; }
+.version-gallery-label strong { color: #93704e; font-size: 10px; }
+.version-gallery-label > span { font-size: 9px; color: #b3997d; }
+.version-posters { display: flex; gap: 10px; margin: 0 -5px; padding: 3px 5px 9px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; list-style: none; scrollbar-width: thin; }
+.version-posters > li { flex: 0 0 132px; scroll-snap-align: start; }
+.version-posters button { display: block; width: 100%; padding: 0; border: 1px solid #eddec9; border-radius: 13px; overflow: hidden; text-align: left; background: #f7ecda; box-shadow: 0 3px 8px #9a704812; }
+.version-posters img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; background: #f2ddc1; }
+.version-posters button > span { display: flex; align-items: center; gap: 5px; min-height: 35px; padding: 7px; color: #906b48; font-size: 9px; font-weight: 800; }
+.version-posters small { font-size: 8px; color: #bc9c77; }
+.version-history-dialog .version-archive-note { font-size: 9px; line-height: 1.8; color: #b49a80; margin: 10px 0 0; }
+.version-history-footer { margin: 22px 24px 26px; text-align: center; font-size: 10px; line-height: 1.8; color: #b59b80; }
+.version-poster-view { padding: 10px 16px 20px; text-align: center; }
+.version-poster-heading { display: flex; align-items: center; gap: 8px; padding-right: 34px; }
+.version-poster-heading > span { margin-left: auto; font-size: 9px; color: #ac9074; }
+.version-poster-view h2 { font-size: 18px; margin: 8px 0 13px; color: #865c3c; }
+.version-poster-stage { display: grid; place-items: center; position: relative; margin: 0; min-height: 220px; border: 1px solid #eddec8; border-radius: 15px; overflow: hidden; background: #f1e5d3; }
+.version-poster-stage > img { display: block; width: auto; max-width: 100%; height: auto; max-height: min(60svh, 720px); object-fit: contain; }
+.version-poster-state { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 14px; padding: 20px; color: #a17d59; background: #f5ecde; font-size: 11px; }
+.version-poster-state button { min-height: 44px; padding: 8px 18px; border: 1px solid #ddc4a3; border-radius: 12px; background: #fff8e9; color: #956b44; }
+.version-poster-stage[data-phase=ready] .version-poster-state { display: none; }
+.version-poster-state button[hidden] { display: none; }
+.version-poster-navigation { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 13px; }
+.version-poster-navigation button { min-width: 86px; min-height: 44px; padding: 8px 12px; border: 1px solid #e8d6bd; border-radius: 13px; background: #f7ecda; color: #946b45; font-size: 11px; font-weight: 800; }
+.version-poster-navigation button:disabled { opacity: .4; cursor: default; transform: none; }
+.version-poster-navigation > span { font-size: 11px; color: #af8d68; font-variant-numeric: tabular-nums; }
+.version-poster-caption { margin: 12px 6px 0; color: #a18467; font-size: 11px; line-height: 1.8; }
+@media (max-width: 360px) {
+  .version-timeline { padding: 0 12px 0 22px; }
+  .version-milestone { padding-left: 13px; }
+  .version-milestone article { padding: 15px 12px; }
+  .version-milestone h3 { font-size: 16px; }
+  .version-posters > li { flex-basis: 120px; }
+  .version-poster-heading > span { max-width: 92px; line-height: 1.7; }
+}

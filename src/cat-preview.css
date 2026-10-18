@@ -1,0 +1,74 @@
+/* Customization keeps the full cat above the controls, or beside them in landscape. */
+.nest.cat-preview-open:not(.is-companion):not(.feeding-open) > .scene {
+  left: var(--cat-preview-left);
+  top: var(--cat-preview-top);
+  width: var(--cat-preview-width);
+  height: var(--cat-preview-height);
+  right: auto;
+  bottom: auto;
+}
+.nest.cat-preview-open .scene > .cat-button { height: 100%; width: 100%; }
+.nest.cat-preview-open .wallet,
+.nest.cat-preview-open .together,
+.nest.cat-preview-open .partner-update,
+.nest.cat-preview-open .pet-card,
+.nest.cat-preview-open .feeding-preview,
+.nest.cat-preview-open .feed-button,
+.nest.cat-preview-open .bottom-nav,
+.nest.cat-preview-open .side-actions,
+.nest.cat-preview-open .connection-note,
+.nest.cat-preview-open .growth-rewards,
+.nest.cat-preview-open .speech-bubble,
+.nest.cat-preview-open .cat-rhythm,
+.nest.cat-preview-open .home-cat-controls { visibility: hidden; pointer-events: none; }
+.cat-preview-sheet.appearance-sheet,
+.cat-preview-sheet.expression-sheet {
+  position: fixed;
+  inset: auto;
+  left: var(--cat-panel-left);
+  top: var(--cat-panel-top);
+  width: var(--cat-panel-width);
+  height: var(--cat-panel-height);
+  min-height: 0;
+  max-width: none;
+  max-height: var(--cat-panel-height);
+  margin: 0;
+  padding: 12px 14px max(10px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #fffaf1fa, #faeddcfa);
+  color: #80573d;
+}
+.cat-preview-sheet::backdrop { background: #50351f0a; backdrop-filter: none; }
+.cat-preview-sheet .modal-close { top: 8px; right: 9px; width: 34px; height: 34px; z-index: 3; }
+.cat-preview-sheet .modal-content { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.cat-preview-sheet.appearance-sheet .sheet-handle,
+.cat-preview-sheet.appearance-sheet .eyebrow { display: none; }
+.cat-preview-sheet.appearance-sheet h2 { min-height: 24px; margin: 0 30px 10px 4px; font-size: 16px; line-height: 24px; letter-spacing: 0; }
+.cat-preview-sheet .appearance-tabs { padding: 3px; gap: 3px; border-radius: 12px; }
+.cat-preview-sheet .appearance-tabs button { min-height: 36px; padding: 7px 3px; font-size: 11px; }
+.cat-preview-sheet .appearance-choices { min-height: 82px; padding: 12px 3px 6px; gap: 8px; }
+.cat-preview-sheet .appearance-choice { min-width: 40px; min-height: 62px; gap: 5px; }
+.cat-preview-sheet .appearance-choice > span { width: 36px; height: 36px; border-width: 2px; }
+.cat-preview-sheet .appearance-choice > small { font-size: 9px; }
+.cat-preview-sheet.appearance-sheet .modal-primary { min-height: 40px; margin-top: 8px; padding: 8px 12px; font-size: 13px; }
+.cat-preview-sheet .appearance-note { margin: 7px 0 2px; font-size: 9px; line-height: 15px; }
+.cat-preview-sheet .model-credit { display: inline-block; font-size: 8px; line-height: 14px; }
+.cat-preview-sheet.expression-sheet .modal-content { display: flex; flex-direction: column; overflow: hidden; }
+.cat-preview-sheet .expression-heading { flex: 0 0 auto; min-height: 25px; padding: 0 65px 3px 2px; }
+.cat-preview-sheet .expression-heading h2 { font-size: 15px; line-height: 24px; }
+.cat-preview-sheet .expression-tabs { flex: 0 0 auto; margin-top: 4px; }
+.cat-preview-sheet .expression-tabs button { min-height: 32px; font-size: 11px; }
+.cat-preview-sheet .expression-grid { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(62px, 1fr); overflow-y: auto; overscroll-behavior: contain; margin-top: 6px; padding: 2px; }
+.cat-preview-sheet .expression-choice,
+.cat-preview-sheet .animation-choice { min-height: 62px; padding: 2px; }
+.cat-preview-sheet .expression-choice .expression-portrait,
+.cat-preview-sheet .animation-choice .action-portrait { width: 42px; height: 42px; }
+.cat-preview-sheet .expression-choice > strong { font-size: 10px; line-height: 14px; }
+.cat-preview-sheet .expression-footer { flex: 0 0 auto; margin-top: 6px; padding-top: 5px; }
+.cat-preview-sheet .expression-greet { min-height: 32px; font-size: 10px; }
+@media (max-width: 360px) {
+  .cat-preview-sheet.appearance-sheet, .cat-preview-sheet.expression-sheet { padding-left: 10px; padding-right: 10px; }
+  .cat-preview-sheet.appearance-sheet h2 { font-size: 15px; }
+  .cat-preview-sheet .appearance-choices { gap: 6px; }
+}

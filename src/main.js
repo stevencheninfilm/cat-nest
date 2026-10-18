@@ -2,6 +2,8 @@ import { formatAffection } from './affection.js';
 import { createPetNameLayout } from './pet-name-layout.js';
 import './onboarding.css';
 import { createOnboarding } from './onboarding.js';
+import './game-guide.css';
+import { createGameGuide } from './game-guide.js';
 import { homeBinding } from './home-bond.js';
 import './style.css';
 import './feeding.css';
@@ -26,6 +28,10 @@ import './interaction-feedback.css';
 import './world-experience.css';
 import './nest-decor.css';
 import './nest-life.css';
+import './version-history.css';
+import { createVersionHistory } from './version-history.js';
+import './cat-preview.css';
+import { applyCatPreviewLayout } from './cat-preview-layout.js';
 import './feature-unlocks.css';
 import { FEATURE_UNLOCKS, featureStatus } from './feature-unlocks.js';
 import { featureLockPanel, updateFeatureEntry } from './feature-unlocks-ui.js';
@@ -34,7 +40,7 @@ import { gamePanelSignature, keepArcadeBoard, computerTurnDelay, paintGameSelect
 import { createLocalGames } from './minigames-local-client.js';
 import { createGamePreload } from './minigames-preload.js';
 import { createInteractionFeedback } from './interaction-feedback.js';
-import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole } from 'lucide';
+import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole, BookOpen } from 'lucide';
 import { FOODS, FEEDING_BONUS, initialState, normalizeState, reduceAction, levelInfo, careActionInfo } from './state';
 import { petNeeds, growthRewardAmount, NEED_KEYS, NEED_LABELS, needsDecayDescription, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { needButtons, needDetails, growthBonusBadge, growthBonusDetails } from './pet-needs-ui.js';
@@ -72,7 +78,7 @@ import { createNestLife } from './nest-life-ui.js';
 import { TOUCH_GAMES, CAT_PLAY_UNLOCK_LEVEL, catPlayUnlocked } from './minigames-touch-rules.js';
 import { createHomeCatInteractions } from './home-cat-interactions.js';
 
-const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole };
+const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole, BookOpen };
 const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const $ = s => document.querySelector(s);
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -82,7 +88,7 @@ function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value
 const params = new URLSearchParams(location.search);
 const invitedRole = normalizeCoupleRole(params.get('join'));
 const returningOwner = (Boolean(read('catnest.role',null)) && !invitedRole) || params.has('court') || params.get('mode')==='judge';
-let onboarding;
+let onboarding, gameGuide;
 // A remembered role is only a hint; every visit begins with an explicit choice.
 let coupleRole = normalizeCoupleRole(read('catnest.role', null));
 let roleEntered = false;
@@ -141,7 +147,7 @@ let growthHomeSignature = '';
 $('#app').innerHTML = `
 <main class="nest" aria-label="猫猫小窝养成游戏">
   <div class="room-backdrop"></div><div class="warm-overlay"></div><div class="sun-dust" aria-hidden="true"></div>
-  <header class="topbar"><a class="brand" href="${home.href}" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small data-nest-time>小窝的此刻</small></span></a><div class="topbar-actions"><button class="companion-entry" data-companion-enter aria-label="沉浸陪伴，隐藏全部界面" title="隐藏全部界面，安静陪猫猫">${icon('eye-off')}<span>沉浸陪伴</span></button><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></div></header>
+  <header class="topbar"><a class="brand" href="${home.href}" aria-label="猫猫小窝首页"><span class="brand-mark">${icon('paw-print')}</span><span>猫猫小窝<small data-nest-time>小窝的此刻</small></span></a><div class="topbar-actions"><button class="companion-entry" data-companion-enter aria-label="沉浸陪伴，隐藏全部界面" title="隐藏全部界面，安静陪猫猫">${icon('eye-off')}<span>沉浸陪伴</span></button><button class="round-button guide-entry-button" data-open="tutorial" aria-label="新手指引" title="新手指引 · 跟着小猫认识小窝">${icon('book-open')}</button><button class="round-button settings-button" data-open="settings" aria-label="设置">${icon('settings-2')}</button></div></header>
   <div class="wallet" aria-label="养成资源"><div class="currency"><span class="coin-icon">${icon('paw-print')}</span><strong id="coins">1,200</strong><span class="currency-label">猫爪币</span></div><div class="currency"><span class="heart-icon">${icon('heart')}</span><strong id="love">${formatAffection(state.love)}</strong><span class="currency-label">亲密度</span></div><button class="currency level-currency" data-open="stages" aria-label="查看全部成长阶段"><span class="level-heart" data-live-growth-heart></span><strong id="top-level">Lv.1</strong><span class="currency-label">成长</span></button></div>
   <button class="together" data-open="roles" aria-label="查看双方在线状态和切换身份"><span class="together-presence" id="together-presence"></span><span class="together-link" id="together-cta">进入 ›</span></button>
   <button class="partner-update" id="partner-update" data-open="shared-care" aria-label="查看伙伴动态和共同照顾记录"></button>
@@ -181,7 +187,7 @@ const catSpeech = createCatSpeech({
     const needs=petNeeds(state), behavior=catTemperament({...state,...needs},nestLife.now(),catExpression);
     return {...state,...needs,behaviorPeriod:behavior.period,behaviorMood:behavior.mood};
   },
-  canSpeak:() => roleEntered && !homeCat?.active && !document.hidden && !$('.nest').hidden && !$('.nest').classList.contains('is-companion') && (!$('#modal').open || ['feeding','expressions'].includes($('#modal-content').dataset.view)),
+  canSpeak:() => roleEntered && !homeCat?.active && !document.hidden && !$('.nest').hidden && !$('.nest').classList.contains('is-companion') && !$('.nest').classList.contains('cat-preview-open') && (!$('#modal').open || ['feeding','expressions'].includes($('#modal-content').dataset.view)),
   reducedMotion:() => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 });
 const companion = createCompanionMode({ nest:$('.nest'), cat:$('#cat'), controls:$('#companion-controls'), onChange() {
@@ -262,6 +268,7 @@ const coupleExperience = createCoupleExperience({
   },
 });
 const diary = createDiaryController({root:$('#modal-content'),canOpen:()=>currentFeatureStatus('diary').unlocked,lockedPanel:()=>featureLockPanel('diary'),getState:()=>cloudConfigured?{...confirmedState,diary:{...confirmedState.diary,favorites:state.diary.favorites}}:state,dispatch,toast,supplemental:()=>nestLife.diary()});
+const versionHistory = createVersionHistory({root:$('#modal-content')});
 const growthBubbleView = createGrowthBubbleView($('#growth-rewards'));
 renderIcons();
 function currentFeatureStatus(feature) {
@@ -279,7 +286,7 @@ function updateFeatureEntries() {
   for(const [feature,label]of [['collection','猫猫图鉴'],['diary','猫猫日记'],['expressions','小猫表情与动作']])updateFeatureEntry($(`[data-open="${feature}"]`),currentFeatureStatus(feature),label);
   const view=$('#modal-content').dataset.view;
   if(roleEntered&&$('#modal').open&&['diary','expressions'].includes(view)&&!currentFeatureStatus(view).unlocked)closeModal();
-  if(roleEntered&&$('#modal').open&&view==='expressions'&&catPaletteLevel!==levelInfo(cloudConfigured?confirmedState.xp:state.xp).level){$('#modal-content').innerHTML=expressionPanel();positionExpressionsPanel();}
+  if(roleEntered&&$('#modal').open&&view==='expressions'&&catPaletteLevel!==levelInfo(cloudConfigured?confirmedState.xp:state.xp).level){$('#modal-content').innerHTML=expressionPanel();positionCatPanels();}
 }
 let renderedSkin='';
 function render() {
@@ -467,7 +474,7 @@ function scheduleUpgrade() {
   clearTimeout(upgradeTimer);
   if (!pendingUpgrade) return;
   upgradeTimer=setTimeout(() => {
-    if (!pendingUpgrade || !roleEntered || onboarding?.isOpen() || companion.active || homeCat?.active || $('.nest').hidden || $('#modal').open || document.hidden) return;
+    if (!pendingUpgrade || !roleEntered || onboarding?.isOpen() || gameGuide?.isOpen() || companion.active || homeCat?.active || $('.nest').hidden || $('#modal').open || document.hidden) return;
     lastCelebratedStage=pendingUpgrade.to.min;
     openModal('stage-upgrade');
     pendingUpgrade=null;
@@ -706,6 +713,7 @@ function openModal(view, options = {}) {
   nestLife.interrupt();
   companion.exit();
   if (!roleEntered && view !== 'roles') view='roles';
+  if (view === 'handbook' || view === 'tutorial') { closeModal(); void gameGuide?.start({book:view==='handbook'}); return; }
   if (view === 'onboarding' || view === 'invite') { onboarding?.start({invite:view==='invite'}); return; }
   if (view === 'judge') { closeModal(); showCourt(); return; }
   if (view === 'collection') { closeModal(); showCatbook(); return; }
@@ -715,10 +723,13 @@ function openModal(view, options = {}) {
   if (view==='stages' && (!$('#modal').open || $('#modal-content').dataset.view!=='stages')) stagePreviewId=growthStageForXp(state.xp).id;
   if (view === 'games' && (!$('#modal').open || $('#modal-content').dataset.view !== 'games')) { gameLobby = true; gameSelectedGame = null; }
   $('#modal-content').dataset.view = view;
+  if (view === 'versions') versionHistory.open();
+  $('#modal').classList.toggle('version-history-dialog',view==='versions');
   $('#modal').classList.toggle('appearance-sheet',view==='appearance');
   $('#modal').classList.toggle('expression-sheet',view==='expressions');
   catRhythm.setAttribute('aria-expanded',String(view==='expressions'));
   if(view==='expressions')$('#modal').setAttribute('aria-labelledby','expression-panel-title');
+  else if(view==='versions')$('#modal').setAttribute('aria-labelledby','version-history-title');
   else $('#modal').removeAttribute('aria-labelledby');
   $('.nest').classList.toggle('expressions-open',view==='expressions');
   $('#modal-close').hidden = view === 'roles' && !roleEntered;
@@ -744,8 +755,9 @@ function openModal(view, options = {}) {
     feeding: () => feedingSheet(feedingSheetOptions()),
     roles: () => rolePicker({...presenceOptions(),state:cloudConfigured?confirmedState:state,ready:roleEntered&&coupleSnapshotReady,invitedRole,newVisitor:!returningOwner}),
     rename: () => `${header('🐈','HELLO, LITTLE ONE','给小猫起个名字','每一个小名字，都是一份偏爱。')}<form id="rename-form"><label for="cat-name">小猫的名字</label><input id="cat-name" name="name" value="${esc(state.name)}" maxlength="16" required/><button class="primary modal-primary" type="submit">就叫这个名字</button></form>`,
-    settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row onboarding-settings-row" data-open="invite"><span>♡ 双人绑定与邀请</span><b>查看主人 ›</b></button><button class="setting-row onboarding-settings-row" data-open="onboarding"><span>✨ 一分钟新手引导</span><b>跟着小猫试试 ›</b></button><button class="setting-row" data-open="appearance"><span>${icon('shirt')} 小猫装扮</span><b>换个小魔法 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${runtime.isTest ? '当前为测试调试存档，刷新或重新进入恢复默认；不会写入正式小窝或调用真实 AI。' : localPetPreview ? '当前为本地联机预览，互动、对局和成长保存在这台电脑。' : cloudConfigured ? '日常操作即时反馈并在后台自动保存；只有保存出错时才会提醒。短暂断网会在本机排队并自动重试。下次选择原身份继续，不要清理浏览器缓存。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
+    settings: () => `${header('🧶','MAKE YOURSELF AT HOME','小窝设置')}<button class="identity-setting" data-open="roles"><span class="identity-avatar ${coupleRole}" aria-hidden="true">${coupleRole === 'male' ? '👦🏻' : '👧🏻'}</span><span><small>当前身份</small><strong>${profile.name}</strong></span><b>切换身份 ${icon('chevron-right')}</b></button><button class="setting-row onboarding-settings-row" data-open="invite"><span>♡ 双人绑定与邀请</span><b>查看主人 ›</b></button><button class="setting-row onboarding-settings-row" data-open="tutorial"><span>🐾 猫猫实景新手指引</span><b>跟着箭头走 ›</b></button><button class="setting-row onboarding-settings-row" data-open="handbook"><span>📖 图文新手手册</span><b>按板块查阅 ›</b></button><button class="setting-row onboarding-settings-row" data-open="onboarding"><span>✨ 一分钟新手引导</span><b>跟着小猫试试 ›</b></button><button class="setting-row" data-open="appearance"><span>${icon('shirt')} 小猫装扮</span><b>换个小魔法 ${icon('chevron-right')}</b></button><button class="setting-row" data-open="versions" aria-haspopup="dialog"><span>${icon('notebook-pen')} 版本历史</span><b>更新与画报 ${icon('chevron-right')}</b></button><button class="setting-row" id="toggle-sound"><span>${icon(sound ? 'volume-2' : 'volume-x')} 互动音效</span><b>${sound ? '已开启' : '已关闭'}</b></button><p class="fine-print">${runtime.isTest ? '当前为测试调试存档，刷新或重新进入恢复默认；不会写入正式小窝或调用真实 AI。' : localPetPreview ? '当前为本地联机预览，互动、对局和成长保存在这台电脑。' : cloudConfigured ? '日常操作即时反馈并在后台自动保存；只有保存出错时才会提醒。短暂断网会在本机排队并自动重试。下次选择原身份继续，不要清理浏览器缓存。' : '当前为本机预览，云端服务还未连接。进度会保存在这个浏览器。'}</p>`,
     diary: () => diary.panel(),
+    versions: () => versionHistory.panel(),
     guide: () => `${header('✨','GROW WITH LOVE','每一点爱，都算数','照顾小猫会产生成长气泡，点击领取才计入成长；升级所需成长逐级增加：120、150、180……每级多 30 点。')}<div class="guide-list"><div><span>🐟 9 种美味食物<small>${careRuleText('feed')} · 食物活力 +${FOODS.meal.energy}，饮水 +${FOODS.water.energy}</small></span><b>+5～50 成长</b></div><div><span>🤍 温柔摸摸<small>${careRuleText('pet')}</small></span><b>+3 成长 · +${CARE_NEED_EFFECTS.pet.mood} 开心</b></div><div><span>🪄 陪它玩耍<small>${careRuleText('play')}</small></span><b>+8 成长 · +10 猫爪币</b></div><div><span>🌙 休息一下<small>${careRuleText('sleep')}</small></span><b>+4 成长 · +${CARE_NEED_EFFECTS.sleep.energy} 活力</b></div><div><span>🐾 本轮双人喂养<small>${careRuleText('pair')} · 每轮一次</small></span><b>额外 +${formatAffection(FEEDING_BONUS)} 亲密度 · +${FEEDING_BONUS} 成长</b></div></div><p class="guide-limits-note">饱饱、开心、活力每一项大于 80，成长各加 10%；一项 ×1.1，两项 ×1.2，三项 ×1.3（摸摸 3→3.9）；领取时不重复加成。${needsDecayDescription()}，离线也会计算。点击小猫下方的具体状态可查看提升方法。</p><p class="guide-limits-note">每日次数由两人共享，北京时间（UTC+8）0 点重置。喂食冷却按身份单独计算，摸摸、逗猫和休息共享冷却；跨日仍需等冷却结束。叫醒随时可用，不消耗次数，也不增加成长。</p><p class="fine-print">气泡不会自动消失，刷新或离开小窝也会保留，点击后小爱心会飞入成长条。首次喂食开启 4 小时一轮的双人小任务，两位猫友在本轮各喂一次，额外成长会加入本次喂食气泡。每日双人奖励用完后，喂食仍可在其次数和冷却内进行。猫爪币通过逗猫免费获得。</p>`,
     home: () => `${header('🏡','YOUR COZY CORNER','欢迎回到小窝',`这里是${esc(state.name)}的家，也是你每天可以放松一下的地方。`)}<div class="home-summary"><div><strong>${levelInfo(state.xp).level}</strong><span>小猫等级</span></div><div><strong>${formatAffection(state.love)}</strong><span>积攒的爱</span></div><div><strong>${state.history.length}</strong><span>近期陪伴</span></div></div><button class="primary modal-primary" data-open="roles">${icon('users-round')} 查看或切换身份</button>`,
   };
@@ -753,11 +765,13 @@ function openModal(view, options = {}) {
   if (view==='guide') $('#modal-content').insertAdjacentHTML('beforeend','<button class="stage-guide-link" data-open="stages">查看全部成长阶段 <span>›</span></button>');
   renderIcons(); renderConnection();
   if (!$('#modal').open) $('#modal').showModal();
+  if (view === 'versions') { $('#modal').scrollTop=0; $('#version-history-title').focus({preventScroll:true}); }
   interactionFeedback.panel($('#modal-content'));
-  if (view === 'expressions') positionExpressionsPanel();
+  positionCatPanels();
   if (view === 'feeding') catSpeech.say('feeding');
   updateFeedingSaveStatus();
   updateModelPause();
+  gameGuide?.panelOpened(view);
 }
 function gameOptions() { const localStatus=localGames.status();return { state:gameState(), clientId, saving:gameSaving(), multiplayer:cloudConfigured, connected:gameConnected(), lobby:gameLobby, selectedGame:gameSelectedGame, selectedCell:gameSelectedCell, pendingAction:localGames.active||state.games.match?.mode==='duo'?null:gamePendingAction, pendingActions:localGames.active?[]:duoPendingActions, localPreview:!cloudConfigured || localPetPreview, localMode:localGames.active, localPlayable:true, settlementPending:localStatus.unconfirmed, localPendingCount:localStatus.pending, saveError, duoConnected:!cloudConfigured||status.phase==='online' }; }
 function refreshGames() {
@@ -909,8 +923,11 @@ catRhythm.dataset.open='expressions';catRhythm.setAttribute('aria-haspopup','dia
 catRhythm.setAttribute('aria-expanded','false');
 catRhythm.innerHTML=`${catExpressionPortrait('happy','expression-entry-face')}<small>表情</small>`;
 $('.scene').append(catRhythm);
-function positionExpressionsPanel() {
-  if(!$('#modal').open || $('#modal-content').dataset.view!=='expressions')return;
+function positionCatPanels() {
+  const viewport=window.visualViewport;
+  const preview=applyCatPreviewLayout({dialog:$('#modal'),nest:$('.nest'),panel:$('#modal-content').dataset.view,
+    viewport:{left:viewport?.offsetLeft||0,top:viewport?.offsetTop||0,width:viewport?.width||window.innerWidth,height:viewport?.height||window.innerHeight}});
+  if(preview || !$('#modal').open || $('#modal-content').dataset.view!=='expressions')return;
   const anchor=catRhythm.getBoundingClientRect(), panel=$('#modal').getBoundingClientRect();
   const gap=10, margin=12, width=window.innerWidth, height=window.innerHeight;
   const beside=anchor.right+gap+panel.width<=width-margin;
@@ -919,8 +936,10 @@ function positionExpressionsPanel() {
   $('#modal').style.setProperty('--expression-left',`${Math.max(margin,Math.min(left,width-panel.width-margin))}px`);
   $('#modal').style.setProperty('--expression-top',`${Math.max(margin,Math.min(top,height-panel.height-margin))}px`);
 }
-window.addEventListener('resize',positionExpressionsPanel);
-window.addEventListener('scroll',positionExpressionsPanel,{passive:true});
+window.addEventListener('resize',positionCatPanels);
+window.addEventListener('scroll',positionCatPanels,{passive:true});
+window.visualViewport?.addEventListener('resize',positionCatPanels);
+window.visualViewport?.addEventListener('scroll',positionCatPanels,{passive:true});
 function renderCatBehavior(behavior) {
   catExpression=behavior.expression;
   $('.nest').dataset.catPeriod=behavior.period;
@@ -1009,7 +1028,7 @@ document.addEventListener('click', event => {
   if (el.dataset.catPaletteTab) {
     if(!requireFeature('expressions'))return;
     catPaletteTab=el.dataset.catPaletteTab==='actions'?'actions':'expressions';
-    $('#modal-content').innerHTML=expressionPanel();renderIcons();positionExpressionsPanel();
+    $('#modal-content').innerHTML=expressionPanel();renderIcons();positionCatPanels();
     $(`[data-cat-palette-tab="${catPaletteTab}"]`).focus({preventScroll:true});
     return;
   }
@@ -1062,8 +1081,9 @@ document.addEventListener('submit', event => {
   if (form.id === 'rename-form') { if (name && dispatch({ type:'rename', name })) closeModal(); }
 });
 $('#modal').addEventListener('click', event => { if (event.target === $('#modal')) { const box=$('#modal').getBoundingClientRect(); if (event.clientX<box.left || event.clientX>box.right || event.clientY<box.top || event.clientY>box.bottom) closeModal(); } });
-$('#modal').addEventListener('cancel', event => { if (!roleEntered || appearanceSubmitting) event.preventDefault(); });
+$('#modal').addEventListener('cancel', event => { if (versionHistory.back() || !roleEntered || appearanceSubmitting) event.preventDefault(); });
 $('#modal').addEventListener('close', () => {
+  positionCatPanels();
   diary.close();
   if (!roleEntered) { queueMicrotask(() => { if (!roleEntered && !$('#modal').open) $('#modal').showModal(); }); return; }
   $('.nest').classList.remove('feeding-open','expressions-open'); catModel?.setState(state); updateModelPause(); scheduleUpgrade();
@@ -1139,16 +1159,31 @@ async function showCourt() {
       const { createCourt } = await import('./court.js');
       court=createCourt({ container:courtContainer, profileName:profile.name, modelAssetBase, getPetAppearance:() => state.appearance, toast, onBack() { court.close(); $('.nest').hidden=false; document.body.classList.remove('court-mode'); updateModelPause(); scheduleUpgrade(); } });
     }
-    $('.nest').hidden=true; document.body.classList.add('court-mode'); court.open();
+    $('.nest').hidden=true; document.body.classList.add('court-mode'); court.open(); gameGuide?.panelOpened('judge');
     updateModelPause();
   } catch { toast('猫猫判官正在准备中，稍后就能见面啦'); }
 }
+gameGuide=createGameGuide({storage:runtime.guidePreferences||runtime.localStorage,isTest:runtime.isTest,assetBase:import.meta.env.BASE_URL,
+  getContext:()=>({role:coupleRole,entered:roleEntered,canOpen:view=>!Object.hasOwn(FEATURE_UNLOCKS,view)||currentFeatureStatus(view).unlocked}),onClose:scheduleUpgrade,
+  async navigate(view) {
+    if(Object.hasOwn(FEATURE_UNLOCKS,view)&&!currentFeatureStatus(view).unlocked)return false;
+    if(view==='judge'&&document.body.classList.contains('court-mode'))return true;
+    if(view!=='home'&&$('#modal').open&&$('#modal-content').dataset.view===view)return true;
+    homeCat?.dismiss();companion.exit();
+    if(document.body.classList.contains('catbook-mode')){catbook?.close();document.body.classList.remove('catbook-mode');$('.nest').hidden=false;}
+    if(document.body.classList.contains('court-mode')){court?.close();document.body.classList.remove('court-mode');$('.nest').hidden=false;}
+    closeModal();
+    if(view==='home'){updateModelPause();return;}
+    if(view==='judge'){await showCourt();return;}
+    openModal(view);
+  },
+});
 onboarding=createOnboarding({storage:runtime.localStorage,preferences:runtime.guidePreferences||runtime.localStorage,home,baseUrl:document.baseURI,isTest:runtime.isTest,testActions:runtime.testActions,returning:returningOwner,
   getContext:()=>({state:cloudConfigured?confirmedState:state,role:coupleRole,entered:roleEntered,available:!$('.nest').hidden&&!document.hidden,ready:!cloudConfigured||coupleSnapshotReady,connected:!cloudConfigured||status.phase==='online',members,known:presenceKnown&&status.phase==='online',canCare:type=>careActionInfo(state,{type},clientId).allowed&&(type!=='play'||petNeeds(state).energy>=PLAY_ENERGY_COST)}),
-  dispatch,greet(){catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');},toast,onClose:scheduleUpgrade,
+  dispatch,greet(){catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');},toast,onClose:scheduleUpgrade,onComplete(){void gameGuide.start();},
 });
 window.addEventListener('catnest:onboarding',event=>onboarding.start({restart:event.detail?.restart===true}));
-if(import.meta.hot)import.meta.hot.dispose(()=>onboarding.destroy());
+if(import.meta.hot)import.meta.hot.dispose(()=>{onboarding.destroy();gameGuide.destroy();});
 render(); renderConnection(); initializeCatModel(); openModal('roles');
 $('.nest').addEventListener('pointerdown',()=>nestLife.interrupt(),{passive:true});
 nestLife.tick();
