@@ -23,13 +23,13 @@ test('waiting feedback begins after role selection and tracks the saved snapshot
   assert.equal(homeLoadingState({...online,entered:false,phase:'connecting'}),null);
   const waiting=homeLoadingState({...online,phase:'connecting',snapshotReady:false});
   assert.equal(waiting.state,'connecting');assert.match(waiting.detail,/首次连接可能需要约一分钟/);
-  assert.equal(homeLoadingState({...online,phase:'connecting'}).state,'syncing');
+  assert.equal(homeLoadingState({...online,phase:'connecting'}),null);
   assert.equal(homeLoadingState({...online,snapshotReady:false}).state,'syncing');
   assert.equal(homeLoadingState(online),null);
 });
 
 test('the loader waits for both cloud and model in either completion order',()=>{
-  assert.equal(homeLoadingState({...online,phase:'connecting',modelPhase:'ready'}).state,'syncing');
+  assert.equal(homeLoadingState({...online,phase:'connecting',modelPhase:'ready'}),null);
   assert.equal(homeLoadingState({...online,modelPhase:'loading'}).state,'model');
   assert.equal(homeLoadingState({...online,phase:'connecting',snapshotReady:false,modelPhase:'loading'}).state,'connecting');
   assert.equal(homeLoadingState(online),null);
@@ -48,7 +48,8 @@ test('initial connection failure stops the bar and offers retry rather than wait
 });
 
 test('a lost connection or full room has clear recovery feedback',()=>{
-  const offline=homeLoadingState({...online,phase:'offline'});
+  assert.equal(homeLoadingState({...online,phase:'offline'}),null,'a live-stream reconnect never covers an already loaded room');
+  const offline=homeLoadingState({...online,phase:'offline',snapshotReady:false});
   assert.equal(offline.retry,true);assert.match(offline.title,/恢复连接/);
   const full=homeLoadingState({...online,phase:'full'});
   assert.equal(full.state,'error');assert.match(full.detail,/已有两位猫友在线/);

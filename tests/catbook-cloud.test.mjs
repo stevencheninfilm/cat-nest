@@ -18,7 +18,7 @@ const gardenReady=()=>{const base=seedInvites(initialState(),10);base.xp=levelSt
 test('inviting an already collected cat to another scene waits for confirmation and celebrates once',async t=>{
   const base=gardenReady(),h=harness(t,base);await h.room.start();
   h.room.dispatch({type:'invite-cat',catId:'bandit',sceneId:'garden'});
-  assert.equal(h.display().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
+  assert.equal(h.display().collection.sceneInvited[0].sceneId,'garden');assert.equal(h.confirmed().collection.sceneInvited,undefined);assert.deepEqual(h.notifications,[]);
   const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
   assert.equal(h.confirmed().collection.invited.length,10);
   assert.equal(h.confirmed().collection.sceneInvited[0].sceneId,'garden');
@@ -100,12 +100,12 @@ test('daily feeding waits for confirmed cloud state before unlocking the daily c
   assert.deepEqual(h.notifications,[{type:'cat-unlocked',id:'toast'}]);
 });
 
-test('a rejected outfit preview never unlocks the dress cat',async t=>{
+test('an unconfirmed outfit upload keeps its appearance preview but never unlocks the dress cat',async t=>{
   const base=initialState(),h=harness(t,base);await h.room.start();
   h.room.dispatch({type:'dress',appearance:{...base.appearance,clothes:1}});
   assert.equal(h.display().collection.achievements.dress,1);assert.equal(h.confirmed().collection.achievements.dress,0);assert.deepEqual(h.notifications,[]);
   h.ack.resolve(response({error:{code:'STORAGE_WRITE_FAILED',message:'尚未确认保存'}},503));await flush();
-  assert.equal(h.display().collection.achievements.dress,0);assert.deepEqual(h.notifications,[]);
+  assert.equal(h.display().collection.achievements.dress,1);assert.equal(h.confirmed().collection.achievements.dress,0);assert.deepEqual(h.notifications,[]);
 });
 
 test('delayed feeding does not unlock a cat until the shared cloud save is confirmed',async t=>{
@@ -153,7 +153,7 @@ test('a confirmed fifteenth invitation produces one entrance followed by the sce
   base.collection.stats={feed:180,pet:600,play:300,sleep:30,pair:96};base.collection.foods=Object.keys(FOODS);
   base.collection.wins={rps:12,memory:12,gomoku:12};
   const h=harness(t,base);await h.room.start();h.room.dispatch({type:'invite-cat',catId:'onyx'});
-  assert.equal(h.display().collection.invited.length,14);assert.deepEqual(h.notifications,[]);
+  assert.equal(h.display().collection.invited.length,15);assert.equal(h.confirmed().collection.invited.length,14);assert.deepEqual(h.notifications,[]);
   const saved=h.accepted();h.ack.resolve(response(saved));await flush();h.sources[0].emit('action',saved);
   assert.deepEqual(h.notifications,[{type:'cat-arrived',id:'onyx'},{type:'scene-unlocked',id:'western'}]);
 });

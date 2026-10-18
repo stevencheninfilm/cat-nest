@@ -26,7 +26,7 @@ test('a broken connection never reports stale online members or a falsely offlin
 test('the compact summary counts identities rather than tabs and separates pending saves', () => {
   const options = { ...connected, members:[{ id:male.clientId },{ id:male.clientId },{ id:female.clientId }] };
   assert.equal(connectionSummary(options), '2 人在线 · 互动自动保存');
-  assert.equal(connectionSummary({ ...options, savePhase:'saving' }), '2 人在线 · 保存中');
+  assert.equal(connectionSummary({ ...options, savePhase:'saving' }), '2 人在线 · 互动自动保存');
   assert.equal(connectionSummary({ ...options, savePhase:'error' }), '2 人在线 · 保存待确认');
   assert.equal(connectionSummary({ ...options, phase:'offline' }), '连接中断 · 在线状态待确认');
 });

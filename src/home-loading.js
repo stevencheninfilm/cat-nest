@@ -2,7 +2,9 @@
  * stage with an indeterminate bar, then dismiss only when both are ready. */
 export function homeLoadingState({ entered=false, configured=false, phase='solo', snapshotReady=false, modelPhase='loading' }={}) {
   if (!entered) return null;
-  if (configured && phase !== 'online') {
+  // Once the authoritative save has loaded, reconnection is background work.
+  // A full room is an explicit access refusal rather than a transient outage.
+  if (configured && phase !== 'online' && (!snapshotReady || phase === 'full')) {
     if (phase === 'error' || phase === 'full') return {
       state:'error', retry:true,
       title:phase === 'full' ? '小窝暂时满员' : '小窝暂时没连上',

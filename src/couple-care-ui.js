@@ -78,8 +78,7 @@ export function cooperationButton(task, state, options) {
   if (task.completed) return { disabled:true, label:'今日已完成' };
   if (task.waiting) return { disabled:true, label:`等${COUPLE_ROLES.find(role => role.clientId !== options.clientId)?.name || '伙伴'}接力` };
   if (!options.ready) return { disabled:true, label:'正在读取小窝' };
-  if (options.configured && options.phase !== 'online') return { disabled:true, label:'连接后继续' };
-  if (options.saving) return { disabled:true, label:'正在保存陪伴' };
+  if (options.configured && !(options.connected ?? options.phase === 'online')) return { disabled:true, label:'连接后继续' };
   if (task.action.type === 'sleep' && state.sleeping) return { disabled:true, label:'等小猫醒来再接力' };
   const info = careActionInfo(state, task.action, options.clientId, options.now);
   if (!info.allowed) return { disabled:true, label:info.reason === 'daily_limit' ? '今日照顾次数已满' : `${timeLeft(info.remainingMs)}后可接力` };

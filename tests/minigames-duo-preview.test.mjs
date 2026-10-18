@@ -43,7 +43,7 @@ test('all three shared boards place a real local piece immediately without predi
     assert.equal(next.xp,s.xp);assert.deepEqual(next.pendingGrowth,s.pendingGrowth);assert.equal(next.games.earned,s.games.earned);assert.ok(validGameHub(next.games));
     assert.equal(preview(next,move(next,1)),null,'same player cannot take the next turn');assert.deepEqual(s,before);
     const html=minigamesPanel({state:next,clientId:a.id,lobby:false,pendingActions:[action],now:at});
-    assert.match(html,/棋盘正在后台同步/);assert.doesNotMatch(html,/game-result/);
+    assert.match(html,/轮到伙伴啦/);assert.doesNotMatch(html,/game-result/);
   }
 });
 
@@ -65,7 +65,7 @@ test('memory accepts two distinct taps before either response, never a third or 
 test('RPS immediately locks and shows only our chosen hand, while guess never fabricates a hint',()=>{
   let s=publicState(fixture('rps')),action=move(s,'rock'),next=preview(s,action);
   assert.deepEqual(next.games.match.locked,[true,false]);assert.equal(next.games.match.rounds.length,0);assert.equal(next.games.match.secret,undefined);assert.equal(preview(next,move(next,'paper')),null);
-  const html=minigamesPanel({state:next,clientId:a.id,lobby:false,pendingActions:[action],now:at});assert.match(html,/<span>✊<\/span>/);assert.match(html,/等待双方揭晓/);
+  const html=minigamesPanel({state:next,clientId:a.id,lobby:false,pendingActions:[action],now:at});assert.match(html,/<span>✊<\/span>/);assert.match(html,/等伙伴出手/);
   s=publicState(fixture('guess'));next=preview(s,move(s,50));assert.deepEqual(next.games.match.guesses,[]);assert.equal(next.games.match.low,1);assert.equal(next.games.match.high,100);assert.equal(next.games.match.answer,null);assert.equal(next.games.match.turn,1);
 });
 

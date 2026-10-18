@@ -33,3 +33,8 @@
 - 浏览器截图：`/private/tmp/cat-nest-optimistic-pending.png`、`/private/tmp/cat-nest-optimistic-rollback.png`。验收仅使用虚构数据，未写入线上存档。
 
 第二版精确补丁位于 `/private/tmp/cat-v2-optimistic-20261014/optimistic-v2.patch`，校验清单为同目录 `manifest.json`。第二版加补丁的独立快照再次通过 49 项专项回归（0 跳过）和 Node 22 生产构建；日志为同目录 `regression.log`、`build.log`。补丁不包含其他聊天尚未完成的小游戏、本地预览配置或图鉴入场改动。
+
+
+## 后台保存后续优化（本地待发布）
+
+上文记录的是最初的上线行为。本次取消日常照顾的全局保存等待；临时上传错误与超时保留本机反馈，明确拒绝才回退，并把正常保存提示移到后台。最新流程、保护边界、回归与未完成的真机验收见 [日常操作与后台保存](background-sync.md)。当前尚未推送部署。

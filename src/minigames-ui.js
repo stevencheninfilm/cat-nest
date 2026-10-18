@@ -32,7 +32,7 @@ function resultPanel(m,state,busy,settlementPending=false) {
   if(m.status!=='finished')return '';
   const title=m.mode==='solo'?(ARCADE_GAMES.includes(m.game)?`挑战完成 · ${m.scores[0]} 分`:EXTRA_GAMES.includes(m.game)?extraSoloResult(m):m.game==='memory'?'八对猫猫都找到了！':`挑战完成 · ${m.game==='rps'?'答对':'完成'} ${m.scores[0]} / 3 ${m.game==='rps'?'题':'关'}`):m.winner===-1?'平局，也是一份好时光！':`${esc(m.players[m.winner].name)}赢啦！`;
   if(m.arcade?.rewardEligible===false)return `<div class="game-result" role="status"><h3>${title}</h3><p>${ARCADE_REQUIREMENTS[m.game]}${m.mode==='duo'?'，双方都需达成':''}，下次再来试试！</p><button class="game-secondary" data-game-create="${m.game}" data-game-mode="${m.mode}" data-game-difficulty="${m.arcade?.level||''}" ${disabled(busy)}>再玩一局</button></div>`;
-  return `<div class="game-result" role="status"><span>✦</span><h3>${title}</h3><p>${settlementPending?'本局已完成，成长将在联网核对后送到小窝。':m.reward?`这局为猫猫带来 ${m.reward} 点成长 ♡`:'今天已获得 50 点小游戏成长，明天再来收小心意吧。'}</p>${settlementPending?'<small>可以继续玩，结果会在后台保存 ♡</small>':m.reward&&state.pendingGrowth.some(r=>r.id===`game:${m.id}`)?'<button class="primary" data-open="growth">领取成长气泡</button>':m.reward?'<small>这局的成长已经收好啦 ♡</small>':''}<button class="game-secondary" data-game-create="${m.game}" data-game-mode="${m.mode}" data-game-difficulty="${m.arcade?.level||''}" ${disabled(busy)}>再玩一局</button></div>`;
+  return `<div class="game-result" role="status"><span>✦</span><h3>${title}</h3><p>${settlementPending?'本局已完成，再陪小猫玩一局吧 ♡':m.reward?`这局为猫猫带来 ${m.reward} 点成长 ♡`:'今天已获得 50 点小游戏成长，明天再来收小心意吧。'}</p>${settlementPending?'':m.reward&&state.pendingGrowth.some(r=>r.id===`game:${m.id}`)?'<button class="primary" data-open="growth">领取成长气泡</button>':m.reward?'<small>这局的成长已经收好啦 ♡</small>':''}<button class="game-secondary" data-game-create="${m.game}" data-game-mode="${m.mode}" data-game-difficulty="${m.arcade?.level||''}" ${disabled(busy)}>再玩一局</button></div>`;
 }
 function rpsBoard(m,player,busy,now,pending) {
   const active=m.status==='active',round=m.rounds.at(-1),revealing=m.phase==='reveal';
@@ -77,13 +77,13 @@ function gomokuBoard(m,player,busy,now,selectedCell) {
   const next=active&&solo&&m.phase==='reveal'?`<button class="primary game-next" data-game-next ${disabled(busy||player<0||now<m.revealUntil)}>下一关</button>`:'';
   return `<p class="game-turn" role="status">${status}</p><div class="gomoku-board" role="group" aria-label="十五乘十五五子棋棋盘">${cells}</div>${confirm}${next}<p class="gomoku-rule">${solo?'每关一手 · 绿色圆圈展示答案 · 完成三关结算':'黑棋先行 · 连成五子即获胜 · 无禁手'}</p>`;
 }
-export function minigamesPanel({ state,clientId,saving=false,connected=true,multiplayer=true,lobby=true,selectedGame=null,selectedCell=null,localPreview=false,pendingAction=null,pendingActions=[],localMode=false,localPlayable=false,settlementPending=false,localPendingCount=0,duoConnected=connected,now=Date.now() }) {
+export function minigamesPanel({ state,clientId,saving=false,connected=true,multiplayer=true,lobby=true,selectedGame=null,selectedCell=null,localPreview=false,pendingAction=null,pendingActions=[],localMode=false,localPlayable=false,settlementPending=false,localPendingCount=0,saveError='',duoConnected=connected,now=Date.now() }) {
   const hub=normalizeGameHub(state.games,now),m=hub.match,busy=saving||!connected,touchUnlocked=catPlayUnlocked(levelInfo(state.xp).level);
   const title='<div class="game-heading"><span class="game-heading-icon" aria-hidden="true"><img src="./assets/minigames/game-entry-v1.webp" width="55" height="55" alt="" draggable="false" decoding="async"/></span><h2>猫猫游戏屋</h2></div>';
   const quota=`<div class="game-quota"><span>今日成长</span><div class="game-quota-track" role="progressbar" aria-label="今日小游戏成长" aria-valuemin="0" aria-valuemax="${GAME_DAILY_LIMIT}" aria-valuenow="${hub.earned}"><i style="width:${hub.earned/GAME_DAILY_LIMIT*100}%"></i></div><strong>${hub.earned}<small> / ${GAME_DAILY_LIMIT}</small></strong></div>`;
-  const localNotice=localPlayable?`${localPendingCount?`<p class="game-local-save" role="status">${localPendingCount} 局结果待保存 · 不影响继续玩<button data-local-game-retry>重试上传</button></p>`:''}`:'';
+  const localNotice=localPlayable&&localPendingCount&&saveError?`<p class="game-local-save" role="alert">结果暂未保存，已保留 ${localPendingCount} 局记录<button data-local-game-retry>重试上传</button></p>`:'';
   const duoPlaying=!localMode&&m?.mode==='duo'&&m.status==='active';
-  const connection=localPlayable?`<p class="game-connection" role="status">${localMode?'本机即时运行 · 结束后后台保存':duoPlaying?duoConnected?'本机即时反馈 · 对局后台同步':'连接恢复中 · 操作暂存在本机':'单人、人机可脱机玩 · 双人需要联网'}</p>${localNotice}`:`<p class="game-connection" role="status">${saving?'正在保存这一回合…':connected?!multiplayer?'单人和电脑可玩 · 双人联机暂不可用':localPreview?'本地联机预览':'已连接小窝 · 实时同步':'正在连接小窝…'}</p>`;
+  const connection=localPlayable?`<p class="game-connection" role="status">${localMode?'陪小猫玩一会儿吧 ♡':duoPlaying?duoConnected?'和伙伴一起玩 ♡':'连接暂时中断，操作已暂存':'挑一个喜欢的小游戏吧 ♡'}</p>${localNotice}`:`<p class="game-connection" role="status">${saving?'正在保存这一回合…':connected?!multiplayer?'单人和电脑可玩 · 双人联机暂不可用':localPreview?'本地联机预览':'已连接小窝 · 实时同步':'正在连接小窝…'}</p>`;
   if(lobby||!m) {
     const running=m&&['waiting','active'].includes(m.status);
     const label=m?.status==='waiting'?`${esc(m.players[0].name)}邀请你玩${GAMES[m.game].name}`:m?.status==='finished'?`${GAMES[m.game].name}已完成`:`${m?GAMES[m.game].name:''}正在进行 · ${m?GAME_MODES[m.mode]:''}`;
@@ -92,7 +92,7 @@ export function minigamesPanel({ state,clientId,saving=false,connected=true,mult
     return catalog({title,quota,invite,connection,touchUnlocked});
   }
   const moves=pendingActions.filter(a=>a.type==='game-move'&&a.gameId===m.id),last=moves.at(-1);
-  const pending=last?{move:last.move,moves:moves.map(a=>a.move),message:m.game==='memory'?'已选好卡片，牌面正在同步…':m.game==='rps'?'已锁定出手，等待双方揭晓…':m.game==='guess'?`已猜 ${last.move}，大小提示正在同步…`:'已落子，棋盘正在后台同步…'}:pendingGameFeedback(m,pendingAction,clientId);
+  const pending=last?{move:last.move,moves:moves.map(a=>a.move),message:m.game==='memory'?'已选好卡片':m.game==='rps'?'已选好，等伙伴出手':m.game==='guess'?`已猜 ${last.move}`:'轮到伙伴啦'}:pendingGameFeedback(m,pendingAction,clientId);
   if(pending&&!last&&['gomoku','tictactoe','connect4'].includes(m.game))selectedCell=pending.move;
   const player=m.players.findIndex(p=>p.id===clientId),active=m.status==='active';
   const header=`<button class="game-back" data-game-lobby>‹ 返回游戏屋</button><div class="game-match-heading"><h2>${GAMES[m.game].emoji} ${GAMES[m.game].name}</h2><span>${GAME_MODES[m.mode]}</span></div>`;

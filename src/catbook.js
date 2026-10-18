@@ -39,8 +39,9 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     }
     const welcomed=updates.find(event=>event.type === 'cat-arrived' && event.id === ownInvitation?.id && (event.sceneId || 'station') === ownInvitation?.sceneId);
     const availability=getAvailability();
-    if(ownInvitation && availability.saving) ownInvitationSaving=true;
-    if(ownInvitationSaving && !availability.saving && !welcomed) { ownInvitation=null;ownInvitationSaving=false; }
+    const invitationPending=ownInvitation && (availability.pendingInvitations?.has(`${ownInvitation.id}:${ownInvitation.sceneId}`) || availability.saving);
+    if(invitationPending) ownInvitationSaving=true;
+    if(ownInvitationSaving && !invitationPending && !welcomed) { ownInvitation=null;ownInvitationSaving=false; }
     if(welcomed) {
       stopPresentation();
       invitationNoticeRequested=true;
@@ -278,7 +279,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     }
     if (button.dataset.bookInvite) {
       const state=getState(), availability=getAvailability();
-      if (!availability.saving && availability.connected && canInviteCat(button.dataset.bookInvite,state.collection,levelInfo(state.xp).level,button.dataset.bookInviteScene,state.diary)) {
+      if (!availability.pendingInvitations?.has(`${button.dataset.bookInvite}:${button.dataset.bookInviteScene}`) && availability.connected && canInviteCat(button.dataset.bookInvite,state.collection,levelInfo(state.xp).level,button.dataset.bookInviteScene,state.diary)) {
         ownInvitation={id:button.dataset.bookInvite,sceneId:button.dataset.bookInviteScene};
         ownInvitationSaving=false;
         if(onAction({ type:'invite-cat', catId:ownInvitation.id, sceneId:ownInvitation.sceneId }) === false) ownInvitation=null;

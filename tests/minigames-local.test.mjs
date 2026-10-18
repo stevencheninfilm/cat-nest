@@ -162,7 +162,9 @@ test('local UI leaves solo and computer enabled during cloud outages but keeps d
   for(const mode of ['solo','computer'])assert.doesNotMatch(html.match(new RegExp(`<button data-game-create="memory" data-game-mode="${mode}"[^>]*>`))[0],/disabled/);
   assert.match(html.match(/<button data-game-create="memory" data-game-mode="duo"[^>]*>/)[0],/disabled/);
   const x=finish('rps');const result=minigamesPanel({state:{...state,games:x.hub},clientId:actor.id,lobby:false,localMode:true,localPlayable:true,settlementPending:true,localPendingCount:1});
-  assert.match(result,/联网核对后/);assert.doesNotMatch(result,/成长已经收好|data-open="growth"/);assert.match(result,/data-local-game-retry/);
+  assert.match(result,/本局已完成/);assert.doesNotMatch(result,/成长已经收好|data-open="growth"|data-local-game-retry|待保存|后台保存/);
+  const failed=minigamesPanel({state:{...state,games:x.hub},clientId:actor.id,lobby:false,localMode:true,localPlayable:true,settlementPending:true,localPendingCount:1,saveError:'upload failed'});
+  assert.match(failed,/结果暂未保存/);assert.match(failed,/data-local-game-retry/);
 });
 test('entering the game room decodes all covers once without blocking on unavailable assets',async()=>{
   let loads=0;class Image{set src(value){loads++;queueMicrotask(()=>value.includes('memory')?this.onerror():this.onload());}decode(){return Promise.resolve();}}

@@ -1,9 +1,9 @@
 import { ARCADE_GAMES } from './minigames-arcade-rules.js';
 import { connect4Cell } from './minigames-extra.js';
 /** Rendering keys exclude the advancing clock, except actual unlock edges. */
-export function gamePanelSignature({state,clientId,saving,connected,multiplayer,lobby,selectedGame,selectedCell,localPreview,pendingAction,pendingActions,duoConnected,settlementPending,localPendingCount,localMode,now=Date.now()}) {
+export function gamePanelSignature({state,clientId,saving,connected,multiplayer,lobby,selectedGame,selectedCell,localPreview,pendingAction,pendingActions,duoConnected,settlementPending,localPendingCount,saveError,localMode,now=Date.now()}) {
   const match=state.games.match;
-  return JSON.stringify([state.games,state.xp,clientId,saving,connected,multiplayer,lobby,selectedGame,localPreview,pendingAction,pendingActions,duoConnected,settlementPending,localPendingCount,localMode,
+  return JSON.stringify([state.games,state.xp,clientId,saving,connected,multiplayer,lobby,selectedGame,localPreview,pendingAction,pendingActions,duoConnected,settlementPending,localPendingCount,saveError,localMode,
     state.pendingGrowth.some(r=>r.id===`game:${match?.id}`),Math.floor((now+8*3600_000)/86400_000),Boolean(match&&now>=match.revealUntil)]);
 }
 /** Moving the local draft changes two cells, never rebuilds a 225-cell board. */

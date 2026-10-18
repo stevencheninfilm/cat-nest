@@ -14,11 +14,11 @@ export function createCloudRoom(options) {
   let room = /^[a-f0-9]{32}$/.test(roomId || '') ? roomId : null;
   let queue = [...pending];
   let revision = -1;
-  let source, poll, retry, destroyed = false, draining = false, ready = false;
+  let source, poll, retry, retryAt = 0, destroyed = false, draining = false, ready = false;
   const seen = new Set();
   const previews = new Map();
   const liveReceipts = new Map();
-  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
+  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
   let authoritativeState = null, displayedState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
   async function request(path, options = {}) {
@@ -31,9 +31,18 @@ export function createCloudRoom(options) {
       return data;
     } finally { clearTimeout(timeout); }
   }
-  function publishState() {
+  function publishState(append) {
     if (!authoritativeState) return;
     if (!optimisticReducer) { onState(authoritativeState); return; }
+    // Append to the already projected state on a new tap. Replaying every
+    // pending action (and its whole diary) on every tap grows quadratically.
+    // A new authoritative snapshot still performs the complete conflict rebase.
+    if (append && append.base === displayedState) {
+      displayedState=append.next;
+      const pendingGames=queue.filter(item=>previews.get(item.operationId)?.active && previews.get(item.operationId)?.game).map(item=>item.action);
+      onState(displayedState,{confirmedState:authoritativeState,optimistic:true,pendingGames});
+      return;
+    }
     let display = authoritativeState, optimistic = false;
     const pendingGames = [];
     const withdrawn = [];
@@ -44,6 +53,7 @@ export function createCloudRoom(options) {
       if (authoritativeState.pendingGrowth?.some(reward => reward.id === item.operationId)) continue;
       if (seen.has(item.operationId) || redundantDuoTransition(authoritativeState,item.action,me)) continue;
       const game = duoPreviewable(display,item.action);
+      preview.game=game;
       const next = game ? previewDuoGameAction(display,item.action,me,preview.at,item.operationId) : optimisticReducer(display, item.action, me, preview.at, item.operationId);
       if (next) { display = next; optimistic = true; if(game)pendingGames.push(item.action); }
       else { preview.active = false; withdrawn.push(item); }
@@ -77,19 +87,25 @@ export function createCloudRoom(options) {
       onAction(event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp });
     }
     if(event)liveReceipts.get(event.operationId)?.(data);
+    // A late durable receipt also releases a queue waiting for its retry timer.
+    if (!draining && queue[0] && seen.has(queue[0].operationId)) {
+      retryAt=0; clearTimeout(retry); queueMicrotask(drain);
+    }
   }
   function saveQueue() { onPending(queue.map(item => ({ ...item }))); }
   async function drain() {
     if (draining || !ready || destroyed) return;
+    if (Date.now() < retryAt) return;
+    clearTimeout(retry);
     draining = true;
     while (queue.length && !destroyed) {
-      onSaveStatus({ phase:'saving', message:'正在保存到云端…' });
       const item=queue[0];
-      if (redundantDuoTransition(authoritativeState,item.action,me)) {
+      if (seen.has(item.operationId) || redundantDuoTransition(authoritativeState,item.action,me)) {
         previews.delete(item.operationId); queue.shift(); saveQueue(); publishState();
         onSaveStatus({phase:queue.length?'saving':'saved',message:queue.length?'正在保存到云端…':`已保存到 ${storageLabel}`,at:Date.now()});
         continue;
       }
+      onSaveStatus({ phase:'saving', message:'正在保存到云端…' });
       try {
         // An SSE receipt already confirms the durable write. Release the next
         // queued move immediately rather than waiting for its duplicate HTTP
@@ -110,7 +126,7 @@ export function createCloudRoom(options) {
           onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
           continue;
         }
-        if (error.status >= 400 && error.status < 500 && error.status !== 429) {
+        if (error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)) {
           if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* Fall back to the latest live snapshot. */ }
             if(destroyed)break;
@@ -141,11 +157,11 @@ export function createCloudRoom(options) {
           onSaveStatus({ phase:'error', message:error.message });
           if (queue.length) continue;
         } else {
-          // The game choice remains visibly queued through a temporary outage.
-          // Only a definitive refusal or newer conflicting snapshot undoes it.
-          if(!duoPreviewable(authoritativeState,item.action))rollback(item, error);
-          onSaveStatus({ phase:'error', message:duoPreviewable(authoritativeState,item.action) ? '对局操作已暂存，连接恢复后自动同步，请暂时保留本页' : optimisticReducer ? '云端保存结果未确认，已恢复显示；将核对并自动重试，请暂时保留本页' : '云端保存失败，将自动重试；请暂时保留本页' });
-          clearTimeout(retry); retry=setTimeout(drain, 8000);
+          // An unknown upload result is not a rejection. Keep the local result
+          // and original operation ID until a durable receipt or refusal arrives.
+          onSaveStatus({ phase:'error', message:'保存暂未确认，操作已暂存在本机，将自动重试；请勿清除浏览器数据' });
+          retryAt=Date.now()+8000;
+          clearTimeout(retry); retry=setTimeout(()=>{retryAt=0;void drain();}, 8000);
         }
         break;
       }
@@ -160,7 +176,7 @@ export function createCloudRoom(options) {
     source.addEventListener('action', event => { try { apply(JSON.parse(event.data)); } catch {} });
     source.addEventListener('presence', event => { try { onPresence(JSON.parse(event.data)); } catch {} });
     source.addEventListener('full', () => { ready=false; source.close(); onStatus({phase:'full',role:null,message:'这个猫窝已有两位猫友在线，请稍后再来'}); });
-    source.onopen=() => { if (destroyed) return; ready=true; onStatus({phase:'online',role:'cloud',message:`已连接共同小窝，互动会自动保存到 ${storageLabel}`}); drain(); };
+    source.onopen=() => { if (destroyed) return; ready=true; retryAt=0; onStatus({phase:'online',role:'cloud',message:`已连接共同小窝，互动会自动保存到 ${storageLabel}`}); drain(); };
     source.onerror=() => { if (!destroyed) onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复，已保存的云端存档仍然保留'}); };
     clearInterval(poll); poll=setInterval(async () => { if (destroyed) return; try { apply(await request(`/api/rooms/${room}`)); } catch {} }, 20000);
   }
@@ -200,19 +216,26 @@ export function createCloudRoom(options) {
       if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
       const item = {operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action};
       const game=optimisticReducer&&duoPreviewable(displayedState||authoritativeState,action);
-      if(game&&!previewDuoGameAction(displayedState||authoritativeState,action,me,Date.now(),item.operationId))return false;
+      const at=Date.now(), previewable=optimisticReducer&&(game||previewTypes.has(action?.type));
+      const previewBase=displayedState||authoritativeState;
+      // Validate against every preceding local choice before reserving queue
+      // space. Cooldowns, balances and reward IDs still prevent repeated taps.
+      const projected=previewable ? (game ? previewDuoGameAction : optimisticReducer)(previewBase,action,me,at,item.operationId) : null;
+      if(previewable&&!projected)return false;
       if(action?.type==='game-arcade-input'&&queue.some(next=>next.action?.type===action.type&&next.action.gameId===action.gameId&&next.action.seq===action.seq))return false;
       if(action?.type==='game-arcade-sync'&&queue.some(next=>next.action?.type===action.type&&next.action.gameId===action.gameId))return false;
       queue.push(item);
-      if (optimisticReducer && (game||previewTypes.has(action?.type))) previews.set(item.operationId, { at:Date.now(), active:true, animated:false });
-      saveQueue(); drain();
+      if (previewable) previews.set(item.operationId, { at, active:true, animated:false, game });
+      saveQueue();
       if (previews.has(item.operationId)) {
-        publishState();
+        publishState({base:previewBase,next:projected});
         const preview = previews.get(item.operationId);
         if (preview?.active) { preview.animated=true; onAction(action, me, { operationId:item.operationId, optimistic:true, previewed:false }); }
       }
+      void drain();
       return true;
     },
+    get ready() { return ready && !destroyed; },
     updateName(next) { if (coupleMode) return; me.name=next; if(room&&ready) subscribe(); },
     destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); },
   };

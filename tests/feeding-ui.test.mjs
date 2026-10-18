@@ -99,12 +99,12 @@ test('a still-active meal from the previous round is distinguished from feeding 
   assert.match(homeSlot(home, 'female'), /✓ 本轮已喂/);
 });
 
-test('feeding stays disabled during a save or disconnection and does not promise immediate growth', () => {
+test('feeding remains usable during an unrelated save, but requires its first connection and respects care limits', () => {
   const base = options(initialState(now));
-  assert.deepEqual(feedingButtonContent({ ...base, saving:true }), { disabled:true, content:'正在保存这份心意…' });
+  assert.deepEqual(feedingButtonContent({ ...base, saving:true }), feedingButtonContent(base));
   assert.deepEqual(feedingButtonContent({ ...base, connected:false }), { disabled:true, content:'正在连接云端小窝…' });
   assert.deepEqual(feedingButtonContent(base), { disabled:false, content:'喂这个 <span>成长气泡 +27.5</span>' });
-  assert.match(feedingSheet({ ...base, saving:true }), /id="serve-food" disabled/);
+  assert.doesNotMatch(feedingSheet({ ...base, saving:true }), /id="serve-food" disabled/);
 });
 
 

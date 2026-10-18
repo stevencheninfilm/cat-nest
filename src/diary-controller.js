@@ -4,7 +4,7 @@ import { createMemoryCard } from './memory-card.js';
 import { featureUnlockMessage } from './feature-unlocks.js';
 
 export function createDiaryController({root,getState,saving=()=>false,dispatch,toast=()=>{},supplemental=()=>'',canOpen=()=>true,lockedPanel=()=>''}) {
-  let tab='collection',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,pending=null,message='',progressTimer=null;
+  let tab='collection',filter='all',page=0,selected=null,url=null,blob=null,error='',signature='',generation=0,message='',progressTimer=null;
   const state=()=>getState();
   const journal=()=>normalizeMemoryJournal(state().diary,state());
   const selectedEntry=()=>journal().entries.find(e=>e.id===selected);
@@ -22,10 +22,6 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
   function refresh() {
     if (root.dataset.view !== 'diary' || !root.closest('dialog')?.open) return;
     if(!canOpen())return;
-    if(pending && !saving()) {
-      const saved=journal().favorites.includes(pending.id)===pending.favorite;
-      message=saved?(pending.favorite?'已加入共同收藏 ♡':'已取消收藏，纪念仍保留在时光轴'):'收藏还未保存成功，请稍后重试';pending=null;
-    }
     const key=JSON.stringify([tab==='locked'?Math.floor(Date.now()/30_000):null,state().diary,state().history,state().xp,state().coupleCare,state().feedingWindow,state().games?.match,saving(),message]);
     if(key!==signature){signature=key;draw();}
   }
@@ -48,7 +44,7 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
     else if(button.dataset.diaryPage!==undefined){page=Math.max(0,Number(button.dataset.diaryPage)||0);draw();root.closest('dialog').scrollTop=0;}
     else if(button.dataset.memoryFavorite){
       const id=button.dataset.memoryFavorite,favorite=!journal().favorites.includes(id);
-      if(dispatch({type:'diary-favorite',memoryId:id,favorite})){pending={id,favorite};message='正在保存共同收藏…';refresh();draw();}
+      if(dispatch({type:'diary-favorite',memoryId:id,favorite})){message='';refresh();draw();}
     } else if(button.dataset.memoryCard){await prepare(button.dataset.memoryCard);}
     else if(button.dataset.memoryRetry){await prepare(button.dataset.memoryRetry);}
     else if(button.hasAttribute('data-diary-back')){selected=null;cleanCard();draw();root.closest('dialog').scrollTop=0;}
@@ -58,5 +54,5 @@ export function createDiaryController({root,getState,saving=()=>false,dispatch,t
       catch(failure){if(failure.name!=='AbortError')toast('暂时无法直接分享，可以先保存图片');}
     }
   });
-  return {panel,refresh,open(nextFilter='all'){if(!canOpen())return false;tab='collection';filter=['together','fun','growth'].includes(nextFilter)?nextFilter:'all';page=0;selected=null;cleanCard();return true;},close(){clearInterval(progressTimer);progressTimer=null;selected=null;pending=null;message='';signature='';cleanCard();}};
+  return {panel,refresh,open(nextFilter='all'){if(!canOpen())return false;tab='collection';filter=['together','fun','growth'].includes(nextFilter)?nextFilter:'all';page=0;selected=null;cleanCard();return true;},close(){clearInterval(progressTimer);progressTimer=null;selected=null;message='';signature='';cleanCard();}};
 }

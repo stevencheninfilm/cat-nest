@@ -91,8 +91,8 @@ export function feedingButtonContent({ state, selectedFood, clientId, saving = f
   const food = FOODS[selectedMeal(selectedFood)];
   const growth = growthRewardAmount(food.love, petNeeds(state,now).boostCount);
   const care = careActionInfo(state, { type:'feed' }, clientId, now);
-  const disabled = !connected || saving || !care.allowed || state.coins < food.cost;
-  const content = saving ? '正在保存这份心意…' : !connected ? '正在连接云端小窝…' : care.reason === 'daily_limit' ? '今日喂食次数已用完' : care.reason === 'cooldown' ? `${countdown(care.remainingMs)} 后可喂食` : state.coins < food.cost ? '猫爪币还不够啦' : `喂这个 <span>成长气泡 +${growth}</span>`;
+  const disabled = !connected || !care.allowed || state.coins < food.cost;
+  const content = !connected ? '正在连接云端小窝…' : care.reason === 'daily_limit' ? '今日喂食次数已用完' : care.reason === 'cooldown' ? `${countdown(care.remainingMs)} 后可喂食` : state.coins < food.cost ? '猫爪币还不够啦' : `喂这个 <span>成长气泡 +${growth}</span>`;
   return { disabled, content };
 }
 export function feedingSheet({ state, selectedFood, tab = 'menu', category = 'all', clientId, members = [], saving = false, connected = true, now = Date.now() }) {

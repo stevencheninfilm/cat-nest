@@ -36,6 +36,6 @@ export function connectionSummary({ phase = 'solo', configured = false, entered 
   if (phase !== 'online') return '连接中断 · 在线状态待确认';
   const count = COUPLE_ROLES.filter(role => members.some(member => member.id === role.clientId)).length;
   const connection = known ? `${count} 人在线` : '正在同步';
-  const saved = savePhase === 'saving' ? '保存中' : savePhase === 'error' ? '保存待确认' : '互动自动保存';
+  const saved = savePhase === 'error' ? '保存待确认' : '互动自动保存';
   return `${connection} · ${saved}`;
 }

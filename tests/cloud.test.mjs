@@ -187,7 +187,7 @@ test('temporary API failure retains the exact pending operation, reports an erro
   assert.equal(h.observed.actions.length, 0);
   assert.equal(h.observed.states.length, 1);
   assert.equal(h.observed.saves.at(-1).phase, 'error');
-  assert.match(h.observed.saves.at(-1).message, /保存失败.*自动重试/);
+  assert.match(h.observed.saves.at(-1).message, /保存暂未确认.*自动重试/);
   t.mock.timers.tick(7999);
   await flush();
   assert.equal(attempts, 1);

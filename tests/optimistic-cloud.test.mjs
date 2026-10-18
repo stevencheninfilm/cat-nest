@@ -100,7 +100,7 @@ test('a refused claim restores the saved bubble, XP and history and never retrie
   assert.equal(h.observed.actions.filter(action => !action.optimistic).length, 0);
 });
 
-test('an unknown storage failure rolls back display and retries the same operation without animating twice', async t => {
+test('an unknown storage failure keeps the local display and retries the same operation without animating twice', async t => {
   const base = initialState(); let attempts = 0;
   const h = harness(t, req => {
     if (req.method === 'GET') return response(snapshot(base));
@@ -111,8 +111,9 @@ test('an unknown storage failure rolls back display and retries the same operati
   const original = clone(h.requests.at(-1).body);
   assert.equal(h.latest().love, base.love + 3);
   await flush();
-  assert.deepEqual(h.latest(), base);
-  assert.equal(h.observed.rollbacks.length, 1);
+  assert.equal(h.latest().love,base.love+3);
+  assert.deepEqual(h.observed.states.at(-1).confirmedState,base);
+  assert.equal(h.observed.rollbacks.length,0);
   assert.equal(h.observed.pending.at(-1)[0].operationId, original.operationId);
   t.mock.timers.tick(8000); await flush();
   assert.deepEqual(h.requests.at(-1).body, original);
@@ -202,15 +203,16 @@ test('reloaded pending work is verified using its original ID without replaying 
   assert.equal(h.observed.actions.at(-1).previewed, false);
 });
 
-test('a stalled action rolls back after fifteen seconds while retaining the pending ID for verification', async t => {
+test('a stalled action keeps its local feedback after fifteen seconds and retains the pending ID for verification', async t => {
   const base = initialState();
   const h = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : new Promise((resolve, reject) => req.signal.addEventListener('abort', () => reject(new Error('request timed out')))));
   await h.room.start(); h.room.dispatch({ type:'pet' });
   assert.equal(h.latest().love, base.love + 3);
   t.mock.timers.tick(15000); await flush();
-  assert.deepEqual(h.latest(), base);
+  assert.equal(h.latest().love,base.love+3);
+  assert.deepEqual(h.observed.states.at(-1).confirmedState,base);
   assert.equal(h.observed.pending.at(-1).length, 1);
-  assert.equal(h.observed.rollbacks.length, 1);
+  assert.equal(h.observed.rollbacks.length, 0);
   assert.equal(h.observed.saves.at(-1).phase, 'error');
 });
 
@@ -244,7 +246,8 @@ test('a malformed success response cannot commit the temporary display or erase 
   const base = initialState();
   const h = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : response({ state:null, revision:1 }));
   await h.room.start(); h.room.dispatch({ type:'pet' }); await flush();
-  assert.deepEqual(h.latest(), base);
+  assert.deepEqual(h.observed.states.at(-1).confirmedState,base);
+  assert.equal(h.latest().love,base.love+3);
   assert.equal(h.observed.pending.at(-1).length, 1);
   assert.equal(h.observed.saves.at(-1).phase, 'error');
   assert.equal(h.observed.actions.filter(event => !event.optimistic).length, 0);
