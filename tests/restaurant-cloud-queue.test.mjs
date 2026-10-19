@@ -37,6 +37,28 @@ function harness(t,handler,{state=requested(),pending=[],roomId=ROOM}={}){
 }
 function apply(state,item,at=Date.now()){const next=reduceAction(state,item.action,{id:item.clientId,name:item.name},at,item.operationId);assert.ok(next,`server rejected ${item.action.type}:${item.action.stepId??''} at ${at}`);return next;}
 
+test('restaurant steps and home care keep each other when taps append to the same pending save queue',async t=>{
+  const base=requested(),acks=Array.from({length:4},deferred);let saved=base,posts=0;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved)):acks[posts++].promise,{state:base});
+  await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),true);
+  assert.equal(h.cloud.dispatch({type:'pet'}),true);
+  assert.equal(h.cloud.dispatch({type:'feed',food:'water'}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}),false);
+  assert.equal(h.posts().length,1,'the first upload does not block local kitchen or home actions');
+  assert.equal(h.latest().pendingGrowth.length,2);
+  assert.equal(h.latest().coins,base.coins-5);
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs.length,1);
+  for(let i=0;i<4;i++){
+    const item=h.posts()[i].body;saved=apply(saved,item);
+    acks[i].resolve(response(receipt(item,saved,i+1)));await flush();
+  }
+  assert.equal(h.pending().length,0);
+  assert.deepEqual(h.latest(),saved);
+  assert.equal(h.observed.rollbacks.length,0);
+});
+
 test('an exhausted operation hands off immediately in the optimistic queue without advancing to the first employee full-recovery clock',async t=>{
   let base=requested();base.restaurant.staff=1;
   Object.assign(base.restaurant.staffTraining['worker-1'],{energy:10,energyMode:'rest-room',rest:null});

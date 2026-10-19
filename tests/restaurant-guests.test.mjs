@@ -132,6 +132,6 @@ test('order bubbles appear after seating, and the terminal exposes deterministic
   assert.ok(terminal.includes('data-r-debug-arrive="1"'));assert.ok(terminal.includes('data-r-debug-arrive="2"'));assert.ok(terminal.includes('data-r-debug-arrive="random"'));
   assert.ok(terminal.includes('data-r-debug-reset'));assert.ok(terminal.includes('重置餐厅顾客和订单'));assert.ok(!terminal.includes('重播'));assert.ok(terminal.includes('已暂停'));
   assert.match(restaurantTerminalPanel(restaurantInfo(state,NOW),{icon}),/data-r-debug-reset[^>]+disabled/);
-  assert.ok(restaurantMarkup(state,{debugEnabled:true}).includes('打开餐厅控制终端'));
+  assert.ok(restaurantMarkup(state,{isTest:true,debugEnabled:true}).includes('打开餐厅控制终端'));
   assert.ok(!restaurantMarkup(state,{debugEnabled:false}).includes('打开餐厅控制终端'));
 });
