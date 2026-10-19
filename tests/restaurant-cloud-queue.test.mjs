@@ -1,0 +1,314 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createCloudRoom } from '../src/cloud.js';
+import { initialState,reduceAction,levelStartXp } from '../src/state.js';
+import { validRestaurant,restaurantInfo,restaurantRecipe } from '../src/restaurant.js';
+import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
+import { restaurantGuestDebugResult } from '../demo/restaurant-guests.js';
+import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
+import { prepareRestaurantMealForCollection } from './restaurant-meal-fixtures.mjs';
+const NOW=Date.parse('2026-10-18T12:00:00Z'),ROOM='e'.repeat(32),ACTOR={id:'queue-owner',name:'店长'};
+const clone=value=>structuredClone(value),response=(data,status=200)=>({ok:status>=200&&status<300,status,json:async()=>clone(data)});
+const snapshot=(state,revision=0,event)=>({roomId:ROOM,state,revision,...(event?{event}:{})});
+const receipt=(item,state,revision=1)=>snapshot(state,revision,{operationId:item.operationId,action:item.action,actor:{id:item.clientId,name:item.name}});
+const flush=async()=>{for(let index=0;index<50;index++)await Promise.resolve();};
+function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};}
+function requested(recipeId='coffee',count=1){
+  let state=initialState(NOW-6000);state.restaurant.stats.experience=levelStartXp(restaurantRecipe(recipeId).unlockLevel);if(restaurantRecipe(recipeId).special){state.restaurant.ownedSpecialRecipes=[recipeId];state.restaurant.recipeLevels[recipeId]=1;}for(let index=0;index<count;index++)state=reduceAction(state,{type:'restaurant-arrive',partySize:1,recipeId},ACTOR,NOW-6000,`seed-arrival-${index}`);
+  assert.ok(state);assert.equal(validRestaurant(state.restaurant),true);return state;
+}
+function harness(t,handler,{state=requested(),pending=[],roomId=ROOM}={}){
+  t.mock.timers.enable({apis:['Date','setTimeout','setInterval'],now:NOW});
+  const requests=[],sources=[],observed={states:[],actions:[],rollbacks:[],pending:[],saves:[],statuses:[]};
+  class Source{
+    constructor(url){this.url=url;this.listeners=new Map();this.closed=false;sources.push(this);}
+    addEventListener(type,callback){this.listeners.set(type,callback);}
+    emit(type,data){if(!this.closed)this.listeners.get(type)?.({data:JSON.stringify(data)});}
+    fail(){this.onerror?.();}open(){this.onopen?.();}close(){this.closed=true;}
+  }
+  const cloud=createCloudRoom({apiBase:'https://cloud.example.test',roomId,clientId:ACTOR.id,name:ACTOR.name,initialState:state,pending:clone(pending),optimisticReducer:reduceAction,
+    fetchImpl:async(url,options={})=>{const req={url,method:options.method??'GET',body:options.body?JSON.parse(options.body):null,signal:options.signal};requests.push(req);return handler(req);},eventSourceFactory:url=>new Source(url),
+    onRoom(){},onPresence(){},onStatus:value=>observed.statuses.push(clone(value)),onState:(state,meta)=>observed.states.push(clone({state,...meta})),
+    onAction:(action,actor,meta)=>observed.actions.push(clone({action,actor,...meta})),onRollback:(action,actor,meta)=>observed.rollbacks.push(clone({action,actor,...meta})),
+    onPending:value=>observed.pending.push(clone(value)),onSaveStatus:value=>observed.saves.push(clone(value)),
+  });
+  t.after(()=>cloud.destroy());
+  return {cloud,requests,sources,observed,state,latest:()=>observed.states.at(-1)?.state,pending:()=>observed.pending.at(-1)??pending,posts:()=>requests.filter(req=>req.method==='POST')};
+}
+function apply(state,item,at=Date.now()){const next=reduceAction(state,item.action,{id:item.clientId,name:item.name},at,item.operationId);assert.ok(next,`server rejected ${item.action.type}:${item.action.stepId??''} at ${at}`);return next;}
+
+test('restaurant steps and home care keep each other when taps append to the same pending save queue',async t=>{
+  const base=requested(),acks=Array.from({length:4},deferred);let saved=base,posts=0;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved)):acks[posts++].promise,{state:base});
+  await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),true);
+  assert.equal(h.cloud.dispatch({type:'pet'}),true);
+  assert.equal(h.cloud.dispatch({type:'feed',food:'water'}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}),false);
+  assert.equal(h.posts().length,1,'the first upload does not block local kitchen or home actions');
+  assert.equal(h.latest().pendingGrowth.length,2);
+  assert.equal(h.latest().coins,base.coins-5);
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs.length,1);
+  for(let i=0;i<4;i++){
+    const item=h.posts()[i].body;saved=apply(saved,item);
+    acks[i].resolve(response(receipt(item,saved,i+1)));await flush();
+  }
+  assert.equal(h.pending().length,0);
+  assert.deepEqual(h.latest(),saved);
+  assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('an exhausted operation hands off immediately in the optimistic queue without advancing to the first employee full-recovery clock',async t=>{
+  let base=requested();base.restaurant.staff=1;
+  Object.assign(base.restaurant.staffTraining['worker-1'],{energy:10,energyMode:'rest-room',rest:null});
+  base.restaurant.staffTraining['worker-2']={...clone(base.restaurant.staffTraining['worker-1']),energy:100};
+  base=reduceAction(base,{type:'restaurant-kitchen-accept',orderId:'table-1'},ACTOR,NOW);
+  base=reduceAction(base,{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'},ACTOR,NOW);
+  const first=clone(base.restaurant.orders[0].workflow.runs[0]),rest=clone(base.restaurant.staffTraining['worker-1'].rest),ack=deferred();let saved=base;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved)):ack.promise,{state:base});
+  t.mock.timers.tick(first.endAt-NOW);await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'}),true);
+  assert.equal(h.posts().length,1,'the POST waits only for the completed operation, not for its former employee recovery');
+  const local=h.latest(),flow=local.restaurant.orders[0].workflow;
+  assert.equal(flow.workerId,'worker-2');assert.equal(flow.runs[1].commandAt,first.endAt);assert.ok(Date.now()<rest.arriveAt);
+  assert.equal(local.restaurant.staffTraining['worker-1'].energy,0);assert.deepEqual(local.restaurant.staffTraining['worker-1'].rest,rest);
+  assert.equal(local.restaurant.staffTraining['worker-2'].energy,90);assert.ok(validRestaurant(local.restaurant));
+  assert.equal(restaurantInfo(local,Date.now()).kitchen.workers[0].phase,'rest-walk');assert.equal(restaurantInfo(local,Date.now()).kitchen.workers[1].phase,'walk');
+  t.mock.timers.tick(650);saved=apply(saved,h.posts()[0].body);ack.resolve(response(receipt(h.posts()[0].body,saved)));await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.orders[0].workflow.workerId,'worker-2');
+  assert.deepEqual(h.latest().restaurant.staffTraining['worker-1'].rest,rest);assert.equal(h.latest().restaurant.staffTraining['worker-2'].energy,90);
+  assert.equal(h.observed.rollbacks.length,0);assert.equal(saved.restaurant.orders[0].workflow.runs[1].commandAt,first.endAt+650);
+});
+
+test('a research draw waits for the real card and ignores duplicate queued taps',async t=>{
+  const base=initialState(NOW),ack=deferred();let saved=base;
+  const h=harness(t,async req=>{
+    if(req.method==='GET')return response(snapshot(saved));
+    await ack.promise;saved=apply(saved,req.body);return response(receipt(req.body,saved));
+  },{state:base});
+  await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-research-draw',draw:1}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-research-draw',draw:1}),false);
+  assert.equal(h.latest().restaurant.research.draws,0,'no speculative random card appears before the server receipt');
+  ack.resolve();await flush();
+  assert.equal(h.posts().length,1);assert.equal(h.latest().restaurant.research.draws,1);
+  assert.equal(h.latest().restaurant.research.fragments.rice,3);assert.equal(h.pending().length,0);
+});
+
+test('fragment fusion waits for the saved balance and ignores repeated queued conversions',async t=>{
+  const base=restaurantResearchDebugResult(initialState(NOW),{mode:'research-fusion'},NOW).state,ack=deferred();let saved=base;
+  const h=harness(t,async req=>{if(req.method==='GET')return response(snapshot(saved));await ack.promise;saved=apply(saved,req.body);return response(receipt(req.body,saved));},{state:base});
+  await h.cloud.start();const action={type:'restaurant-research-fuse',recipeId:'cocoa',amount:5,expectedFragments:5,expectedFusion:0};
+  assert.equal(h.cloud.dispatch(action),true);assert.equal(h.cloud.dispatch(action),false);
+  assert.equal(h.latest().restaurant.research.fragments.cocoa,5);assert.equal(h.latest().restaurant.research.inspirationEarned,base.restaurant.research.inspirationEarned);
+  ack.resolve();await flush();assert.equal(h.posts().length,1);assert.equal(h.latest().restaurant.research.fragments.cocoa,0);
+  assert.equal(h.latest().restaurant.research.inspirationEarned,base.restaurant.research.inspirationEarned+25);assert.equal(h.pending().length,0);
+});
+
+test('a first-course collection waits for its canonical next ID while other existing orders still preview',async t=>{
+  let base=restaurantGuestDebugResult(initialState(NOW-3600000),{mode:'guest',guestId:'guest-dawn-duke'},NOW-3600000).state;
+  base=prepareRestaurantMealForCollection(base,'table-1',ACTOR).state;
+  base.restaurant.levels.tables=2;
+  base=reduceAction(base,{type:'restaurant-arrive',partySize:1,recipeId:'coffee'},ACTOR,NOW-6000);
+  assert.ok(base);assert.equal(restaurantInfo(base,NOW).orders.find(order=>order.id==='table-1').status,'collectible');
+  const ack=deferred();let saved=base,revision=0,posts=0;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved,revision));
+    if(posts++===0)return ack.promise;
+    saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));
+  },{state:base});await h.cloud.start();
+  const collect={type:'restaurant-collect',orderId:'table-1'};
+  assert.equal(h.cloud.dispatch(collect),true);assert.equal(h.cloud.dispatch(collect),false,'same collection cannot queue twice');
+  assert.equal(h.latest().restaurant.nextOrderId,3);assert.equal(h.latest().coins,base.coins);assert.equal(h.latest().goldFish,base.goldFish);
+  assert.equal(h.latest().restaurant.parties[0].members[0].service.round,1,'no guessed next-course ID enters the display');
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-3'}),false,'a speculative new ID cannot be clicked');
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-2'}),true);
+  assert.equal(h.latest().restaurant.orders.find(order=>order.id==='table-2').workflow.acceptedAt,NOW);
+  saved=reduceAction(saved,{type:'restaurant-arrive',partySize:1,recipeId:'donut'},{id:'other-owner',name:'伙伴'},NOW);
+  assert.ok(saved);assert.equal(saved.restaurant.nextOrderId,4);
+  saved=apply(saved,h.posts()[0].body);assert.equal(saved.restaurant.parties[0].members[0].orderId,'table-4');
+  ack.resolve(response(receipt(h.posts()[0].body,saved,++revision)));await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.parties[0].members[0].orderId,'table-4');
+  assert.equal(h.latest().restaurant.orders.find(order=>order.id==='table-2').workflow.acceptedAt,NOW);
+  assert.equal(h.latest().restaurant.stats.served,1);assert.equal(h.latest().goldFish,base.goldFish);assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('restoring a queued first-course collection never invents another order or an early completion bonus',async t=>{
+  const fixture=restaurantGuestDebugResult(initialState(NOW-3600000),{mode:'guest',guestId:'guest-dawn-duke'},NOW-3600000).state;
+  const base=prepareRestaurantMealForCollection(fixture,'table-1',ACTOR).state;
+  const pending=[{operationId:'restore-first-course',clientId:ACTOR.id,name:ACTOR.name,action:{type:'restaurant-collect',orderId:'table-1'},restaurantPreviewAt:NOW}];
+  let offline=true,saved=base;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved));
+    if(offline)throw new TypeError('offline');
+    saved=apply(saved,req.body);return response(receipt(req.body,saved));
+  },{state:base,pending});await h.cloud.start();await flush();
+  assert.equal(h.latest().restaurant.nextOrderId,2);assert.equal(h.latest().restaurant.parties[0].members[0].service.round,1);
+  assert.equal(h.latest().coins,base.coins);assert.equal(h.latest().goldFish,base.goldFish);assert.equal(h.pending().length,1);
+  offline=false;t.mock.timers.tick(8000);await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.nextOrderId,3);assert.equal(h.latest().restaurant.parties[0].members[0].service.round,2);
+  assert.equal(h.latest().restaurant.parties[0].members[0].service.history.length,1);assert.equal(h.latest().goldFish,base.goldFish);
+  assert.ok(h.posts().every(req=>req.body.operationId==='restore-first-course'));assert.equal(h.observed.actions.filter(action=>action.optimistic).length,0);
+});
+
+test('an existing order responds before HTTP, queues other orders, and persists only local preview timing off the wire',async t=>{
+  const base=requested('coffee',2),acks=[deferred(),deferred()];let posts=0;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):acks[posts++].promise,{state:base});
+  assert.equal(h.cloud.isReady(),false);assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),false);
+  await h.cloud.start();assert.equal(h.cloud.isReady(),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),true);
+  assert.equal(h.latest().restaurant.orders[0].workflow.acceptedAt,NOW);assert.equal(h.observed.states.at(-1).confirmedState.restaurant.orders[0].workflow.acceptedAt,null);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-2'}),true);assert.equal(h.latest().restaurant.orders[1].workflow.acceptedAt,NOW);
+  assert.equal(h.posts().length,1);assert.equal(h.pending().length,2);assert.ok(h.pending().every(item=>item.restaurantPreviewAt===NOW));
+  assert.deepEqual(Object.keys(h.posts()[0].body).sort(),['action','clientId','name','operationId']);
+  assert.equal(h.cloud.getPendingActions().length,2);const copied=h.cloud.getPendingActions();copied.pop();assert.equal(h.cloud.getPendingActions().length,2);
+  let saved=apply(base,h.posts()[0].body);acks[0].resolve(response(receipt(h.posts()[0].body,saved)));await flush();
+  assert.equal(h.posts().length,2);saved=apply(saved,h.posts()[1].body);acks[1].resolve(response(receipt(h.posts()[1].body,saved,2)));await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.actions.filter(action=>action.optimistic).length,2);
+});
+
+test('a 650ms authoritative start delay preserves the local animation and waits before posting the already-clicked next step',async t=>{
+  const base=requested(),ack=deferred();let saved=base,revision=0,posts=0;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved,revision));
+    if(posts++===0)return ack.promise;
+    saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));
+  },{state:base});await h.cloud.start();
+  h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'});
+  const localEnd=h.latest().restaurant.orders[0].workflow.runs[0].endAt;
+  t.mock.timers.tick(650);saved=apply(base,h.posts()[0].body);ack.resolve(response(receipt(h.posts()[0].body,saved,++revision)));await flush();
+  const actualEnd=saved.restaurant.orders[0].workflow.runs[0].endAt;assert.equal(actualEnd,localEnd+650);
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs[0].endAt,localEnd,'the acknowledged receipt does not rewind the displayed walk');
+  t.mock.timers.tick(localEnd-Date.now());assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'}),true);
+  const nextId=h.pending()[0].operationId;assert.equal(h.latest().restaurant.orders[0].workflow.runs[1].commandAt,localEnd);assert.equal(h.posts().length,2);
+  assert.equal(h.observed.saves.at(-1).phase,'queued');assert.equal(h.observed.saves.at(-1).retrying,false);assert.equal(h.observed.rollbacks.length,0);
+  t.mock.timers.tick(649);await flush();assert.equal(h.posts().length,2,'no premature POST can get a timing refusal');
+  t.mock.timers.tick(26);await flush();assert.equal(h.posts().length,3);assert.equal(h.posts()[2].body.operationId,nextId);
+  assert.ok(saved.restaurant.orders[0].workflow.runs[1].commandAt>=actualEnd);assert.equal(h.pending().length,0);assert.equal(h.observed.rollbacks.length,0);
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs[1].commandAt,localEnd);
+});
+
+for(const kind of ['network','timeout','503','429','uncertain-409'])test(`${kind} retains the restaurant preview and original operation ID for an automatic retry`,async t=>{
+  const base=requested();let attempts=0,saved=base,revision=0;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved,revision));
+    if(++attempts===1){if(kind==='network')throw new TypeError('offline');if(kind==='timeout')return new Promise((yes,no)=>req.signal.addEventListener('abort',()=>no(new Error('aborted'))));return response({error:{code:kind==='uncertain-409'?'STORAGE_CONFLICT':'STORAGE_UNAVAILABLE',message:'暂时未确认'}},kind==='uncertain-409'?409:Number(kind));}
+    saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));
+  },{state:base});await h.cloud.start();h.sources[0].fail();assert.equal(h.cloud.isReady(),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),true);const original=clone(h.posts()[0].body);
+  if(kind==='timeout')t.mock.timers.tick(15000);await flush();
+  assert.equal(h.latest().restaurant.orders[0].workflow.acceptedAt,NOW);assert.equal(h.pending().length,1);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'queued');assert.equal(h.observed.saves.at(-1).retrying,true);
+  t.mock.timers.tick(8000);await flush();assert.equal(attempts,2);assert.deepEqual(h.posts()[1].body,original);assert.equal(h.pending().length,0);assert.equal(h.observed.saves.at(-1).phase,'saved');assert.equal(h.observed.actions.filter(action=>action.optimistic).length,1);
+});
+
+test('a malformed success cannot erase the queued action or its preview',async t=>{
+  const base=requested(),h=harness(t,req=>req.method==='GET'?response(snapshot(base)):response({state:null,revision:1}),{state:base});await h.cloud.start();h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});await flush();
+  assert.equal(h.pending().length,1);assert.equal(h.latest().restaurant.orders[0].workflow.acceptedAt,NOW);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'queued');
+});
+
+test('an explicit business refusal is the only failure that removes and rolls back a restaurant preview',async t=>{
+  const base=requested(),h=harness(t,req=>req.method==='GET'?response(snapshot(base)):response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'这份订单已被伙伴取消。'}},409),{state:base});await h.cloud.start();h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.orders[0].workflow.acceptedAt,null);assert.equal(h.observed.rollbacks.length,1);assert.equal(h.observed.rollbacks[0].reason,'rejected');assert.equal(h.observed.saves.at(-1).phase,'error');
+  const count=h.posts().length;t.mock.timers.tick(8000);await flush();assert.equal(h.posts().length,count);
+});
+
+test('a state-only snapshot that moves a dependency later cannot withdraw the next local step',async t=>{
+  const base=requested(),pending=deferred();const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):pending.promise,{state:base});await h.cloud.start();
+  h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'});const localEnd=h.latest().restaurant.orders[0].workflow.runs[0].endAt;
+  t.mock.timers.tick(localEnd-NOW);assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'}),true);
+  let later=reduceAction(base,{type:'restaurant-kitchen-accept',orderId:'table-1'},ACTOR,NOW+650,'later-accept');later=reduceAction(later,{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'},ACTOR,NOW+650,'later-gather');
+  h.sources[0].emit('state',snapshot(later,2));assert.equal(h.pending().length,3);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.latest().restaurant.orders[0].workflow.runs[1].stepId,'espresso');
+  assert.ok(h.latest().restaurant.orders[0].workflow.runs[1].commandAt>=later.restaurant.orders[0].workflow.runs[0].endAt);
+});
+
+test('reload restores restaurant previews and replays only original IDs, respecting every authoritative processing interval',async t=>{
+  const base=requested(),restoreAt=NOW+10000,items=[
+    {operationId:'restore-kitchen-accept',clientId:ACTOR.id,name:ACTOR.name,action:{type:'restaurant-kitchen-accept',orderId:'table-1'},restaurantPreviewAt:NOW},
+    {operationId:'restore-kitchen-gather',clientId:ACTOR.id,name:ACTOR.name,action:{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'},restaurantPreviewAt:NOW},
+    {operationId:'restore-kitchen-espresso',clientId:ACTOR.id,name:ACTOR.name,action:{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'},restaurantPreviewAt:restoreAt},
+  ];let saved=base,revision=0;
+  const h=harness(t,req=>{if(req.method==='GET')return response(snapshot(saved,revision));saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));},{state:base,pending:items});
+  await h.cloud.start();await flush();assert.equal(h.posts().length,2);assert.equal(h.pending().length,1);assert.equal(h.latest().restaurant.orders[0].workflow.runs[1].stepId,'espresso');
+  const end=saved.restaurant.orders[0].workflow.runs[0].endAt;t.mock.timers.tick(end-Date.now()+25);await flush();assert.equal(h.posts().length,3);assert.equal(h.pending().length,0);assert.deepEqual(h.posts().map(req=>req.body.operationId),items.map(item=>item.operationId));
+  assert.ok(saved.restaurant.orders[0].workflow.runs[1].commandAt>=end);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.actions.filter(action=>action.optimistic).length,0,'reload never replays click animations');
+});
+
+test('a durable SSE receipt drains a restaurant action once even if its HTTP acknowledgement times out',async t=>{
+  const base=requested(),h=harness(t,req=>req.method==='GET'?response(snapshot(base)):new Promise((yes,no)=>req.signal.addEventListener('abort',()=>no(new Error('lost HTTP')))),{state:base});await h.cloud.start();h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});
+  const item=h.posts()[0].body,saved=apply(base,item),data=receipt(item,saved);h.sources[0].emit('action',data);h.sources[0].emit('action',data);await flush();assert.equal(h.pending().length,0);
+  t.mock.timers.tick(15000);await flush();assert.equal(h.posts().length,1);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.actions.filter(action=>!action.optimistic).length,1);
+});
+
+test('all twenty-one complete dishes can be clicked offline and replay in order without skipping real server processing or awarding twice',async t=>{
+  for(const recipeId of ['rice','coffee','sandwich','lemontea','donut','pancake','pudding','matcha','burger','udon','waffle','strawberrymilk','gold-salmon','sushi','pizza','grape','parfait','gold-sundae','cheesecake','gold-latte','cocoa'])await t.test(recipeId,async t=>{
+    const base=requested(recipeId);let saved=base,revision=0,offline=true;const committed=[];
+    const h=harness(t,req=>{
+      if(req.method==='GET')return response(snapshot(saved,revision));
+      if(offline)throw new TypeError('offline');
+      saved=apply(saved,req.body);committed.push(clone(req.body));return response(receipt(req.body,saved,++revision));
+    },{state:base});await h.cloud.start();h.sources[0].fail();
+    assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),true);await flush();
+    for(const step of KITCHEN_FLOWS[recipeId]){
+      assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:step.id}),true);
+      const run=h.latest().restaurant.orders[0].workflow.runs.at(-1);t.mock.timers.tick((run.rest?.fullAt??run.endAt)-Date.now());await flush();
+    }
+    assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'delivery'}),true);
+    const delivered=h.latest().restaurant.orders[0].workflow;t.mock.timers.tick(delivered.servedAt+4500-Date.now());await flush();
+    assert.equal(h.cloud.dispatch({type:'restaurant-collect',orderId:'table-1'}),true);
+    const expected=clone(h.pending()),localWallet=h.latest().coins,localXp=h.latest().xp;
+    assert.equal(expected.length,KITCHEN_FLOWS[recipeId].length+3);assert.equal(h.latest().restaurant.orders.length,0);assert.equal(saved.coins,base.coins);assert.equal(saved.xp,base.xp);
+    const reconnectAt=Date.now();offline=false;assert.equal(h.cloud.retryPending(),true);await flush();
+    for(let attempts=0;h.pending().length&&attempts<40;attempts++){
+      const order=saved.restaurant.orders[0],run=order?.workflow.runs.at(-1),action=h.pending()[0].action;
+      const nextAt=action.type==='restaurant-collect'?order.workflow.servedAt+4500:run?.rest?.fullAt??run?.endAt??Date.now();
+      t.mock.timers.tick(Math.max(26,nextAt-Date.now()+26));await flush();
+    }
+    assert.equal(h.pending().length,0);assert.deepEqual(committed.map(item=>item.operationId),expected.map(item=>item.operationId));
+    assert.equal(saved.coins,localWallet);assert.equal(saved.xp,localXp);assert.equal(saved.xp,base.xp);assert.equal(saved.pendingGrowth.length,1);assert.equal(saved.pendingGrowth[0].amount,restaurantRecipe(recipeId).xp);assert.equal(saved.restaurant.stats.served,1);assert.equal(validRestaurant(saved.restaurant),true);assert.equal(saved.restaurant.orders.length,0);
+    assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'saved');
+    assert.ok(saved.updatedAt>=reconnectAt);assert.ok(committed.every(item=>!Object.hasOwn(item,'restaurantPreviewAt')));
+  });
+});
+
+test('an uncertain write which already committed is retried with the same ID and confirms once',async t=>{
+  const base=requested();let saved=base,attempts=0,first;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved,first?1:0));
+    if(++attempts===1){first=clone(req.body);saved=apply(saved,req.body);throw new TypeError('response lost after durable write');}
+    assert.deepEqual(req.body,first);return response({...receipt(first,saved),duplicate:true});
+  },{state:base});await h.cloud.start();h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});await flush();assert.equal(h.pending().length,1);
+  t.mock.timers.tick(8000);await flush();assert.equal(h.pending().length,0);assert.equal(attempts,2);assert.equal(h.observed.actions.filter(action=>!action.optimistic).length,1);assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('foreign-room snapshots and receipts cannot replace this home or erase its pending intent',async t=>{
+  const base=requested(),foreign={...snapshot(initialState(NOW),20),roomId:'a'.repeat(32)};
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):response(foreign),{state:base});await h.cloud.start();h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'});await flush();
+  h.sources[0].emit('state',foreign);assert.equal(h.pending().length,1);assert.equal(h.latest().restaurant.orders[0].workflow.acceptedAt,NOW);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.states.at(-1).confirmedState.restaurant.orders[0].workflow.acceptedAt,null);
+});
+
+test('real demo business and simulated explicit refusals both settle instead of retrying forever',async t=>{
+  t.mock.timers.enable({apis:['Date','setTimeout','setInterval'],now:NOW});
+  const {demoEngine,demoFetch,DEMO_ORIGIN}=await import('../demo/transport.js');
+  const {DEMO_ROOM,DEMO_ACTORS}=await import('../demo/engine.js');
+  const originalControls=clone(demoEngine.controls);
+  t.after(()=>Object.assign(demoEngine.controls,originalControls));
+  for(const kind of ['DEMO_ACTION_REJECTED','DEMO_REJECTED']){
+    demoEngine.reset();Object.assign(demoEngine.controls,{latency:0,offline:false,rejectNext:false,partnerOnline:false});
+    const arrival=demoEngine.action({operationId:`demo-queue-seed-${kind}`,clientId:DEMO_ACTORS.male.id,name:DEMO_ACTORS.male.name,action:{type:'restaurant-arrive',partySize:1,recipeId:'coffee'}});assert.equal(arrival.status,200);
+    const orderId=arrival.data.state.restaurant.orders[0].id;t.mock.timers.tick(6000);
+    const observed={states:[],rollbacks:[],pending:[],saves:[]};
+    const cloud=createCloudRoom({apiBase:DEMO_ORIGIN,roomId:DEMO_ROOM,coupleRole:'male',fetchImpl:demoFetch,eventSourceFactory:()=>({addEventListener(){},close(){}}),optimisticReducer:reduceAction,
+      onRoom(){},onPresence(){},onStatus(){},onAction(){},onState:state=>observed.states.push(clone(state)),onPending:queue=>observed.pending.push(clone(queue)),onSaveStatus:status=>observed.saves.push(clone(status)),onRollback:(action,actor,meta)=>observed.rollbacks.push(clone(meta)),
+    });t.after(()=>cloud.destroy());
+    const starting=cloud.start();t.mock.timers.tick(35);await starting;
+    if(kind==='DEMO_ACTION_REJECTED')demoEngine.scenario('new-home');else demoEngine.controls.rejectNext=true;
+    assert.equal(cloud.dispatch({type:'restaurant-kitchen-accept',orderId}),true);
+    assert.ok(observed.states.at(-1).restaurant.orders[0].workflow.acceptedAt!==null);
+    for(const delay of [0,35,35,35]){t.mock.timers.tick(delay);await flush();}
+    assert.equal(observed.pending.at(-1).length,0);assert.equal(observed.rollbacks.length,1);assert.equal(observed.rollbacks[0].code,kind);assert.equal(observed.saves.at(-1).phase,'error');
+    assert.equal(kind==='DEMO_ACTION_REJECTED'?observed.states.at(-1).restaurant.orders.length:observed.states.at(-1).restaurant.orders[0].workflow.acceptedAt,kind==='DEMO_ACTION_REJECTED'?0:null);
+    const count=demoEngine.logs.filter(log=>log.method==='POST').length;t.mock.timers.tick(8000);await flush();assert.equal(demoEngine.logs.filter(log=>log.method==='POST').length,count);
+    cloud.destroy();
+  }
+});

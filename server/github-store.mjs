@@ -8,6 +8,8 @@ import { sanitizeLocalGameAction, localGameReceipt, validLocalEvent } from '../s
 import { validCoupleCare } from '../src/couple-care.js';
 import { validMemoryJournal, normalizeMemoryJournal, validMemoryId } from '../src/memory-journal.js';
 import { validNest, sanitizeNestAction, validFurnitureCare } from '../src/nest-decor.js';
+import { validGoldFish } from '../src/restaurant-economy.js';
+import { validRestaurant, normalizeRestaurant, sanitizeRestaurantAction, restaurantActionResult } from '../src/restaurant.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -24,6 +26,7 @@ export function sanitizeAction(value) {
   if (!plain(value)) return null;
   if(value.type==='game-local-finish')return sanitizeLocalGameAction(value);
   if (typeof value.type==='string' && value.type.startsWith('nest-')) return sanitizeNestAction(value);
+  if (typeof value.type==='string' && value.type.startsWith('restaurant-')) return sanitizeRestaurantAction(value);
   if (typeof value.type === 'string' && value.type.startsWith('game-')) return sanitizeGameAction(value);
   const keys = Object.keys(value);
   if (value.type === 'join-home' && keys.length === 1) return {type:'join-home'};
@@ -63,6 +66,8 @@ function validStoredState(value) {
   if (Object.hasOwn(value, 'coupleCare') && !validCoupleCare(value.coupleCare)) return false;
   if (Object.hasOwn(value, 'diary') && !validMemoryJournal(value.diary)) return false;
   if (Object.hasOwn(value, 'nest') && !validNest(value.nest)) return false;
+  if (Object.hasOwn(value,'goldFish') && !validGoldFish(value.goldFish)) return false;
+  if (Object.hasOwn(value, 'restaurant') && !validRestaurant(value.restaurant)) return false;
   if (Object.hasOwn(value, 'needsUpdatedAt') && (!Number.isSafeInteger(value.needsUpdatedAt) || value.needsUpdatedAt < 0)) return false;
   for (const key of ['coins', 'love', 'xp', 'hunger', 'mood', 'energy']) {
     const max = key === 'xp' ? Number.MAX_SAFE_INTEGER : ['coins', 'love'].includes(key) ? 999999 : 100;
@@ -182,6 +187,8 @@ export function createGitHubStore({
       // Migrate only the new optional ledger; preserve the original save fields.
       room.state.collection ??= normalizeState(room.state, now()).collection;
       room.state.diary = normalizeMemoryJournal(room.state.diary,room.state,now(),room.createdAt);
+      room.state.restaurant = normalizeRestaurant(room.state.restaurant, now());
+      room.state.goldFish ??= 0;
       const record = { room, sha: data.sha };
       cache.set(id, { record, etag: response.headers.get('etag') });
       if (cache.size > 1000) cache.delete(cache.keys().next().value);
@@ -251,7 +258,7 @@ export function createGitHubStore({
           const produced = room.state.pendingGrowth?.find(reward => reward.id === operationId)
             || room.claimedGrowth.find(reward => reward.id === operationId);
           if (produced) {
-            if (produced.actorId !== actor.id || produced.kind !== action.type || produced.furniture !== action.furniture || (action.type === 'feed' && produced.food !== action.food)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+            if (produced.actorId !== actor.id || produced.kind !== action.type || produced.furniture !== action.furniture || (action.type === 'feed' && produced.food !== action.food) || (action.type === 'restaurant-collect' && produced.orderId !== action.orderId)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event: { operationId, action, actor }, duplicate: true };
           }
           const actionAt = now();
@@ -263,6 +270,7 @@ export function createGitHubStore({
             if (!canInviteCat(action.catId, normalizeState(room.state,actionAt).collection, levelInfo(room.state.xp).level,action.sceneId,room.state.diary)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
           }
           const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
+          if (!reduced && action.type.startsWith('restaurant-')) throw new StorageError('RESTAURANT_ACTION_REJECTED',restaurantActionResult(normalizeState(room.state,actionAt),action,actor,actionAt).reason||'餐桌已更新，请按最新小馆继续操作。',409);
           if (!reduced && action.type.startsWith('nest-')) throw new StorageError('NEST_ACTION_REJECTED','布置已更新，或金币、空间不足。请按最新小窝继续摆放。',409);
           if (!reduced && action.type.startsWith('game-')) throw new StorageError('GAME_ACTION_REJECTED', '对局已更新，请按最新回合操作；只有本局玩家可以参与。', 409);
           if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);

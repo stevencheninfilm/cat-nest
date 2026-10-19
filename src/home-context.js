@@ -39,5 +39,5 @@ export function homeStorageKey(key,context) {
 }
 export function initialHomeState(context,now=Date.now()) {
   const state=initialState(now);
-  return context.source==='room' ? {...state,coins:1200,love:0,xp:0} : state;
+  return context.source==='room' ? {...state,love:0,xp:0} : state;
 }

@@ -1,0 +1,13 @@
+.restaurant-home-entry{color:#9b681f;text-shadow:0 1px 2px #fff5d7}
+.restaurant-home-entry .nav-icon{position:relative;flex-shrink:0;background:linear-gradient(145deg,#fff6d9eb,#edc573d9 65%,#cf9c42cc);border-color:#fff4c9;box-shadow:0 2px 9px #98652e33,inset 0 0 0 3px #fff5c65c,inset 0 1px 6px #fffbe9,0 0 13px #ffe6a34a}
+.restaurant-home-entry .restaurant-home-mascot{display:block;width:49px;height:49px;object-fit:contain;filter:drop-shadow(0 2px 1px #9c6c3b35);user-select:none;-webkit-user-drag:none}
+.restaurant-home-entry>span:nth-child(2){white-space:nowrap}
+.restaurant-home-entry small{color:#b58942}
+.bottom-nav:has(.restaurant-home-entry) .home-note{min-width:0}
+.bottom-nav:has(.restaurant-home-entry) #save-status{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.restaurant-home-entry:focus-visible{outline:2px solid #a77331;outline-offset:4px}
+/* Keep the local demo launcher in the middle slot, leaving both entries clear. */
+.demo-mode:has(.nest:not([hidden]) .restaurant-home-entry) .demo-launcher{left:calc(50% + min(2.2vw,10px));width:clamp(78px,23vw,110px);min-height:44px;padding:5px 4px;gap:0;border-radius:14px;border-color:#ead8b9;background:linear-gradient(150deg,#fff9e9,#f5e7ca);color:#987c5d;box-shadow:0 2px 0 #c7ab85,0 3px 7px #61472b26}
+.demo-mode:has(.nest:not([hidden]) .restaurant-home-entry) .demo-launcher strong{font-size:11px;letter-spacing:0}
+.demo-mode:has(.nest:not([hidden]) .restaurant-home-entry) .demo-launcher small{font-size:6.5px;letter-spacing:0;color:#aa9275}
+.demo-mode:has(.nest:not([hidden]) .restaurant-home-entry) .demo-launcher-icon,.demo-mode:has(.nest:not([hidden]) .restaurant-home-entry) .demo-launcher-arrow{display:none}

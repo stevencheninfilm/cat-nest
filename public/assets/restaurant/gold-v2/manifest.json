@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "mode": "built-in-imagegen",
+  "reference": "gold-v1/theme-starlight.webp",
+  "assets": {
+    "theme-moonclock": {
+      "file": "theme-moonclock.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-59e77684-93cf-4dae-adf1-3f4c46a3629d.png",
+      "alpha": true
+    },
+    "theme-aquarium": {
+      "file": "theme-aquarium.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-9b8ce23a-e0a2-4291-adc6-ec9b5f1919d7.png",
+      "alpha": true
+    },
+    "theme-gramophone": {
+      "file": "theme-gramophone.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-ae3b0d2a-6b33-4e2d-821e-28582b7855a6.png",
+      "alpha": true
+    },
+    "theme-fireplace": {
+      "file": "theme-fireplace.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-a7af6a3a-e6a4-4a24-863f-0b76d503990a.png",
+      "alpha": true
+    },
+    "theme-snowglobe": {
+      "file": "theme-snowglobe.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-70af3999-836c-48d5-9104-cf97527aa5a2.png",
+      "alpha": true
+    },
+    "theme-cloudgarden": {
+      "file": "theme-cloudgarden.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-9a32834c-6baa-40b4-a350-189a4d5f4f9c.png",
+      "alpha": true
+    }
+  }
+}

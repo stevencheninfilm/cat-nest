@@ -1,0 +1,2886 @@
+{
+  "version": 3,
+  "mode": "built-in-imagegen",
+  "createdDate": "2026-10-18",
+  "bboxFormat": "[left, top, rightExclusive, bottomExclusive]",
+  "props": [
+    {
+      "id": "ingredients-sandwich",
+      "propId": "ingredients-sandwich",
+      "file": "props/ingredients-sandwich.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/ingredients-sandwich.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 39700,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6651
+      },
+      "contentBBox": [
+        32,
+        140,
+        480,
+        373
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "washing-salad",
+      "propId": "washing-salad",
+      "file": "props/washing-salad.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/washing-salad.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 64322,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5893
+      },
+      "contentBBox": [
+        32,
+        39,
+        480,
+        474
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "board-salad",
+      "propId": "board-salad",
+      "file": "props/board-salad.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/board-salad.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 45544,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5747
+      },
+      "contentBBox": [
+        32,
+        118,
+        480,
+        395
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "toast-bread",
+      "propId": "toast-bread",
+      "file": "props/toast-bread.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/toast-bread.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 38848,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4865
+      },
+      "contentBBox": [
+        32,
+        55,
+        480,
+        457
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "sandwich-sauce",
+      "propId": "sandwich-sauce",
+      "file": "props/sandwich-sauce.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/sandwich-sauce.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 38930,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5869
+      },
+      "contentBBox": [
+        32,
+        83,
+        480,
+        429
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "sandwich-assembly",
+      "propId": "sandwich-assembly",
+      "file": "props/sandwich-assembly.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/sandwich-assembly.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 39692,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6708
+      },
+      "contentBBox": [
+        32,
+        101,
+        480,
+        411
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "ingredients-lemontea",
+      "propId": "ingredients-lemontea",
+      "file": "props/ingredients-lemontea.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/ingredients-lemontea.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 39074,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5782
+      },
+      "contentBBox": [
+        32,
+        80,
+        480,
+        432
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "washing-lemon",
+      "propId": "washing-lemon",
+      "file": "props/washing-lemon.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/washing-lemon.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 56428,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5949
+      },
+      "contentBBox": [
+        32,
+        38,
+        480,
+        474
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "board-lemon",
+      "propId": "board-lemon",
+      "file": "props/board-lemon.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/board-lemon.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 29876,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6141
+      },
+      "contentBBox": [
+        32,
+        125,
+        480,
+        387
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "tea-pot",
+      "propId": "tea-pot",
+      "file": "props/tea-pot.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/tea-pot.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 56928,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4361
+      },
+      "contentBBox": [
+        34,
+        32,
+        478,
+        480
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "lemontea-mixing",
+      "propId": "lemontea-mixing",
+      "file": "props/lemontea-mixing.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/lemontea-mixing.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 65878,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4824
+      },
+      "contentBBox": [
+        45,
+        32,
+        468,
+        480
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "ingredients-sandwich",
+      "propId": "ingredients-sandwich",
+      "file": "props/ingredients-sandwich.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/ingredients-sandwich.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 39700,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6651
+      },
+      "contentBBox": [
+        32,
+        140,
+        480,
+        373
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "washing-salad",
+      "propId": "washing-salad",
+      "file": "props/washing-salad.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/washing-salad.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 64322,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5893
+      },
+      "contentBBox": [
+        32,
+        39,
+        480,
+        474
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "board-salad",
+      "propId": "board-salad",
+      "file": "props/board-salad.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/board-salad.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 45544,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5747
+      },
+      "contentBBox": [
+        32,
+        118,
+        480,
+        395
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "toast-bread",
+      "propId": "toast-bread",
+      "file": "props/toast-bread.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/toast-bread.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 38848,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4865
+      },
+      "contentBBox": [
+        32,
+        55,
+        480,
+        457
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "sandwich-sauce",
+      "propId": "sandwich-sauce",
+      "file": "props/sandwich-sauce.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/sandwich-sauce.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 38930,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5869
+      },
+      "contentBBox": [
+        32,
+        83,
+        480,
+        429
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "sandwich-assembly",
+      "propId": "sandwich-assembly",
+      "file": "props/sandwich-assembly.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/sandwich-assembly.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 39692,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6708
+      },
+      "contentBBox": [
+        32,
+        101,
+        480,
+        411
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "ingredients-lemontea",
+      "propId": "ingredients-lemontea",
+      "file": "props/ingredients-lemontea.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/ingredients-lemontea.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 39074,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5782
+      },
+      "contentBBox": [
+        32,
+        80,
+        480,
+        432
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "washing-lemon",
+      "propId": "washing-lemon",
+      "file": "props/washing-lemon.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/washing-lemon.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 56428,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5949
+      },
+      "contentBBox": [
+        32,
+        38,
+        480,
+        474
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "board-lemon",
+      "propId": "board-lemon",
+      "file": "props/board-lemon.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/board-lemon.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 29876,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6141
+      },
+      "contentBBox": [
+        32,
+        125,
+        480,
+        387
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "tea-pot",
+      "propId": "tea-pot",
+      "file": "props/tea-pot.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/tea-pot.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 56928,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4361
+      },
+      "contentBBox": [
+        34,
+        32,
+        478,
+        480
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": "lemontea-mixing",
+      "propId": "lemontea-mixing",
+      "file": "props/lemontea-mixing.webp",
+      "url": "/assets/restaurant/kitchen-v3/props/lemontea-mixing.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations": [],
+      "bytes": 65878,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4824
+      },
+      "contentBBox": [
+        45,
+        32,
+        468,
+        480
+      ],
+      "contentAnchor": [
+        256,
+        256
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "id": "gather-sandwich",
+      "animationId": "gather-sandwich",
+      "propId": "ingredients-sandwich",
+      "file": "animations/gather-sandwich.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/gather-sandwich.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 223752,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.602
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6558
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6649
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6165
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.602
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6493
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6771
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6493
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.602
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6165
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6649
+        }
+      ],
+      "contentBBox": [
+        24,
+        80,
+        360,
+        304
+      ],
+      "frameBBoxes": [
+        [
+          24,
+          129,
+          360,
+          304
+        ],
+        [
+          29,
+          130,
+          356,
+          304
+        ],
+        [
+          24,
+          98,
+          360,
+          304
+        ],
+        [
+          24,
+          80,
+          360,
+          304
+        ],
+        [
+          27,
+          117,
+          356,
+          304
+        ],
+        [
+          24,
+          131,
+          360,
+          304
+        ],
+        [
+          27,
+          117,
+          356,
+          304
+        ],
+        [
+          24,
+          80,
+          360,
+          304
+        ],
+        [
+          24,
+          98,
+          360,
+          304
+        ],
+        [
+          29,
+          130,
+          356,
+          304
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "wash-salad",
+      "animationId": "wash-salad",
+      "propId": "washing-salad",
+      "file": "animations/wash-salad.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/wash-salad.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 348262,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5763
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5939
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5912
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5763
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5936
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5828
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5961
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5828
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5936
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5763
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5912
+        }
+      ],
+      "contentBBox": [
+        24,
+        34,
+        360,
+        350
+      ],
+      "frameBBoxes": [
+        [
+          24,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ],
+        [
+          25,
+          34,
+          360,
+          350
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "toast-bread",
+      "animationId": "toast-bread",
+      "propId": "toast-bread",
+      "file": "animations/toast-bread.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/toast-bread.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 227574,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.424
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5206
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5311
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5231
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.424
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5066
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.571
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5066
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.424
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5231
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5311
+        }
+      ],
+      "contentBBox": [
+        31,
+        24,
+        353,
+        360
+      ],
+      "frameBBoxes": [
+        [
+          34,
+          69,
+          347,
+          360
+        ],
+        [
+          33,
+          96,
+          349,
+          360
+        ],
+        [
+          34,
+          77,
+          350,
+          360
+        ],
+        [
+          31,
+          24,
+          353,
+          360
+        ],
+        [
+          39,
+          24,
+          352,
+          360
+        ],
+        [
+          46,
+          109,
+          350,
+          360
+        ],
+        [
+          39,
+          24,
+          352,
+          360
+        ],
+        [
+          31,
+          24,
+          353,
+          360
+        ],
+        [
+          34,
+          77,
+          350,
+          360
+        ],
+        [
+          33,
+          96,
+          349,
+          360
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "spread-sauce",
+      "animationId": "spread-sauce",
+      "propId": "sandwich-sauce",
+      "file": "animations/spread-sauce.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/spread-sauce.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 197038,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5917
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5975
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5923
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5924
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5917
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.592
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6012
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.592
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5917
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5924
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5923
+        }
+      ],
+      "contentBBox": [
+        24,
+        63,
+        360,
+        322
+      ],
+      "frameBBoxes": [
+        [
+          45,
+          63,
+          360,
+          322
+        ],
+        [
+          45,
+          63,
+          360,
+          322
+        ],
+        [
+          42,
+          63,
+          360,
+          322
+        ],
+        [
+          24,
+          63,
+          343,
+          322
+        ],
+        [
+          24,
+          63,
+          343,
+          322
+        ],
+        [
+          24,
+          63,
+          327,
+          322
+        ],
+        [
+          24,
+          63,
+          343,
+          322
+        ],
+        [
+          24,
+          63,
+          343,
+          322
+        ],
+        [
+          42,
+          63,
+          360,
+          322
+        ],
+        [
+          45,
+          63,
+          360,
+          322
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "assemble-sandwich",
+      "animationId": "assemble-sandwich",
+      "propId": "sandwich-assembly",
+      "file": "animations/assemble-sandwich.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/assemble-sandwich.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 498,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 135760,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5676
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.7
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5905
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6638
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6112
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5676
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6693
+        }
+      ],
+      "contentBBox": [
+        24,
+        45,
+        360,
+        340
+      ],
+      "frameBBoxes": [
+        [
+          33,
+          149,
+          360,
+          340
+        ],
+        [
+          32,
+          53,
+          360,
+          340
+        ],
+        [
+          36,
+          119,
+          358,
+          340
+        ],
+        [
+          24,
+          46,
+          335,
+          340
+        ],
+        [
+          24,
+          45,
+          337,
+          340
+        ],
+        [
+          24,
+          106,
+          336,
+          340
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "gather-lemontea",
+      "animationId": "gather-lemontea",
+      "propId": "ingredients-lemontea",
+      "file": "animations/gather-lemontea.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/gather-lemontea.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 237554,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.505
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.565
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5503
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5545
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.505
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5296
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5753
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5296
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.505
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5545
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5503
+        }
+      ],
+      "contentBBox": [
+        24,
+        40,
+        360,
+        344
+      ],
+      "frameBBoxes": [
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          40,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          40,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ],
+        [
+          24,
+          80,
+          360,
+          344
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "wash-lemon",
+      "animationId": "wash-lemon",
+      "propId": "washing-lemon",
+      "file": "animations/wash-lemon.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/wash-lemon.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 313458,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5715
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6013
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5887
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5816
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5736
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5767
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5715
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5767
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5736
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5816
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5887
+        }
+      ],
+      "contentBBox": [
+        24,
+        30,
+        360,
+        355
+      ],
+      "frameBBoxes": [
+        [
+          26,
+          30,
+          359,
+          355
+        ],
+        [
+          25,
+          30,
+          360,
+          355
+        ],
+        [
+          26,
+          30,
+          358,
+          355
+        ],
+        [
+          25,
+          30,
+          360,
+          355
+        ],
+        [
+          25,
+          30,
+          360,
+          355
+        ],
+        [
+          24,
+          30,
+          360,
+          355
+        ],
+        [
+          25,
+          30,
+          360,
+          355
+        ],
+        [
+          25,
+          30,
+          360,
+          355
+        ],
+        [
+          26,
+          30,
+          358,
+          355
+        ],
+        [
+          25,
+          30,
+          360,
+          355
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "brew-tea",
+      "animationId": "brew-tea",
+      "propId": "tea-pot",
+      "file": "animations/brew-tea.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/brew-tea.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 281138,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4267
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4412
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4267
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4433
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4504
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4515
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4621
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4515
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4504
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4433
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.4267
+        }
+      ],
+      "contentBBox": [
+        30,
+        24,
+        355,
+        360
+      ],
+      "frameBBoxes": [
+        [
+          30,
+          33,
+          354,
+          360
+        ],
+        [
+          30,
+          27,
+          354,
+          360
+        ],
+        [
+          30,
+          24,
+          355,
+          360
+        ],
+        [
+          30,
+          31,
+          343,
+          360
+        ],
+        [
+          30,
+          29,
+          344,
+          360
+        ],
+        [
+          30,
+          43,
+          343,
+          360
+        ],
+        [
+          30,
+          29,
+          344,
+          360
+        ],
+        [
+          30,
+          31,
+          343,
+          360
+        ],
+        [
+          30,
+          24,
+          355,
+          360
+        ],
+        [
+          30,
+          27,
+          354,
+          360
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "mix-lemontea",
+      "animationId": "mix-lemontea",
+      "propId": "lemontea-mixing",
+      "file": "animations/mix-lemontea.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/mix-lemontea.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 295918,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5863
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5863
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5902
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5913
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6059
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6052
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6043
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6052
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6059
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5913
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5902
+        }
+      ],
+      "contentBBox": [
+        24,
+        40,
+        360,
+        344
+      ],
+      "frameBBoxes": [
+        [
+          75,
+          40,
+          352,
+          344
+        ],
+        [
+          24,
+          40,
+          357,
+          344
+        ],
+        [
+          74,
+          40,
+          357,
+          344
+        ],
+        [
+          76,
+          53,
+          352,
+          344
+        ],
+        [
+          24,
+          53,
+          357,
+          344
+        ],
+        [
+          72,
+          50,
+          360,
+          344
+        ],
+        [
+          24,
+          53,
+          357,
+          344
+        ],
+        [
+          76,
+          53,
+          352,
+          344
+        ],
+        [
+          74,
+          40,
+          357,
+          344
+        ],
+        [
+          24,
+          40,
+          357,
+          344
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 8,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "package-lemontea",
+      "animationId": "package-lemontea",
+      "propId": "lemontea",
+      "file": "animations/package-lemontea.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/package-lemontea.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 10,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 830,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 289714,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5916
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.614
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6113
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5977
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5916
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6051
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6026
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6051
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5916
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5977
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6113
+        }
+      ],
+      "contentBBox": [
+        46,
+        24,
+        339,
+        360
+      ],
+      "frameBBoxes": [
+        [
+          46,
+          24,
+          339,
+          360
+        ],
+        [
+          46,
+          24,
+          329,
+          360
+        ],
+        [
+          46,
+          24,
+          327,
+          360
+        ],
+        [
+          46,
+          24,
+          339,
+          360
+        ],
+        [
+          46,
+          24,
+          339,
+          360
+        ],
+        [
+          46,
+          24,
+          335,
+          360
+        ],
+        [
+          46,
+          24,
+          339,
+          360
+        ],
+        [
+          46,
+          24,
+          339,
+          360
+        ],
+        [
+          46,
+          24,
+          327,
+          360
+        ],
+        [
+          46,
+          24,
+          329,
+          360
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 6,
+      "method": "built-in-imagegen-six-frame-sheet; body baseline alignment and common alpha-crop transform"
+    },
+    {
+      "id": "slice-salad",
+      "animationId": "slice-salad",
+      "propId": "board-salad",
+      "file": "animations/slice-salad.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/slice-salad.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 16,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 1328,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 171446,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5148
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5155
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5148
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5198
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5258
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.529
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5279
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5239
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5188
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5155
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5148
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5198
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5258
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.529
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5279
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5239
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5188
+        }
+      ],
+      "contentBBox": [
+        24,
+        41,
+        360,
+        344
+      ],
+      "frameBBoxes": [
+        [
+          24,
+          48,
+          360,
+          344
+        ],
+        [
+          24,
+          62,
+          360,
+          344
+        ],
+        [
+          24,
+          75,
+          360,
+          344
+        ],
+        [
+          24,
+          79,
+          360,
+          344
+        ],
+        [
+          24,
+          73,
+          360,
+          344
+        ],
+        [
+          24,
+          58,
+          360,
+          344
+        ],
+        [
+          24,
+          46,
+          360,
+          344
+        ],
+        [
+          24,
+          41,
+          360,
+          344
+        ],
+        [
+          24,
+          48,
+          360,
+          344
+        ],
+        [
+          24,
+          62,
+          360,
+          344
+        ],
+        [
+          24,
+          75,
+          360,
+          344
+        ],
+        [
+          24,
+          79,
+          360,
+          344
+        ],
+        [
+          24,
+          73,
+          360,
+          344
+        ],
+        [
+          24,
+          58,
+          360,
+          344
+        ],
+        [
+          24,
+          46,
+          360,
+          344
+        ],
+        [
+          24,
+          41,
+          360,
+          344
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 16,
+      "method": "new imagegen board + existing imagegen independent knife; 2 chopping cycles, translation and rotation"
+    },
+    {
+      "id": "slice-lemon",
+      "animationId": "slice-lemon",
+      "propId": "board-lemon",
+      "file": "animations/slice-lemon.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/slice-lemon.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 16,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 1328,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 146746,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.542
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5441
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.542
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5481
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5591
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5655
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5637
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5588
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5509
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5441
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.542
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5481
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5591
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5655
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5637
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5588
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.5509
+        }
+      ],
+      "contentBBox": [
+        24,
+        44,
+        360,
+        341
+      ],
+      "frameBBoxes": [
+        [
+          24,
+          51,
+          360,
+          341
+        ],
+        [
+          24,
+          65,
+          360,
+          341
+        ],
+        [
+          24,
+          78,
+          360,
+          341
+        ],
+        [
+          24,
+          82,
+          360,
+          341
+        ],
+        [
+          24,
+          76,
+          360,
+          341
+        ],
+        [
+          24,
+          61,
+          360,
+          341
+        ],
+        [
+          24,
+          49,
+          360,
+          341
+        ],
+        [
+          24,
+          44,
+          360,
+          341
+        ],
+        [
+          24,
+          51,
+          360,
+          341
+        ],
+        [
+          24,
+          65,
+          360,
+          341
+        ],
+        [
+          24,
+          78,
+          360,
+          341
+        ],
+        [
+          24,
+          82,
+          360,
+          341
+        ],
+        [
+          24,
+          76,
+          360,
+          341
+        ],
+        [
+          24,
+          61,
+          360,
+          341
+        ],
+        [
+          24,
+          49,
+          360,
+          341
+        ],
+        [
+          24,
+          44,
+          360,
+          341
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 16,
+      "method": "new imagegen board + existing imagegen independent knife; 2 chopping cycles, translation and rotation"
+    },
+    {
+      "id": "plate-sandwich",
+      "animationId": "plate-sandwich",
+      "propId": "sandwich",
+      "file": "animations/plate-sandwich.webp",
+      "url": "/assets/restaurant/kitchen-v3/animations/plate-sandwich.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 16,
+      "durations": [
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83,
+        83
+      ],
+      "durationMs": 1328,
+      "fps": 12.048192771084338,
+      "loop": 0,
+      "bytes": 109258,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6139
+      },
+      "frameAlpha": [
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6188
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6187
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6235
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6287
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6317
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6303
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6268
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6212
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6188
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6187
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6235
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6287
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6249
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6217
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.619
+        },
+        {
+          "min": 0,
+          "max": 255,
+          "transparentFraction": 0.6139
+        }
+      ],
+      "contentBBox": [
+        53,
+        24,
+        332,
+        360
+      ],
+      "frameBBoxes": [
+        [
+          53,
+          44,
+          332,
+          360
+        ],
+        [
+          53,
+          51,
+          332,
+          360
+        ],
+        [
+          53,
+          60,
+          332,
+          360
+        ],
+        [
+          53,
+          63,
+          332,
+          360
+        ],
+        [
+          53,
+          61,
+          332,
+          360
+        ],
+        [
+          53,
+          53,
+          332,
+          360
+        ],
+        [
+          53,
+          46,
+          332,
+          360
+        ],
+        [
+          53,
+          41,
+          332,
+          360
+        ],
+        [
+          53,
+          44,
+          332,
+          360
+        ],
+        [
+          53,
+          51,
+          332,
+          360
+        ],
+        [
+          53,
+          60,
+          332,
+          360
+        ],
+        [
+          53,
+          63,
+          332,
+          360
+        ],
+        [
+          53,
+          52,
+          332,
+          360
+        ],
+        [
+          53,
+          39,
+          332,
+          360
+        ],
+        [
+          53,
+          30,
+          332,
+          360
+        ],
+        [
+          53,
+          24,
+          332,
+          360
+        ]
+      ],
+      "contentAnchor": [
+        192,
+        192
+      ],
+      "distinctDecodedFrames": 16,
+      "method": "existing finished-food imagegen artwork + independent knife cutting cycle, then knife lifts clear for plating"
+    }
+  ],
+  "propMap": {
+    "ingredients-sandwich": "props/ingredients-sandwich.webp",
+    "washing-salad": "props/washing-salad.webp",
+    "board-salad": "props/board-salad.webp",
+    "toast-bread": "props/toast-bread.webp",
+    "sandwich-sauce": "props/sandwich-sauce.webp",
+    "sandwich-assembly": "props/sandwich-assembly.webp",
+    "ingredients-lemontea": "props/ingredients-lemontea.webp",
+    "washing-lemon": "props/washing-lemon.webp",
+    "board-lemon": "props/board-lemon.webp",
+    "tea-pot": "props/tea-pot.webp",
+    "lemontea-mixing": "props/lemontea-mixing.webp"
+  },
+  "animationMap": {
+    "gather-sandwich": "animations/gather-sandwich.webp",
+    "wash-salad": "animations/wash-salad.webp",
+    "toast-bread": "animations/toast-bread.webp",
+    "spread-sauce": "animations/spread-sauce.webp",
+    "assemble-sandwich": "animations/assemble-sandwich.webp",
+    "gather-lemontea": "animations/gather-lemontea.webp",
+    "wash-lemon": "animations/wash-lemon.webp",
+    "brew-tea": "animations/brew-tea.webp",
+    "mix-lemontea": "animations/mix-lemontea.webp",
+    "package-lemontea": "animations/package-lemontea.webp",
+    "slice-salad": "animations/slice-salad.webp",
+    "slice-lemon": "animations/slice-lemon.webp",
+    "plate-sandwich": "animations/plate-sandwich.webp"
+  },
+  "recipeSteps": {
+    "sandwich": {
+      "gather": {
+        "propId": "ingredients-sandwich",
+        "animationId": "gather-sandwich"
+      },
+      "wash-salad": {
+        "propId": "washing-salad",
+        "animationId": "wash-salad"
+      },
+      "slice-salad": {
+        "propId": "board-salad",
+        "animationId": "slice-salad"
+      },
+      "toast-bread": {
+        "propId": "toast-bread",
+        "animationId": "toast-bread"
+      },
+      "spread-sauce": {
+        "propId": "sandwich-sauce",
+        "animationId": "spread-sauce"
+      },
+      "assemble-sandwich": {
+        "propId": "sandwich-assembly",
+        "animationId": "assemble-sandwich"
+      },
+      "plate-sandwich": {
+        "propId": "sandwich",
+        "propFile": "../foods/sandwich.webp",
+        "animationId": "plate-sandwich"
+      }
+    },
+    "lemontea": {
+      "gather": {
+        "propId": "ingredients-lemontea",
+        "animationId": "gather-lemontea"
+      },
+      "wash-lemon": {
+        "propId": "washing-lemon",
+        "animationId": "wash-lemon"
+      },
+      "slice-lemon": {
+        "propId": "board-lemon",
+        "animationId": "slice-lemon"
+      },
+      "brew-tea": {
+        "propId": "tea-pot",
+        "animationId": "brew-tea"
+      },
+      "mix-lemontea": {
+        "propId": "lemontea-mixing",
+        "animationId": "mix-lemontea"
+      },
+      "package-lemontea": {
+        "propId": "lemontea",
+        "propFile": "../foods/lemontea.webp",
+        "animationId": "package-lemontea"
+      }
+    }
+  },
+  "notes": [
+    "Every new prop is actual ImageGen artwork using local image references.",
+    "Animations contain independent ingredient, utensil, water, steam or pouring action; no generic whole-prop shaking.",
+    "Final sandwich/lemontea carrying art remains the original foods assets."
+  ]
+}

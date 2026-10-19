@@ -62,7 +62,7 @@ test('refreshing starts default pet, games, requests and court instead of the pr
   oldEngine.action({clientId:DEMO_ACTORS.female.id,operationId:'demo-previous-game-01',action:{type:'game-create',game:'rps',mode:'duo',previousId:null}});
   assert.ok(oldEngine.snapshot().state.games.match);
   const freshLocal=createMemoryStorage(),freshSession=createMemoryStorage(),fresh=createDemoEngine({storage:freshLocal,now:()=>time});
-  assert.equal(fresh.snapshot().state.xp,400);assert.equal(fresh.snapshot().state.coins,11960);
+  assert.equal(fresh.snapshot().state.xp,400);assert.equal(fresh.snapshot().state.coins,100);
   assert.equal(fresh.snapshot().state.games.match,null);assert.equal(fresh.getCourt(),null);
   assert.equal(freshLocal.getItem('catnest.role'),null);assert.equal(freshLocal.getItem('catnest.pending.preview.female'),null);assert.equal(freshSession.getItem('catcourt.session.demo'),null);
 });

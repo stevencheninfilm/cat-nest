@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "mode": "built-in-imagegen",
+  "assets": {
+    "gold-fish": {
+      "file": "gold-fish.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-5325a236-6533-4698-bd68-91eed99d3e54.png",
+      "alpha": true,
+      "sourceBounds": [
+        246,
+        147,
+        1351,
+        815
+      ]
+    },
+    "special-salmon": {
+      "file": "special-salmon.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-d063343a-5bbb-4f4e-9801-08fac5244ea0.png",
+      "alpha": true,
+      "sourceBounds": [
+        233,
+        87,
+        1308,
+        951
+      ]
+    },
+    "special-sundae": {
+      "file": "special-sundae.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-ce9e67e2-7705-49f6-859a-7699a925ea67.png",
+      "alpha": true,
+      "sourceBounds": [
+        263,
+        53,
+        1069,
+        1144
+      ]
+    },
+    "special-latte": {
+      "file": "special-latte.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-027f343c-99a7-4c2c-a51a-9623aaba752c.png",
+      "alpha": true,
+      "sourceBounds": [
+        264,
+        67,
+        1332,
+        945
+      ]
+    },
+    "theme-starlight": {
+      "file": "theme-starlight.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-2151b579-7fe0-45ea-960f-feeb864bd909.png",
+      "alpha": true,
+      "sourceBounds": [
+        157,
+        88,
+        1073,
+        1279
+      ]
+    },
+    "theme-glass": {
+      "file": "theme-glass.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-1c9dc4ae-4ea0-411c-bee5-c2648c9d16ea.png",
+      "alpha": true,
+      "sourceBounds": [
+        81,
+        84,
+        1293,
+        1063
+      ]
+    },
+    "theme-royal": {
+      "file": "theme-royal.webp",
+      "width": 512,
+      "height": 512,
+      "source": "/Users/stevenchen/.codex/generated_images/01a14e16-4694-76e3-8db4-36f4a767e639/exec-2965f5c9-f789-4d63-8eb9-d40a7a571ecf.png",
+      "alpha": true,
+      "sourceBounds": [
+        56,
+        51,
+        1146,
+        1198
+      ]
+    }
+  }
+}

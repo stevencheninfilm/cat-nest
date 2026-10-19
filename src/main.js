@@ -15,6 +15,33 @@ import './growth-stages.css';
 import './cat-speech.css';
 import './companion.css';
 import './catbook.css';
+import './restaurant.css';
+import './restaurant-audio.css';
+import './restaurant-decor.css';
+import './restaurant-guests.css';
+import './restaurant-street.css';
+import './restaurant-customers.css';
+import './restaurant-order-tiers.css';
+import './restaurant-research.css';
+import './restaurant-research-hero.css';
+import './restaurant-recipe-celebration.css';
+import './restaurant-research-reveal.css';
+import './restaurant-research-lottery.css';
+import './restaurant-kitchen.css';
+import './restaurant-economy.css';
+import './restaurant-progression.css';
+import './restaurant-panels.css';
+import './restaurant-kitchen-board.css';
+import './restaurant-energy.css';
+import './restaurant-home.css';
+import './restaurant-experience.css';
+import './restaurant-growth-stages.css';
+import './restaurant-upgrade.css';
+import './restaurant-staff-rest.css';
+import './restaurant-locked.css';
+import './restaurant-recipe-detail.css';
+import { createRestaurant } from './restaurant-ui.js';
+import { restaurantActionResult } from './restaurant.js';
 import './growth-bars.css';
 import './pet-needs.css';
 import './diary.css';
@@ -41,7 +68,7 @@ import { gamePanelSignature, keepArcadeBoard, computerTurnDelay, paintGameSelect
 import { createLocalGames } from './minigames-local-client.js';
 import { createGamePreload } from './minigames-preload.js';
 import { createInteractionFeedback } from './interaction-feedback.js';
-import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole, BookOpen } from 'lucide';
+import { createIcons, PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, UtensilsCrossed, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole, BookOpen } from 'lucide';
 import { FOODS, FEEDING_BONUS, initialState, normalizeState, reduceAction, levelInfo, careActionInfo } from './state';
 import { petNeeds, growthRewardAmount, NEED_KEYS, NEED_LABELS, needsDecayDescription, CARE_NEED_EFFECTS, PLAY_ENERGY_COST } from './pet-needs.js';
 import { needButtons, needDetails, growthBonusBadge, growthBonusDetails } from './pet-needs-ui.js';
@@ -81,7 +108,7 @@ import { createNestLife } from './nest-life-ui.js';
 import { TOUCH_GAMES, CAT_PLAY_UNLOCK_LEVEL, catPlayUnlocked } from './minigames-touch-rules.js';
 import { createHomeCatInteractions } from './home-cat-interactions.js';
 
-const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole, BookOpen };
+const ICONS = { PawPrint, Coins, Heart, Sparkles, Settings2, Hand, WandSparkles, Moon, NotebookPen, ChevronRight, UsersRound, X, Pencil, House, Gavel, UtensilsCrossed, Volume2, VolumeX, ArrowRight, Shirt, EyeOff, LockKeyhole, BookOpen };
 const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const $ = s => document.querySelector(s);
 const esc = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -114,6 +141,9 @@ let catModelPhase = 'loading';
 let catExpression = 'auto';
 let catPaletteTab = 'expressions',catPaletteLevel=null;
 let catbook = null;
+let restaurant = null;
+let restaurantReturnHome = false;
+let restaurantRoutePending = location.hash === '#restaurant';
 let world = null, worldOpening = false;
 let appearanceDraft=normalizeAppearance(state.appearance),appearanceTab='body',appearanceSubmitting=false;
 let appearanceLoading=false,appearanceLoadError=false;
@@ -161,7 +191,7 @@ $('#app').innerHTML = `
   <section class="pet-card glass" aria-label="小猫状态"><div class="pet-title"><button class="pet-name" data-open="rename"><strong id="pet-name">糯米</strong>${icon('pencil')}</button><span class="level-badge"><span class="level-badge-heart" data-live-growth-heart></span><b id="level">Lv.1</b></span>${growthBonusBadge()}</div><div class="xp-row"><span class="xp-stage-heart" data-live-growth-heart></span><div class="progress-track" role="progressbar" aria-label="小猫成长进度" aria-valuemin="0"><div id="xp-bar"></div></div><span id="xp">86 / 120</span></div><div class="needs" aria-label="小猫状态，点击查看详情">${needButtons()}</div></section>
   <button class="feeding-preview glass" data-open="feeding" aria-label="查看当前餐食和双方喂养状态">${feedingHome({ state, clientId, members, selectedFood })}</button>
   <button class="feed-button" id="feed-button">${icon('paw-print')}<span>喂食</span><span class="feed-love">+25 ${icon('heart')}</span><span class="button-sparkle">✦</span><small class="feed-care-badge" data-care-status="feed" data-care-compact="true"></small></button>
-  <nav class="bottom-nav" aria-label="小窝导航"><button class="nav-entry judge" data-open="judge"><span class="nav-icon">${icon('gavel')}</span><span>猫猫判官<small>CAT JUDGE</small></span></button><span class="home-note"><button class="nest-home-entry" data-open="nest" aria-label="布置共同的小窝">⌂ 布置小窝 <b id="nest-home-level">Lv.1</b></button><span id="save-status" aria-live="polite">${runtime.storageLabel} · 请选择身份</span></span><button class="nav-entry home catbook-entry" data-open="collection" aria-label="猫猫图鉴，查看成就和邀请新猫猫"><span class="nav-icon book-nav-icon">${catSprite(getCollectionCat('bandit'))}<b class="book-nav-count" id="catbook-nav-count" aria-hidden="true" hidden></b></span><span>猫猫图鉴<small>CAT BOOK</small></span></button></nav>
+  <nav class="bottom-nav" aria-label="小窝导航">${runtime.isTest?`<button class="nav-entry restaurant-home-entry" data-open="restaurant" aria-label="猫猫餐厅，经营赚取金币与成长经验"><span class="nav-icon"><img class="restaurant-home-mascot" src="${import.meta.env.BASE_URL}assets/restaurant/characters/chef.webp" alt="" aria-hidden="true"></span><span>猫猫餐厅<small>CAT RESTAURANT</small></span></button>`:`<button class="nav-entry judge" data-open="judge"><span class="nav-icon">${icon('gavel')}</span><span>猫猫判官<small>CAT JUDGE</small></span></button>`}<span class="home-note"><button class="nest-home-entry" data-open="nest" aria-label="布置共同的小窝">⌂ 布置小窝 <b id="nest-home-level">Lv.1</b></button><span id="save-status" aria-live="polite">${runtime.storageLabel} · 请选择身份</span></span><button class="nav-entry home catbook-entry" data-open="collection" aria-label="猫猫图鉴，查看成就和邀请新猫猫"><span class="nav-icon book-nav-icon">${catSprite(getCollectionCat('bandit'))}<b class="book-nav-count" id="catbook-nav-count" aria-hidden="true" hidden></b></span><span>猫猫图鉴<small>CAT BOOK</small></span></button></nav>
   <div class="connection-note" id="connection-note" aria-live="polite"></div>
   <div class="companion-controls" id="companion-controls" hidden><button class="companion-exit" data-companion-exit>${icon('x')}<span>退出沉浸</span></button><p class="companion-hint" id="companion-hint"><strong>只留下你和猫猫</strong>点点猫猫，继续互动<br/>轻点空白处显示退出按钮 · Esc 返回小窝</p></div>
 </main>
@@ -344,6 +374,7 @@ function render() {
   updateCareControls();
   updateFeatureEntries();
   catbook?.render();
+  restaurant?.render();
   refreshGames();
   renderCoupleCare();
   diary.refresh();
@@ -498,6 +529,14 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   if(action.type==='diary-favorite'){diary.refresh();return;}
   if(action.type?.startsWith('nest-')){if(!optimistic&&!previewed)toast(`${actor.name}${mine?'':'刚刚'}${state.nest.lastEdit?.text||'更新了小窝布置'}`);return;}
   if (action.type?.startsWith('game-')) { refreshGames(); return; }
+  if (action.type?.startsWith('restaurant-')) {
+    restaurant?.render();
+    if(!optimistic&&action.type==='restaurant-collect'){
+      if(mine)toast('金币已同步小窝，回小窝领取「餐厅经营经验」');
+      chime();
+    }
+    return;
+  }
   if (action.type === 'invite-cat') {
     if(optimistic){toast(`向${getCollectionCat(action.catId)?.name || '新猫猫'}发出邀请啦 ♡`);return;}
     toast(`${getCollectionCat(action.catId)?.name || '新猫猫'}已加入${CAT_SCENES.find(scene=>scene.id===action.sceneId)?.name || '猫猫车站'}，快去看看它吧 ♡`);
@@ -547,6 +586,7 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   chime();
 }
 function rollbackReaction(action, actor, { operationId }) {
+  if(action.type?.startsWith('restaurant-')){cloudUi.request('state');return;}
   if(action.type?.startsWith('game-')){cloudUi.request('games');return;}
   if(action.type?.startsWith('nest-')){world?.setState(state);return;}
   interactionFeedback.rollback(operationId);
@@ -591,6 +631,7 @@ function dispatch(action) {
   const gated=action.type==='invite-cat'?'collection':action.type==='diary-favorite'?'diary':null;
   if(gated&&!requireFeature(gated))return false;
   const care = careActionInfo(state, action, clientId);
+  if(action.type.startsWith('restaurant-')){const result=restaurantActionResult(state,action,{id:clientId,name:profile.name});if(!result.ok){toast(result.reason);return false;}}
   if(action.type.startsWith('nest-')){const result=nestActionResult(state,action,{id:clientId,name:profile.name});if(!result.ok){toast(result.reason);return false;}}
   if (action.type === 'claim-growth') {
     if (pendingGrowthClaims.has(action.rewardId)) return false;
@@ -614,7 +655,8 @@ function dispatch(action) {
   const localOperationId = crypto.randomUUID();
   const next = reduceAction(state, action, actor, Date.now(), localOperationId);
   if (!next) { toast('这次互动暂时不能完成，请稍后再试'); updateCareControls(); return false; }
-  state = next; render(); react(action, actor, { operationId:localOperationId });
+  const previousXp=state.xp;
+  state = next; render(); react(action, actor, { operationId:localOperationId,previousXp,confirmedXp:state.xp });
   if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
   return true;
@@ -652,6 +694,7 @@ function startCloud() {
       if(confirmed!==receivedCloudSnapshot){confirmedState=normalizeState(confirmed);receivedCloudSnapshot=confirmed;}
       state=next===confirmed?confirmedState:normalizeState(next);
       coupleSnapshotReady=true;localGames.reconcile();
+      restoreRestaurantRoute();
       if (!receivedNeedsState) { needsFeedback.reset(petNeeds(state)); receivedNeedsState=true; }
       cloudUi.request('state');
     },
@@ -706,6 +749,7 @@ function enterRole(role) {
   catSpeech.start();
   if (changed || !cloud || status.phase !== 'online') startCloud();
   localGames.resume();
+  restoreRestaurantRoute();
   if (params.has('court') || params.get('mode') === 'judge') { params.delete('court'); params.delete('mode'); showCourt(); }
 }
 function openModal(view, options = {}) {
@@ -722,6 +766,7 @@ function openModal(view, options = {}) {
   if (view === 'handbook' || view === 'tutorial') { closeModal(); void gameGuide?.start({book:view==='handbook'}); return; }
   if (view === 'onboarding' || view === 'invite') { onboarding?.start({invite:view==='invite'}); return; }
   if (view === 'judge') { closeModal(); showCourt(); return; }
+  if (view === 'restaurant') { closeModal(); showRestaurant({fromHome:true}); return; }
   if (view === 'collection') { closeModal(); showCatbook(); return; }
   if (view === 'nest') { closeModal(); void showWorld({decorate:true}); return; }
   if (view === 'shared-care' && (!$('#modal').open || $('#modal-content').dataset.view !== 'shared-care')) { coupleTab='activity'; couplePages.activity=couplePages.memories=0; coupleHasNew=false; }
@@ -1109,6 +1154,9 @@ const catbookContainer = document.createElement('section');
 catbookContainer.id = 'catbook-root';
 catbookContainer.hidden = true;
 $('#app').append(catbookContainer);
+const restaurantContainer = document.createElement('section');
+restaurantContainer.id='restaurant-root';restaurantContainer.hidden=true;
+$('#app').append(restaurantContainer);
 let homeScroll = 0;
 const worldContainer = document.createElement('section');
 worldContainer.id='world-root';worldContainer.hidden=true;
@@ -1141,6 +1189,7 @@ function initializeCatbook() {
     canOpen:()=>currentFeatureStatus('collection').unlocked,
     getAvailability:() => ({ pendingInvitations, connected:careConnected() }),
     onAction:dispatch,
+    onRestaurant:showRestaurant,
     initialScene:read('catnest.catbook.scene', 'station'),
     onSceneChange:id => save('catnest.catbook.scene', id),
     onBack() {
@@ -1150,6 +1199,26 @@ function initializeCatbook() {
     },
   });
 }
+function showRestaurant({fromHome=false}={}) {
+  initializeCatbook();
+  restaurantReturnHome=fromHome;
+  if(fromHome){homeScroll=window.scrollY;$('.nest').hidden=true;interactionFeedback.clear();}
+  if(!restaurant)restaurant=createRestaurant({container:restaurantContainer,getState:()=>state,
+    getAvailability:()=>({connected:!cloudConfigured||status.phase==='online',ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,saving:careSaving(),savePhase:saveStatus.phase,retrying:saveStatus.retrying===true}),onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,testActions:runtime.testActions,
+    onBack(){const url=new URL(location.href);url.hash='';history.replaceState(null,'',url);if(restaurantReturnHome){$('.nest').hidden=false;document.body.classList.remove('catbook-mode');updateModelPause();scheduleUpgrade();window.scrollTo(0,homeScroll);$('[data-open="restaurant"]')?.focus({preventScroll:true});}else{document.body.classList.add('catbook-mode');catbook.open();updateModelPause();}},
+  });
+  catbook.close();document.body.classList.remove('catbook-mode');
+  const url=new URL(location.href);url.hash='restaurant';history.replaceState(null,'',url);
+  restaurant.open();restaurantContainer.querySelector('[data-r-back]').setAttribute('aria-label',fromHome?'返回猫猫小窝':'返回猫猫图鉴');window.scrollTo(0,0);updateModelPause();
+}
+function restoreRestaurantRoute(){
+  if(!restaurantRoutePending||!roleEntered||cloudConfigured&&!coupleSnapshotReady)return;
+  restaurantRoutePending=false;
+  if(runtime.isTest){closeModal();showRestaurant({fromHome:true});return;}
+  if(!currentFeatureStatus('collection').unlocked)return;
+  initializeCatbook();closeModal();$('.nest').hidden=true;showRestaurant();
+}
+if(import.meta.hot)import.meta.hot.dispose(()=>restaurant?.destroy());
 function showCatbook() {
   if(!requireFeature('collection'))return;
   homeCat?.dismiss();
@@ -1206,5 +1275,9 @@ window.addEventListener('pagehide', () => { localGames.pause();cloudUi.flush();c
 window.addEventListener('pageshow', e => { if (e.persisted) { if (roleEntered && cloudConfigured) startCloud(); if (roleEntered) catSpeech.start(); updateModelPause(); } });
 
 document.addEventListener('visibilitychange',()=>document.hidden?localGames.pause():localGames.resume());
-window.addEventListener('online',()=>localGames.retry());
+window.addEventListener('online',()=>{
+  localGames.retry();
+  if(cloud&&roleEntered&&!cloud.isReady()&&['error','offline'].includes(status.phase))void cloud.start();
+  else cloud?.retryPending();
+});
 document.addEventListener('pointerdown',event=>{if(event.target.closest('[data-open=games]'))void preloadGames();},{passive:true});

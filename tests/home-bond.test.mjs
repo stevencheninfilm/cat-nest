@@ -60,7 +60,7 @@ test('new owner survives file reload and both players keep the same pet and prog
   await store.applyAction(PREVIEW_HOME,{operationId:'male-joins-home',clientId:male.id,name:male.name,action:{type:'join-home'}});
   const reopened=createLocalPreviewStore({file,now:()=>at+100});
   const saved=await reopened.applyAction(PREVIEW_HOME,{operationId:'female-joins-home',clientId:female.id,name:female.name,action:{type:'join-home'}});
-  assert.equal(saved.revision,2);assert.equal(saved.state.xp,86);assert.equal(saved.state.coins,1200);assert.equal(homeBinding(saved.state).count,2);
+  assert.equal(saved.revision,2);assert.equal(saved.state.xp,86);assert.equal(saved.state.coins,100);assert.equal(homeBinding(saved.state).count,2);
 });
 
 test('invite URLs stay in their own save, suggest the opposite role, and contain no room or court credential',()=>{

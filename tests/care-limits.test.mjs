@@ -80,7 +80,7 @@ test('feeding cooldown is personal while all foods and identities consume one sh
 });
 
 test('three complete pair rounds receive exactly three bonuses and later feeds keep their base reward', () => {
-  const before = initialState(start);
+  const before = {...initialState(start),coins:1200};
   let state = before;
   for (let round = 0; round < 3; round += 1) {
     const now = start + round * CARE_LIMITS.feed.cooldownMs;

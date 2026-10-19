@@ -1,0 +1,194 @@
+/* Compact management sheets: keep the restaurant visible above the controls. */
+.r-sheet{--r-panel-height:52dvh;height:var(--r-panel-height);max-height:calc(100dvh - 64px);padding:6px 12px max(10px,env(safe-area-inset-bottom));border-width:1px;border-bottom:0;border-radius:20px 20px 0 0;container-type:inline-size}
+.r-sheet[data-panel=staff]{--r-panel-height:auto;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.r-sheet[data-panel=staff]>.r-sheet-content{flex:0 1 auto;padding-bottom:0}
+.r-sheet[data-panel=training]{--r-panel-height:48dvh}
+.r-sheet[data-panel=upgrades]{--r-panel-height:44dvh}
+.r-sheet[data-panel=themes],.r-sheet[data-panel=info]{--r-panel-height:50dvh}
+.r-sheet::backdrop{background:#39351f25;backdrop-filter:blur(1px)}
+.r-sheet-handle{width:28px;height:3px;min-height:3px;margin-bottom:5px}
+.r-sheet>header{min-height:37px;padding-bottom:6px;border-bottom:1px solid #dfcaab70}
+.r-sheet h2{font-size:16px;line-height:1.4;margin:0;letter-spacing:.5px}
+.r-sheet>header .r-round{width:30px;height:30px;padding:6px;border-radius:10px;box-shadow:0 2px 0 #d9c7a8}
+.r-sheet>header .r-round svg{width:16px;height:16px}
+.r-sheet-content{padding:8px 0 0;flex:1;scrollbar-width:thin}
+.r-panel-caption{font-size:10px;line-height:1.5;color:#a08b6b;margin:0 0 8px}
+.r-mini-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px;margin:12px 0 7px}
+.r-mini-heading small{font-size:9px;font-weight:400;color:#a18b6a}
+.r-header-actions{display:flex;align-items:center;gap:7px}
+.r-header-actions .r-round{width:31px;height:33px;padding:6px}
+.r-header-actions .r-round svg{width:18px;height:18px}
+.r-brand{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
+
+/* All twenty-one dishes, including the three signatures, use this same grid. */
+.r-sheet .r-catalog-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:#a28a69;margin:0 0 7px}
+.r-catalog-toolbar>button{display:flex;align-items:center;gap:3px;border:0;background:transparent;padding:3px 0 3px 6px;color:#a48142;font-size:10px}
+.r-catalog-toolbar>button svg{width:13px;height:13px}
+.r-sheet .r-recipe-filters{gap:5px;margin-bottom:8px}
+.r-sheet .r-recipe-filters button{min-height:29px;padding:4px 3px;border-radius:8px;font-size:10px;gap:4px}
+.r-sheet .r-recipe-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.r-sheet .r-recipe-card{padding:10px 5px 10px;border-width:1px;border-radius:14px;min-width:0;box-shadow:0 2px 0 #e4d3b73b}
+.r-sheet .r-recipe-card>.r-food{width:clamp(36px,11cqw,44px);height:auto;aspect-ratio:1;flex-shrink:0;margin-bottom:2px}
+.r-sheet .r-recipe-card h3{font-size:clamp(11px,2.8cqw,13px);line-height:1.45;margin:0;white-space:normal;overflow-wrap:anywhere;letter-spacing:0}
+.r-sheet .r-recipe-stars{font-size:8px;line-height:1.5;letter-spacing:1px}
+.r-sheet .r-recipe-card p{font-size:8px;line-height:1.5;min-height:14px;margin:2px 0 3px;display:flex;align-items:center;justify-content:center}
+.r-sheet .r-recipe-card>b{font-size:14px;line-height:1.5;display:flex;align-items:center;justify-content:center}
+.r-sheet .r-recipe-card>div{gap:4px;margin-top:8px;justify-content:flex-end}
+.r-sheet .r-recipe-sale{gap:6px;margin-top:7px;font-variant-numeric:tabular-nums}
+.r-recipe-sale>small{font-size:9px;font-weight:500;color:#aa9069}
+.r-recipe-availability{display:flex;align-items:center;justify-content:center;gap:4px;min-height:17px;margin-top:5px;color:#9b927f;font-size:9px;line-height:1.5}
+.r-recipe-availability svg{width:11px;height:11px}
+.r-signature-mark{position:absolute;left:10px;top:9px;color:#bc963f;font-size:17px;line-height:1;z-index:2}
+.r-sheet .r-recipe-card .r-small-primary{width:100%;min-height:29px;font-size:10px!important;padding:4px 3px;gap:3px;border-radius:7px;border-width:1px;box-shadow:0 2px 0 #b98b5b26}
+.r-sheet .r-recipe-card .r-research{min-height:25px;padding:3px 2px;font-size:9px!important;border-radius:6px;gap:2px}
+.r-sheet .r-recipe-card .r-price svg{width:11px;height:11px}
+.r-sheet .r-recipe-card .r-recipe-lock{height:58px;font-size:9px;gap:3px}
+.r-sheet .r-recipe-card .r-recipe-lock svg{width:12px;height:12px}
+.r-recipe-note{display:flex;align-items:center;justify-content:center;min-height:25px;font-size:9px;color:#ad9570}
+.r-sheet .r-special-dish .re-gold-price .re-art{width:17px;height:14px}
+.r-sheet .re-signature-label{color:#be974b;letter-spacing:0}
+.r-sheet .r-special-dish:not(.is-locked){background:#fff9e2;border-color:#dfc58c}
+.r-sheet .re-earn-card{padding:9px 11px;gap:6px;border-radius:11px}
+.r-sheet .re-earn-card b{margin-top:3px;font-size:11px}
+.r-sheet .re-earn-card>span{font-size:16px}
+.r-sheet .re-earn-card>span .re-art{width:25px;height:22px}
+.r-sheet .re-earn-card p{font-size:9px;line-height:1.5}
+.r-sheet .re-milestone-track{height:4px}
+
+/* Team and abilities are separate views, sharing the employee selection. */
+.r-panel-switch{display:flex;gap:3px;padding:3px;border-radius:9px;background:#eee5cf;margin-bottom:7px}
+.r-panel-switch>button{flex:1;min-width:0;min-height:27px;border:0;border-radius:7px;background:transparent;font-size:11px;color:#9a8461}
+.r-panel-switch>button[aria-pressed=true]{background:#fffbef;color:#7c633f;box-shadow:0 1px 3px #80613c15;font-weight:800}
+.r-sheet .r-staff-count{justify-content:space-between;font-size:10px;margin:0 2px 5px}
+.r-sheet .r-staff-count>span{font-size:10px}
+.r-sheet .r-staff-slots{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 6px}
+.r-sheet .r-staff-card{display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-rows:1fr 1fr;column-gap:6px;min-height:76px;padding:5px 7px;border-radius:10px;text-align:left}
+.r-sheet .r-staff-card.selected{padding:4px 6px}
+.r-sheet .r-staff-card>.r-cat{grid-row:1 / 3;width:64px;height:64px;justify-self:center}
+.r-sheet .r-staff-card>strong{align-self:end;font-size:11px;line-height:1.4;margin:0;white-space:normal}
+.r-sheet .r-staff-card>small{align-self:start;font-size:9px;line-height:1.3;margin-top:3px}
+.r-sheet .r-staff-card .re-gold-price .re-art{width:16px;height:12px}
+.r-staff-detail{display:flex;align-items:center;gap:7px;min-height:42px;padding:4px 7px;background:#f4ecd9;border-radius:9px;margin-bottom:6px}
+.r-staff-detail>.r-cat{width:35px;height:35px;flex:0 0 35px;animation:none}
+.r-staff-detail>div{min-width:0}
+.r-staff-detail h3{font-size:11px;line-height:1.4;margin:0 0 2px}
+.r-staff-detail p{font-size:9px;line-height:1.4;margin:0;color:#a18b67}
+.r-sheet .r-hire-button{margin:0;min-height:32px;font-size:11px!important;letter-spacing:0;padding:5px;gap:6px;border-radius:9px;border-width:1px}
+.r-sheet .re-worker-tabs{gap:5px;padding:0 0 4px;margin:0;flex-shrink:0}
+.r-sheet .re-worker-tabs button{flex:0 0 auto;flex-direction:row;gap:4px;padding:3px 7px;border-radius:8px;min-height:36px}
+.r-sheet .re-worker-tabs button.selected{padding:2px 6px}
+.r-sheet .re-worker-tabs .r-cat{width:27px;height:27px}
+.r-sheet .re-worker-tabs strong{font-size:10px;margin:0}
+.re-training-roster{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;margin-bottom:7px}
+.re-roster-label{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:21px;margin-bottom:3px;color:#9e8965;font-size:9px}
+.re-roster-label strong{font-weight:600}.re-roster-label>span{font-variant-numeric:tabular-nums;white-space:nowrap}
+.r-sheet .re-training-roster .re-worker-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;overflow:visible;padding:0}
+.r-sheet .re-training-roster .re-worker-tabs button{min-width:0;justify-content:center;padding-inline:3px}
+.r-sheet .re-training-roster .re-worker-tabs button.selected{padding-inline:2px}
+.r-sheet .re-training-chief .re-worker-tabs{grid-template-columns:minmax(0,1fr)}
+.r-sheet .re-training-chief .re-worker-tabs button{height:77px;flex-direction:column;gap:2px}
+.r-sheet .re-training-chief .r-cat{width:47px;height:47px}
+.re-roster-empty{grid-column:1/-1;display:grid;place-items:center;min-height:77px;border:1px dashed #ddd1b4;border-radius:8px;color:#aa9a7d;font-size:10px}
+.r-sheet .re-energy{padding:7px 9px;border-radius:9px;margin:5px 0 7px}
+.r-sheet .re-energy>div:first-child{font-size:10px}
+.r-sheet .re-energy-track{height:4px;margin:5px 0 0}
+.r-sheet .re-energy p{font-size:9px;margin:4px 0 0;line-height:1.4}
+.r-sheet .re-ability-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.r-sheet .re-ability{display:grid;grid-template-columns:16px minmax(0,1fr);align-items:start;gap:4px;padding:8px;border-radius:11px}
+.r-sheet .re-ability-mark{font-size:14px;height:19px;border-radius:5px;align-self:start}
+.r-sheet .re-ability h4{font-size:11px;justify-content:space-between;gap:3px;line-height:1.7}
+.r-sheet .re-ability h4 small{font-size:9px}
+.r-sheet .re-ability h4 small span{display:none}
+.r-sheet .re-ability p{font-size:9px;line-height:1.5;margin:3px 0 0;min-height:27px}
+.r-sheet .re-ability-head{display:flex;align-items:center;gap:4px;min-width:0;min-height:19px}
+.r-sheet .re-ability-head h4{display:block;flex-shrink:0;font-size:11px;line-height:1.4}
+.r-sheet .re-ability .re-ability-head>p{flex:1;min-width:0;margin:0;min-height:0;white-space:nowrap;font-size:9px;line-height:1.4}
+.r-sheet .re-ability-level{flex-shrink:0;font-size:9px;font-weight:800;color:#9b9f6a;white-space:nowrap}
+.r-sheet .re-ability .r-buy{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:4px;min-width:0;min-height:29px;padding:4px;font-size:11px!important;border-radius:7px;border-width:1px;margin-top:2px}
+.r-sheet .re-ability .r-buy small{font-size:9px;letter-spacing:0}
+.r-sheet .re-ability .re-gold-price .re-art{width:17px;height:14px}
+.r-sheet .re-training>.r-panel-caption{font-size:9px;margin:7px 0 0}
+
+/* Ten discrete levels, one color per skill. */
+.re-ability[data-r-ability=speed]{--re-skill-color:#e3a15d;--re-skill-highlight:#ffd794}
+.re-ability[data-r-ability=stamina]{--re-skill-color:#54b5db;--re-skill-highlight:#abebfa}
+.re-ability[data-r-ability=endurance]{--re-skill-color:#85b486;--re-skill-highlight:#c6dfab}
+.re-ability[data-r-ability=skill]{--re-skill-color:#af93ce;--re-skill-highlight:#e1c7f1}
+.re-skill-segments{grid-column:1/-1;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px;height:6px;margin:2px 0 1px}
+.re-skill-segments>i{display:block;min-width:0;border-radius:2px;background:#e9e1cc;box-shadow:inset 0 1px 1px #9b835319}
+.re-skill-segments>i.is-lit{background:linear-gradient(180deg,var(--re-skill-highlight),var(--re-skill-color));box-shadow:inset 0 1px 0 #ffffff70,0 1px 1px #92755222}
+.r-sheet .re-energy-track{height:5px;background:#d8eaf0}
+.r-sheet .re-energy-track>i{background:linear-gradient(180deg,#8cdef6,#46aeda)}
+
+/* Facilities keep four concise upgrade rows; the business ledger lives in Info. */
+.r-sheet .r-upgrade-list{gap:6px}
+.r-sheet .r-upgrade-card{padding:8px;border-width:1px;gap:7px;border-radius:11px;min-height:56px}
+.r-sheet .r-upgrade-icon{width:29px;height:32px;border-radius:8px}
+.r-sheet .r-upgrade-icon svg{width:21px;height:21px}
+.r-sheet .r-upgrade-card h3{font-size:12px;gap:6px;margin-bottom:4px}
+.r-sheet .r-upgrade-card h3 small{font-size:9px}
+.r-sheet .r-upgrade-card p{font-size:9px;line-height:1.5}
+.r-sheet .r-upgrade-card .r-buy{min-width:59px;min-height:33px;padding:4px 5px;font-size:12px!important;border-width:1px;border-radius:8px}
+.r-sheet .r-buy small{letter-spacing:0;font-size:9px}
+.r-sheet .rp-entry{min-height:43px;margin:8px 0 0;padding:7px 8px;gap:7px;border-radius:10px}
+.r-sheet .rp-entry-icon{width:27px;height:27px;border-radius:8px}
+.r-sheet .rp-entry strong{font-size:11px}
+.r-sheet .rp-entry small{font-size:9px;margin-top:1px}
+.r-info-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.r-info-stats>div{padding:11px;border:1px solid #e0cfad;background:#fbf2de;border-radius:11px}
+.r-info-stats span{display:block;font-size:10px;color:#a48c67;margin-bottom:5px}
+.r-info-stats strong{font-size:19px;color:#896943;font-variant-numeric:tabular-nums}
+.r-info-stats small{font-size:9px;margin-left:5px;color:#ab9673;font-weight:400}
+.r-info-decor{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px;padding:10px 11px;border:1px solid #d7dcbc;border-radius:11px;background:#edf0df;font-size:11px;color:#6e784d}
+.r-info-decor .rd-buffs{display:flex;flex-wrap:wrap;gap:5px 9px}
+.r-info-links{display:flex;gap:7px;margin-top:8px}
+.r-info-links>button{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;min-height:32px;font-size:10px;border:1px solid #dfcfaf;background:#f7eed9;border-radius:8px}
+.r-info-links svg{width:14px;height:14px}
+
+/* Separate appearance views share one consistent three-column gallery. */
+.r-sheet[data-panel=themes]{--r-panel-height:auto;height:auto;max-height:min(76dvh,calc(100dvh - 64px));padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.r-sheet[data-panel=themes]>.r-sheet-content{flex:0 1 auto;padding-bottom:0}
+.r-appearance-tabs{position:sticky;top:0;z-index:1;margin-bottom:10px}
+.r-sheet .r-appearance .rk-palette-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.r-sheet .r-appearance .rk-palette-grid>button{padding:10px 4px;min-height:126px}
+.r-sheet .r-appearance .rk-palette-sample{width:clamp(58px,17cqw,78px);height:clamp(58px,17cqw,78px)}
+.r-sheet .rd-groups{gap:9px}
+.r-sheet .rd-group>header{margin:0 1px 5px}
+.r-sheet .rd-group h3{font-size:12px;line-height:1.4}
+.r-sheet .rd-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.r-sheet .rd-card{display:flex;flex-direction:column;gap:7px;padding:7px;border-radius:11px;text-align:center}
+.r-sheet .rd-preview{width:100%;height:clamp(118px,35cqw,160px);border-radius:6px}
+.r-sheet .rd-preview>img{object-fit:contain;object-position:center}
+.r-sheet .rd-card-copy{padding:0;min-width:0;display:flex;flex:1;flex-direction:column}
+.r-sheet .rd-card h4{font-size:11px;line-height:1.5;margin:0 0 4px;white-space:nowrap}
+.r-sheet .rd-buffs{gap:1px;min-height:28px;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center}
+.r-sheet .rd-buffs span{font-size:9px;line-height:1.5;padding:0;background:transparent;border-radius:0}
+.r-sheet .rd-card .r-small-primary{min-height:26px;margin-top:5px;font-size:10px!important;padding:3px 2px;border-width:1px;border-radius:6px;gap:2px;box-shadow:0 2px 0 #b98b5b26}
+.r-sheet .rd-panel-notice{font-size:10px;padding:7px 9px;margin:0 0 8px;border-radius:8px}
+.r-sheet .re-premium-collection .r-theme-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.r-sheet .re-theme{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:clamp(128px,34cqw,154px);padding:10px 6px;border-width:1px;border-radius:12px;text-align:center}
+.r-sheet .re-theme>.re-art{width:clamp(60px,20cqw,84px);height:clamp(60px,20cqw,84px)}
+.r-sheet .re-theme[data-r-theme-active=false]:not([data-r-locked]){background:#f5f2e9;border-color:#d5d2c7;box-shadow:none}
+.r-sheet .re-theme[data-r-theme-active=false]:not([data-r-locked])>.re-art{filter:grayscale(1);opacity:.45}
+.r-sheet .re-theme[data-r-theme-active=false]:not([data-r-locked]) :is(strong,em){color:#a29f92}
+.r-sheet .re-theme strong{font-size:11px;line-height:1.5}
+.r-sheet .re-theme em{font-size:8px;line-height:1.5;margin:0}
+.r-sheet .re-theme small{font-size:9px;line-height:1.5;margin-top:2px}
+.r-sheet .re-theme .re-gold-price .re-art{width:17px;height:14px}
+
+@media(max-width:360px){
+  .r-sheet{padding-inline:9px}
+  .r-sheet .r-recipe-grid{gap:8px}
+  .r-sheet .r-recipe-card{padding-inline:7px}
+  .r-sheet .r-staff-card>strong{font-size:9px}
+  .r-sheet .rd-card{padding:5px;gap:5px}
+  .r-sheet .rd-card h4{font-size:10px}
+  .r-sheet .rd-card .r-small-primary{font-size:9px!important}
+  .r-sheet .rd-buffs span{font-size:8px}
+  .r-sheet .re-ability{padding:6px;grid-template-columns:13px minmax(0,1fr)}
+  .r-sheet .re-ability h4{font-size:10px}
+  .r-sheet .re-ability p{font-size:8px}
+  .r-sheet .re-ability .re-ability-head>p,.r-sheet .re-ability-level{font-size:8px}
+  .r-sheet .re-ability-head{gap:3px}
+}
+@media(prefers-reduced-motion:reduce){.r-sheet[open]{animation:none}}

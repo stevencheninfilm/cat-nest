@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "tool": "built-in image_gen",
+  "atlas": {
+    "file": "atlas.webp",
+    "width": 1024,
+    "height": 1536,
+    "columns": 4,
+    "rows": 6,
+    "cellSize": 256
+  },
+  "customers": {
+    "guest-angler": {
+      "name": "草帽钓客",
+      "column": 0,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-angler.webp",
+      "back": "guest-angler-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-aloha": {
+      "name": "花衬衫猫",
+      "column": 1,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-aloha.webp",
+      "back": "guest-aloha-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-professor": {
+      "name": "眼镜教授",
+      "column": 2,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-professor.webp",
+      "back": "guest-professor-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-conductor": {
+      "name": "蓝帽列车长",
+      "column": 3,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-conductor.webp",
+      "back": "guest-conductor-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-detective": {
+      "name": "侦探猫",
+      "column": 0,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-detective.webp",
+      "back": "guest-detective-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-headphones": {
+      "name": "耳机猫",
+      "column": 1,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-headphones.webp",
+      "back": "guest-headphones-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-princess": {
+      "name": "小皇冠猫",
+      "column": 2,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-princess.webp",
+      "back": "guest-princess-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-sunglasses": {
+      "name": "墨镜明星",
+      "column": 3,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-sunglasses.webp",
+      "back": "guest-sunglasses-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-sailor": {
+      "name": "水手猫",
+      "column": 0,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-sailor.webp",
+      "back": "guest-sailor-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-beanie": {
+      "name": "毛线帽猫",
+      "column": 1,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-beanie.webp",
+      "back": "guest-beanie-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-shark": {
+      "name": "鲨鱼帽猫",
+      "column": 2,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-shark.webp",
+      "back": "guest-shark-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-florist": {
+      "name": "花帽猫",
+      "column": 3,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-florist.webp",
+      "back": "guest-florist-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    }
+  }
+}

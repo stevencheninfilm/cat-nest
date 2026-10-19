@@ -1,0 +1,35 @@
+.rg-tier-food{position:relative;display:inline-grid;place-items:center;flex:0 0 auto;width:34px;height:34px;isolation:isolate;vertical-align:middle}
+.rg-tier-food>.r-food{display:block;width:76%!important;height:76%!important;z-index:0;filter:drop-shadow(0 1px 1px #69533630)}
+.restaurant .rg-tier-food>.rg-tier-coating{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 1px #6b542d26)}
+.restaurant .rg-tier-food>.rg-dish-grade{position:absolute;top:0;right:-2px;z-index:2;display:grid;place-items:center;min-width:13px;height:13px;padding:0 3px;box-sizing:border-box;border:1px solid #a1b19a;border-radius:5px;background:linear-gradient(155deg,#f8fff0,#d2dfbc 55%,#eef6db);box-shadow:inset 0 1px 0 #fff,0 1px 2px #63543b38;color:#5e7853;font:900 8px/1 Georgia,serif;letter-spacing:-.4px;text-shadow:0 1px 0 #fff;pointer-events:none}
+.restaurant .rg-tier-food[data-r-food-grade=A]>.rg-dish-grade{border-color:#2f9eaa;background:linear-gradient(155deg,#e1fffc,#5fcfd4 55%,#a6f3ed);color:#155967}
+.restaurant .rg-tier-food[data-r-food-grade=S]>.rg-dish-grade{border-color:#bb9148;background:linear-gradient(155deg,#fffbe1,#e3ba65 48%,#fff0ae 65%,#d0a04c);color:#79521e}
+.restaurant .rg-tier-food[data-r-food-grade=SS]>.rg-dish-grade{border-color:#a399b8;background:linear-gradient(155deg,#fffcff,#d2c3e0 50%,#eee6f6 65%,#b4a5c8);color:#68537e}
+.restaurant .rg-tier-food[data-r-food-grade=SSS]>.rg-dish-grade{border-color:#bb9148;background:linear-gradient(155deg,#fffbe1,#e3ba65 48%,#fff0ae 65%,#d0a04c);color:#79521e}
+.r-sheet .r-recipe-card>.rg-tier-food{width:clamp(36px,11cqw,44px);height:auto;aspect-ratio:1;margin:2px 0 3px}
+.r-recipe-card.is-locked>.rg-tier-food{filter:grayscale(.8);opacity:.45}
+.rg-grade-guide{display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;padding:7px 9px;margin:0 0 9px;border:1px solid #e3d6bf;border-radius:9px;background:#f7efdf;font-size:9px;color:#a08a68}
+.rg-grade-guide>span{font-size:8px}.rg-grade-guide ol{display:flex;align-items:center;list-style:none;padding:0;margin:0;gap:0;flex:1}.rg-grade-guide li{font:bold 10px/1.5 Georgia,serif;color:#9f957d;white-space:nowrap}.rg-grade-guide li+li:before{content:'›';font:10px/1 sans-serif;color:#c4b79c;padding:0 5px}.rg-grade-guide li[data-r-grade=A]{color:#268d9a}.rg-grade-guide li[data-r-grade=S]{color:#bc8b29}.rg-grade-guide li[data-r-grade=SS]{color:#9581ac}.rg-grade-guide li[data-r-grade=SSS]{color:#b3914e}.rg-grade-guide p{width:100%;margin:0;font-size:8px;line-height:1.5;color:#b49d79}
+.rg-order-seat[data-r-guest-tier=silver] .r-order-bubble{border-color:#b6c3ce;background:#f2f7fb;box-shadow:0 2px 0 #7f95a733}
+.rg-order-seat[data-r-guest-tier=gold] .r-order-bubble{border-color:#d3ac62;background:#fff6dd;box-shadow:0 2px 0 #b7903f33}
+.restaurant .rg-order-seat:is(.is-ready,.is-dish-ready)>.r-order-bubble{background:linear-gradient(145deg,#eaf6cd,#cde7a4);border-color:#87a95d;box-shadow:inset 0 1px 0 #ffffffe6,0 2px 0 #6b8b4340,0 0 0 3px #deefb666}
+.restaurant .rg-order-seat:is(.is-ready,.is-dish-ready)>.r-order-bubble:after{border-color:#87a95d}
+.restaurant .rg-order-seat:is(.is-ready,.is-dish-ready)>.r-order-bubble strong{color:#45652d}
+.restaurant .rg-order-seat:is(.is-ready,.is-dish-ready)>.r-order-bubble small{color:#668047}
+.rg-course-tag{position:absolute;top:2px;right:5px;font-size:5px;line-height:1.3;color:#a28b61;letter-spacing:.2px;pointer-events:none}
+.rg-order-seat[data-r-guest-tier=silver] .rg-course-tag{color:#7f95a7}.rg-order-seat[data-r-guest-tier=gold] .rg-course-tag{color:#b18d44}
+.rg-order-seat.is-collectible[data-r-guest-tier] .r-order-bubble{width:83px;min-height:49px;padding-top:8px;flex-direction:row;gap:3px}.rg-order-seat.is-collectible[data-r-guest-tier] .r-order-bubble strong{font-size:9px}.rg-order-seat.is-collectible[data-r-guest-tier] .r-order-bubble small{max-width:65px;font-size:6px;line-height:1.5}
+.rg-dining-food>.rg-tier-food{width:100%;height:100%}.rg-bonus-gold{display:block;font-size:7px;font-weight:700;color:#b6923f;white-space:nowrap}
+.rc-course-preview{display:flex;align-items:center;gap:8px;margin-top:12px;border:1px solid #ded9cf;border-radius:10px;padding:8px;background:#f0f3f0}
+.rc-course-preview[data-r-guest-tier=silver],.rc-course-preview[data-r-guest-tier=gold]{border-color:#e4cc97;background:#faf0d8}.rc-course-preview>div{display:flex;flex-direction:column;align-items:center;gap:3px;flex:0 0 auto}.rc-course-preview .rg-tier-food{width:43px;height:43px}.rc-course-preview>div>span:last-child{font-size:7px;color:#9a8f7a}.rc-course-preview>i{font-style:normal;color:#b4a788;font-size:12px}.rc-course-preview>p{flex:1;font-size:9px;line-height:1.7;margin:0 0 0 3px;color:#9b875f}.rc-course-preview strong{display:block;font-size:10px;font-weight:700}.rc-course-preview>p>span{display:block;font-size:8px;color:#ae945a}
+.rc-customer-card[data-r-guest-tier=silver]>i{color:#8fa2af}.rc-customer-card[data-r-guest-tier=gold]>i{color:#c49c4f}
+.restaurant .rc-test-guest{display:block;width:100%;min-height:35px;border:1px solid #d5c8ac;border-radius:8px;background:#f0ead8;color:#9c805b;font-size:9px;margin-top:9px}
+.rg-guest-tests{border-top:1px solid #e7dbc5;color:#8e7552;margin:2px 0 7px}.rg-guest-tests>summary{display:flex;align-items:center;min-height:38px;font-size:10px;cursor:pointer;list-style:none;font-weight:700}.rg-guest-tests>summary>span{margin-left:auto;font-size:8px;font-weight:400;color:#a18b69}.rg-guest-tests>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.restaurant .rg-guest-tests button{min-height:38px;border:1px solid #d3c19f;border-radius:8px;background:#f6eedc;color:#967c55;font-size:9px}.rg-guest-tests p{font-size:8px;line-height:1.7;color:#ad9876;margin:7px 0}
+@media(max-width:360px){.rc-course-preview{gap:5px;padding:6px}.rc-course-preview .rg-tier-food{width:36px;height:36px}.rc-course-preview strong{font-size:9px}.rc-course-preview>p>span{font-size:7px}.rg-order-seat.is-collectible[data-r-guest-tier] .r-order-bubble{width:76px}}
+
+.rg-order-odds{border-top:1px solid #e7dbc5;font-size:9px;color:#8e7552;margin:5px 0}
+.rg-order-odds>summary{cursor:pointer;font-weight:700;padding:10px 0}
+.rg-order-odds p{font-size:8px;line-height:1.7;margin:5px 0 9px;color:#9b876a}
+.rg-order-odds table{width:100%;border-collapse:collapse;font-size:8px;font-variant-numeric:tabular-nums;text-align:center}
+.rg-order-odds th,.rg-order-odds td{padding:5px 2px;border-bottom:1px solid #e9dfcd}
+.rg-order-odds thead{color:#806944;background:#f2ead8}

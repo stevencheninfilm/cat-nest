@@ -1,5 +1,17 @@
+import { restaurantGuestHasNextCourse } from './restaurant-guest-service.js';
 import { getCoupleProfile } from './couple-profile.js';
 import { duoPreviewable, previewDuoGameAction, redundantDuoTransition } from './minigames-duo-preview.js';
+import { validRestaurant } from './restaurant.js';
+import { isInteractiveWorkflow, interactiveWorkerReservations } from './restaurant-kitchen-interactive.js';
+
+// Arrival IDs and purchase outcomes still come from the server. Only actions
+// against an existing order are safe to preview before their durable receipt.
+// A first-course collection allocates the next order ID, so it waits for that
+// canonical receipt while unrelated kitchen commands continue to preview.
+const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect']);
+const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
+const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
+const restaurantWorkerClocks=(state,order)=>Object.fromEntries([...new Set((order?.workflow?.runs??[]).map(run=>run.workerId??order.workflow.workerId))].filter(id=>state.restaurant.staffTraining?.[id]).map(id=>[id,structuredClone(state.restaurant.staffTraining[id])]));
 
 /** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
 export function createCloudRoom(options) {
@@ -17,10 +29,86 @@ export function createCloudRoom(options) {
   let source, poll, retry, retryAt = 0, destroyed = false, draining = false, ready = false;
   const seen = new Set();
   const previews = new Map();
+  // Confirmed local commands keep their visual clock while the authoritative
+  // server clock independently gates the next POST. These overlays never become
+  // confirmedState and never change the payload sent to the server.
+  const restaurantTimelines = new Map();
   const liveReceipts = new Map();
   const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
   let authoritativeState = null, displayedState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
+  if(optimisticReducer)for(const item of queue)if(restaurantPreview(item.action))previews.set(item.operationId,{at:Number.isSafeInteger(item.restaurantPreviewAt)?item.restaurantPreviewAt:Date.now(),active:true,animated:false});
+  const outgoing=item=>restaurantAction(item.action)?{operationId:item.operationId,clientId:item.clientId,name:item.name,action:item.action}:item;
+  const restaurantOrder=(state,action)=>state?.restaurant?.orders?.find(order=>order.id===action?.orderId);
+  function restaurantAllocatesCourse(state,action){
+    return action?.type==='restaurant-collect'&&(state?.restaurant?.parties??[]).some(party=>party.members.some(member=>member.orderId===action.orderId&&restaurantGuestHasNextCourse(member)));
+  }
+  function restaurantEffectPresent(state,action){
+    const order=restaurantOrder(state,action),flow=order?.workflow;
+    if(action?.type==='restaurant-kitchen-accept')return flow?.acceptedAt!=null;
+    if(action?.type==='restaurant-kitchen-step')return flow?.runs?.some(run=>run.stepId===action.stepId)||false;
+    if(action?.type==='restaurant-serve')return order?.servedAt!=null;
+    if(action?.type==='restaurant-collect')return !order;
+    return false;
+  }
+  function restaurantActionAt(state,action,at){
+    const order=restaurantOrder(state,action),flow=order?.workflow;
+    if(!order||restaurantEffectPresent(state,action))return at;
+    if(action.type==='restaurant-kitchen-accept')return Math.max(at,order.createdAt);
+    if(action.type==='restaurant-kitchen-step'){
+      const last=flow?.runs?.at(-1);
+      let readyAt=Math.max(at,flow?.acceptedAt??0,last?.endAt??0);
+      // A completed local delivery can leave a short server-side return in
+      // flight. Do not send a new pickup before some employee is actually free.
+      if(flow?.workerId===null||last?.rest){
+        const free=Array.from({length:1+(state.restaurant.staff??0)},(_,index)=>{
+          const id=`worker-${index+1}`,record=state.restaurant.staffTraining?.[id];
+          if(record?.energyMode==='rest-room'&&record.energy<=0&&!record.rest)return Infinity;
+          const reservations=state.restaurant.orders.filter(next=>next.id!==order.id&&next.workflow).flatMap(next=>isInteractiveWorkflow(next.workflow)?interactiveWorkerReservations(next.workflow).filter(window=>window.workerId===id).map(window=>window.endAt):next.workflow.workerId===id?[next.workflow.completedAt]:[]);
+          return Math.max(readyAt,record?.rest?.fullAt??0,...reservations);
+        });
+        const earliest=Math.min(...free);if(Number.isFinite(earliest))readyAt=earliest;
+      }
+      return readyAt;
+    }
+    if(action.type==='restaurant-serve')return Math.max(at,order.readyAt);
+    if(action.type==='restaurant-collect'){
+      const served=flow?.servedAt??order.servedAt??(order.staffLevel>0?order.readyAt+1500:null);
+      return served===null?at:Math.max(at,served+4500);
+    }
+    return at;
+  }
+  function rememberRestaurantTimeline(item,preview,data){
+    if(!restaurantPreview(item?.action))return;
+    const id=item.action.orderId;
+    if(item.action.type==='restaurant-collect'){restaurantTimelines.delete(id);return;}
+    const local=preview?.order,actual=restaurantOrder(data.state,item.action);
+    if(!local?.workflow?.runs||!actual?.workflow?.runs)return;
+    restaurantTimelines.set(id,{order:structuredClone(local),training:preview.training?structuredClone(preview.training):null,workers:preview.workers?structuredClone(preview.workers):null});
+  }
+  function projectRestaurantTimelines(state){
+    let display=state;
+    for(const [id,local] of restaurantTimelines){
+      const actual=display.restaurant?.orders?.find(order=>order.id===id),a=actual?.workflow,b=local.order.workflow;
+      const compatible=a?.runs&&a.recipeId===b.recipeId&&a.workerId===b.workerId&&JSON.stringify(a.workerLevels)===JSON.stringify(b.workerLevels)&&a.runs.length===b.runs.length&&a.runs.every((run,index)=>run.stepId===b.runs[index].stepId&&(run.workerId??a.workerId)===(b.runs[index].workerId??b.workerId));
+      if(!compatible){restaurantTimelines.delete(id);continue;}
+      const next={...display.restaurant,orders:display.restaurant.orders.map(order=>order.id===id?structuredClone(local.order):order)};
+      // Preserve current training levels. Only the local command's exertion
+      // clock is projected; the real ledger remains in confirmedState.
+      const workerClocks=local.workers??(local.training&&b.workerId?{[b.workerId]:local.training}:{});
+      for(const [workerId,training] of Object.entries(workerClocks)){
+        const current=next.staffTraining?.[workerId],run=a.runs.filter(run=>(run.workerId??a.workerId)===workerId).at(-1);
+        // Never replace a ledger already advanced by a later job or training.
+        if(!current||!run||current.energyAt>(run.rest?.arriveAt??run.endAt))continue;
+        next.staffTraining={...next.staffTraining,[workerId]:{...current,energy:training.energy,energyAt:training.energyAt,...(Object.hasOwn(training,'rest')?{rest:structuredClone(training.rest),energyMode:training.energyMode}:{})}};
+      }
+      if(validRestaurant(next))display={...display,restaurant:next};
+      else restaurantTimelines.delete(id);
+    }
+    return display;
+  }
+  function scheduleDrain(delay=8000){const wait=Math.max(1,delay);retryAt=Date.now()+wait;clearTimeout(retry);retry=setTimeout(()=>{retry=null;retryAt=0;void drain();},wait);}
+  function queuedStatus(message='餐厅操作已在本机排队，连接恢复后自动保存',retrying=true){onSaveStatus({phase:'queued',message,retrying,pending:queue.length});}
   async function request(path, options = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), optimisticReducer && options.method === 'POST' && path.endsWith('/actions') ? 15000 : 95000);
@@ -43,7 +131,7 @@ export function createCloudRoom(options) {
       onState(displayedState,{confirmedState:authoritativeState,optimistic:true,pendingGames});
       return;
     }
-    let display = authoritativeState, optimistic = false;
+    let display = projectRestaurantTimelines(authoritativeState), optimistic = display!==authoritativeState;
     const pendingGames = [];
     const withdrawn = [];
     for (const item of queue) {
@@ -52,11 +140,18 @@ export function createCloudRoom(options) {
       // A state-only live snapshot can already contain this care operation.
       if (authoritativeState.pendingGrowth?.some(reward => reward.id === item.operationId)) continue;
       if (seen.has(item.operationId) || redundantDuoTransition(authoritativeState,item.action,me)) continue;
-      const game = duoPreviewable(display,item.action);
+      const game = duoPreviewable(display,item.action),restaurant=restaurantPreview(item.action);
       preview.game=game;
-      const next = game ? previewDuoGameAction(display,item.action,me,preview.at,item.operationId) : optimisticReducer(display, item.action, me, preview.at, item.operationId);
-      if (next) { display = next; optimistic = true; if(game)pendingGames.push(item.action); }
-      else { preview.active = false; withdrawn.push(item); }
+      if(restaurant&&(restaurantEffectPresent(display,item.action)||restaurantAllocatesCourse(display,item.action)))continue;
+      const at=restaurant?restaurantActionAt(display,item.action,preview.at):preview.at;
+      const next = game ? previewDuoGameAction(display,item.action,me,at,item.operationId) : optimisticReducer(display, item.action, me, at, item.operationId);
+      if (next) {
+        display = next; optimistic = true;if(game)pendingGames.push(item.action);
+        if(restaurant){const order=restaurantOrder(next,item.action);preview.order=order?structuredClone(order):null;preview.training=order?.workflow?.workerId?structuredClone(next.restaurant.staffTraining?.[order.workflow.workerId]):null;preview.workers=restaurantWorkerClocks(next,order);}
+      }else if(!restaurant){preview.active = false; withdrawn.push(item);}
+      // A later authoritative timestamp can temporarily make a restaurant
+      // dependency unplayable. Keep its intent and preview active until its
+      // own durable receipt or an explicit business refusal resolves it.
     }
     displayedState = display;
     onState(display, { confirmedState: authoritativeState, optimistic, pendingGames });
@@ -66,14 +161,17 @@ export function createCloudRoom(options) {
     const preview = previews.get(item.operationId);
     if (!preview?.active) return;
     preview.active = false;
+    if(restaurantPreview(item.action))restaurantTimelines.delete(item.action.orderId);
     publishState();
     onRollback(item.action, me, { operationId:item.operationId, reason:'rejected', code:error.code });
   }
   function apply(data, acknowledgement) {
-    if (destroyed || !data?.state || !Number.isFinite(data.revision)) return;
+    if (destroyed || !data?.state || !Number.isFinite(data.revision) || data.roomId!==undefined&&data.roomId!==room) return;
     const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
     const preview = previews.get(event?.operationId || acknowledgement?.operationId);
     const previousXp = authoritativeState?.xp;
+    const ownItem=acknowledgement||queue.find(item=>item.operationId===event?.operationId);
+    if(ownItem&&preview)rememberRestaurantTimeline(ownItem,preview,data);
     if (event) previews.delete(event.operationId);
     if (acknowledgement) previews.delete(acknowledgement.operationId);
     // HTTP and live receipts often deliver the same confirmed revision. Keep
@@ -89,21 +187,25 @@ export function createCloudRoom(options) {
     if(event)liveReceipts.get(event.operationId)?.(data);
     // A late durable receipt also releases a queue waiting for its retry timer.
     if (!draining && queue[0] && seen.has(queue[0].operationId)) {
-      retryAt=0; clearTimeout(retry); queueMicrotask(drain);
+      retryAt=0; clearTimeout(retry);retry=null; queueMicrotask(drain);
     }
   }
   function saveQueue() { onPending(queue.map(item => ({ ...item }))); }
   async function drain() {
     if (draining || !ready || destroyed) return;
     if (Date.now() < retryAt) return;
-    clearTimeout(retry);
+    clearTimeout(retry);retry=null;
     draining = true;
-    while (queue.length && !destroyed) {
+    while (queue.length && !destroyed && ready) {
       const item=queue[0];
       if (seen.has(item.operationId) || redundantDuoTransition(authoritativeState,item.action,me)) {
         previews.delete(item.operationId); queue.shift(); saveQueue(); publishState();
         onSaveStatus({phase:queue.length?'saving':'saved',message:queue.length?'正在保存到云端…':`已保存到 ${storageLabel}`,at:Date.now()});
         continue;
+      }
+      if(restaurantPreview(item.action)){
+        const at=restaurantActionAt(authoritativeState,item.action,Date.now());
+        if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
       }
       onSaveStatus({ phase:'saving', message:'正在保存到云端…' });
       try {
@@ -111,10 +213,10 @@ export function createCloudRoom(options) {
         // queued move immediately rather than waiting for its duplicate HTTP
         // response (which can be much slower on a phone).
         const live = new Promise(resolve=>liveReceipts.set(item.operationId,resolve));
-        const data=await Promise.race([request(`/api/rooms/${room}/actions`, { method:'POST', body:JSON.stringify(item) }),live]);
+        const data=await Promise.race([request(`/api/rooms/${room}/actions`, { method:'POST', body:JSON.stringify(outgoing(item)) }),live]);
         liveReceipts.delete(item.operationId);
         if (destroyed) break;
-        if (optimisticReducer && (!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
+        if (optimisticReducer && (data?.roomId!==undefined&&data.roomId!==room||!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
         apply(data, item); queue.shift(); saveQueue();
         onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
       } catch (error) {
@@ -126,7 +228,18 @@ export function createCloudRoom(options) {
           onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
           continue;
         }
-        if (error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)) {
+        const restaurant=restaurantAction(item.action);
+        const transientRestaurant=restaurant&&([408,425,429].includes(error.status)||error.status===409&&!['RESTAURANT_ACTION_REJECTED','DEMO_ACTION_REJECTED','DEMO_REJECTED','ACTION_REJECTED','INVALID_ACTION','OPERATION_CONFLICT'].includes(error.code));
+        if(restaurant&&error.status===409){
+          // A conflict can be an uncertain write or a delayed live receipt.
+          // Read before judging it; never manufacture another operation ID.
+          try{apply(await request(`/api/rooms/${room}`));}catch{}
+          if(destroyed)break;
+          if(seen.has(item.operationId)){queue.shift();saveQueue();publishState();continue;}
+          const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
+          if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
+        }
+        if (error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!transientRestaurant) {
           if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* Fall back to the latest live snapshot. */ }
             if(destroyed)break;
@@ -159,9 +272,9 @@ export function createCloudRoom(options) {
         } else {
           // An unknown upload result is not a rejection. Keep the local result
           // and original operation ID until a durable receipt or refusal arrives.
-          onSaveStatus({ phase:'error', message:'保存暂未确认，操作已暂存在本机，将自动重试；请勿清除浏览器数据' });
-          retryAt=Date.now()+8000;
-          clearTimeout(retry); retry=setTimeout(()=>{retryAt=0;void drain();}, 8000);
+          if(restaurant)queuedStatus();
+          else onSaveStatus({ phase:'error', message:'保存暂未确认，操作已暂存在本机，将自动重试；请勿清除浏览器数据' });
+          scheduleDrain();
         }
         break;
       }
@@ -212,20 +325,31 @@ export function createCloudRoom(options) {
   return {
     start,
     dispatch(action) {
-      if (!ready || destroyed || queue.length >= 20) return false;
+      if (!ready || destroyed || queue.length >= (restaurantAction(action)?200:20)) return false;
       if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
+      if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return false;
+      if(action?.type==='restaurant-research-draw'&&queue.some(item=>item.action?.type==='restaurant-research-draw'&&item.action.draw===action.draw))return false;
+      if(action?.type==='restaurant-research-fuse'&&queue.some(item=>item.action?.type==='restaurant-research-fuse'&&item.action.expectedFusion===action.expectedFusion))return false;
       const item = {operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action};
-      const game=optimisticReducer&&duoPreviewable(displayedState||authoritativeState,action);
-      const at=Date.now(), previewable=optimisticReducer&&(game||previewTypes.has(action?.type));
-      const previewBase=displayedState||authoritativeState;
-      // Validate against every preceding local choice before reserving queue
-      // space. Cooldowns, balances and reward IDs still prevent repeated taps.
-      const projected=previewable ? (game ? previewDuoGameAction : optimisticReducer)(previewBase,action,me,at,item.operationId) : null;
+      const at=Date.now(),previewBase=displayedState||authoritativeState;
+      const restaurant=optimisticReducer&&restaurantPreview(action)&&!restaurantAllocatesCourse(previewBase,action);
+      const game=optimisticReducer&&duoPreviewable(previewBase,action);
+      const previewable=optimisticReducer&&(restaurant||game||previewTypes.has(action?.type));
+      // Validate against all prior local actions before reserving queue space.
+      const projected=previewable?(game?previewDuoGameAction:optimisticReducer)(previewBase,action,me,at,item.operationId):null;
       if(previewable&&!projected)return false;
       if(action?.type==='game-arcade-input'&&queue.some(next=>next.action?.type===action.type&&next.action.gameId===action.gameId&&next.action.seq===action.seq))return false;
       if(action?.type==='game-arcade-sync'&&queue.some(next=>next.action?.type===action.type&&next.action.gameId===action.gameId))return false;
       queue.push(item);
-      if (previewable) previews.set(item.operationId, { at, active:true, animated:false, game });
+      if (previewable) {
+        const preview={at,active:true,animated:false,game};
+        if(restaurant){
+          item.restaurantPreviewAt=at;
+          const order=restaurantOrder(projected,action);
+          Object.assign(preview,{order:order?structuredClone(order):null,training:order?.workflow?.workerId?structuredClone(projected.restaurant.staffTraining?.[order.workflow.workerId]):null,workers:restaurantWorkerClocks(projected,order)});
+        }
+        previews.set(item.operationId,preview);
+      }
       saveQueue();
       if (previews.has(item.operationId)) {
         publishState({base:previewBase,next:projected});
@@ -236,6 +360,9 @@ export function createCloudRoom(options) {
       return true;
     },
     get ready() { return ready && !destroyed; },
+    isReady:()=>Boolean(ready&&authoritativeState&&room&&!destroyed),
+    getPendingActions:()=>structuredClone(queue),
+    retryPending(){if(!ready||destroyed)return false;clearTimeout(retry);retry=null;retryAt=0;void drain();return true;},
     updateName(next) { if (coupleMode) return; me.name=next; if(room&&ready) subscribe(); },
     destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); },
   };

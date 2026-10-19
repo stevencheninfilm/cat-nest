@@ -1,21 +1,33 @@
-import { initialState, normalizeState, reduceAction, FOODS, foodCooldownMs, levelStartXp } from '../src/state.js';
+import { initialState, normalizeState, reduceAction, FOODS, foodCooldownMs, levelStartXp, INITIAL_COINS } from '../src/state.js';
 import { publicGameHub } from '../src/minigames.js';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { demoLocalStorage } from './storage.js';
 import { TOUCH_GAMES, TOUCH_DURATION, touchComputerEvents } from '../src/minigames-touch-rules.js';
+import { RESTAURANT_THEMES } from '../src/restaurant.js';
+import { PREMIUM_RESTAURANT_THEMES } from '../src/restaurant-economy.js';
+import { RESTAURANT_DECORATIONS } from '../src/restaurant-decor.js';
+import { KITCHEN_CIRCLE_PALETTES } from '../src/restaurant-circle-palettes.js';
+import { restaurantStaffDebugResult } from './restaurant-staff.js';
 
 export const DEMO_ROOM = 'dddddddddddddddddddddddddddd5174';
 const clone = value => structuredClone(value);
 export const DEMO_ACTORS = Object.fromEntries(COUPLE_ROLES.map(role => [role.id, { id:role.clientId, name:role.name }]));
+function unlockRestaurantDecorations(state) {
+  state.restaurant.ownedCirclePalettes=KITCHEN_CIRCLE_PALETTES.map(palette=>palette.id);
+  state.restaurant.ownedDecorations=[...new Set([...(state.restaurant.ownedDecorations??[]),...RESTAURANT_DECORATIONS.map(suite=>suite.id)])];
+  state.restaurant.ownedThemes=[...new Set([...state.restaurant.ownedThemes,...RESTAURANT_THEMES.map(theme=>theme.id),...PREMIUM_RESTAURANT_THEMES.map(theme=>theme.id),...RESTAURANT_DECORATIONS.map(suite=>suite.theme)])];
+  return state;
+}
 
 export function demoSeed(now = Date.now()) {
-  let state = { ...initialState(now-13*86_400_000), name:'糯米', coins:12000, xp:400, love:320, hunger:90, mood:94, energy:96, needsUpdatedAt:now, updatedAt:now, appearance:{body:4,clothes:1,eyes:0,wand:0} };
+  let state = { ...initialState(now-13*86_400_000), name:'糯米', xp:400, love:320, hunger:90, mood:94, energy:96, needsUpdatedAt:now, updatedAt:now, appearance:{body:4,clothes:1,eyes:0,wand:0} };
   // Fictional keepsakes belong only to the isolated, reset-on-refresh test save.
   state.diary.entries.push({id:'level:2',kind:'level',at:now-7*86_400_000,catName:'糯米',photo:'happy',level:2});
   for (const [role, action, age] of [['male',{type:'feed',food:'water'},12*60_000],['female',{type:'feed',food:'mousse'},8*60_000],['female',{type:'pet'},2*60_000]]) {
     state = reduceAction(state, action, DEMO_ACTORS[role], now-age, `demo-seed-${role}-${action.type}`) || state;
   }
-  return normalizeState(state, now);
+  // Fictional feeding history does not spend the player's starting balance.
+  return normalizeState({...state,coins:INITIAL_COINS}, now);
 }
 
 /** Same reducer as the real server, with a deliberately different data store. */
@@ -55,16 +67,27 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
     setOffline(value) { controls.offline=value; notify(value ? 'disconnect':'reconnect',null); },
     sync() { try { const saved=JSON.parse(storage.getItem(key)); if (saved?.revision > record.revision) { record=saved; notify('state',snapshot()); } } catch {} },
     reset() { record={version:1,revision:record.revision+1,state:demoSeed(now()),receipts:[],court:null}; persist(); },
+    debugRestaurantStaff(command) {
+      if(controls.offline)return {ok:false,message:'测试网络已断开，恢复后再切换员工。'};
+      const result=restaurantStaffDebugResult(record.state,command,now());
+      if(!result.ok)return result;
+      replace(result.state);
+      return {ok:true,message:result.message,workers:result.workers};
+    },
     scenario(kind, role='male', food='mousse') {
       const other = role === 'male' ? 'female':'male';
       if (kind === 'new-home') { controls.partnerOnline=false;replace({...initialState(now()),xp:0,love:0});notify('presence-refresh',null);return '已准备全新测试小窝，原有正式存档不受影响'; }
       if (kind === 'join') { controls.partnerOnline=true;const result=action({clientId:DEMO_ACTORS[other].id,operationId:`demo-join-${crypto.randomUUID()}`,action:{type:'join-home'}});notify('presence-refresh',null);return result.error||'演示伙伴已加入共同小窝'; }
+      if (kind === 'restaurant-decorations') {
+        replace(unlockRestaurantDecorations(clone(record.state)));
+        return '已解锁全部餐厅装扮；选择装扮后，猫猫施工队会照常入场布置。仅影响本次测试存档';
+      }
       if (kind === 'unlock') {
         const s=clone(record.state); s.xp=levelStartXp(125)+20; s.coins=99999;
         s.collection.stats={feed:10000,pet:10000,play:10000,sleep:10000,pair:10000}; s.collection.foods=Object.keys(FOODS);
         s.collection.wins={rps:10000,memory:10000,gomoku:10000};
         s.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:20,play:10,sleep:3}};
-        replace(s); return '已解锁全部成长阶段和基础图鉴邀请条件；编号 25–36 按已解锁日记卡片开放';
+        replace(unlockRestaurantDecorations(s)); return '已解锁全部成长阶段、餐厅装扮和基础图鉴邀请条件；编号 25–36 按已解锁日记卡片开放';
       }
       if (kind === 'clear-limits') { const s=clone(record.state); s.careLimits=initialState(now()).careLimits; s.sleeping=false; s.hunger=s.mood=s.energy=96; s.needsUpdatedAt=now(); replace(s); return '每日次数、冷却和体力已恢复，仅影响演示'; }
       if (kind === 'portion') {

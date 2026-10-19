@@ -7,7 +7,7 @@ import { createInvitationSwipe } from './catbook-invitation-swipe.js';
 import { levelInfo } from './state.js';
 import { createCatDialogue, catSpeechMarkup, CAT_DIALOGUE_PAIRS } from './catbook-dialogue.js';
 
-export function createCatbook({ container, getState, getAvailability, onAction, onBack, initialScene='station', onSceneChange, canOpen=()=>true }) {
+export function createCatbook({ container, getState, getAvailability, onAction, onBack, onRestaurant, initialScene='station', onSceneChange, canOpen=()=>true }) {
   let tab='book', catId='bandit', sceneId=initialScene, panel=null, detailOrigin=null;
   let trigger=null, drag=null, yardTap=null, petTap=null, blockCatClickUntil=0;
   let presentation=null, ownInvitation=null, ownInvitationSaving=false, sceneRevealAt=0;
@@ -243,6 +243,7 @@ export function createCatbook({ container, getState, getAvailability, onAction, 
     }
     const button=event.target.closest('button');
     if (!button || !container.contains(button) || button.disabled) return;
+    if (button.hasAttribute('data-book-restaurant')) { cancelPetTap(); onRestaurant?.(); return; }
     if(button.dataset.bookRewardStep) { stepInvitationNotice(Number(button.dataset.bookRewardStep));return; }
     if(button.hasAttribute('data-book-reward-dismiss')) {
       invitationNotice=null;

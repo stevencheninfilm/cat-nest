@@ -1,0 +1,242 @@
+{
+  "version": 8,
+  "mode": "built-in-imagegen",
+  "recipe": "donut",
+  "frameDurationMs": 170,
+  "props": [
+    {
+      "id": "ingredients-donut",
+      "file": "props/ingredients-donut.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "bytes": 52942,
+      "loop": 1,
+      "durations": [],
+      "alphaMin": 0,
+      "transparentFraction": 0.5407,
+      "distinctDecodedFrames": 1
+    },
+    {
+      "id": "donut-shaping",
+      "file": "props/donut-shaping.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "bytes": 40594,
+      "loop": 1,
+      "durations": [],
+      "alphaMin": 0,
+      "transparentFraction": 0.6276,
+      "distinctDecodedFrames": 1
+    },
+    {
+      "id": "donut-frying",
+      "file": "props/donut-frying.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "bytes": 68730,
+      "loop": 1,
+      "durations": [],
+      "alphaMin": 0,
+      "transparentFraction": 0.5169,
+      "distinctDecodedFrames": 1
+    },
+    {
+      "id": "donut-cooling",
+      "file": "props/donut-cooling.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "bytes": 58488,
+      "loop": 1,
+      "durations": [],
+      "alphaMin": 0,
+      "transparentFraction": 0.5328,
+      "distinctDecodedFrames": 1
+    },
+    {
+      "id": "donut-glaze",
+      "file": "props/donut-glaze.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "bytes": 53062,
+      "loop": 1,
+      "durations": [],
+      "alphaMin": 0,
+      "transparentFraction": 0.5542,
+      "distinctDecodedFrames": 1
+    },
+    {
+      "id": "donut-dipping",
+      "file": "props/donut-dipping.webp",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "bytes": 38644,
+      "loop": 1,
+      "durations": [],
+      "alphaMin": 0,
+      "transparentFraction": 0.613,
+      "distinctDecodedFrames": 1
+    }
+  ],
+  "animations": [
+    {
+      "id": "gather-donut",
+      "sourceId": "ingredients-donut",
+      "file": "animations/gather-donut.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 176734,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.6299,
+      "distinctDecodedFrames": 6
+    },
+    {
+      "id": "shape-donut-rings",
+      "sourceId": "donut-shaping",
+      "file": "animations/shape-donut-rings.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 150650,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.6245,
+      "distinctDecodedFrames": 6
+    },
+    {
+      "id": "fry-donut-rings",
+      "sourceId": "donut-frying",
+      "file": "animations/fry-donut-rings.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 248506,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.5436,
+      "distinctDecodedFrames": 6
+    },
+    {
+      "id": "cool-donut-rings",
+      "sourceId": "donut-cooling",
+      "file": "animations/cool-donut-rings.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 227012,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.5096,
+      "distinctDecodedFrames": 6
+    },
+    {
+      "id": "mix-donut-glaze",
+      "sourceId": "donut-glaze",
+      "file": "animations/mix-donut-glaze.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 199272,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.5645,
+      "distinctDecodedFrames": 6
+    },
+    {
+      "id": "dip-donut-glaze",
+      "sourceId": "donut-dipping",
+      "file": "animations/dip-donut-glaze.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 161434,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.5623,
+      "distinctDecodedFrames": 6
+    },
+    {
+      "id": "finish-donut",
+      "sourceId": "donut-finish",
+      "file": "animations/finish-donut.webp",
+      "width": 384,
+      "height": 384,
+      "frames": 6,
+      "bytes": 168310,
+      "loop": 0,
+      "durations": [
+        170,
+        170,
+        170,
+        170,
+        170,
+        170
+      ],
+      "alphaMin": 0,
+      "transparentFraction": 0.6699,
+      "distinctDecodedFrames": 6
+    }
+  ],
+  "reuse": {
+    "wash-donut-strawberries": "../kitchen-v5/animations/wash-waffle-berries.webp",
+    "slice-donut-strawberries": "../kitchen-v5/animations/slice-strawberries.webp",
+    "knead-donut-dough": "../kitchen-v6/animations/knead-pizza-dough.webp",
+    "proof-donut-dough": "../kitchen-v6/animations/proof-pizza-dough.webp",
+    "mash-donut-strawberries": "../kitchen-v5/animations/macerate-strawberries.webp"
+  }
+}

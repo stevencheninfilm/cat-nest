@@ -1,0 +1,373 @@
+{
+  "version": 7,
+  "mode": "built-in-imagegen",
+  "assets": [
+    {
+      "id": "ingredients-gold-sundae",
+      "recipeId": "gold-sundae",
+      "animationId": "gather-gold-sundae",
+      "subject": "A honey-brown ingredient tray with whole strawberries, pink strawberry ice cream in a small tub, cream jug, flour bowl, butter, one egg, sugar, a fish shaped cookie cutter and a tiny sealed edible gold-leaf booklet without writing. Six frames gathering ingredients with a wooden scoop. No finished sundae.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A honey-brown ingredient tray with whole strawberries, pink strawberry ice cream in a small tub, cream jug, flour bowl, butter, one egg, sugar, a fish shaped cookie cutter and a tiny sealed edible gold-leaf booklet without writing. Six frames gathering ingredients with a wooden scoop. No finished sundae.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-00940781-a48c-48f9-bc2e-9323fe54df20.png"
+    },
+    {
+      "id": "fish-cookie-dough",
+      "recipeId": "gold-sundae",
+      "animationId": "mix-fish-cookie-dough",
+      "subject": "A fixed cream-lined sage mixing bowl with pale golden butter-cookie dough. A wooden spatula folds softened butter, flour, sugar and egg into a smooth soft dough over six frames. No cookies yet, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A fixed cream-lined sage mixing bowl with pale golden butter-cookie dough. A wooden spatula folds softened butter, flour, sugar and egg into a smooth soft dough over six frames. No cookies yet, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-0525aabe-40aa-4776-be44-3d6b2641ece7.png"
+    },
+    {
+      "id": "fish-cookie-stamping",
+      "recipeId": "gold-sundae",
+      "animationId": "stamp-fish-cookies",
+      "subject": "A honey-brown board with rolled pale golden cookie dough. A small metal FISH shaped cookie cutter presses and lifts, revealing a cute fish silhouette, with one raw fish-shaped cutout beside it. Six distinct cutter positions, fixed board, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A honey-brown board with rolled pale golden cookie dough. A small metal FISH shaped cookie cutter presses and lifts, revealing a cute fish silhouette, with one raw fish-shaped cutout beside it. Six distinct cutter positions, fixed board, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-ed768480-8196-4b87-9412-108833fc3def.png"
+    },
+    {
+      "id": "fish-cookie-baking",
+      "recipeId": "gold-sundae",
+      "animationId": "bake-fish-cookies",
+      "subject": "A compact cream and sage countertop electric oven with rounded corners and glass door. Inside on a dark small tray two FISH shaped butter cookies bake from pale dough to golden, embossed fish scales visible. Six frames subtle heat, color and steam changes. Fixed oven, no labels or fire outside.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A compact cream and sage countertop electric oven with rounded corners and glass door. Inside on a dark small tray two FISH shaped butter cookies bake from pale dough to golden, embossed fish scales visible. Six frames subtle heat, color and steam changes. Fixed oven, no labels or fire outside.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-78d70d93-0ece-4d2e-a103-b434419a8728.png"
+    },
+    {
+      "id": "gold-sundae-layers",
+      "recipeId": "gold-sundae",
+      "animationId": "layer-gold-sundae",
+      "subject": "The EXACT ornate clear stemmed sundae glass with scalloped foot and GOLD rim from reference1. A small jug pours red strawberry sauce in swirls between layers of white cream and sliced strawberries. Six frames of pouring, fixed glass. No ice cream ball or fish cookie yet.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The EXACT ornate clear stemmed sundae glass with scalloped foot and GOLD rim from reference1. A small jug pours red strawberry sauce in swirls between layers of white cream and sliced strawberries. Six frames of pouring, fixed glass. No ice cream ball or fish cookie yet.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-6145e906-4e99-42d0-8d52-15c661e3f4b1.png"
+    },
+    {
+      "id": "gold-sundae-scooping",
+      "recipeId": "gold-sundae",
+      "animationId": "scoop-gold-sundae",
+      "subject": "The EXACT ornate clear stemmed gold-rimmed dessert glass from reference1, with white cream and strawberry sauce layers and strawberry slices. A metal scoop lowers and releases pink strawberry ice cream balls into the glass across six frames. No whipped top, cookie or gold leaf yet. Fixed glass.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The EXACT ornate clear stemmed gold-rimmed dessert glass from reference1, with white cream and strawberry sauce layers and strawberry slices. A metal scoop lowers and releases pink strawberry ice cream balls into the glass across six frames. No whipped top, cookie or gold leaf yet. Fixed glass.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-292d41c1-ef71-442c-8e25-a14675e1c56c.png"
+    },
+    {
+      "id": "gold-sundae-decorating",
+      "recipeId": "gold-sundae",
+      "animationId": "decorate-gold-sundae",
+      "subject": "The EXACT gold-rimmed stemmed sundae from reference1 with pink strawberry ice cream and sliced strawberries. A piping bag pipes a generous ivory cream swirl and small tongs insert ONE golden FISH shaped butter cookie into the top. Six frames, same glass baseline, no gold leaf yet, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The EXACT gold-rimmed stemmed sundae from reference1 with pink strawberry ice cream and sliced strawberries. A piping bag pipes a generous ivory cream swirl and small tongs insert ONE golden FISH shaped butter cookie into the top. Six frames, same glass baseline, no gold leaf yet, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-b8937621-8675-4272-a678-c2b1006b3df8.png"
+    },
+    {
+      "id": "gold-sundae-finish",
+      "recipeId": "gold-sundae",
+      "animationId": "finish-gold-sundae",
+      "subject": "Match reference1 premium sundae EXACTLY: ornate gold-rimmed stemmed clear glass, pink strawberry ice cream, red strawberries and sauce, big white whipped cream swirl topped with ONE golden fish-shaped cookie. Tiny tweezers lower little edible gold flakes onto cream and strawberries across six frames. Fixed vessel, no magic glow or hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-sundae.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Match reference1 premium sundae EXACTLY: ornate gold-rimmed stemmed clear glass, pink strawberry ice cream, red strawberries and sauce, big white whipped cream swirl topped with ONE golden fish-shaped cookie. Tiny tweezers lower little edible gold flakes onto cream and strawberries across six frames. Fixed vessel, no magic glow or hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-296a7435-a738-4d40-a698-beaaaf52a786.png"
+    },
+    {
+      "id": "ingredients-cheesecake",
+      "recipeId": "cheesecake",
+      "animationId": "gather-cheesecake",
+      "subject": "A honey-brown ingredient tray with rectangular soft cream cheese on ivory dish, cream jug, eggs, flour bowl, sugar bowl and fresh strawberries with a blueberry and mint. Six frames gathering raw ingredients using small spoon. NO baked cake or batter yet.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A honey-brown ingredient tray with rectangular soft cream cheese on ivory dish, cream jug, eggs, flour bowl, sugar bowl and fresh strawberries with a blueberry and mint. Six frames gathering raw ingredients using small spoon. NO baked cake or batter yet.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-fcde45d6-0ddd-4172-b657-516c200c4ea8.png"
+    },
+    {
+      "id": "cheesecake-cheese",
+      "recipeId": "cheesecake",
+      "animationId": "beat-cheesecake-cheese",
+      "subject": "A cream-lined sage ceramic mixing bowl with softened ivory cream cheese and white sugar. A wooden spatula folds then a little whisk beats the thick cheese smooth over six frames. Thick WHITE cheese, no yellow eggs yet. Fixed bowl, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A cream-lined sage ceramic mixing bowl with softened ivory cream cheese and white sugar. A wooden spatula folds then a little whisk beats the thick cheese smooth over six frames. Thick WHITE cheese, no yellow eggs yet. Fixed bowl, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-0e522b21-431f-47af-bb00-cffe44d439db.png"
+    },
+    {
+      "id": "cheesecake-eggs",
+      "recipeId": "cheesecake",
+      "animationId": "mix-cheesecake-eggs",
+      "subject": "A cream-lined sage mixing bowl of smooth pale ivory cream cheese. One small cracked eggshell drops a golden yolk, then a little whisk blends egg through the thick cheese over six frames until pale yellow. Fixed bowl, no hands or whole cake.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A cream-lined sage mixing bowl of smooth pale ivory cream cheese. One small cracked eggshell drops a golden yolk, then a little whisk blends egg through the thick cheese over six frames until pale yellow. Fixed bowl, no hands or whole cake.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-352d4d3e-0361-4f38-b019-e67b18958f76.png"
+    },
+    {
+      "id": "cheesecake-batter",
+      "recipeId": "cheesecake",
+      "animationId": "fold-cheesecake-batter",
+      "subject": "A cream-lined sage mixing bowl of pale yellow cheesecake batter. A small cream jug pours white cream, a fine mesh sieve sprinkles a little white flour, and wooden spatula folds it smooth across six frames. Keep bowl fixed, creamy pourable texture, no cooked cake.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A cream-lined sage mixing bowl of pale yellow cheesecake batter. A small cream jug pours white cream, a fine mesh sieve sprinkles a little white flour, and wooden spatula folds it smooth across six frames. Keep bowl fixed, creamy pourable texture, no cooked cake.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-ca2c6aec-2694-4a5b-8505-7021b558cdf5.png"
+    },
+    {
+      "id": "cheesecake-mold",
+      "recipeId": "cheesecake",
+      "animationId": "pour-cheesecake-mold",
+      "subject": "A small round dark springform baking tin lined with tall crinkled ivory parchment. Smooth pale yellow cheesecake batter is strained through a small sieve from a sage jug into the tin; tin tapped lightly to release bubbles across six frames. No crust or fruit, fixed mold, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A small round dark springform baking tin lined with tall crinkled ivory parchment. Smooth pale yellow cheesecake batter is strained through a small sieve from a sage jug into the tin; tin tapped lightly to release bubbles across six frames. No crust or fruit, fixed mold, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-98fd3d81-d48b-4462-b184-59bda3cea2c0.png"
+    },
+    {
+      "id": "cheesecake-baking",
+      "recipeId": "cheesecake",
+      "animationId": "bake-cheesecake",
+      "subject": "Compact cream and sage countertop electric OVEN, rounded corners and glass door. Inside one ROUND Basque cheesecake in crinkled parchment baking tin rises and develops a very dark caramel-brown top over six frames. Creamy pale sides, no pizza, no fruit garnish. Fixed oven, no text or flames outside.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Compact cream and sage countertop electric OVEN, rounded corners and glass door. Inside one ROUND Basque cheesecake in crinkled parchment baking tin rises and develops a very dark caramel-brown top over six frames. Creamy pale sides, no pizza, no fruit garnish. Fixed oven, no text or flames outside.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-8f3bf2e1-2562-49bb-972c-7c0cce95df10.png"
+    },
+    {
+      "id": "cheesecake-chilling",
+      "recipeId": "cheesecake",
+      "animationId": "chill-cheesecake",
+      "subject": "One whole round Basque cheesecake with dark caramelized top in tall crinkled parchment and round baking tin, on a small wire cooling rack. Six frames show faint steam diminishing and cooling condensation, no body movement. Use same cake size and pale yellow interior as reference1. No fridge background or countertop, no fruit yet.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: One whole round Basque cheesecake with dark caramelized top in tall crinkled parchment and round baking tin, on a small wire cooling rack. Six frames show faint steam diminishing and cooling condensation, no body movement. Use same cake size and pale yellow interior as reference1. No fridge background or countertop, no fruit yet.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-1be57321-e0af-4171-ba6d-9bd8c82478ff.png"
+    },
+    {
+      "id": "cheesecake-slicing",
+      "recipeId": "cheesecake",
+      "animationId": "slice-cheesecake",
+      "subject": "A honey-brown cutting board with a whole round Basque cheesecake, dark caramelized top and pale yellow creamy interior, parchment pulled aside. A small cake knife slices a neat triangular wedge then a cake server lifts it over six frames. Fixed board, no hands, no fruit yet.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A honey-brown cutting board with a whole round Basque cheesecake, dark caramelized top and pale yellow creamy interior, parchment pulled aside. A small cake knife slices a neat triangular wedge then a cake server lifts it over six frames. Fixed board, no hands, no fruit yet.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-da5cd494-da50-408b-b57c-480efeac3cfd.png"
+    },
+    {
+      "id": "cheesecake-finish",
+      "recipeId": "cheesecake",
+      "animationId": "plate-cheesecake",
+      "subject": "Match reference1 EXACTLY: ivory round plate with one thick triangular Basque cheesecake wedge, shiny dark caramelized top and creamy yellow center, a strawberry half, blueberry and green mint sprig beside. A cake server lowers the wedge and small tongs tidy berries in six frames. Fixed plate, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cheesecake.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Match reference1 EXACTLY: ivory round plate with one thick triangular Basque cheesecake wedge, shiny dark caramelized top and creamy yellow center, a strawberry half, blueberry and green mint sprig beside. A cake server lowers the wedge and small tongs tidy berries in six frames. Fixed plate, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.\nCRITICAL CORRECTION: leave at least 22 percent clear padding on ALL four sides inside EVERY 512 square cell. Every plate, cake server and tong is SMALL ENOUGH TO FIT inside its OWN cell. No tool may cross x=512, x=1024 or y=512. Show all utensil tips fully, no cropped tools or stray edge fragments. Each of six subjects centered at x=256,768,1280 and y=256,768. The final two frames include the strawberry half, blueberry and mint shown in reference1.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-bb5dd28f-4d56-434e-93b8-7e3e365d8361.png",
+      "previousAttempts": [
+        {
+          "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-361a9e46-e25e-472e-88b5-b0e097af3e8a.png",
+          "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Match reference1 EXACTLY: ivory round plate with one thick triangular Basque cheesecake wedge, shiny dark caramelized top and creamy yellow center, a strawberry half, blueberry and green mint sprig beside. A cake server lowers the wedge and small tongs tidy berries in six frames. Fixed plate, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+          "reason": "Neighboring frame tool fragment crossed the 512px cell border."
+        }
+      ]
+    },
+    {
+      "id": "ingredients-gold-latte",
+      "recipeId": "gold-latte",
+      "animationId": "gather-gold-latte",
+      "subject": "Honey-brown ingredient tray with roasted coffee beans in bowl, fresh milk jug, tiny booklet of edible gold leaf with no writing, and the EMPTY ivory gold-rimmed coffee cup and saucer with small crown emblem from reference1. Six frames gather with coffee scoop. NO finished coffee or latte art.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-latte.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Honey-brown ingredient tray with roasted coffee beans in bowl, fresh milk jug, tiny booklet of edible gold leaf with no writing, and the EMPTY ivory gold-rimmed coffee cup and saucer with small crown emblem from reference1. Six frames gather with coffee scoop. NO finished coffee or latte art.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-ec1bd47f-5328-4460-adf0-094fe8aacb11.png"
+    },
+    {
+      "id": "gold-latte-cup",
+      "recipeId": "gold-latte",
+      "animationId": "warm-gold-latte-cup",
+      "subject": "The EXACT ivory crown-emblem coffee cup with gold rim and gold handle on gold-rimmed saucer from reference1, empty of coffee. Small sage hot-water jug pours clear warm water into cup then lifts, six frames with faint steam. Same handle orientation and fixed cup baseline, no finished latte art.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-latte.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The EXACT ivory crown-emblem coffee cup with gold rim and gold handle on gold-rimmed saucer from reference1, empty of coffee. Small sage hot-water jug pours clear warm water into cup then lifts, six frames with faint steam. Same handle orientation and fixed cup baseline, no finished latte art.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-1e1b1752-2bcd-4d4d-bc0f-1d4fa9a8a0d3.png"
+    },
+    {
+      "id": "gold-latte-pouring",
+      "recipeId": "gold-latte",
+      "animationId": "pour-gold-latte",
+      "subject": "The EXACT ivory crown-emblem gold-rimmed coffee cup and gold-rimmed saucer from reference1. Espresso already in cup. A small stainless milk pitcher pours steamed milk into espresso creating gentle brown-white swirls, NO finished foam design yet. Six coherent pour frames, fixed cup, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-latte.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The EXACT ivory crown-emblem gold-rimmed coffee cup and gold-rimmed saucer from reference1. Espresso already in cup. A small stainless milk pitcher pours steamed milk into espresso creating gentle brown-white swirls, NO finished foam design yet. Six coherent pour frames, fixed cup, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-f55c7abc-17c3-4d19-b42f-df5f16377219.png"
+    },
+    {
+      "id": "gold-latte-art",
+      "recipeId": "gold-latte",
+      "animationId": "draw-gold-latte-art",
+      "subject": "The EXACT gold-rimmed ivory crown-emblem cup and saucer from reference1. A small silver milk pitcher and fine latte-art pick create the reference WHITE GOLDFISH silhouette on caramel coffee foam. Six frames build the fish head and flowing tail, no gold flakes yet. Same vessel and baseline, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-latte.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The EXACT gold-rimmed ivory crown-emblem cup and saucer from reference1. A small silver milk pitcher and fine latte-art pick create the reference WHITE GOLDFISH silhouette on caramel coffee foam. Six frames build the fish head and flowing tail, no gold flakes yet. Same vessel and baseline, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-39ac3a2d-b71a-4960-89df-0156d28b0f0e.png"
+    },
+    {
+      "id": "gold-latte-leaf",
+      "recipeId": "gold-latte",
+      "animationId": "apply-gold-latte-leaf",
+      "subject": "Match reference1 EXACT ivory gold-rimmed crown-emblem cup and saucer with caramel latte and white GOLDFISH foam artwork. Tiny tweezers lower irregular EDIBLE GOLD leaf flakes around the foam fish across six frames. Cup fixed, no glitter aura, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-latte.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Match reference1 EXACT ivory gold-rimmed crown-emblem cup and saucer with caramel latte and white GOLDFISH foam artwork. Tiny tweezers lower irregular EDIBLE GOLD leaf flakes around the foam fish across six frames. Cup fixed, no glitter aura, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-eaea0734-43cf-4cc6-ad62-0e194ccd8b74.png"
+    },
+    {
+      "id": "gold-latte-finish",
+      "recipeId": "gold-latte",
+      "animationId": "plate-gold-latte",
+      "subject": "The exact reference1 completed premium latte: ivory gold-rimmed crown cup on matching saucer, caramel coffee with white goldfish foam artwork and a few gold leaf flakes. A small golden teaspoon gently settles on saucer across six frames, slight steam changes. Fixed cup baseline, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/gold-v1/special-latte.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The exact reference1 completed premium latte: ivory gold-rimmed crown cup on matching saucer, caramel coffee with white goldfish foam artwork and a few gold leaf flakes. A small golden teaspoon gently settles on saucer across six frames, slight steam changes. Fixed cup baseline, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-fa2c78ae-808d-4c7c-b8b3-7b352053ee0d.png"
+    },
+    {
+      "id": "ingredients-cocoa",
+      "recipeId": "cocoa",
+      "animationId": "gather-cocoa",
+      "subject": "Honey-brown ingredient tray with cocoa powder in small bowl, a dark chocolate bar, milk jug, sugar bowl, three large white marshmallow cubes and the EMPTY coral-pink paw-print mug from reference1. Six frames gathering ingredients. NO finished cocoa, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Honey-brown ingredient tray with cocoa powder in small bowl, a dark chocolate bar, milk jug, sugar bowl, three large white marshmallow cubes and the EMPTY coral-pink paw-print mug from reference1. Six frames gathering ingredients. NO finished cocoa, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-552d06fe-da62-4ffe-aa50-4956fa97e956.png"
+    },
+    {
+      "id": "cocoa-sifting",
+      "recipeId": "cocoa",
+      "animationId": "sift-cocoa",
+      "subject": "A small cream-lined sage bowl and fine mesh sieve holding rich brown cocoa powder. Six frames sieve gently taps cocoa powder into bowl; soft brown dust stays close to bowl. No liquid or matcha, fixed bowl, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A small cream-lined sage bowl and fine mesh sieve holding rich brown cocoa powder. Six frames sieve gently taps cocoa powder into bowl; soft brown dust stays close to bowl. No liquid or matcha, fixed bowl, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-d03536cd-dee3-4579-9572-ea9d7ab3b459.png"
+    },
+    {
+      "id": "cocoa-chocolate-board",
+      "recipeId": "cocoa",
+      "animationId": "chop-cocoa-chocolate",
+      "subject": "A honey-brown cutting board with dark chocolate bar and chopped dark chocolate pieces. A small chef knife lifts and cuts chocolate over six frames. Fixed board, no nuts, no hands or finished drink.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A honey-brown cutting board with dark chocolate bar and chopped dark chocolate pieces. A small chef knife lifts and cuts chocolate over six frames. Fixed board, no nuts, no hands or finished drink.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-a49be850-1863-4493-9da2-b0bbe239214c.png"
+    },
+    {
+      "id": "cocoa-melting",
+      "recipeId": "cocoa",
+      "animationId": "melt-cocoa-chocolate",
+      "subject": "A cream-lined sage saucepan of hot milk, cocoa powder and dark chocolate pieces. A wooden spoon stirs as chocolate melts into rich glossy brown cocoa over six frames. Fixed pot, little steam and ripples, no marshmallows yet.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A cream-lined sage saucepan of hot milk, cocoa powder and dark chocolate pieces. A wooden spoon stirs as chocolate melts into rich glossy brown cocoa over six frames. Fixed pot, little steam and ripples, no marshmallows yet.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-1591fcb6-ba33-4ed0-a2a8-da384fb40803.png"
+    },
+    {
+      "id": "cocoa-whisking",
+      "recipeId": "cocoa",
+      "animationId": "whisk-cocoa",
+      "subject": "A small transparent glass mixing jug full of glossy rich brown hot chocolate. A short whisk blends until silky, thin swirls and faint steam move in six frames. Fixed jug baseline, no hands, marshmallows or whipped cream.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: A small transparent glass mixing jug full of glossy rich brown hot chocolate. A short whisk blends until silky, thin swirls and faint steam move in six frames. Fixed jug baseline, no hands, marshmallows or whipped cream.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-9a14d22b-174b-422d-a444-837e46885985.png"
+    },
+    {
+      "id": "cocoa-pouring",
+      "recipeId": "cocoa",
+      "animationId": "pour-cocoa",
+      "subject": "The exact coral-pink rounded mug with pale paw-print emblem from reference1. A small sage jug pours steaming dark brown hot chocolate into mug across six frames. Fixed handle to right and bottom baseline. NO marshmallows yet, no hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: The exact coral-pink rounded mug with pale paw-print emblem from reference1. A small sage jug pours steaming dark brown hot chocolate into mug across six frames. Fixed handle to right and bottom baseline. NO marshmallows yet, no hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-31fffe74-a651-4aec-a38d-b29ec79d72d5.png"
+    },
+    {
+      "id": "cocoa-finish",
+      "recipeId": "cocoa",
+      "animationId": "finish-cocoa",
+      "subject": "Match reference1 EXACTLY: plump coral-pink paw-print mug with handle on right, steaming rich brown hot chocolate topped with THREE plump white marshmallow cubes and a dusting of cocoa. Small serving tongs lower one marshmallow, then small sieve dusts cocoa across six frames. Fixed mug, no whipped cream or hands.",
+      "refs": [
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/foods/cocoa.webp",
+        "/Users/stevenchen/.codex/worktrees/de22/猫猫判官/public/assets/restaurant/kitchen-v6/qa-props.webp"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production sprite sheet for our cozy cat restaurant game kitchen action.\nGenerate ONE transparent image, EXACTLY SIX animation frames in 3 columns by 2 rows, canvas 1536x1024. Every cell 512x512, at least 14 percent clear padding on every side, 24px completely empty gutters at all cell borders. No neighboring sprite slivers.\nReferences: image1 exact finished dish identity, vessel shape and ingredient colors; image2 existing intermediate kitchen art, cream/sage cookware, warm palette and view. Create a NEW preparation sprite sheet in this established style.\nSubject/action: Match reference1 EXACTLY: plump coral-pink paw-print mug with handle on right, steaming rich brown hot chocolate topped with THREE plump white marshmallow cubes and a dusting of cocoa. Small serving tongs lower one marshmallow, then small sieve dusts cocoa across six frames. Fixed mug, no whipped cream or hands.\nStyle: warm hand-painted 2D casual game illustration, plump rounded food and utensils, warm-brown outlines, subtle painted shading, cream/sage/honey palette, three-quarter overhead view, crisp at small size. Fixed camera, vessel size, handle orientation, horizontal center and bottom baseline in every frame. Show coherent real tool/ingredient/liquid/steam movements, not whole-image shaking. Frames temporal left-to-right then top-to-bottom.\nBackground genuinely transparent alpha. NO backdrop, floor, counter, atmosphere, glow, exterior shadow, cats, people, hands, lettering, numbers, cell borders, watermark or logo. Include only described food, containers and utensils.",
+      "sourcePath": "/Users/stevenchen/.codex/generated_images/01a14df9-a948-7002-8428-978ca4046c89/exec-bc27f6f9-71bb-4fca-a0c7-6c57478188c8.png"
+    }
+  ]
+}

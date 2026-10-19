@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "tool": "built-in image_gen",
+  "atlas": {
+    "file": "atlas.webp",
+    "width": 1024,
+    "height": 1536,
+    "columns": 4,
+    "rows": 6,
+    "cellSize": 256
+  },
+  "customers": {
+    "guest-baker": {
+      "name": "奶油烘焙客",
+      "column": 0,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-baker.webp",
+      "back": "guest-baker-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-reader": {
+      "name": "书店常客",
+      "column": 1,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-reader.webp",
+      "back": "guest-reader-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-botanist": {
+      "name": "温室植物学家",
+      "column": 2,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-botanist.webp",
+      "back": "guest-botanist-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-captain": {
+      "name": "海盐船长",
+      "column": 3,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-captain.webp",
+      "back": "guest-captain-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-tea-master": {
+      "name": "茶道先生",
+      "column": 0,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-tea-master.webp",
+      "back": "guest-tea-master-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-violinist": {
+      "name": "暮樱琴师",
+      "column": 1,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-violinist.webp",
+      "back": "guest-violinist-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-painter": {
+      "name": "云朵画家",
+      "column": 2,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-painter.webp",
+      "back": "guest-painter-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-explorer": {
+      "name": "远行探险家",
+      "column": 3,
+      "row": 2,
+      "backRow": 3,
+      "front": "guest-explorer.webp",
+      "back": "guest-explorer-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-astronomer": {
+      "name": "星光学者",
+      "column": 0,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-astronomer.webp",
+      "back": "guest-astronomer-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-baron": {
+      "name": "金鱼男爵",
+      "column": 1,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-baron.webp",
+      "back": "guest-baron-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-pearl": {
+      "name": "珍珠海客",
+      "column": 2,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-pearl.webp",
+      "back": "guest-pearl-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-royal-critic": {
+      "name": "皇家食评家",
+      "column": 3,
+      "row": 4,
+      "backRow": 5,
+      "front": "guest-royal-critic.webp",
+      "back": "guest-royal-critic-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    }
+  }
+}
