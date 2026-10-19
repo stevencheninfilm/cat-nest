@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HOME_ENTRIES, homeContext, homeTitle, homeStorageKey, initialHomeState, EVIAN_ROOM_ID } from '../src/home-context.js';
+import { HOME_ENTRIES, homeContext, homeTitle, homeStorageKey, initialHomeState, EVIAN_ROOM_ID, validateHomes } from '../src/home-context.js';
 import { createLocalPreviewStore, PREVIEW_HOME } from '../scripts/local-pet-preview.mjs';
 import { namedHomeHtml, namedHomeEntry } from '../scripts/named-home-entry.mjs';
 
@@ -116,3 +116,12 @@ test(`${home.label} saves spending once and reloading never refills its starting
   for(const other of HOME_ENTRIES.filter(other=>other.roomId && other.roomId!==home.roomId))await assert.rejects(()=>reopened.getRoom(other.roomId),error=>error.code==='ROOM_NOT_FOUND');
 });
 }
+
+
+test('mixed-case save entries preserve their spelling and reject case collisions and reserved paths',()=>{
+  assert.equal(homeContext('/Crown/').id,'Crown');
+  for(const path of ['/crown/','/CROWN/'])assert.equal(homeContext(path).id,'unknown');
+  const additional={id:'CrowN',label:'Duplicate',source:'room',roomId:'e'.repeat(32),storagePrefix:'CrowN:'};
+  assert.throws(()=>validateHomes([...HOME_ENTRIES,additional]),/存档网址无效或重复/);
+  for(const id of ['Assets','API','Model','Index','Monitor'])assert.throws(()=>validateHomes([...HOME_ENTRIES,{...additional,id,storagePrefix:`${id}:` }]),/存档网址无效或重复/);
+});
