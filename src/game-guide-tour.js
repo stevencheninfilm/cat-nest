@@ -15,7 +15,7 @@ export const GAME_TOUR = [
   {id:'games',chapter:'games',view:'games',target:'[data-game-select="rps"]',title:'先选喜欢的游戏，再选模式',body:'翻牌、五子棋、猜数字、2048……点封面后会显示单人、电脑和双人选项，以及操作规则。双人联机由一人发起，另一人在同一小窝加入。',hint:'限时游戏需达标，中途退出不发奖；结算后记得领成长气泡。'},
   {id:'games-touch',chapter:'games',view:'games',target:'[data-game-select="teaser"]',title:'还有三种猫猫触屏小游戏',body:'逗猫棒追逐、接住小零食、寻找小玩具，在小猫 Lv.5 解锁。它们是独立小游戏，与主页「逗猫」不同。',hint:'每款具体玩法与奖励，可以在图文手册中查看。'},
   {id:'together',chapter:'together',view:'shared-care',target:'.shared-tabs',title:'一个人照顾，也能等另一人接力',body:'「照顾足迹」看彼此做过什么；「默契接力」按任务接下一棒；「共同回忆」留住完成的纪念。普通照顾次数和冷却照常生效。'},
-  {id:'court-entry',chapter:'court',view:'home',target:'[data-open="judge"]',title:'想认真聊聊，猫猫会听',body:'底部的「猫猫判官」是两个人好好说话的小法庭。本轮先认识入口；等你主动打开判官，我再带你了解入席、陈词和修复流程。',next:'继续认识其他功能'},
+  {id:'court-entry',chapter:'court',view:'home',target:'[data-open="settings"]',title:'想认真聊聊，猫猫会听',body:'从右上角「设置 → 猫猫判官」进入两个人好好说话的小法庭。本轮先认识入口；等你主动打开判官，我再带你了解入席、陈词和修复流程。',next:'继续认识其他功能'},
   {id:'court',chapter:'court',view:'judge',target:'#court-create, #court-claim-button, #court-submit, #court-stage, .court-result-tabs',title:'各自陈词，双方到齐才开庭',body:'一人发起审理并分享邀请，另一人加入。分别认领猫爪方、鱼干方，写下经过和感受，可附最多 4 张截图。双方提交后才会评理。',hint:'判词后可以查看修复建议、各自确认任务，或补充证词复议。指引不会替你提交；已有法庭可按当前进度继续。'},
   {id:'diary-entry',chapter:'diary',view:'home',target:'[data-open="diary"]',title:'一起长大的日子，都值得记下',body:'从右侧「日记」进入，看看小猫的成长与两个人的共同纪念。',next:'翻开成长日记',activate:true},
   {id:'diary',chapter:'diary',view:'diary',target:'.journal-tabs',title:'每一个主题，收藏一次',body:'「待解锁」写着下一张纪念卡的条件；「正式卡册」按主题收集；重复的纪念留在时间轴。点卡片爱心可共同收藏，打开卡片还能保存图片。',hint:'部分图鉴猫猫看的是正式卡册数量，不是时间轴条数。'},
