@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { normalizeAppearance, MAGE_CAT_VERSION } from './mage-cat-config.js';
+import { normalizeAppearance, appearanceCharacter, MAGE_CAT_VERSION } from './mage-cat-config.js';
+import { createCharacterSwitch } from './pet-character-switch.js';
+import { OTTER_MODEL_PATH, prepareOtterModel, updateOtterExpression, disposeOtterModel } from './otter-model.js';
 import { advanceMagePose } from './mage-cat-animation.js';
 import { createCatBehavior } from './cat-behavior.js';
 import { createMageAnimationPlayer } from './mage-cat-player.js';
@@ -10,7 +12,7 @@ import { createYarnPawRig } from './nest-yarn-paw.js';
 const PERIOD_LIGHTS=Object.fromEntries(Object.entries(NEST_PERIODS).map(([id,p])=>[id,{...p,skyColor:new THREE.Color(p.sky),keyColor:new THREE.Color(p.tint)}]));
 
 /** Nekueda's licensed Mage Cat, with its original skeleton, LODs, motions and textures. */
-export function createCatModel({container,assetBase,onReady,onError,reducedMotion=false,decorateScene,onBehaviorChange,autonomous=true,random=Math.random,clock=Date.now,canRotate=()=>true}={}) {
+export function createCatModel({container,assetBase,onReady,onError,onCharacterStatus,reducedMotion=false,decorateScene,onBehaviorChange,autonomous=true,random=Math.random,clock=Date.now,canRotate=()=>true}={}) {
   const base=(assetBase || `${import.meta.env.BASE_URL}api/pet-model/${MAGE_CAT_VERSION}`).replace(/\/$/,'');
   let renderer,scene,camera,pivot,model,mixer,player,decoration,ambientLight,keyLight;
   let frame=0,lastFrame=0,destroyed=false,paused=false,ready=false,failed=false;
@@ -22,8 +24,26 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
   let appearance=normalizeAppearance();
   let baseHalfHeight=1.72,viewHalfHeight=1.72,viewCenter=1.5;
   let roomView=false,layout,stageFrame,pawRig;
+  let catSlot,currentCharacter='cat';
   const stageAnchor=new THREE.Vector3(),stageFoot=new THREE.Vector3(),footSample=new THREE.Vector3();let stageFeet=[];
   const materials=new Map(),geometries=new Set(),texturePromises=new Map(),disposers=[];
+  const characterSwitch=createCharacterSwitch({
+    load:async id=>{
+      if(id==='cat')return catSlot;
+      const gltf=await new GLTFLoader().loadAsync(new URL(OTTER_MODEL_PATH,document.baseURI).href);
+      try{return prepareOtterModel(gltf);}catch(error){disposeOtterModel({model:gltf.scene});throw error;}
+    },
+    apply(slot,id){
+      pawRig?.restore();decoration?.destroy?.();mixer.stopAllAction();pivot.remove(model);
+      model=slot.model;mixer=slot.mixer??=new THREE.AnimationMixer(model);player=createMageAnimationPlayer(mixer,slot.clips);
+      currentCharacter=id;behavior.setClips(slot.clips);pivot.add(model);pivot.position.set(0,0,0);pivot.rotation.set(0,yaw,0);pivot.scale.setScalar(1);
+      player.sync(pose);mixer.update(0);setStageFeet();pawRig=createYarnPawRig(model);
+      decoration=decorateScene?.({scene,model,pivot,camera,renderer,reducedMotion,getStageFrame:()=>stageFrame,setRoomView});
+      currentExpression='';void updateExpression();container.dataset.petCharacter=id;resize();publishBehavior();startFrame();
+    },
+    onStatus(status){if(destroyed)return;container.dataset.characterPhase=status.phase;onCharacterStatus?.(status);},
+    dispose(slot,id){if(id!=='cat'){slot.mixer?.stopAllAction();slot.mixer?.uncacheRoot(slot.model);disposeOtterModel(slot);}},
+  });
   const listen=(node,type,handler,options)=>{node.addEventListener(type,handler,options);disposers.push(()=>node.removeEventListener(type,handler,options));};
   const api={
     canAmbientEvent(){return ready&&!paused&&!pointer&&engagementYaw===null&&behavior.canAmbientEvent();},
@@ -55,14 +75,15 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       const next=normalizeAppearance(value);
       if(JSON.stringify(next)===JSON.stringify(appearance))return;
       appearance=next;
-      if(ready)applyAppearance().catch(fail);
+      if(ready){if(appearanceCharacter(appearance)==='cat')applyAppearance().catch(fail);void characterSwitch.select(appearanceCharacter(appearance));}
     },
+    retryCharacter(){if(ready)void characterSwitch.select(appearanceCharacter(appearance));},
     setPaused(value){const next=Boolean(value);if(paused===next)return;paused=next;lastFrame=0;if(paused){decoration?.act?.({type:'life-hide'});cancelAnimationFrame(frame);frame=0;behavior.suspend();pose=behavior.snapshot();}else startFrame();},
     consumeTap(){const result=didDrag;didDrag=false;return result;},
     resetView(){targetYaw=0;startFrame();},
     setEngaged(value){if(value&&engagementYaw===null){engagementYaw=targetYaw;targetYaw=0;pointer=null;}else if(!value&&engagementYaw!==null){targetYaw=engagementYaw;engagementYaw=null;}startFrame();},
     stageAction(action){const result=decoration?.act?.(action);startFrame();return result;},
-    destroy(){destroyed=true;cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();pawRig?.restore();decoration?.destroy?.();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
+    destroy(){destroyed=true;characterSwitch.destroy();cancelAnimationFrame(frame);observer?.disconnect();for(const dispose of disposers)dispose();pawRig?.restore();decoration?.destroy?.();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);catSlot?.mixer?.stopAllAction();if(catSlot)catSlot.mixer.uncacheRoot(catSlot.model);for(const g of geometries)g.dispose();for(const m of materials.values())m.dispose();for(const promise of texturePromises.values())promise.then(t=>t.dispose()).catch(()=>{});renderer?.dispose();renderer?.domElement.remove();container?.classList.remove('has-cat-model');},
   };
   function publishBehavior(){
     container.dataset.catMood=pose.mood;container.dataset.catPeriod=pose.period;container.dataset.catAction=pose.id;container.dataset.catClip=pose.clip;container.dataset.catExpressionMode=pose.expression;
@@ -86,18 +107,25 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
     startFrame();
   }
   async function updateExpression(){
+    if(currentCharacter==='otter'){updateOtterExpression(model,pose.eyes);container.dataset.catExpression=`${pose.eyes}:${pose.mouth}`;return;}
     const key=`${appearance.eyes}:${pose.eyes}:${pose.mouth}`;
     if(key===currentExpression)return;
     currentExpression=key;
     const eyeFile=['closed','happy','panic','tired','wink'].includes(pose.eyes)?`eyes-${pose.eyes}.webp`:`eyes-${appearance.eyes}-${pose.eyes}.webp`;
     try{
       const [eye,mouth]=await Promise.all([texture(eyeFile),texture(`mouth-${pose.mouth}.webp`)]);
-      if(destroyed || currentExpression!==key)return;
+      if(destroyed || currentCharacter!=='cat' || currentExpression!==key)return;
       for(const name of ['Mage_Cat_Eye_L','Mage_Cat_Eye_R']){const m=materials.get(name);m.map=eye;m.needsUpdate=true;}
       const m=materials.get('Mage Cat_Mouth');m.map=mouth;m.needsUpdate=true;
       container.dataset.catExpression=`${pose.eyes}:${pose.mouth}`;
       startFrame();
     }catch(error){fail(error);}
+  }
+  function setStageFeet(){
+    model.updateWorldMatrix(true,true);let skin;model.traverse(n=>{if(n.isSkinnedMesh&&!skin)skin=n;});
+    stageFeet=skin?.skeleton.bones.filter(b=>['Foot_L','Foot_R'].includes(b.name))??[];stageAnchor.set(0,0,0);
+    for(const foot of stageFeet)stageAnchor.add(pivot.worldToLocal(foot.getWorldPosition(footSample)));
+    if(stageFeet.length)stageAnchor.divideScalar(stageFeet.length);
   }
   function updateCamera(){
     if(!layout)return;
@@ -194,14 +222,12 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       model.scale.multiplyScalar(scale);model.position.x-=((box.min.x+box.max.x)/2)*scale;model.position.y-=box.min.y*scale;
       model.position.z-=((box.min.z+box.max.z)/2)*scale;
       model.updateWorldMatrix(true,true);
-      let skin;model.traverse(n=>{if(n.isSkinnedMesh&&!skin)skin=n;});
-      stageFeet=skin?.skeleton.bones.filter(b=>['Foot_L','Foot_R'].includes(b.name))??[];
-      for(const foot of stageFeet)stageAnchor.add(foot.getWorldPosition(footSample));
-      if(stageFeet.length)stageAnchor.divideScalar(stageFeet.length);
+      setStageFeet();
       const [normal,ao]=await Promise.all([texture('body-normal.webp',false),texture('body-ao.webp',false)]);
       for(const name of ['Mage_Cat','Mage_Cat_Clothes']){const m=materials.get(name);m.normalMap=normal;m.normalScale.set(.45,.45);m.aoMap=ao;m.aoMapIntensity=.35;}
       await applyAppearance();
       if(destroyed)return;
+      catSlot={model,mixer,clips:gltf.animations};container.dataset.petCharacter='cat';
       pawRig=createYarnPawRig(model);
       decoration=decorateScene?.({scene,model,pivot,camera,renderer,reducedMotion,getStageFrame:()=>stageFrame,setRoomView});
       ready=true;container.classList.add('has-cat-model');container.dataset.modelPhase='ready';container.setAttribute('aria-busy','false');publishBehavior();
@@ -218,7 +244,7 @@ export function createCatModel({container,assetBase,onReady,onError,reducedMotio
       const end=event=>{if(pointer?.id!==event.pointerId)return;try{if(container.hasPointerCapture(event.pointerId))container.releasePointerCapture(event.pointerId);}catch{}pointer=null;};
       listen(container,'pointerup',end);listen(container,'pointercancel',end);
       listen(window,'pointerup',end);listen(window,'pointercancel',end);listen(window,'blur',()=>{pointer=null;});
-      onReady?.();startFrame();
+      onReady?.();void characterSwitch.select(appearanceCharacter(appearance));startFrame();
     }catch(error){fail(error);}
   }
   void load();return api;

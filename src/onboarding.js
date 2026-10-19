@@ -20,7 +20,7 @@ export function invitationMarkup(model,{isTest=false,copied=false,error='',url='
 }
 
 /** The guide uses ordinary actions and confirmed receipts; it never seeds a room. */
-export function createOnboarding({storage,preferences=storage,home,baseUrl,getContext,dispatch,greet,toast=()=>{},returning=false,isTest=false,testActions,onClose=()=>{},onComplete=()=>{}}) {
+export function createOnboarding({storage,preferences=storage,home,baseUrl,getContext,dispatch,greet,toast=()=>{},returning=false,isTest=false,testActions,onClose=()=>{},onComplete=()=>{},autoStart=true}) {
   const dialog=document.createElement('dialog');dialog.className='onboarding-dialog';dialog.setAttribute('aria-labelledby','onboarding-title');
   document.body.append(dialog);
   let role,progress,pending=null,draft='',appearance,created=false,view='guide',error='',copied=false,signature='',joinPending=false,autoQueued=false,lastRole;
@@ -71,7 +71,7 @@ export function createOnboarding({storage,preferences=storage,home,baseUrl,getCo
     if(context.connected&&!joinPending&&!binding.owners.find(owner=>owner.id===context.role)?.joined){
       joinPending=true;queueMicrotask(()=>{if(!dispatch({type:'join-home'}))joinPending=false;});
     }
-    if(context.available!==false&&!autoQueued&&!dialog.open&&!returning&&!progress?.paused&&progress?.step!=='done'&&preferences.getItem('onboarding.v2.completed')!=='done') {
+    if(autoStart&&context.available!==false&&!autoQueued&&!dialog.open&&!returning&&!progress?.paused&&progress?.step!=='done'&&preferences.getItem('onboarding.v2.completed')!=='done') {
       autoQueued=true;queueMicrotask(()=>{if(!document.querySelector('dialog[open]'))start();else autoQueued=false;});
     }
     render();

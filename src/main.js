@@ -66,7 +66,9 @@ import { careQuotaText, careStatusText, careBlockedMessage, careRuleText } from 
 import { createGrowthBubbleView, growthTray, growthLabel, jellyHeartMarkup } from './growth-ui.js';
 import { growthStageForXp, getGrowthStageById, stageStyle, growthUpgrade } from './growth-stages.js';
 import { growthStagesPanel, growthUpgradePanel } from './growth-stage-ui.js';
-import { APPEARANCE_OPTIONS, normalizeAppearance, MAGE_CAT_VERSION, MAGE_CAT_AUTHOR } from './mage-cat-config.js';
+import { normalizeAppearance, MAGE_CAT_VERSION } from './mage-cat-config.js';
+import { appearanceSheetMarkup } from './appearance-ui.js';
+import './appearance-characters.css';
 import { createCompanionMode } from './companion-mode.js';
 import { createCatbook } from './catbook.js';
 import { getCollectionCat } from './cat-collection.js';
@@ -113,6 +115,7 @@ let catPaletteTab = 'expressions',catPaletteLevel=null;
 let catbook = null;
 let world = null, worldOpening = false;
 let appearanceDraft=normalizeAppearance(state.appearance),appearanceTab='body',appearanceSubmitting=false;
+let appearanceLoading=false,appearanceLoadError=false;
 let sound = read('catnest.sound', false);
 let cloud = null;
 const localPetPreview = runtime.localPreview;
@@ -379,6 +382,7 @@ function renderConnection({panels=true}={}) {
   if (retry) retry.hidden = !['error','offline','full'].includes(status.phase);
   if(panels){refreshFeedingSheet();updateCareControls();renderFeedingHome();renderGrowth();catbook?.render();renderCoupleCare();}
   onboarding?.sync();
+  gameGuide?.sync();
 }
 function presenceOptions() { return { members, phase:status.phase, configured:cloudConfigured, entered:roleEntered, known:presenceKnown, selectedRole:coupleRole, binding:coupleSnapshotReady?homeBinding(confirmedState):null }; }
 function sharedCareOptions(now = Date.now()) { return { ...presenceOptions(), now, clientId, tab:coupleTab, activityPage:couplePages.activity, memoriesPage:couplePages.memories, connected:careConnected(), ready:!cloudConfigured || coupleSnapshotReady, notice:coupleNotice }; }
@@ -835,14 +839,15 @@ async function copyGameLink() {
   catch { toast('复制暂不可用，可以直接分享浏览器地址'); }
 }
 function appearanceSheet() {
-  const labels={body:'毛色',clothes:'衣服',eyes:'眼睛',wand:'魔杖'};
-  return `<div class="sheet-handle" aria-hidden="true"></div><span class="eyebrow">A LITTLE MAGIC, JUST FOR YOU</span><h2>给小猫换个小魔法</h2><div class="appearance-tabs" role="tablist" aria-label="装扮部位">${Object.entries(labels).map(([key,label])=>`<button role="tab" id="appearance-tab-${key}" data-appearance-tab="${key}" aria-controls="appearance-choices" aria-selected="${key===appearanceTab}">${label}</button>`).join('')}</div><div id="appearance-choices" class="appearance-choices" role="tabpanel" aria-labelledby="appearance-tab-${appearanceTab}">${APPEARANCE_OPTIONS[appearanceTab].map((option,index)=>`<button class="appearance-choice ${appearanceDraft[appearanceTab]===index?'selected':''}" data-appearance-choice="${index}" aria-label="${labels[appearanceTab]}：${option.name}" aria-pressed="${appearanceDraft[appearanceTab]===index}" ${appearanceSubmitting?'disabled':''}><span style="--swatch:${option.color}">${appearanceDraft[appearanceTab]===index?'✓':''}</span><small>${option.name}</small></button>`).join('')}</div><button class="primary modal-primary" id="apply-appearance" ${appearanceSubmitting?'disabled':''}>就穿这一套 ♡</button><p class="appearance-note">装扮免费 · 两个人都会看见同一只小猫</p><a class="model-credit" href="${MAGE_CAT_AUTHOR.url}" target="_blank" rel="noopener noreferrer">魔法小猫来自 ${MAGE_CAT_AUTHOR.name}</a>`;
+  return appearanceSheetMarkup({draft:appearanceDraft,tab:appearanceTab,submitting:appearanceSubmitting,loading:appearanceLoading,error:appearanceLoadError,otterPortrait:new URL('pets/baby-otter-v1/portrait.webp',document.baseURI).href});
 }
 function refreshAppearanceSheet() {
   if(!$('#modal').open || $('#modal-content').dataset.view!=='appearance')return;
   const focus=document.activeElement?.dataset.appearanceChoice;
+  const characterFocus=document.activeElement?.dataset.petCharacter;
   $('#modal-content').innerHTML=appearanceSheet();
   if(focus!==undefined)$(`[data-appearance-choice="${focus}"]`)?.focus({preventScroll:true});
+  else if(characterFocus)$(`[data-pet-character="${characterFocus}"]`)?.focus({preventScroll:true});
 }
 function feedingSheetOptions() {
   return { state, selectedFood, tab:feedingTab, category:foodCategory, clientId, profileName:profile.name, members,
@@ -954,19 +959,20 @@ async function initializeCatModel() {
   catModel?.destroy(); catModelPhase='loading'; renderHomeLoading();
   $('#retry-cat-model').hidden=true;$('#retry-cat-model').disabled=true;
   const failed=() => {
-    catModelPhase='error'; renderHomeLoading();
+    catModelPhase='error'; renderHomeLoading(); gameGuide?.sync();
     $('#retry-cat-model').hidden=false;$('#retry-cat-model').disabled=false;$('#retry-cat-model').textContent='小猫还没加载好，点这里重试';
   };
   try {
     const [{ createCatModel },{ createLifePropStage }] = await Promise.all([import('./cat-model.js'),import('./nest-life-props.js')]);
     catModel = createCatModel({ container: $('#cat'), assetBase:modelAssetBase, clock:()=>nestLife.now(), canRotate:()=>Boolean(roleEntered&&homeCat?.canRotate&&!actionLocked&&!$('#modal').open), reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, onBehaviorChange:renderCatBehavior,
       decorateScene:createLifePropStage,
-      onReady() { catModelPhase='ready'; renderHomeLoading(); $('#retry-cat-model').hidden=true; queueMicrotask(() => { catModel?.setState(state); updateModelPause(); }); },
+      onCharacterStatus({phase}) { appearanceLoading=phase==='loading';appearanceLoadError=phase==='error';refreshAppearanceSheet(); },
+      onReady() { catModelPhase='ready'; renderHomeLoading(); $('#retry-cat-model').hidden=true; queueMicrotask(() => { catModel?.setState(state); updateModelPause();gameGuide?.sync(); }); },
       onError:failed,
     });
     catModel.setState(state);
     updateModelPause();
-  } catch { failed(); }
+  } catch { failed();gameGuide?.sync(); }
 }
 document.addEventListener('click', event => {
   const el = event.target.closest('button'); if (!el) return;
@@ -1050,8 +1056,10 @@ document.addEventListener('click', event => {
     return;
   }
   if (el.dataset.appearanceTab){appearanceTab=el.dataset.appearanceTab;refreshAppearanceSheet();return;}
+  if (el.dataset.petCharacter && !appearanceSubmitting){appearanceDraft=normalizeAppearance({...appearanceDraft,character:el.dataset.petCharacter});catModel?.setAppearance(appearanceDraft);refreshAppearanceSheet();return;}
+  if (el.hasAttribute('data-retry-character')){catModel?.retryCharacter();return;}
   if (el.dataset.appearanceChoice!==undefined && !appearanceSubmitting){appearanceDraft={...appearanceDraft,[appearanceTab]:Number(el.dataset.appearanceChoice)};catModel?.setAppearance(appearanceDraft);refreshAppearanceSheet();return;}
-  if (el.id==='apply-appearance' && !appearanceSubmitting){if(JSON.stringify(appearanceDraft)===JSON.stringify(state.appearance)){closeModal();return;}appearanceSubmitting=true;if(!dispatch({type:'dress',appearance:{...appearanceDraft}}))appearanceSubmitting=false;refreshAppearanceSheet();return;}
+  if (el.id==='apply-appearance' && !appearanceSubmitting && !appearanceLoading && !appearanceLoadError){if(JSON.stringify(appearanceDraft)===JSON.stringify(state.appearance)){closeModal();return;}appearanceSubmitting=true;if(!dispatch({type:'dress',appearance:{...appearanceDraft}}))appearanceSubmitting=false;refreshAppearanceSheet();return;}
   if (el.dataset.coupleRole) { enterRole(el.dataset.coupleRole); return; }
   if (el.id === 'retry-cloud') { startCloud(); return; }
   if (el.dataset.open) { openModal(el.dataset.open,{diaryFilter:el.dataset.diaryFilter}); return; }
@@ -1086,10 +1094,10 @@ $('#modal').addEventListener('close', () => {
   positionCatPanels();
   diary.close();
   if (!roleEntered) { queueMicrotask(() => { if (!roleEntered && !$('#modal').open) $('#modal').showModal(); }); return; }
-  $('.nest').classList.remove('feeding-open','expressions-open'); catModel?.setState(state); updateModelPause(); scheduleUpgrade();
+  $('.nest').classList.remove('feeding-open','expressions-open'); catModel?.setState(state); updateModelPause(); scheduleUpgrade(); gameGuide?.sync();
   catRhythm.setAttribute('aria-expanded','false');
 });
-document.addEventListener('visibilitychange', () => { updateModelPause(); if (document.hidden) needsFeedback.reset(petNeeds(state)); else { renderNeeds(); updateCareControls(); refreshFeedingSheet(); scheduleUpgrade(); } });
+document.addEventListener('visibilitychange', () => { updateModelPause(); if (document.hidden) needsFeedback.reset(petNeeds(state)); else { renderNeeds(); updateCareControls(); refreshFeedingSheet(); scheduleUpgrade();gameGuide?.sync(); } });
 const courtContainer = document.createElement('section');
 courtContainer.id = 'court-root';
 courtContainer.hidden = true;
@@ -1163,8 +1171,8 @@ async function showCourt() {
     updateModelPause();
   } catch { toast('猫猫判官正在准备中，稍后就能见面啦'); }
 }
-gameGuide=createGameGuide({storage:runtime.guidePreferences||runtime.localStorage,isTest:runtime.isTest,assetBase:import.meta.env.BASE_URL,
-  getContext:()=>({role:coupleRole,entered:roleEntered,canOpen:view=>!Object.hasOwn(FEATURE_UNLOCKS,view)||currentFeatureStatus(view).unlocked}),onClose:scheduleUpgrade,
+gameGuide=createGameGuide({autoStart:true,storage:runtime.guidePreferences||runtime.localStorage,isTest:runtime.isTest,assetBase:import.meta.env.BASE_URL,
+  getContext:()=>({role:coupleRole,entered:roleEntered,ready:!cloudConfigured||coupleSnapshotReady,available:!document.hidden&&!$('.nest').hidden&&catModelPhase!=='loading'&&!onboarding?.isOpen(),canOpen:view=>!Object.hasOwn(FEATURE_UNLOCKS,view)||currentFeatureStatus(view).unlocked}),onClose:scheduleUpgrade,
   async navigate(view) {
     if(Object.hasOwn(FEATURE_UNLOCKS,view)&&!currentFeatureStatus(view).unlocked)return false;
     if(view==='judge'&&document.body.classList.contains('court-mode'))return true;
@@ -1178,7 +1186,7 @@ gameGuide=createGameGuide({storage:runtime.guidePreferences||runtime.localStorag
     openModal(view);
   },
 });
-onboarding=createOnboarding({storage:runtime.localStorage,preferences:runtime.guidePreferences||runtime.localStorage,home,baseUrl:document.baseURI,isTest:runtime.isTest,testActions:runtime.testActions,returning:returningOwner,
+onboarding=createOnboarding({autoStart:false,storage:runtime.localStorage,preferences:runtime.guidePreferences||runtime.localStorage,home,baseUrl:document.baseURI,isTest:runtime.isTest,testActions:runtime.testActions,returning:returningOwner,
   getContext:()=>({state:cloudConfigured?confirmedState:state,role:coupleRole,entered:roleEntered,available:!$('.nest').hidden&&!document.hidden,ready:!cloudConfigured||coupleSnapshotReady,connected:!cloudConfigured||status.phase==='online',members,known:presenceKnown&&status.phase==='online',canCare:type=>careActionInfo(state,{type},clientId).allowed&&(type!=='play'||petNeeds(state).energy>=PLAY_ENERGY_COST)}),
   dispatch,greet(){catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');},toast,onClose:scheduleUpgrade,onComplete(){void gameGuide.start();},
 });

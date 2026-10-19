@@ -1,0 +1,17 @@
+.pet-character-choices { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 12px; }
+.pet-character-choice { display:flex; align-items:center; min-height:58px; padding:5px 10px; gap:7px; border:1px solid #dac7ac; border-radius:16px; background:#fffaf1; color:#977454; text-align:left; }
+.pet-character-choice > span { font-size:30px; width:44px; text-align:center; }
+.pet-character-choice > img { object-fit:contain; width:44px; height:46px; }
+.pet-character-choice > strong { font-size:12px; }
+.pet-character-choice > b { margin-left:auto; font-size:14px; color:#997342; min-width:12px; }
+.pet-character-choice.selected { border:2px solid #c49b67; background:#fbefd9; padding:4px 9px; }
+.otter-outfit-note { text-align:center; color:#9b795a; font-size:12px; line-height:1.7; padding:10px 0; margin:4px 0; }
+.pet-character-status { font-size:11px; line-height:1.5; color:#9c7045; margin:5px 0; }
+.pet-character-status[hidden] { display:none; }
+.pet-character-status button { padding:3px 6px; background:#efdfc8; border-radius:7px; color:#805b3b; }
+.cat-preview-sheet .pet-character-choices { margin:0 0 8px; gap:6px; }
+.cat-preview-sheet .pet-character-choice { min-height:48px; padding:3px 7px; gap:4px; border-radius:12px; }
+.cat-preview-sheet .pet-character-choice.selected { padding:2px 6px; }
+.cat-preview-sheet .pet-character-choice > span { width:32px; font-size:25px; }
+.cat-preview-sheet .pet-character-choice > img { width:34px; height:38px; }
+.cat-preview-sheet .pet-character-choice > strong { font-size:11px; }

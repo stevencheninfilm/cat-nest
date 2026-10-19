@@ -34,6 +34,10 @@ jobs:
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_COURT_API_URL: ${{ vars.VITE_COURT_API_URL }}
+      - name: Wait for the matching backend release
+        run: node scripts/wait-backend-release.mjs
+        env:
+          BACKEND_URL: ${{ vars.VITE_API_URL || 'https://cat-nest-api.onrender.com' }}
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload site

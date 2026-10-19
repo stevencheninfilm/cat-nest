@@ -427,7 +427,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   }
   if (Object.hasOwn(CARE_LIMITS, action.type) && !care.isWake) recordCare(next, action.type, actor?.id, now, action.food);
   recordCollectionAchievements(next.collection,{boostCount:Math.max(boostCount,petNeeds(next,now).boostCount),careCounts:next.careLimits.counts,
-    dressChanged:action.type === 'dress' && Object.keys(current.appearance).some(key=>current.appearance[key] !== next.appearance[key])});
+    dressChanged:action.type === 'dress' && JSON.stringify(normalizeAppearance(current.appearance)) !== JSON.stringify(normalizeAppearance(next.appearance))});
   next.coupleCare = recordCoupleCare(next.coupleCare, action, actor?.id, now, rewardId, { isWake:care.isWake, feedingWindow:next.feedingWindow });
   if(action.furniture)text=`在${nestItem(action.furniture).name}，${text}`;
   next.history.unshift({ text, actor: cleanName(actor?.name).slice(0, 16), at: next.updatedAt });

@@ -2,23 +2,24 @@ import { gameGuideChapters, guideCatalog, searchGuide, GUIDE_ASSET_ROOT } from '
 import { GAME_TOUR, PANEL_TOURS, guideTourRoute, tourStepForChapter, tourLayout } from './game-guide-tour.js';
 
 const esc=value=>String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const blank=()=>({version:1,chapter:'welcome',seen:[],tour:0,tourComplete:false,panels:{}});
+const blank=()=>({version:1,chapter:'welcome',seen:[],tour:0,tourComplete:false,tourStarted:false,panels:{}});
 export function loadGameGuide(storage,role) {
   try {
     const value=JSON.parse(storage.getItem(`catnest.handbook.v1.${role}`));
     if(value?.version!==1)return blank();
     const panels=Object.fromEntries(Object.keys(PANEL_TOURS).filter(key=>value.panels?.[key]?.seen===true).map(key=>[key,{seen:true,complete:value.panels[key].complete===true,step:PANEL_TOURS[key].includes(value.panels[key].step)?value.panels[key].step:PANEL_TOURS[key][0]}]));
-    return { ...blank(),chapter:typeof value.chapter==='string'?value.chapter:'welcome',seen:Array.isArray(value.seen)?value.seen.filter(id=>typeof id==='string').slice(0,100):[],tour:Number.isInteger(value.tour)?Math.max(0,Math.min(GAME_TOUR.length-1,value.tour)):0,tourComplete:value.tourComplete===true,panels };
+    return { ...blank(),chapter:typeof value.chapter==='string'?value.chapter:'welcome',seen:Array.isArray(value.seen)?value.seen.filter(id=>typeof id==='string').slice(0,100):[],tour:Number.isInteger(value.tour)?Math.max(0,Math.min(GAME_TOUR.length-1,value.tour)):0,tourComplete:value.tourComplete===true,tourStarted:value.tourStarted===true||value.tourComplete===true||Number.isInteger(value.tour)&&value.tour>0,panels };
   } catch { return blank(); }
 }
 
-export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTest=false,assetBase='./',view=window}) {
+export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTest=false,assetBase='./',view=window,autoStart=false}) {
   const chapters=gameGuideChapters({isTest});
   const dialog=document.createElement('dialog');
   dialog.className='game-guide-dialog';
   document.body.append(dialog);
   let progress=blank(),role,mode='book',current=chapters[0],query='',toc=false,opener=null,busy=false,serial=0,frame=0,destroyed=false,changing=false;
-  let route=guideTourRoute(),routeIndex=0,panel=null,lastGeometry='';
+  let route=guideTourRoute(),routeIndex=0,panel=null,lastGeometry='',autoQueued=false;
+  const automaticSeen=new Set();
   const stepNow=()=>GAME_TOUR.find(step=>step.id===route[routeIndex]);
   const asset=name=>`${assetBase}${GUIDE_ASSET_ROOT}${name}-v1.webp`;
   function remember(){if(role)try{storage.setItem(`catnest.handbook.v1.${role}`,JSON.stringify(progress));}catch{/* Reading also works without local preferences. */}}
@@ -96,11 +97,25 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
       if(!route.length){renderBook();if(!dialog.open)dialog.showModal();return true;}
       const saved=panel?progress.panels[panel]?.step:GAME_TOUR[progress.tour]?.id;
       const complete=panel?progress.panels[panel]?.complete:progress.tourComplete;
-      if(!panel&&(restart||complete))progress.tourComplete=false;
+      if(!panel){progress.tourStarted=true;automaticSeen.add(role);if(restart||complete)progress.tourComplete=false;}
       const firstChapter=chapter?GAME_TOUR[tourStepForChapter(chapter)]?.id:null;
       await showTour(restart||complete?0:Math.max(0,route.indexOf(firstChapter||saved)));
     }
     return true;
+  }
+  function sync(){
+    if(!autoStart||destroyed||autoQueued||dialog.open||busy)return;
+    const context=getContext();
+    if(!context.entered||context.ready===false||context.available===false)return;
+    const saved=loadGameGuide(storage,context.role);
+    if(automaticSeen.has(context.role)||saved.tourStarted||saved.tourComplete)return;
+    const requestedRole=context.role;autoQueued=true;
+    queueMicrotask(()=>{
+      autoQueued=false;const next=getContext();
+      if(destroyed||next.role!==requestedRole||!next.entered||next.ready===false||next.available===false||dialog.open||busy||document.querySelector('dialog[open]'))return;
+      const latest=loadGameGuide(storage,next.role);
+      if(!latest.tourStarted&&!latest.tourComplete)void start();
+    });
   }
   function close(){++serial;busy=false;dialog.close();}
   function onDialogClose(){
@@ -148,5 +163,5 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
     const saved=loadGameGuide(storage,getContext().role);if(saved.panels[name]?.seen)return;
     queueMicrotask(()=>{if(!destroyed&&!dialog.open&&!busy)void start({panel:name});});
   }
-  return {start,panelOpened,isOpen:()=>dialog.open||busy,destroy(){destroyed=true;++serial;cancelAnimationFrame(frame);document.removeEventListener('click',panelClick);view.removeEventListener('resize',reposition);view.removeEventListener('scroll',reposition,true);view.visualViewport?.removeEventListener('resize',reposition);dialog.remove();}};
+  return {start,sync,panelOpened,isOpen:()=>dialog.open||busy,destroy(){destroyed=true;++serial;cancelAnimationFrame(frame);document.removeEventListener('click',panelClick);view.removeEventListener('resize',reposition);view.removeEventListener('scroll',reposition,true);view.visualViewport?.removeEventListener('resize',reposition);dialog.remove();}};
 }

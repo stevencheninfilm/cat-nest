@@ -5,7 +5,7 @@ import { initialState, reduceAction } from '../src/state.js';
 import { HOME_ENTRIES } from '../src/home-context.js';
 import { createMemoryStorage } from '../demo/storage.js';
 
-function setup(t,{returning=false,established=false}={}) {
+function setup(t,{returning=false,established=false,autoStart=true}={}) {
   const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
   const events=new Map();
   const dialog={open:false,innerHTML:'',className:'',setAttribute(){},contains(){return false;},querySelector(){return null;},showModal(){this.open=true;},close(){this.open=false;},remove(){},addEventListener(type,handler){events.set(type,handler);}};
@@ -15,7 +15,7 @@ function setup(t,{returning=false,established=false}={}) {
   const storage=createMemoryStorage(),preferences=createMemoryStorage(),actor={id:'partner-male',name:'男方'},requests=[];
   const context={state:{...initialState(1800000000000),xp:established?400:0},role:'male',entered:true,ready:true,connected:true,members:[actor],known:true,canCare:()=>true};
   if(established)context.state.name='老朋友';
-  const guide=createOnboarding({storage,preferences,home:HOME_ENTRIES[0],baseUrl:'https://example.test/cat-nest/',returning,getContext:()=>context,dispatch(action){requests.push(action);return true;},greet(){}});
+  const guide=createOnboarding({autoStart,storage,preferences,home:HOME_ENTRIES[0],baseUrl:'https://example.test/cat-nest/',returning,getContext:()=>context,dispatch(action){requests.push(action);return true;},greet(){}});
   const click=action=>events.get('click')({target:{disabled:false,dataset:{onboarding:action},closest(){return this;}}});
   const submit=name=>{events.get('input')({target:{id:'onboarding-name',value:name}});events.get('submit')({target:{id:'onboarding-name-form'},preventDefault(){}});};
   function confirm(action,operationId) {
@@ -66,4 +66,10 @@ test('a cooling-down pet action is presented as play and completed binding has o
   const both={...h.context.state,homeBond:{version:1,adoptedAt:null,owners:[{id:'partner-male',joinedAt:1},{id:'partner-female',joinedAt:1}]}};
   const summary=invitationMarkup(invitationModel({...h.context,state:both}),{isTest:true,finished:true});
   assert.match(summary,/两位主人已加入/);assert.doesNotMatch(summary,/data-onboarding="simulate"|data-onboarding="copy"/);
+});
+
+
+test('the adoption walkthrough remains available manually when the illustrated guide owns automatic first entry',async t=>{
+  const h=setup(t,{autoStart:false});h.guide.sync();await Promise.resolve();assert.equal(h.dialog.open,false);
+  h.guide.start();assert.equal(h.dialog.open,true);assert.match(h.dialog.innerHTML,/领养你的第一只小猫/);
 });
