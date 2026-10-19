@@ -29,7 +29,7 @@ test('concurrent collections cannot overspend coins and a lost purchase response
   const m=mockGitHub(),state=initialState(at);state.coins=160;await m.home(state);
   const results=await Promise.allSettled([m.store().applyAction(HOME,op('male',{type:'nest-buy',item:'plant'},'concurrent-plant-buy')),m.store().applyAction(HOME,op('female',{type:'nest-buy',item:'cushion'},'concurrent-cushion-buy'))]);
   assert.equal(results.filter(r=>r.status==='fulfilled').length,1);const saved=await m.store().getRoom(HOME);assert.ok(saved.state.coins>=0);assert.equal(saved.state.nest.owned.length,6);
-  const another=mockGitHub();await another.home();another.control.loseAck=true;const buy=op('female',{type:'nest-buy',item:'plant'},'lost-purchase-response');
+  const another=mockGitHub();await another.home({...initialState(at),coins:1200});another.control.loseAck=true;const buy=op('female',{type:'nest-buy',item:'plant'},'lost-purchase-response');
   await assert.rejects(another.store().applyAction(HOME,buy));const retry=await another.store().applyAction(HOME,buy);
   assert.equal(retry.duplicate,true);assert.equal(retry.state.coins,1080);assert.equal(retry.state.nest.owned.filter(id=>id==='plant').length,1);
 });

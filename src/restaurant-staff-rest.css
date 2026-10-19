@@ -1,0 +1,59 @@
+/* A slim, glossy blue capsule above employees, independent of order progress. */
+.rr-energy{display:block;position:relative;width:38px;height:6px;overflow:hidden;border:1px solid #d8f5ff;border-radius:99px;background:#5785a3a8;box-shadow:0 1px 2px #355b6e55,inset 0 1px 2px #315f8645}
+.rr-energy>i{display:block;height:100%;border-radius:99px;background:linear-gradient(180deg,#c1f6ff 0%,#57d1f4 35%,#34a8e4 70%,#80dcfc 100%);box-shadow:inset 0 1px 0 #f4ffffa6;transition:width .22s linear}
+.rk-worker>.rr-energy{position:absolute;bottom:96%;left:50%;transform:translateX(-50%);width:43%;min-width:23px;max-width:42px;z-index:9}
+.rk-worker .rk-worker-progress{bottom:calc(100% + 8px)}
+.rk-worker .rk-worker-thought{bottom:calc(100% + 10px)}
+.rk-worker.is-fatigued.is-moving>.rk-worker-body,.rk-worker[data-phase=rest-walk]>.rk-worker-body{animation:rk-waddle 1.3s ease-in-out infinite alternate}
+.rk-worker.rr-is-inside,.rk-worker[data-phase=resting],.rk-worker[data-phase=rest-ready]{visibility:hidden;pointer-events:none}
+.rr-entrance{position:absolute;left:89%;top:35%;width:10%;height:12%;z-index:6;pointer-events:none}
+.rr-door{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer}
+.rr-door>img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(1px 2px 2px #77533542)}
+.rr-door>span{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);font-size:clamp(6px,1.6cqw,9px);font-weight:800;white-space:nowrap;padding:2px 4px;border:1px solid #d4b587;border-radius:4px;background:#fff1ceeb;color:#876743}
+.rr-entrance:has(.rr-rest-summary[open]){z-index:35}
+.rr-rest-summary{position:absolute;right:0;bottom:calc(100% + 3px);z-index:3;width:28px;pointer-events:auto}
+.rr-rest-summary>summary{list-style:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:28px;min-height:57px;padding:5px 3px;border:1px solid #a7c4ca;border-radius:8px;background:#f1fcfff2;color:#5b8090;box-shadow:0 2px 3px #6b694821;cursor:pointer;user-select:none}
+.rr-rest-summary>summary::-webkit-details-marker{display:none}
+.rr-rest-summary>summary>span{writing-mode:vertical-rl;font-size:9px;font-weight:800;letter-spacing:2px;line-height:1.1}
+.rr-rest-summary>summary>b{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;font-size:10px;line-height:1;background:#d8edf5;color:#567d8f;font-variant-numeric:tabular-nums}
+.rr-rest-summary[data-state=ready]>summary{border-color:#b6c398;background:#f3f7e7;color:#7b8a57}
+.rr-rest-summary[data-state=ready]>summary>b{background:#e0e9c7;color:#748455}
+.rr-rest-summary>summary:focus-visible{outline:2px solid #579fa5;outline-offset:3px}
+.rr-rest-popover{position:absolute;right:34px;top:0;width:166px;padding:7px;border:1px solid #b9cbd0;border-radius:11px;background:#fffdf3fa;box-shadow:0 4px 14px #604b3429;color:#7f7057}
+.rr-rest-popover>header{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:0 0 4px;border-bottom:1px solid #d8e1db}
+.rr-rest-popover>header>strong{font-size:10px;font-weight:800}
+.restaurant .rr-rest-popover>header>button{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:#f1eddf;color:#938366;font-size:16px;line-height:1}
+.rr-rest-popover>ul{list-style:none;margin:0;padding:0;max-height:min(246px,28dvh);overflow-y:auto;scrollbar-width:thin}
+.rr-rest-popover li{display:flex;align-items:center;gap:6px;min-height:40px;padding:5px 1px;border-bottom:1px solid #e6e9dd}
+.rr-rest-popover li>.r-cat{width:28px;height:28px;flex:0 0 28px;animation:none}
+.rr-rest-popover li>div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 4px;flex:1;min-width:0}
+.rr-rest-popover li strong{font-size:9px;line-height:1.4;white-space:nowrap}
+.rr-rest-popover li div>span:not(.rr-energy){font-size:8px;line-height:1.4;color:#7096a4;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rr-rest-popover li[data-rest-phase=ready] div>span:not(.rr-energy){color:#85935f}
+.rr-rest-popover .rr-energy{grid-column:1/-1;width:100%;height:5px}
+.restaurant .rr-room-link{display:block;width:100%;min-height:28px;padding:5px 3px;margin-top:5px;border:0;border-radius:6px;background:#eaf1e3;color:#7e8e64;font-size:9px;line-height:1.5;text-align:center}
+.r-sheet[data-panel=restroom]{--r-panel-height:min(49dvh,calc(min(62.5vw,300px) + 94px))}
+.rr-room{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:8/5;background:#e8dbb5;border:1px solid #dbc59f;isolation:isolate}
+.rr-room-art{display:block;width:100%;height:100%;object-fit:cover}
+.rr-resting-workers{position:absolute;left:5%;right:5%;top:47%;bottom:4%;display:flex;justify-content:center;align-items:end;gap:6%;pointer-events:none}
+.rr-resting-worker{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:end;width:23%;max-width:100px;min-width:0}
+.rr-resting-worker>.r-cat{width:85%;height:auto;aspect-ratio:1;animation:rr-rest-breathe 3s ease-in-out infinite}
+.rr-resting-worker>.rr-energy{width:45%;min-width:24px;height:6px;flex-shrink:0;margin-bottom:3px}
+.rr-resting-worker>strong{font-size:9px;line-height:1.5;padding:1px 5px;border-radius:4px;background:#fff5d9dc;color:#8f704d;white-space:nowrap}
+.rr-recovery-bubble{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);width:max-content;padding:4px 7px;border:1px solid #a8c8d6;border-radius:9px 9px 9px 2px;background:#f4fcfff0;color:#5b8ba2;font-size:9px;font-weight:700;line-height:1.5;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 1px 3px #75694c18}
+.rr-resting-worker[data-rest-phase=ready]>.rr-recovery-bubble{border-color:#c4cc9d;background:#f8fbe7;color:#89965e}
+.rr-many-workers{top:27%;left:7%;right:7%;bottom:4%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:7px 12px;align-items:end}
+.rr-many-workers>.rr-resting-worker{width:100%;max-width:none;height:100%;gap:1px}
+.rr-many-workers .r-cat{width:42%;max-width:46px;flex:0 1 auto;min-height:0}
+.rr-many-workers .rr-energy{width:45%;height:5px;margin-bottom:1px;flex-shrink:0}
+.rr-many-workers .rr-recovery-bubble{position:static;transform:none;width:max-content;max-width:100%;font-size:8px;line-height:1.35;padding:2px 5px;white-space:nowrap;flex-shrink:0}
+.rr-many-workers strong{font-size:8px;line-height:1.3;padding:0 4px}
+.rr-many-workers:has(>:nth-child(7)){grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 9px}
+.rr-room-toolbar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:7px 0 0;color:#9a805f}
+.rr-room-toolbar>div{display:flex;gap:12px;font-size:10px;line-height:1.4}
+.rr-room-toolbar b{font-weight:800;color:#7c8963;margin-left:2px;font-variant-numeric:tabular-nums}
+.restaurant .rr-training-link{display:block;flex-shrink:0;border:1px solid #ddcba5;border-radius:7px;background:#faf1dc;color:#9a7d53;padding:5px 9px;font-size:10px;line-height:1.5;min-height:28px}
+.rr-room-note{font-size:9px;line-height:1.5;margin:6px 0 0;color:#a28d6b}
+@keyframes rr-rest-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025,.98)}}
+@media(max-width:360px){.rr-recovery-bubble{font-size:8px;padding:3px 4px}.rr-rest-popover{width:156px;right:32px}.rr-many-workers{gap:6px 9px}.rr-many-workers .rr-recovery-bubble{font-size:7px;padding:1px 3px}.rr-room-toolbar>div{gap:9px;font-size:9px}.restaurant .rr-training-link{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.rr-energy>i,.rr-resting-worker>.r-cat,.rk-worker[data-phase=rest-walk]>.rk-worker-body{animation:none!important;transition:none}}

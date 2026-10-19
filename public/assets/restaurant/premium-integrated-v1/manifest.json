@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "tool": "built-in-imagegen",
+  "canvas": {
+    "width": 940,
+    "height": 1672
+  },
+  "variants": {
+    "default": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-4696bd3a-e9f6-4330-b9d3-a09957e79785.png",
+      "patches": {
+        "starlight": {
+          "file": "default/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-4696bd3a-e9f6-4330-b9d3-a09957e79785.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "default/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-4696bd3a-e9f6-4330-b9d3-a09957e79785.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "default/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-8deb5af0-cc6f-4d34-bfc2-94bf0a6b251e.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    },
+    "cream-bakery": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-da1a00f4-53ba-4ce4-a8d0-858c74798c0c.png",
+      "patches": {
+        "starlight": {
+          "file": "cream-bakery/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-da1a00f4-53ba-4ce4-a8d0-858c74798c0c.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "cream-bakery/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-da1a00f4-53ba-4ce4-a8d0-858c74798c0c.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "cream-bakery/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-da1a00f4-53ba-4ce4-a8d0-858c74798c0c.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    },
+    "cream-library": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-b9d4c07a-96ff-40c3-95b6-c76b7058ef56.png",
+      "patches": {
+        "starlight": {
+          "file": "cream-library/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-b9d4c07a-96ff-40c3-95b6-c76b7058ef56.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "cream-library/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-b9d4c07a-96ff-40c3-95b6-c76b7058ef56.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "cream-library/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-b9d4c07a-96ff-40c3-95b6-c76b7058ef56.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    },
+    "mint-greenhouse": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-045e9f17-575b-4e2c-b355-1cf8fcf7c1c5.png",
+      "patches": {
+        "starlight": {
+          "file": "mint-greenhouse/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-045e9f17-575b-4e2c-b355-1cf8fcf7c1c5.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "mint-greenhouse/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-045e9f17-575b-4e2c-b355-1cf8fcf7c1c5.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "mint-greenhouse/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-045e9f17-575b-4e2c-b355-1cf8fcf7c1c5.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    },
+    "mint-seaside": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-94e8ebcb-fa67-437e-ad99-b711dfafef2e.png",
+      "patches": {
+        "starlight": {
+          "file": "mint-seaside/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-94e8ebcb-fa67-437e-ad99-b711dfafef2e.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "mint-seaside/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-94e8ebcb-fa67-437e-ad99-b711dfafef2e.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "mint-seaside/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-46fe3264-acea-49c1-9483-7e2595a6c5aa.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    },
+    "sakura-teahouse": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-8d6e3fb0-ca76-4029-a499-3602c0064fe6.png",
+      "patches": {
+        "starlight": {
+          "file": "sakura-teahouse/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-8d6e3fb0-ca76-4029-a499-3602c0064fe6.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "sakura-teahouse/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-8d6e3fb0-ca76-4029-a499-3602c0064fe6.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "sakura-teahouse/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-a3da38cb-b95a-4958-a2cc-4773606cd7be.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    },
+    "sakura-evening": {
+      "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-e5a4f119-d643-48e4-87b7-85e12625eee9.png",
+      "patches": {
+        "starlight": {
+          "file": "sakura-evening/starlight.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-e5a4f119-d643-48e4-87b7-85e12625eee9.png",
+          "left": 36,
+          "top": 300,
+          "width": 132,
+          "height": 210
+        },
+        "cloudgarden": {
+          "file": "sakura-evening/cloudgarden.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-e5a4f119-d643-48e4-87b7-85e12625eee9.png",
+          "left": 758,
+          "top": 310,
+          "width": 160,
+          "height": 240
+        },
+        "fireplace": {
+          "file": "sakura-evening/fireplace.webp",
+          "source": "/Users/stevenchen/.codex/generated_images/01a14df7-7763-7211-a943-2bc65c48e469/exec-a6d93258-c3bc-4c8f-b75d-86d57d4cada7.png",
+          "left": 0,
+          "top": 650,
+          "width": 134,
+          "height": 280
+        }
+      }
+    }
+  }
+}

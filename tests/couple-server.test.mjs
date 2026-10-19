@@ -79,7 +79,7 @@ async function until(predicate) {
   }
 }
 
-test('common home loads the existing GitHub save verbatim, including legacy feeding identities', async t => {
+test('common home preserves the existing GitHub save and feeding identities while adding restaurant training', async t => {
   const state = initialState();
   state.name = '原来的猫猫'; state.love = 543; state.xp = 412;
   state.history = [{ actor: '旧猫友', text: '陪小猫玩了逗猫棒', at: Date.now() }];
@@ -94,8 +94,14 @@ test('common home loads the existing GitHub save verbatim, including legacy feed
   const data = await first.json();
   assert.equal(data.roomId, HOME);
   assert.equal(data.revision, 12);
-  assert.deepEqual(data.state, state);
-  assert.deepEqual((await second.json()).state, state);
+  const training=data.state.restaurant.staffTraining;
+  assert.deepEqual(Object.keys(training),['worker-1']);
+  assert.deepEqual(training['worker-1'].levels,{speed:1,stamina:1,endurance:1,skill:1});
+  assert.equal(training['worker-1'].energy,100);
+  assert.ok(training['worker-1'].energyAt>=state.updatedAt);
+  const expected={...state,restaurant:{...state.restaurant,waitingParties:[],staffTraining:training}};
+  assert.deepEqual(data.state, expected);
+  assert.deepEqual((await second.json()).state, expected);
   assert.deepEqual(data.roles, COUPLE_ROLES);
   assert.ok(mock.calls.every(call => call.id === HOME && call.method === 'GET'));
   const handler = createPetHandler({ store: storeFor(mock), serveStatic: false });

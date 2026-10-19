@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "mode": "built-in-imagegen",
+  "description": "厨房十区域：蛋包饭与拿铁流程道具。fridge 两帧同画布且箱体对齐；其他道具固定 512×512。",
+  "assets": [
+    {
+      "id": "fridge-closed",
+      "file": "fridge-closed.webp",
+      "width": 512,
+      "height": 640,
+      "bytes": 19494,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5781,
+        "solidFraction": 0.4093
+      },
+      "bodyAnchor": [
+        0.38,
+        0.472
+      ],
+      "sharedFrame": "fridge"
+    },
+    {
+      "id": "ingredients-omurice",
+      "file": "ingredients-omurice.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 24748,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.7275,
+        "solidFraction": 0.2628
+      }
+    },
+    {
+      "id": "vegetables-basket",
+      "file": "vegetables-basket.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 45260,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5467,
+        "solidFraction": 0.4379
+      }
+    },
+    {
+      "id": "bowl-empty",
+      "file": "bowl-empty.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 21258,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5078,
+        "solidFraction": 0.4799
+      }
+    },
+    {
+      "id": "bowl-eggs",
+      "file": "bowl-eggs.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 32918,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4712,
+        "solidFraction": 0.5156
+      }
+    },
+    {
+      "id": "whisk",
+      "file": "whisk.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 42724,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.8077,
+        "solidFraction": 0.1545
+      }
+    },
+    {
+      "id": "board-chicken",
+      "file": "board-chicken.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 22606,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5842,
+        "solidFraction": 0.4071
+      }
+    },
+    {
+      "id": "knife",
+      "file": "knife.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 17588,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.8372,
+        "solidFraction": 0.1515
+      }
+    },
+    {
+      "id": "washing-vegetables",
+      "file": "washing-vegetables.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 56584,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6219,
+        "solidFraction": 0.348
+      }
+    },
+    {
+      "id": "wok-fried-rice",
+      "file": "wok-fried-rice.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 60818,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5397,
+        "solidFraction": 0.4391
+      }
+    },
+    {
+      "id": "seasonings",
+      "file": "seasonings.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 30016,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6881,
+        "solidFraction": 0.2985
+      }
+    },
+    {
+      "id": "ingredients-latte",
+      "file": "ingredients-latte.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 25844,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6207,
+        "solidFraction": 0.3666
+      }
+    },
+    {
+      "id": "coffee-espresso",
+      "file": "coffee-espresso.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 35232,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.5008,
+        "solidFraction": 0.4846
+      }
+    },
+    {
+      "id": "milk-pitcher",
+      "file": "milk-pitcher.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 32942,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4569,
+        "solidFraction": 0.5241
+      }
+    },
+    {
+      "id": "latte-cup",
+      "file": "latte-cup.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 34404,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.4982,
+        "solidFraction": 0.488
+      }
+    },
+    {
+      "id": "drink-packaging",
+      "file": "drink-packaging.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 29690,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.6055,
+        "solidFraction": 0.3795
+      }
+    },
+    {
+      "id": "fridge-open",
+      "file": "fridge-open.webp",
+      "width": 512,
+      "height": 640,
+      "bytes": 35410,
+      "alpha": {
+        "min": 0,
+        "max": 255,
+        "transparentFraction": 0.467,
+        "solidFraction": 0.5172
+      },
+      "bodyAnchor": [
+        0.38,
+        0.472
+      ],
+      "sharedFrame": "fridge"
+    }
+  ]
+}

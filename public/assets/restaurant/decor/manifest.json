@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "tool": "built-in image_gen",
+  "cellSize": 256,
+  "crew": {
+    "builder-orange": {
+      "file": "crew/builder-orange.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "builder-orange-back": {
+      "file": "crew/builder-orange-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "builder-gray": {
+      "file": "crew/builder-gray.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "builder-gray-back": {
+      "file": "crew/builder-gray-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    }
+  },
+  "sets": {
+    "cream-bakery": {
+      "scene": "cream-bakery/scene.webp",
+      "props": [
+        {
+          "id": "window",
+          "file": "window.webp",
+          "x": 12,
+          "y": 24,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "wall",
+          "file": "wall.webp",
+          "x": 91,
+          "y": 45,
+          "width": 11,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "counter",
+          "file": "counter.webp",
+          "x": 88,
+          "y": 78,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        }
+      ]
+    },
+    "cream-library": {
+      "scene": "cream-library/scene.webp",
+      "props": [
+        {
+          "id": "window",
+          "file": "window.webp",
+          "x": 12,
+          "y": 24,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "wall",
+          "file": "wall.webp",
+          "x": 91,
+          "y": 45,
+          "width": 11,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "counter",
+          "file": "counter.webp",
+          "x": 88,
+          "y": 78,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        }
+      ]
+    },
+    "mint-greenhouse": {
+      "scene": "mint-greenhouse/scene.webp",
+      "props": [
+        {
+          "id": "window",
+          "file": "window.webp",
+          "x": 12,
+          "y": 24,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "wall",
+          "file": "wall.webp",
+          "x": 91,
+          "y": 45,
+          "width": 11,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "counter",
+          "file": "counter.webp",
+          "x": 88,
+          "y": 78,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        }
+      ]
+    },
+    "mint-seaside": {
+      "scene": "mint-seaside/scene.webp",
+      "props": [
+        {
+          "id": "window",
+          "file": "window.webp",
+          "x": 12,
+          "y": 24,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "wall",
+          "file": "wall.webp",
+          "x": 91,
+          "y": 45,
+          "width": 11,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "counter",
+          "file": "counter.webp",
+          "x": 88,
+          "y": 78,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        }
+      ]
+    },
+    "sakura-teahouse": {
+      "scene": "sakura-teahouse/scene.webp",
+      "props": [
+        {
+          "id": "window",
+          "file": "window.webp",
+          "x": 12,
+          "y": 24,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "wall",
+          "file": "wall.webp",
+          "x": 91,
+          "y": 45,
+          "width": 11,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "counter",
+          "file": "counter.webp",
+          "x": 88,
+          "y": 78,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        }
+      ]
+    },
+    "sakura-evening": {
+      "scene": "sakura-evening/scene.webp",
+      "props": [
+        {
+          "id": "window",
+          "file": "window.webp",
+          "x": 12,
+          "y": 24,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "wall",
+          "file": "wall.webp",
+          "x": 91,
+          "y": 45,
+          "width": 11,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        },
+        {
+          "id": "counter",
+          "file": "counter.webp",
+          "x": 88,
+          "y": 78,
+          "width": 9,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,65 @@
+/* The same five materials are used by menu cards, the research album, and
+ * the promotion dialog. Premium tiers add depth without changing card size. */
+.rr-quality-card{--rq-paper:#fff9e9;--rq-ink:#8c7453;--rq-muted:#ab9877;--rq-rim:#dfd1b5;--rq-metal:#b0ba94;--rq-wash:#f3ecd9;--rq-texture:linear-gradient(transparent,transparent)}
+.rr-quality-card[data-r-quality=A]{--rq-paper:#e8fffd;--rq-ink:#205f69;--rq-muted:#47777d;--rq-rim:#3dabb5;--rq-metal:#45b1bc;--rq-wash:#8edce1;--rq-texture:radial-gradient(ellipse at 85% 4%,#fff 0,transparent 65%)}
+.rr-quality-card[data-r-quality=S]{--rq-paper:#fff6d6;--rq-ink:#8b5b1f;--rq-muted:#9c773e;--rq-rim:#d7ae57;--rq-metal:#d6a538;--rq-wash:#f0cf7d;--rq-texture:linear-gradient(125deg,transparent 25%,#ffffffc2 42%,transparent 58%),repeating-linear-gradient(45deg,#d4aa5a1f 0 1px,transparent 1px 9px)}
+.rr-quality-card[data-r-quality=SS]{--rq-paper:#eee7f7;--rq-ink:#6f577c;--rq-muted:#9d88ac;--rq-rim:#baa2cd;--rq-metal:#b19cc6;--rq-wash:#d9cbe7;--rq-texture:radial-gradient(ellipse at 50% -20%,#fff8 0,transparent 75%),repeating-linear-gradient(45deg,#b49bc71a 0 1px,transparent 1px 8px),repeating-linear-gradient(-45deg,#b49bc71a 0 1px,transparent 1px 8px)}
+.rr-quality-card[data-r-quality=SSS]{--rq-paper:#303747;--rq-ink:#f6dfac;--rq-muted:#bdab8b;--rq-rim:#c6a263;--rq-metal:#e2c383;--rq-wash:#514959;--rq-texture:radial-gradient(ellipse at 50% -10%,#c29b5942 0,transparent 70%),repeating-linear-gradient(45deg,#efce8812 0 1px,transparent 1px 10px),repeating-linear-gradient(-45deg,#efce8812 0 1px,transparent 1px 10px)}
+.restaurant .r-recipe-card.rr-quality-card,.restaurant .rr-fragment-card.rr-quality-card{position:relative;isolation:isolate;background:var(--rq-texture),linear-gradient(155deg,var(--rq-paper) 28%,var(--rq-wash));border-color:var(--rq-rim);box-shadow:inset 0 1px 0 #ffffff5c,0 2px 3px #5d4d3620;color:var(--rq-ink)}
+.restaurant .rr-quality-card:is([data-r-quality=S],[data-r-quality=SS],[data-r-quality=SSS]):not(dialog):before{content:'';position:absolute;inset:3px;border:1px solid var(--rq-rim);opacity:.4;pointer-events:none;border-radius:8px;z-index:-1}
+.restaurant .rr-quality-card:is([data-r-quality=SS],[data-r-quality=SSS]):not(dialog):after{content:'✦';position:absolute;top:5px;left:6px;color:var(--rq-metal);font-size:9px;pointer-events:none;opacity:.8}
+.restaurant .rr-quality-card h3,.restaurant .rr-quality-card h4{color:var(--rq-ink)}
+.restaurant .rr-quality-card>p,.restaurant .rr-quality-card>small{color:var(--rq-muted)}
+.restaurant .rr-quality-card .r-recipe-stars{color:var(--rq-ink);opacity:.8}
+.restaurant .rr-quality-card>.rr-fragment-progress{background:var(--rq-wash);box-shadow:inset 0 0 0 1px var(--rq-rim)}
+.rr-quality-card>.rr-fragment-progress>i{background:var(--rq-metal)}
+.restaurant .rr-quality-card[data-r-quality=SSS]>b{color:#edcd8d}
+.restaurant .rr-quality-card[data-r-quality=SSS] .r-research{background:#e5c98d1f;border:1px solid #b49b6560;color:#e7cc94!important}
+.restaurant .rr-quality-card[data-r-quality=SSS] .r-research.is-ready{background:#e5c98d;color:#67502d!important}
+.restaurant .rr-quality-card.is-locked{filter:saturate(.35)}
+
+.rr-inspiration-rules,.rr-terminal-preview{margin:9px 0 5px;border-top:1px solid #e0d4bd;color:#9b8664}
+.rr-inspiration-rules summary,.rr-terminal-preview summary{padding:9px 0;cursor:pointer;font-size:9px}
+.rr-inspiration-rules summary span,.rr-terminal-preview summary span{float:right;color:#b3a080;font-size:8px}
+.rr-inspiration-rules p{font-size:9px;line-height:1.8;margin:4px 0 8px;color:#a89372}
+.rr-inspiration-rules table{width:100%;border-collapse:collapse;border:1px solid #e3d6bb;border-radius:8px;font-size:9px;text-align:center;background:#fbf4e5;overflow:hidden}
+.rr-inspiration-rules caption{font-size:9px;text-align:left;margin:4px 0 7px;color:#a28c66}.rr-inspiration-rules th,.rr-inspiration-rules td{padding:6px 4px;border-bottom:1px solid #e7ddc9}.rr-inspiration-rules th{font-weight:500;color:#907c5d}
+.rr-terminal-preview>div{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.restaurant .rr-terminal-preview button{min-height:32px;padding:3px;border:1px solid #ccbb9c;border-radius:7px;background:#f5edda;font-size:9px;color:#957c56}
+.rr-order-inspiration{position:absolute;right:-3px;bottom:-14px;padding:2px 5px;border:1px solid #d2ba81;border-radius:7px;background:#fff0bd;color:#a2823f;font-size:7px;line-height:1;white-space:nowrap;font-style:normal;z-index:3;pointer-events:none;box-shadow:0 1px 2px #6f542c20}
+.rr-inspiration-award{display:block;font-size:12px;font-weight:700;color:#a58743;margin-top:4px}
+
+.rr-celebration{position:fixed;inset:0;margin:auto;width:min(350px,calc(100% - 28px));max-width:none;max-height:calc(100dvh - 48px);padding:20px 18px 18px;border:1px solid var(--rq-rim);border-radius:23px;background:var(--rq-texture),linear-gradient(145deg,var(--rq-paper) 30%,var(--rq-wash));color:var(--rq-ink);box-shadow:inset 0 0 0 5px #ffffff15,0 18px 80px #17152e70;overflow:hidden;box-sizing:border-box}
+.rr-celebration:not([open]){display:none}.rr-celebration[open]{display:block;animation:rr-promotion-enter .5s cubic-bezier(.18,.85,.22,1.12)}
+.rr-celebration::backdrop{background:#26243594;backdrop-filter:blur(5px)}
+.rr-celebration:before{content:'';position:absolute;inset:6px;border:1px solid var(--rq-rim);opacity:.5;border-radius:17px;pointer-events:none}
+.restaurant .rr-promotion-close{position:absolute;top:11px;right:11px;width:27px;height:27px;border:1px solid var(--rq-rim);border-radius:50%;background:transparent;color:var(--rq-muted);font-size:18px;line-height:1;z-index:5}
+.rr-promotion-heading{display:flex;align-items:center;gap:12px;padding-top:8px}
+.rr-promotion-grade{display:grid;place-items:center;min-width:61px;height:66px;font:bold 49px/1 Georgia,serif;color:var(--rq-metal);letter-spacing:-4px;text-shadow:0 2px 0 var(--rq-paper),0 3px 0 var(--rq-rim),0 6px 12px #44435225}
+.rr-celebration[data-r-quality=SS] .rr-promotion-grade{font-size:39px}.rr-celebration[data-r-quality=SSS] .rr-promotion-grade{font-size:34px;letter-spacing:-3px;min-width:73px}
+.rr-promotion-heading small{font-size:7px;letter-spacing:2px;color:var(--rq-muted)}.rr-promotion-heading h2{font-size:19px;line-height:1.4;margin:4px 0}.rr-promotion-heading p{font-size:10px;margin:0;color:var(--rq-muted)}
+.rr-promotion-stage{position:relative;height:185px;margin:7px -4px 0;isolation:isolate;overflow:hidden}
+.rr-promotion-rays{position:absolute;left:calc(50% - 110px);top:calc(48% - 110px);width:220px;height:220px;border-radius:50%;background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#fff5 15deg 24deg,#fff0 25deg 40deg);mask-image:radial-gradient(circle,#0008 20%,transparent 70%);animation:rr-rays-turn 28s linear infinite;z-index:-1}
+.rr-celebration[data-r-quality=S] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#d6a53899 15deg 24deg,#fff0 25deg 40deg)}
+.rr-celebration[data-r-quality=SS] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#9572bc99 15deg 24deg,#fff0 25deg 40deg)}
+.rr-celebration[data-r-quality=SSS] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#f6d58e66 15deg 24deg,#fff0 25deg 40deg)}
+.rr-promotion-platter{position:absolute;left:50%;top:35%;width:196px;height:103px;transform:translateX(-50%);border:4px solid var(--rq-rim);border-radius:50%;background:radial-gradient(ellipse,#ffffff59 45%,#ffffff08 70%),var(--rq-wash);box-shadow:inset 0 0 0 3px #fff5,inset 0 -5px 0 #3e324112,0 6px 0 var(--rq-metal),0 14px 14px #28334926}
+.rr-promotion-platter>.r-food{position:absolute;left:50%;bottom:3%;width:154px;height:154px;transform:translateX(-50%);filter:drop-shadow(0 5px 3px #37231925);animation:rr-food-arrive .65s cubic-bezier(.2,.8,.3,1.2)}
+.rr-promotion-stage>.r-cat{position:absolute;width:55px;height:55px;filter:drop-shadow(0 3px 1px #3e304126);z-index:2}.rr-promotion-chef{left:0;bottom:19px;transform:rotate(-8deg)}.rr-promotion-waiter{right:-2px;bottom:22px;transform:scaleX(-1) rotate(-8deg)}
+.rr-promotion-spark{position:absolute;color:var(--rq-metal);animation:rr-spark-shine 1.8s ease-in-out infinite alternate}.rr-spark-one{left:13%;top:12%;font-size:23px}.rr-spark-two{right:12%;top:28%;font-size:30px;animation-delay:.4s}.rr-spark-three{right:25%;top:0;font-size:14px;animation-delay:.8s}.rr-promotion-laurel{position:absolute;bottom:0;left:50%;transform:translateX(-50%) rotate(-12deg);color:var(--rq-metal);font-size:32px}
+.rr-promotion-name{display:flex;align-items:center;justify-content:center;gap:10px;margin:7px 0 0}.rr-promotion-name h3{margin:0;font-size:18px;letter-spacing:1px}.rr-promotion-name>span{font-size:10px;color:var(--rq-metal)}
+.rr-promotion-path{display:flex;align-items:center;justify-content:center;gap:16px;margin:9px 0 14px;font:21px/1.2 Georgia,serif;color:var(--rq-muted)}.rr-promotion-path strong{color:var(--rq-ink);font-size:28px;text-shadow:0 2px 0 var(--rq-paper)}.rr-promotion-path i{font:14px/1 sans-serif;color:var(--rq-metal)}
+.rr-promotion-rewards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:11px 5px;border-block:1px solid var(--rq-rim);background:#ffffff10;text-align:center}.rr-promotion-rewards>div+div{border-left:1px solid var(--rq-rim)}.rr-promotion-rewards small{display:block;color:var(--rq-muted);font-size:9px;margin-bottom:5px}.rr-promotion-rewards span{font-size:14px;font-variant-numeric:tabular-nums}.rr-promotion-rewards i{font-style:normal;font-size:10px;color:var(--rq-muted)}.rr-promotion-rewards b{font-size:20px;color:var(--rq-ink)}.rr-promotion-rewards em{font-size:8px;color:var(--rq-muted);font-style:normal;display:block;margin-top:3px}
+.rr-promotion-note{font-size:9px;color:var(--rq-muted);line-height:1.7;text-align:center;margin:12px 0}
+.restaurant .rr-promotion-confirm{position:relative;z-index:3;width:100%;min-height:41px;border:1px solid var(--rq-rim);border-radius:10px;background:linear-gradient(#fff5,#fff0),var(--rq-metal);color:var(--rq-ink);text-shadow:0 1px 1px #443c4033;font-size:12px;font-weight:700;box-shadow:inset 0 1px 0 #fff5,0 2px 0 #3c324020}
+.rr-celebration[data-r-quality=SSS] .rr-promotion-confirm{color:#6f542e;text-shadow:0 1px 0 #fff7}
+.rr-confetti{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden;border-radius:22px}.rr-confetti>i{position:absolute;left:var(--party-x);bottom:11%;width:5px;height:9px;border-radius:1px;background:var(--party-color);opacity:0;animation:rr-party-pop 2.2s cubic-bezier(.15,.6,.25,1) var(--party-delay) both}
+.rr-confetti>span{position:absolute;bottom:8%;font-size:30px;filter:drop-shadow(0 3px 2px #0002);animation:rr-horn-pop .6s ease-out both}.rr-party-left{left:0;transform:rotate(-16deg)}.rr-party-right{right:0;transform:scaleX(-1) rotate(-16deg)}
+@keyframes rr-promotion-enter{from{opacity:0;transform:translateY(12px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes rr-food-arrive{from{opacity:0;transform:translate(-50%,15px) scale(.85)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes rr-party-pop{0%{opacity:0;transform:translate(0,0) rotate(0)}8%{opacity:1}65%{opacity:1}100%{opacity:0;transform:translate(var(--party-dx),var(--party-dy)) rotate(var(--party-turn))}}
+@keyframes rr-horn-pop{0%{opacity:0;scale:.4}45%{scale:1.2}100%{opacity:1;scale:1}}
+@keyframes rr-spark-shine{from{opacity:.35;scale:.85}to{opacity:1;scale:1.1}}
+@keyframes rr-rays-turn{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@media(max-width:360px){.rr-celebration{padding:15px 14px 14px;width:calc(100% - 22px)}.rr-promotion-heading h2{font-size:17px}.rr-promotion-stage{height:160px}.rr-promotion-platter{width:177px;height:92px}.rr-promotion-platter>.r-food{width:140px;height:140px}.rr-promotion-stage>.r-cat{width:46px;height:46px}.rr-promotion-name h3{font-size:16px}.rr-promotion-grade{min-width:54px;font-size:44px}.rr-promotion-path{margin-bottom:10px}.rr-promotion-rewards{padding-block:8px}.rr-promotion-note{margin-block:8px}}
+@media(max-height:690px){.rr-celebration{padding-block:12px;max-height:calc(100dvh - 24px);overflow-y:auto}.rr-promotion-stage{height:134px}.rr-promotion-platter{top:30%;height:86px}.rr-promotion-platter>.r-food{width:125px;height:125px}.rr-promotion-grade{height:50px}.rr-promotion-heading{padding-top:0}.rr-promotion-name{margin-top:0}}
+@media(prefers-reduced-motion:reduce){.rr-celebration[open],.rr-promotion-platter>.r-food,.rr-promotion-rays,.rr-promotion-spark,.rr-confetti>span{animation:none}.rr-confetti>i{display:none}}

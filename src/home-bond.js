@@ -1,4 +1,5 @@
 import { COUPLE_ROLES } from './couple-profile.js';
+import { INITIAL_COINS } from './game-defaults.js';
 
 const ids = new Set(COUPLE_ROLES.map(role => role.clientId));
 const time = value => Number.isSafeInteger(value) && value >= 0;
@@ -29,7 +30,7 @@ export function joinHome(state, actorId, now) {
 }
 export function isNewPet(state) {
   return !state.homeBond?.adoptedAt && !state.history?.length && !state.feedRecords?.length && !state.pendingGrowth?.length
-    && !state.coupleCare?.records?.length && !state.collection?.invited?.length && state.xp <= 86 && state.coins === 1200 && state.name === '糯米';
+    && !state.coupleCare?.records?.length && !state.collection?.invited?.length && state.xp <= 86 && [INITIAL_COINS,1200].includes(state.coins) && state.name === '糯米';
 }
 export function homeBinding(state, members = [], known = false) {
   const bond = normalizeHomeBond(state.homeBond,state);

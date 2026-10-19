@@ -111,7 +111,7 @@ export function recordMemoryJournal(value,{before,after,action,actorId,now,id,le
   const add=e=>{if(!ids.has(e.id)){next.entries.unshift(e);ids.add(e.id);}};
   const actor=actors.has(actorId)?actorId:'other';
   if(firsts.has(action.type) && !(action.type==='sleep' && before.sleeping))add(entry('first',`first:${action.type}`,now,after,{occasion:action.type,photo:photoFor(action.type),actorId:actor}));
-  if(action.type==='claim-growth')for(let level=levelBefore+1;level<=levelAfter;level++)add(entry('level',`level:${level}`,now,after,{level}));
+  if(['claim-growth','restaurant-collect'].includes(action.type))for(let level=levelBefore+1;level<=levelAfter;level++)add(entry('level',`level:${level}`,now,after,{level}));
   const game=after.games?.match;
   if(game?.mode==='duo' && game.status==='finished' && before.games?.match?.status!=='finished')add(entry('game',`game:${game.id}`,now,after,{occasion:game.game,sourceId:game.id}));
   // One deterministic vignette per day, only after a successful care action.

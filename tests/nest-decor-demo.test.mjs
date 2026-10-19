@@ -10,6 +10,7 @@ import { demoEngine, demoFetch, DemoEventSource, DEMO_ORIGIN } from '../demo/tra
 test('the shared app decorates through the test adapter, reaches both roles and resets on a fresh visit', async t => {
   t.mock.method(globalThis, 'fetch', () => { throw Error('test decoration must never contact a real server'); });
   demoEngine.reset();
+  demoEngine.scenario('unlock');
   demoEngine.controls.latency = 0;
   const players = [];
   function player(role) {
@@ -68,5 +69,5 @@ test('the shared app decorates through the test adapter, reaches both roles and 
   assert.equal(fresh.nest.palette,'honey');
   assert.equal(fresh.nest.owned.includes('cushion'),false);
   assert.equal(fresh.nest.placements.length,5);
-  assert.equal(fresh.coins,baseline.coins);
+  assert.equal(fresh.coins,100);
 });

@@ -1,0 +1,622 @@
+{
+  "version": 1,
+  "cellSize": 256,
+  "scene": {
+    "path": "/assets/restaurant/restaurant-scene.webp",
+    "width": 940,
+    "height": 1672,
+    "tables": [
+      {
+        "x": 24.5,
+        "y": 31.4
+      },
+      {
+        "x": 75.3,
+        "y": 31.4
+      },
+      {
+        "x": 23.7,
+        "y": 43.3
+      },
+      {
+        "x": 76.2,
+        "y": 43.3
+      },
+      {
+        "x": 22.8,
+        "y": 55.1
+      },
+      {
+        "x": 77.3,
+        "y": 55.1
+      }
+    ],
+    "entrance": {
+      "x": 50,
+      "y": 20
+    },
+    "kitchen": {
+      "left": 22,
+      "right": 84,
+      "top": 68,
+      "bottom": 84
+    },
+    "servicePass": {
+      "x": 50,
+      "y": 66
+    },
+    "centralAisle": {
+      "left": 40,
+      "right": 60,
+      "top": 20,
+      "bottom": 85
+    }
+  },
+  "characters": {
+    "chef": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 0,
+      "path": "/assets/restaurant/characters/chef.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "chef-back": {
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 0,
+      "path": "/assets/restaurant/characters/chef-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "waiter": {
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 0,
+      "path": "/assets/restaurant/characters/waiter.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "waiter-back": {
+      "x": 768,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 3,
+      "row": 0,
+      "path": "/assets/restaurant/characters/waiter-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "orange": {
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 1,
+      "path": "/assets/restaurant/characters/orange.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "orange-back": {
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 1,
+      "path": "/assets/restaurant/characters/orange-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "calico": {
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 1,
+      "path": "/assets/restaurant/characters/calico.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "calico-back": {
+      "x": 768,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 3,
+      "row": 1,
+      "path": "/assets/restaurant/characters/calico-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "gray": {
+      "x": 0,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 2,
+      "path": "/assets/restaurant/characters/gray.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "gray-back": {
+      "x": 256,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 2,
+      "path": "/assets/restaurant/characters/gray-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "scarf": {
+      "x": 512,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 2,
+      "path": "/assets/restaurant/characters/scarf.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "scarf-back": {
+      "x": 768,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 3,
+      "row": 2,
+      "path": "/assets/restaurant/characters/scarf-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-sesame": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 0,
+      "atlas": "staff-sesame-v1.webp",
+      "path": "/assets/restaurant/characters/staff-sesame.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-sesame-back": {
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 1,
+      "atlas": "staff-sesame-v1.webp",
+      "path": "/assets/restaurant/characters/staff-sesame-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    }
+  },
+  "foods": {
+    "rice": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 0,
+      "path": "/assets/restaurant/foods/rice.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "coffee": {
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 0,
+      "path": "/assets/restaurant/foods/coffee.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "pancake": {
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 0,
+      "path": "/assets/restaurant/foods/pancake.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "burger": {
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 1,
+      "path": "/assets/restaurant/foods/burger.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "pizza": {
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 1,
+      "path": "/assets/restaurant/foods/pizza.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "parfait": {
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 1,
+      "path": "/assets/restaurant/foods/parfait.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "sandwich": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 0,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/sandwich.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "donut": {
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 0,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/donut.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "lemontea": {
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 0,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/lemontea.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "pudding": {
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 1,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/pudding.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "matcha": {
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 1,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/matcha.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "udon": {
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 1,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/udon.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "waffle": {
+      "x": 0,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 2,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/waffle.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "strawberrymilk": {
+      "x": 256,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 2,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/strawberrymilk.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "sushi": {
+      "x": 512,
+      "y": 512,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 2,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/sushi.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "grape": {
+      "x": 0,
+      "y": 768,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 3,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/grape.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "cheesecake": {
+      "x": 256,
+      "y": 768,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 3,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/cheesecake.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "cocoa": {
+      "x": 512,
+      "y": 768,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 3,
+      "atlas": "food-expansion-v1.webp",
+      "path": "/assets/restaurant/foods/cocoa.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "charactersAtlas": {
+    "path": "/assets/restaurant/cat-sprites.webp",
+    "pngPath": "/assets/restaurant/cat-sprites.png",
+    "width": 1024,
+    "height": 768,
+    "cols": 4,
+    "rows": 3,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "foodsAtlas": {
+    "path": "/assets/restaurant/food-sprites.webp",
+    "pngPath": "/assets/restaurant/food-sprites.png",
+    "width": 768,
+    "height": 512,
+    "cols": 3,
+    "rows": 2,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "foodExpansionAtlas": {
+    "path": "/assets/restaurant/food-expansion-v1.webp",
+    "width": 768,
+    "height": 1024,
+    "cols": 3,
+    "rows": 4,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "staffCharacters": {
+    "staff-pudding": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 0,
+      "atlas": "staff-expansion-v1.webp",
+      "path": "/assets/restaurant/characters/staff-pudding.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-mint": {
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 0,
+      "atlas": "staff-expansion-v1.webp",
+      "path": "/assets/restaurant/characters/staff-mint.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-chestnut": {
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 0,
+      "atlas": "staff-expansion-v1.webp",
+      "path": "/assets/restaurant/characters/staff-chestnut.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-pudding-back": {
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 1,
+      "atlas": "staff-expansion-v1.webp",
+      "path": "/assets/restaurant/characters/staff-pudding-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-mint-back": {
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 1,
+      "row": 1,
+      "atlas": "staff-expansion-v1.webp",
+      "path": "/assets/restaurant/characters/staff-mint-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-chestnut-back": {
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 2,
+      "row": 1,
+      "atlas": "staff-expansion-v1.webp",
+      "path": "/assets/restaurant/characters/staff-chestnut-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    }
+  },
+  "staffExpansionAtlas": {
+    "path": "/assets/restaurant/staff-expansion-v1.webp",
+    "width": 768,
+    "height": 512,
+    "cols": 3,
+    "rows": 2,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "staffSesameAtlas": {
+    "path": "/assets/restaurant/staff-sesame-v1.webp",
+    "width": 256,
+    "height": 512,
+    "cols": 1,
+    "rows": 2,
+    "cellWidth": 256,
+    "cellHeight": 256
+  }
+}

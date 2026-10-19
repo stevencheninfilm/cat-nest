@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "composition": "Original deterministic synthesis; no external samples",
+  "music": {
+    "restaurant": {
+      "file": "cafe-little-sunshine.m4a",
+      "seconds": 41.739125,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.11443,
+      "seamDelta": 0.000169,
+      "sha256": "21482f414e578c9c1ee0de42d7d545d5e4736671855eda8968a513f4241d02bf",
+      "title": "小馆的晴天",
+      "bpm": 92,
+      "bars": 16,
+      "key": "C major"
+    },
+    "research": {
+      "file": "research-starlit-recipe.m4a",
+      "seconds": 49.230781,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.16842,
+      "seamDelta": 0.006659,
+      "sha256": "db0c49717c7a1535f6036afa9da910def0e1b643dbac69533ef1999bfbef3967",
+      "title": "星光里的秘密食谱",
+      "bpm": 78,
+      "bars": 16,
+      "key": "D major"
+    },
+    "garden": {
+      "file": "garden-afternoon.m4a",
+      "seconds": 34.285719,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.16893,
+      "seamDelta": 0.010699,
+      "sha256": "e75515d32defc9698ddf27fdf8e90a9e48e63bb48353c49c56711d2f80c698e4",
+      "title": "花园午后",
+      "bpm": 84,
+      "bars": 16,
+      "key": "F major",
+      "meter": "3/4"
+    },
+    "rain": {
+      "file": "rain-window-coffee.m4a",
+      "seconds": 40.0,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.14015,
+      "seamDelta": 0.001355,
+      "sha256": "76116c71dce93ef12ae00bf9b9695ea167366793cb6bb9b899caba028743b7a8",
+      "title": "雨窗慢咖啡",
+      "bpm": 72,
+      "bars": 16,
+      "key": "Eb major",
+      "meter": "6/8"
+    },
+    "bakery": {
+      "file": "paw-bakery-parade.m4a",
+      "seconds": 35.555563,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.15873,
+      "seamDelta": 0.000389,
+      "sha256": "73880432e66f59eac66cbdeeb75a06f246c9239715a08dcc889968823c5d3bcb",
+      "title": "猫爪烘焙舞",
+      "bpm": 108,
+      "bars": 16,
+      "key": "C major"
+    },
+    "moon": {
+      "file": "moonlit-recipe-notes.m4a",
+      "seconds": 38.918906,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.15908,
+      "seamDelta": 0.005854,
+      "sha256": "c89b551a0a339c132fef48bacb6bef2f85d6f5cf9c50ccfcd2cefe35baaecd29",
+      "title": "月光手札",
+      "bpm": 74,
+      "bars": 16,
+      "key": "D minor",
+      "meter": "3/4"
+    }
+  },
+  "effects": {
+    "click": {
+      "file": "click-soft-v2.wav",
+      "seconds": 0.105,
+      "sampleRate": 32000,
+      "peak": 0.54707,
+      "rms": 0.12321,
+      "seamDelta": 0,
+      "sha256": "a6eb55d3c2dca6290f2174484f1ddb91907a252a56f62ff43d2bc6f5062a11cc"
+    },
+    "accept": {
+      "file": "accept.wav",
+      "seconds": 0.48,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.20519,
+      "seamDelta": 0,
+      "sha256": "22aa1af16f60ca8533e629bc24caf6658f56a213ffdbef0e49a8bc52f5df2072"
+    },
+    "step": {
+      "file": "step.wav",
+      "seconds": 0.35,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.22378,
+      "seamDelta": 0,
+      "sha256": "f639f5a1ca5ae835fccde8c62846d2604b7d1d683eec3748b292c906e66d8550"
+    },
+    "complete": {
+      "file": "complete.wav",
+      "seconds": 0.72,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.18275,
+      "seamDelta": 0,
+      "sha256": "992cb47c6cb22efd7da80439a6b1c3b162d7dfadfb4a53f0aec81ebd568ef65f"
+    },
+    "serve": {
+      "file": "serve.wav",
+      "seconds": 0.85,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.18905,
+      "seamDelta": 0,
+      "sha256": "527796af21ad5a976bbd39a8d2909c3f41f311542f8ac72e3bb18be322406b39"
+    },
+    "collect": {
+      "file": "collect.wav",
+      "seconds": 0.8,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.1874,
+      "seamDelta": 0,
+      "sha256": "d532b433bcd0d8d630b7d906e599a00914accf69fbd796cc552be461ed0a31be"
+    },
+    "draw": {
+      "file": "draw.wav",
+      "seconds": 1.3,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.17793,
+      "seamDelta": 0,
+      "sha256": "dec6af2930ee2d238778a9c50cad4299846048c3f6fce2879ad463933275171b"
+    },
+    "flip": {
+      "file": "flip.wav",
+      "seconds": 0.32,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.21373,
+      "seamDelta": 0,
+      "sha256": "d9ba8ab5a82dbf101384414276967b9d8d27d4462cd63a60e0d6eff6e44eb255"
+    },
+    "reveal": {
+      "file": "reveal.wav",
+      "seconds": 1.6,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.15866,
+      "seamDelta": 0,
+      "sha256": "664fa08f51e5a5e0ab31fdfb143304be97654c789c2aa8a45caf70eb363e3535"
+    },
+    "upgrade": {
+      "file": "upgrade.wav",
+      "seconds": 1.25,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.18473,
+      "seamDelta": 0,
+      "sha256": "0b19f374e723ab1741f9399fe7977ef7a9fdc3945f872c5c02e574c91d65d41e"
+    },
+    "decorate": {
+      "file": "decorate.wav",
+      "seconds": 0.55,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.21379,
+      "seamDelta": 0,
+      "sha256": "006cc1f3cec82a4ea8445594a2d69f5a8b5b85b9231d676f625363eadc8df0b6"
+    },
+    "decoration-complete": {
+      "file": "decoration-complete.wav",
+      "seconds": 1.35,
+      "sampleRate": 32000,
+      "peak": 0.68,
+      "rms": 0.15055,
+      "seamDelta": 0,
+      "sha256": "02acb6a29e0318c5b9b037e4cfc9253671fe269e9c550838be1580c27f5d405a"
+    }
+  }
+}

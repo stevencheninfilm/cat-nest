@@ -7,7 +7,7 @@ import { createMonitorService, createMonitorHandler, summarizeHome, localSaveMon
 
 const at=1_800_000_000_000;
 const todd=HOME_ENTRIES.find(home=>home.id==='todd');
-const room=(home,extra={})=>({roomId:home.roomId || 'a'.repeat(32),revision:3,state:{...initialHomeState(home,at),...extra}});
+const room=(home,extra={})=>({roomId:home.roomId || 'a'.repeat(32),revision:3,state:{...initialHomeState(home,at),coins:1200,...extra}});
 function cloudFake({broken=new Set(),calls=[],release='a'.repeat(40)}={}) {
   return async (url,options)=>{
     calls.push({url,options});

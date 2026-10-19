@@ -1,0 +1,64 @@
+.ru-facility-list{display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.ru-facility{min-width:0;padding:8px;border:1px solid #ddc9a5;border-radius:11px;background:#fffbed;--re-skill-color:#e3a15d;--re-skill-highlight:#ffd794}
+.ru-facility[data-r-facility=fridge]{--re-skill-color:#54b5db;--re-skill-highlight:#abebfa}
+.ru-facility[data-r-facility=tables]{--re-skill-color:#85b486;--re-skill-highlight:#c6dfab}
+.ru-facility[data-r-facility=tips]{--re-skill-color:#af93ce;--re-skill-highlight:#e1c7f1}
+.ru-facility>header{display:flex;align-items:center;gap:6px}
+.ru-mark{display:grid;place-items:center;width:19px;height:21px;flex-shrink:0;border-radius:5px;background:#f3e8ca;color:#a88e51;font-size:16px}
+.ru-facility h3{font-size:11px;line-height:1.5;margin:0;flex:1}
+.ru-facility>header>small{font-size:9px;font-weight:800;color:#9e9e6c;white-space:nowrap}
+.ru-description{font-size:9px;line-height:1.5;color:#ad9871;margin:4px 0 6px}
+.ru-facility .re-skill-segments{height:6px;gap:3px;margin:6px 0}
+.ru-effects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 7px;margin:3px 0 5px;min-width:0;font-variant-numeric:tabular-nums}
+.ru-effects>div{display:flex;align-items:baseline;justify-content:space-between;gap:5px;min-width:0;min-height:18px}
+.ru-effects>div>span{font-size:9px;color:#ac9774;white-space:nowrap;flex-shrink:0}
+.ru-effects strong{font-size:10px;line-height:1.5;font-weight:700;color:#8b704b;white-space:nowrap}
+.ru-effects .ru-next strong{color:#8b9a67}
+.ru-effects .ru-max{grid-column:1/-1;padding:3px 5px;border-radius:5px;background:#f9efd2}
+.ru-effects .ru-max>span{color:#b28e45}.ru-effects .ru-max strong{color:#a17c39}
+.ru-facility>.r-buy{width:100%;flex-direction:row;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;min-height:30px;font-size:11px!important;border-radius:7px;padding:4px}
+.ru-facility>.r-buy small{font-size:9px;letter-spacing:0}
+.ru-level-details{grid-column:1/-1;min-width:0;border-top:1px solid #e7dcc2;margin-top:3px;font-variant-numeric:tabular-nums}
+.ru-level-details>summary{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 0;min-height:28px;list-style:none;font-size:9px;color:#b09b73;cursor:pointer}
+.ru-level-details>summary::-webkit-details-marker{display:none}.ru-level-details[open]>summary>span{rotate:180deg}
+.ru-level-details table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;color:#987e58}
+.ru-level-details caption{text-align:left;color:#ad9b7c;font-size:8px;line-height:1.6;padding:6px 0}
+.ru-level-details th,.ru-level-details td{padding:6px 3px;text-align:left;border-bottom:1px solid #ece2c9;font-weight:500;line-height:1.6;vertical-align:top;overflow-wrap:anywhere}
+.ru-level-details th:first-child{width:35%}.ru-level-details thead{color:#b29f7b}
+.ru-level-details td>small,.ru-level-details th>small{display:block;font-size:8px;color:#b09b79}
+.ru-level-details th>b{display:block;font-size:8px;color:#8b9a67}
+.ru-level-details tr[aria-current=true]{background:#eff0d9}
+.r-sheet .re-ability .ru-effects{grid-column:1/-1;gap:3px 8px;margin:3px 0}
+.r-sheet .re-ability p{min-height:0;margin:2px 0 3px}
+.r-sheet .re-ability .re-skill-segments{margin:3px 0}
+.r-sheet .re-ability .ru-effects strong{font-size:10px}
+.ru-level-details>summary:focus-visible{outline:2px solid #9aa774;outline-offset:2px}
+.ru-facility-row{display:grid;grid-template-columns:23px minmax(0,1fr) 70px;align-items:center;gap:0 9px;padding:7px 9px}
+.ru-facility-row>.ru-mark{grid-column:1;grid-row:1;width:23px;height:27px;font-size:18px}
+.ru-facility-copy{grid-column:2;grid-row:1;min-width:0}
+.ru-facility-copy>header{display:flex;align-items:baseline;gap:8px}
+.ru-facility-copy h3{flex:0 1 auto;font-size:11px}
+.ru-facility-copy>header>small{font-size:9px;color:#a7a17a;white-space:nowrap}
+.ru-facility-row .re-skill-segments{height:3px;gap:2px;margin:3px 0}
+.ru-facility-effect{display:flex;align-items:baseline;gap:8px;margin:0;font-size:10px;line-height:1.5;color:#ab9774;font-variant-numeric:tabular-nums}
+.ru-facility-current{min-width:0;white-space:nowrap}
+.ru-facility-effect strong{font-weight:700;color:#92764d}
+.ru-facility-next{color:#8b9a67}
+.ru-facility-max{display:inline;flex-shrink:0;margin-left:auto;text-align:right;white-space:nowrap;font-size:9px;line-height:1.5;color:#ba9b61}
+.ru-facility-row>.r-buy{grid-column:3;grid-row:1;min-height:32px;align-self:center;padding:3px;gap:1px;flex-direction:column;border-radius:7px}
+.ru-facility-row>.r-buy small{font-size:8px;white-space:nowrap}
+.ru-help-link{display:flex;align-items:center;gap:4px;margin:6px 0 0 auto;min-height:24px;padding:3px 0 3px 8px;border:0;background:transparent;color:#a48a5c;font-size:10px}
+.ru-help-link:focus-visible{outline:2px solid #9aa774;outline-offset:2px;border-radius:4px}
+.ru-upgrade-guide{margin:20px 0 5px;padding-top:16px;border-top:1px dashed #dac8a6;scroll-margin-top:6px}
+.ru-upgrade-guide>h3{font-size:14px;margin:0 0 12px;color:#94774f}
+.ru-upgrade-guide>h4{font-size:11px;margin:14px 0 6px;color:#94774f}
+.ru-upgrade-guide>p{font-size:10px;line-height:1.7;color:#a18b68;margin:0 0 8px}
+.ru-upgrade-guide>.ru-level-details{padding:0 10px;margin:6px 0 0;border:1px solid #dfd1b3;border-radius:9px;background:#fbf5e6}
+.ru-upgrade-guide>.ru-level-details>summary{min-height:36px;padding:7px 0;font-size:11px;color:#94774f}
+.ru-upgrade-guide summary>strong{font-size:11px}
+.ru-upgrade-guide summary>small{margin-left:auto;font-size:9px;color:#ad9871}
+.r-sheet[data-panel=upgrades]{--r-panel-height:auto;height:auto;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.r-sheet[data-panel=upgrades]>.r-sheet-content{flex:0 1 auto;padding-bottom:0}
+@media(max-width:360px){.ru-facility{padding:7px}.ru-facility>header{gap:4px;flex-wrap:wrap}.ru-facility>header>small{margin-left:auto}.ru-effects .ru-max{padding-inline:3px}.ru-effects strong,.r-sheet .re-ability .ru-effects strong{font-size:9px}.ru-effects>div>span{font-size:8px}.ru-level-details table{font-size:9px}}
+@media(max-width:360px){.ru-facility-row{grid-template-columns:21px minmax(0,1fr) 64px;column-gap:7px}.ru-facility-row>.ru-mark{width:21px;height:25px}.ru-facility-effect{font-size:9px}.ru-facility-copy>header{gap:5px}}
+@media(max-width:360px){.ru-facility-effect{gap:5px}.ru-facility-max{font-size:8px}}

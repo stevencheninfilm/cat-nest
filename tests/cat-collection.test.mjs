@@ -32,7 +32,7 @@ test('each achievement counts accepted care once, while retries, rejected action
 });
 
 test('lifetime counters and distinct foods survive midnight, more than forty diary entries, and reload', () => {
-  let state=initialState(start);
+  let state={...initialState(start),coins:1200};
   for(let day=0;day<50;day++) state=act(state,{type:'pet'},start+day*86400_000,`collection-pet-${day}`);
   assert.equal(state.history.length,40);
   assert.equal(state.collection.stats.pet,50);
@@ -55,7 +55,7 @@ test('lifetime counters and distinct foods survive midnight, more than forty dia
 });
 
 test('the pair achievement requires an actual shared feeding reward and never repeats within the same round', () => {
-  const first=act(initialState(start),{type:'feed',food:'meal'});
+  const first=act({...initialState(start),coins:1200},{type:'feed',food:'meal'});
   let paired=reduceAction(first,{type:'feed',food:'fish'},{id:'partner-female',name:'女方'},start+1,'collection-paired-feed');
   assert.equal(first.collection.stats.pair,0);
   assert.equal(paired.collection.stats.pair,1);
@@ -72,7 +72,7 @@ test('the pair achievement requires an actual shared feeding reward and never re
 });
 
 test('invitation requires its achievement, preserves all resources, and stays collected after reload', () => {
-  const before={...initialState(start),xp:levelStartXp(2)};
+  const before={...initialState(start),coins:1200,xp:levelStartXp(2)};
   assert.equal(act(before,{type:'invite-cat',catId:'bolt'}),null);
   assert.equal(act(before,{type:'invite-cat',catId:'unknown-cat'}),null);
   let met=before;

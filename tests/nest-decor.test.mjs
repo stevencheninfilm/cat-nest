@@ -16,7 +16,7 @@ test('old saves receive an independent furnished nest without losing progress, c
   next.nest.placements[0].x=22;assert.equal(emptyNest().placements[0].x,0);
 });
 test('both players can collect, place, turn, store, recolor and upgrade without generating care rewards',()=>{
-  let s=initialState(at);const original=structuredClone(s),owned=act(s,{type:'nest-buy',item:'plant'});
+  let s={...initialState(at),coins:1200};const original=structuredClone(s),owned=act(s,{type:'nest-buy',item:'plant'});
   assert.equal(owned.coins,s.coins-120);assert.equal(owned.nest.placements.some(p=>p.item==='plant'),false);
   s=act(owned,{type:'nest-place',item:'plant',x:3,z:2.6,rotation:0},female);assert.ok(s);assert.equal(s.nest.lastEdit.actor,'女方');
   s=act(s,{type:'nest-place',item:'plant',x:3,z:2.6,rotation:1});assert.equal(s.nest.placements.find(p=>p.item==='plant').rotation,1);

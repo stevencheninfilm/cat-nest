@@ -3,7 +3,7 @@ import { GROWTH_STAGES, stageStyle } from './growth-stages.js';
 import { GAMES } from './minigames.js';
 
 const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
-const LABELS = { feed:'喂食', pet:'摸摸', play:'玩耍', sleep:'休息' };
+const LABELS = { feed:'喂食', pet:'摸摸', play:'玩耍', sleep:'休息', 'restaurant-collect':'餐厅经营经验' };
 let artworkId = 0;
 
 /** Reference-matched, pre-rendered 3D artwork is shared by every growth surface.
@@ -24,7 +24,7 @@ function rewardButton(reward, { blocked = false, claimingRewardId = null, pendin
   const claiming = reward.id === claimingRewardId || pendingRewardIds.has(reward.id);
   const label = growthLabel(reward);
   const multiplier = reward.boosted ? (10 + (reward.boostCount ?? 1)) / 10 : 1;
-  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${jellyHeartMarkup(stage)}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的陪伴${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
+  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${jellyHeartMarkup(stage)}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的${reward.kind==='restaurant-collect'?'餐厅经营':'陪伴'}${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
 }
 
 /** Keep existing rewards in their own side slots when another bubble is collected. */

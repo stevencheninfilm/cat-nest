@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "tool": "built-in image_gen",
+  "atlas": {
+    "file": "atlas.webp",
+    "width": 1024,
+    "height": 512,
+    "columns": 4,
+    "rows": 2,
+    "cellSize": 256
+  },
+  "customers": {
+    "guest-dawn-duke": {
+      "name": "晨曦公爵",
+      "column": 0,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-dawn-duke.webp",
+      "back": "guest-dawn-duke-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-moon-opera": {
+      "name": "月桂歌剧家",
+      "column": 1,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-moon-opera.webp",
+      "back": "guest-moon-opera-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-sapphire-count": {
+      "name": "蓝宝石伯爵",
+      "column": 2,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-sapphire-count.webp",
+      "back": "guest-sapphire-count-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "guest-aurora-traveler": {
+      "name": "极光旅人",
+      "column": 3,
+      "row": 0,
+      "backRow": 1,
+      "front": "guest-aurora-traveler.webp",
+      "back": "guest-aurora-traveler-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    }
+  }
+}

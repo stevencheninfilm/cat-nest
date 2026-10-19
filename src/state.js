@@ -10,6 +10,12 @@ import { replayLocalGame, sanitizeLocalGameAction } from './minigames-local-rule
 import { emptyCoupleCare, normalizeCoupleCare, recordCoupleCare } from './couple-care.js';
 import { emptyMemoryJournal, normalizeMemoryJournal, recordMemoryJournal, favoriteMemory } from './memory-journal.js';
 import { emptyNest, normalizeNest, nestActionResult, nestItem, validFurnitureCare } from './nest-decor.js';
+import { initialRestaurant, normalizeRestaurant, restaurantActionResult, restaurantRecipe } from './restaurant.js';
+import { normalizeGoldFish } from './restaurant-economy.js';
+import { levelStartXp, levelInfo } from './growth-levels.js';
+import { INITIAL_COINS } from './game-defaults.js';
+export { levelStartXp, levelInfo } from './growth-levels.js';
+export { INITIAL_COINS } from './game-defaults.js';
 
 export const FOODS = {
   snack: { name: '冻干小鱼', cost: 10, love: 10, hunger: 10, energy: 8 },
@@ -55,9 +61,10 @@ const cleanName = value => typeof value === 'string' ? value.replace(/[\u0000-\u
 const validFood = key => typeof key === 'string' && Object.hasOwn(FOODS, key);
 function validGrowthReward(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.id !== 'string' || !GROWTH_ID.test(value.id)) return false;
-  if (!['feed', 'pet', 'play', 'sleep', 'game'].includes(value.kind) || !Number.isFinite(value.amount) || value.amount <= 0) return false;
+  if (!['feed', 'pet', 'play', 'sleep', 'game', 'restaurant-collect'].includes(value.kind) || !Number.isFinite(value.amount) || value.amount <= 0) return false;
   if (Object.hasOwn(value,'furniture') && !validFurnitureCare({type:value.kind,furniture:value.furniture})) return false;
   if (value.kind === 'game') return Object.hasOwn(GAMES,value.game) && Number.isInteger(value.amount) && value.amount <= 15 && typeof value.actorId === 'string' && CLIENT_ID.test(value.actorId) && typeof value.actor === 'string' && value.actor === cleanName(value.actor) && validTime(value.at) && Object.keys(value).every(key => ['id','kind','game','amount','actorId','actor','at'].includes(key));
+  if (value.kind === 'restaurant-collect') return Boolean(restaurantRecipe(value.recipeId)) && typeof value.orderId==='string' && /^table-[1-9][0-9]{0,15}$/.test(value.orderId) && Number.isSafeInteger(Number(value.orderId.slice(6))) && value.amount<=100 && Math.abs(value.amount*10-Math.round(value.amount*10))<1e-9 && typeof value.actorId==='string' && CLIENT_ID.test(value.actorId) && typeof value.actor==='string' && value.actor===cleanName(value.actor) && validTime(value.at) && Object.keys(value).every(key=>['id','kind','orderId','recipeId','amount','actorId','actor','at'].includes(key));
   if (Object.hasOwn(value, 'boosted') && value.boosted !== true) return false;
   if (Object.hasOwn(value, 'boostCount') && (value.boosted !== true || !Number.isInteger(value.boostCount) || value.boostCount < 1 || value.boostCount > 3)) return false;
   const boostCount = value.boosted ? value.boostCount ?? 1 : 0;
@@ -164,7 +171,7 @@ function normalizeFeedingWindow(value,now) {
 }
 export function initialState(now = Date.now()) {
   now = validTime(now) ? now : 0;
-  return { version: 1, name: '糯米', coins: 1200, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), homeBond:emptyHomeBond(), diary:emptyMemoryJournal(now), nest:emptyNest(), updatedAt: now };
+  return { version: 1, name: '糯米', coins: INITIAL_COINS, goldFish:0, love: 86, xp: 86, hunger: 68, mood: 82, energy: 76, needsUpdatedAt:now, sleeping: false, history: [], feedRecords: [], feedingWindow: null, pendingGrowth: [], careLimits: emptyCareLimits(now), appearance: normalizeAppearance(), collection:emptyCollection(), games:emptyGameHub(now), coupleCare:emptyCoupleCare(now), homeBond:emptyHomeBond(), diary:emptyMemoryJournal(now), nest:emptyNest(), restaurant:initialRestaurant(now), updatedAt: now };
 }
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
@@ -179,10 +186,12 @@ export function normalizeState(value, now = Date.now()) {
       next[key] = key === 'xp' && !Number.isInteger(bounded) ? Math.round(bounded * 10) / 10 : Math.round(bounded);
     }
   }
+  next.goldFish = normalizeGoldFish(value.goldFish);
   next.name = typeof value.name === 'string' ? value.name.trim().slice(0, 16) || fallback.name : fallback.name;
   next.sleeping = value.sleeping === true;
   next.appearance = normalizeAppearance(value.appearance);
   next.nest = normalizeNest(value.nest);
+  next.restaurant = normalizeRestaurant(value.restaurant, now);
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
   const savedBoostCount=['hunger','mood','energy'].filter(key=>next[key]>80).length;
@@ -315,6 +324,18 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     const result=nestActionResult(current,action,actor,now);if(!result.ok)return null;
     return normalizeState({...current,nest:result.nest,coins:result.coins,updatedAt:now,history:[{text:result.text,actor:cleanName(actor?.name).slice(0,16),at:now},...current.history].slice(0,40)},now);
   }
+  if (typeof action.type==='string' && action.type.startsWith('restaurant-')) {
+    const result=restaurantActionResult(current,action,actor,now);if(!result.ok)return null;
+    const next={...current,restaurant:result.restaurant,coins:result.coins,goldFish:result.goldFish??current.goldFish,xp:result.xp,updatedAt:now,history:[{text:result.text,actor:cleanName(actor?.name).slice(0,16),at:now},...current.history].slice(0,40)};
+    if(result.growthReward){
+      const actorId=typeof actor?.id==='string'&&CLIENT_ID.test(actor.id)?actor.id:'local-care';
+      const reward={id:operationId??`restaurant-collect:${actorId}:${result.growthReward.orderId}:${now}`,kind:'restaurant-collect',...result.growthReward,actorId,actor:cleanName(actor?.name),at:now};
+      if(!validGrowthReward(reward)||current.pendingGrowth.some(pending=>pending.id===reward.id))return null;
+      next.pendingGrowth=[...current.pendingGrowth,reward];
+    }
+    next.diary=recordMemoryJournal(current.diary,{before:current,after:next,action,actorId:actor?.id,now,id:operationId,levelBefore:levelInfo(current.xp).level,levelAfter:levelInfo(next.xp).level});
+    return normalizeState(next,now);
+  }
   if (action.type === 'join-home' || action.type === 'adopt-cat') {
     const bond = joinHome(current,actor?.id,now);
     if (!bond) return null;
@@ -395,7 +416,7 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       if (experience === null) return null;
       const [reward] = next.pendingGrowth.splice(index, 1);
       next.xp = experience;
-      text = `收下成长气泡，获得${reward.amount}点成长`;
+      text = `收下${reward.kind==='restaurant-collect'?'餐厅经营经验':'成长'}气泡，获得${reward.amount}点成长`;
       break;
     }
     case 'dress':
@@ -436,21 +457,3 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
   return normalizeState(next, now);
 }
 /** Cumulative growth required to reach a level, shared with stage progress. */
-export function levelStartXp(level) {
-  const completed = Number.isFinite(level) ? Math.max(0, Math.floor(level) - 1) : 0;
-  return 15 * completed * (completed + 7);
-}
-
-export function levelInfo(xp) {
-  const bounded = Number.isFinite(xp) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, xp)) : 0;
-  const total = Number.isInteger(bounded) ? bounded : Math.round(bounded * 10) / 10;
-  // Each upgrade costs 120 + 30 * (level - 1). Completing n levels therefore
-  // costs 15 * n * (n + 7); invert the sum instead of iterating over every level.
-  const threshold = completed => levelStartXp(completed + 1);
-  let completed = Math.floor((Math.sqrt(49 + 4 * total / 15) - 7) / 2);
-  // Correct floating-point rounding at exact boundaries, including large saves.
-  while (threshold(completed) > total) completed -= 1;
-  while (threshold(completed + 1) <= total) completed += 1;
-  const progress = total - threshold(completed);
-  return { level: completed + 1, progress:Number.isInteger(progress) ? progress : Math.round(progress * 10) / 10, target: 120 + 30 * completed };
-}

@@ -20,7 +20,7 @@ test('reloading an old save never rescales its stored units or loses a tenth-poi
     assert.equal(state.love,543);assert.equal(formatAffection(state.love),'54');
   }
   const next=reduceAction(state,{type:'pet'},male,now,'affection-pet');
-  assert.equal(formatAffection(next.love),'54');assert.equal(next.xp,86);assert.equal(next.coins,1200);
+  assert.equal(formatAffection(next.love),'54');assert.equal(next.xp,86);assert.equal(next.coins,100);
   assert.equal(next.pendingGrowth[0].amount,3.3,'growth keeps its existing amount');
   const reopened=normalizeState(JSON.parse(JSON.stringify(next)),now);
   assert.equal(formatAffection(reopened.love),'54');assert.equal(reopened.love,546);
@@ -34,7 +34,7 @@ test('feeding bonuses show one intimacy point while preserving ten base growth p
   let state=reduceAction(initialState(now),{type:'feed',food:'water'},male,now,'affection-water');
   assert.equal(formatAffection(state.love),'9');
   state=reduceAction(state,{type:'feed',food:'fish'},female,now+1000,'affection-fish');
-  assert.equal(formatAffection(state.love),'15');assert.equal(state.coins,1155);assert.equal(state.xp,86);
+  assert.equal(formatAffection(state.love),'15');assert.equal(state.coins,55);assert.equal(state.xp,86);
   assert.equal(state.pendingGrowth[1].amount,72,'the 50+10 growth reward retains its existing 1.2 boost');
   const menu=feedingSheet({state:initialState(now),clientId:male.id,selectedFood:'fish',now});
   assert.match(menu,/鲜鱼罐罐，成长气泡加55，亲密度加5，/);

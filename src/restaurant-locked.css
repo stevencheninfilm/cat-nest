@@ -1,0 +1,16 @@
+/* Match the cat encyclopedia: readable conditions, muted art, a visible lock.
+ * Save state decides the attribute; temporary disabled buttons keep their art. */
+.restaurant [data-r-locked=true],.restaurant .rr-quality-card[data-r-locked=true]{filter:grayscale(1);color:#a29f92;border-color:#dedbd0;background-color:#f7f4eb;box-shadow:none}
+.restaurant [data-r-locked=true] :is(h3,h4,strong,small,p,.r-recipe-stars,.rp-target,.rp-status,.rd-buffs span){color:#a29f92}
+.restaurant [data-r-locked=true]>:is(.r-cat,.r-food,.rg-tier-food,.re-art,.rp-preview,.rd-preview,.rk-palette-sample),
+.restaurant .rc-customer-detail[data-r-locked=true] .rc-portrait>.r-cat{filter:grayscale(1);opacity:.38}
+.restaurant [data-r-locked=true]>.rp-preview :is(.r-cat,.r-food,img,.rk-palette-sample){filter:none}
+.restaurant .r-lock-icon{display:inline-block;width:11px;height:12px;flex:0 0 11px;vertical-align:-2px;color:#a6a28f}
+.restaurant :is(.r-staff-card>small,.rc-customer-card>small,.re-theme>small,.rk-palette-grid>button>small){display:flex;align-items:center;justify-content:center;gap:3px}
+.restaurant .r-staff-card>small{justify-content:flex-start;flex-wrap:wrap}
+.restaurant .r-staff-detail h3{display:flex;align-items:center;gap:4px}
+.restaurant .r-staff-detail[data-r-locked=true]>.r-cat{opacity:.38}
+.restaurant [data-r-locked=true]>.rp-preview{opacity:.38}
+.restaurant .rp-next-item[data-r-locked=true]{background:transparent}
+.restaurant .rp-next-item>.r-lock-icon{width:10px;height:11px;flex-basis:10px}
+.restaurant .r-locked-table[data-r-locked=true]{background:#f1efe4df}
