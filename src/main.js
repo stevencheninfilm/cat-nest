@@ -3,7 +3,8 @@ import { createPetNameLayout } from './pet-name-layout.js';
 import './onboarding.css';
 import { createOnboarding } from './onboarding.js';
 import './game-guide.css';
-import { createGameGuide } from './game-guide.js';
+import { createGameGuide, loadGameGuide } from './game-guide.js';
+import { createGuideSync } from './guide-sync.js';
 import { homeBinding } from './home-bond.js';
 import './style.css';
 import './feeding.css';
@@ -90,7 +91,7 @@ function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value
 const params = new URLSearchParams(location.search);
 const invitedRole = normalizeCoupleRole(params.get('join'));
 const returningOwner = (Boolean(read('catnest.role',null)) && !invitedRole) || params.has('court') || params.get('mode')==='judge';
-let onboarding, gameGuide;
+let onboarding, gameGuide, guideSync;
 // A remembered role is only a hint; every visit begins with an explicit choice.
 let coupleRole = normalizeCoupleRole(read('catnest.role', null));
 let roleEntered = false;
@@ -382,6 +383,7 @@ function renderConnection({panels=true}={}) {
   if (retry) retry.hidden = !['error','offline','full'].includes(status.phase);
   if(panels){refreshFeedingSheet();updateCareControls();renderFeedingHome();renderGrowth();catbook?.render();renderCoupleCare();}
   onboarding?.sync();
+  if(roleEntered)guideSync?.sync(coupleRole);
   gameGuide?.sync();
 }
 function presenceOptions() { return { members, phase:status.phase, configured:cloudConfigured, entered:roleEntered, known:presenceKnown, selectedRole:coupleRole, binding:coupleSnapshotReady?homeBinding(confirmedState):null }; }
@@ -1171,8 +1173,11 @@ async function showCourt() {
     updateModelPause();
   } catch { toast('猫猫判官正在准备中，稍后就能见面啦'); }
 }
-gameGuide=createGameGuide({autoStart:true,storage:runtime.guidePreferences||runtime.localStorage,isTest:runtime.isTest,assetBase:import.meta.env.BASE_URL,
-  getContext:()=>({role:coupleRole,entered:roleEntered,ready:!cloudConfigured||coupleSnapshotReady,available:!document.hidden&&!$('.nest').hidden&&catModelPhase!=='loading'&&!onboarding?.isOpen(),canOpen:view=>!Object.hasOwn(FEATURE_UNLOCKS,view)||currentFeatureStatus(view).unlocked}),onClose:scheduleUpgrade,
+guideSync=!runtime.isTest&&!localPetPreview&&apiBase?createGuideSync({home:home.id,storage:runtime.localStorage,fetchImpl:runtime.fetch,apiBase,
+  getLocal:role=>loadGameGuide(runtime.localStorage,role),applyRemote:(record,role)=>gameGuide?.applyRemote(record,role),onReady:()=>gameGuide?.sync(),
+}):null;
+gameGuide=createGameGuide({autoStart:true,storage:runtime.guidePreferences||runtime.localStorage,isTest:runtime.isTest,assetBase:import.meta.env.BASE_URL,onStatus:event=>guideSync?.report(event),
+  getContext:()=>({role:coupleRole,entered:roleEntered,ready:(!cloudConfigured||coupleSnapshotReady)&&(!guideSync||guideSync.ready(coupleRole)),available:!document.hidden&&!$('.nest').hidden&&catModelPhase!=='loading'&&!onboarding?.isOpen(),canOpen:view=>!Object.hasOwn(FEATURE_UNLOCKS,view)||currentFeatureStatus(view).unlocked}),onClose:scheduleUpgrade,
   async navigate(view) {
     if(Object.hasOwn(FEATURE_UNLOCKS,view)&&!currentFeatureStatus(view).unlocked)return false;
     if(view==='judge'&&document.body.classList.contains('court-mode'))return true;
@@ -1191,7 +1196,7 @@ onboarding=createOnboarding({autoStart:false,storage:runtime.localStorage,prefer
   dispatch,greet(){catModel?.react('touch',{...petNeeds(state),sleeping:state.sleeping});catSpeech.say('touch');},toast,onClose:scheduleUpgrade,onComplete(){void gameGuide.start();},
 });
 window.addEventListener('catnest:onboarding',event=>onboarding.start({restart:event.detail?.restart===true}));
-if(import.meta.hot)import.meta.hot.dispose(()=>{onboarding.destroy();gameGuide.destroy();});
+if(import.meta.hot)import.meta.hot.dispose(()=>{onboarding.destroy();gameGuide.destroy();guideSync?.destroy();});
 render(); renderConnection(); initializeCatModel(); openModal('roles');
 $('.nest').addEventListener('pointerdown',()=>nestLife.interrupt(),{passive:true});
 nestLife.tick();

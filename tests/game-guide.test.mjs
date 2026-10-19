@@ -64,7 +64,7 @@ test('mobile coachmark stays on screen and uses fresh target geometry after the 
   }
 });
 
-function harness(t,{autoStart=false}={}){
+function harness(t,{autoStart=false,onStatus=()=>{}}={}){
   const originals=new Map(['document','requestAnimationFrame','cancelAnimationFrame'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
   const handlers=new Map(),frames=new Map(),writes=[],destinations=[],style=new Map();let sequence=0;
   const target={getBoundingClientRect:()=>({top:300,bottom:340,left:20,right:150,width:130,height:40}),getClientRects:()=>[{}],scrollIntoView(){}};
@@ -78,7 +78,7 @@ function harness(t,{autoStart=false}={}){
   t.after(()=>{for(const [key,descriptor]of originals)if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];});
   const view={addEventListener(){},removeEventListener(){}};
   const preferences={getItem:key=>storage.getItem(key),setItem(key,value){writes.push(key);storage.setItem(key,value);}};
-  const guide=createGameGuide({autoStart,storage:preferences,getContext:()=>context,navigate:async name=>{destinations.push(name);},view});
+  const guide=createGameGuide({autoStart,onStatus,storage:preferences,getContext:()=>context,navigate:async name=>{destinations.push(name);},view});
   const click=async action=>{handlers.get('click')({target:{closest(){return {disabled:false,dataset:{guideAction:action}};}}});await new Promise(resolve=>setImmediate(resolve));};
   const tick=()=>{const [id,callback]=frames.entries().next().value||[];if(callback){frames.delete(id);callback();}};
   return {guide,dialog,storage,context,writes,destinations,click,tick,target,style,frames,blocker};
@@ -163,4 +163,19 @@ test('a queued first-visit guide is cancelled if the identity changes or the con
   const h=harness(t,{autoStart:true});h.guide.sync();h.context.role='female';
   await new Promise(resolve=>setImmediate(resolve));assert.equal(h.dialog.open,false);
   h.guide.sync();h.guide.destroy();await new Promise(resolve=>setImmediate(resolve));assert.equal(h.dialog.open,false);assert.deepEqual(h.destinations,[]);
+});
+
+test('monitor reset replays only the selected identity on next entry and emits actual shown/pause status',async t=>{
+  const events=[],h=harness(t,{autoStart:true,onStatus:e=>events.push(e)});
+  h.storage.setItem('catnest.handbook.v1.male',JSON.stringify({version:1,tourStarted:true,tourComplete:true}));
+  h.storage.setItem('catnest.handbook.v1.female',JSON.stringify({version:1,tourStarted:true,tourComplete:true}));
+  h.guide.applyRemote({generation:1,phase:'unknown'},'male');h.guide.sync();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(h.dialog.open,true);assert.equal(loadGameGuide(h.storage,'male').resetGeneration,1);assert.equal(loadGameGuide(h.storage,'female').tourComplete,true);
+  assert.deepEqual(events,[{role:'male',phase:'shown',generation:1}]);
+  assert.equal(h.guide.applyRemote({generation:2,phase:'unknown'},'male'),false,'an active guide is never interrupted');
+  await h.click('close');assert.equal(events.at(-1).phase,'paused');h.guide.sync();await new Promise(resolve=>setImmediate(resolve));assert.equal(h.dialog.open,false);
+});
+test('a guide already shown on another device does not automatically repeat on a fresh device',async t=>{
+  const h=harness(t,{autoStart:true});h.guide.applyRemote({generation:2,phase:'completed'},'male');h.guide.sync();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(h.dialog.open,false);assert.equal(loadGameGuide(h.storage,'male').tourComplete,true);
 });

@@ -24,6 +24,7 @@ export default defineConfig(({ command, mode }) => {
   define: { ...(modelUrl ? { 'import.meta.env.VITE_MODEL_URL':JSON.stringify(modelUrl) } : {}), 'import.meta.env.VITE_LOCAL_PET_PREVIEW':JSON.stringify(localPet) },
   server: {
     port: 5173,
+    fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.cat-monitor/**'] },
     proxy: { '/api': apiProxy },
   },
   preview: { proxy: { '/api': apiProxy } },

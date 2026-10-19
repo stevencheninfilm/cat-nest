@@ -7,5 +7,6 @@ dist/
 artifacts/
 .cat-court/
 .cat-preview/
+.cat-monitor/
 server/data/
 dist-demo/

@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createGitHubStore, ROOM_ID, sanitizeActor, StorageError } from './github-store.mjs';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { createModelAssetHandler } from './model-assets.mjs';
+import { createGuideHandler } from './guide-api.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -23,6 +24,7 @@ export function createPetHandler({
   pollMs = 15_000,
   maxBodyBytes = 32_768,
   modelAssets = createModelAssetHandler(),
+  guideHandler = createGuideHandler(),
   coupleRoomId = process.env.COUPLE_ROOM_ID || '0aed6937627c924a7497025ebd18fe5d',
 } = {}) {
   const origins = new Set((Array.isArray(corsOrigin) ? corsOrigin : corsOrigin.split(',')).map(value => value.trim()).filter(Boolean));
@@ -108,7 +110,7 @@ export function createPetHandler({
   async function handle(request, response) {
     let url;
     try { url = new URL(request.url, 'http://localhost'); } catch { return false; }
-    const apiRoute = url.pathname.startsWith('/api/pet-model/') || url.pathname === '/api/health' || url.pathname === '/api/couple/home' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
+    const apiRoute = url.pathname.startsWith('/api/guides/') || url.pathname.startsWith('/api/pet-model/') || url.pathname === '/api/health' || url.pathname === '/api/couple/home' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
     if (!apiRoute && !serveStatic) return false;
     if (closed) { json(response, 503, { error: { code: 'SHUTTING_DOWN', message: '服务正在重启，请稍后重试。' } }); return true; }
     try {
@@ -128,6 +130,7 @@ export function createPetHandler({
           response.end(); return true;
         }
         if (await modelAssets(request, response, url)) return true;
+        if (await guideHandler(request,response,url,{json,body})) return true;
         if (url.pathname === '/api/health' && request.method === 'GET') {
           json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: store.storage || 'github' }); return true;
         }

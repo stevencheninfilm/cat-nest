@@ -14,6 +14,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
+COPY --from=build /app/config ./config
 COPY --from=build /app/scripts/court-archive.mjs ./scripts/court-archive.mjs
 COPY --from=build /app/src/state.js ./src/state.js
 COPY --from=build /app/src/feature-unlocks.js ./src/feature-unlocks.js

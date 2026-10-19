@@ -1,5 +1,6 @@
 import { formatAffection } from './affection.js';
 import './local-save-monitor.css';
+import { guideMonitorMarkup } from './monitor-guide-ui.js';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const number=value=>Number.isFinite(value) ? new Intl.NumberFormat('zh-CN',{maximumFractionDigits:1}).format(value) : '—';
@@ -7,7 +8,7 @@ const date=value=>Number.isFinite(value) ? new Intl.DateTimeFormat('zh-CN',{mont
 const short=value=>value ? escape(value.slice(0,7)) : '未读取';
 const root=document.querySelector('#monitor');
 root.innerHTML=`<main class="observatory">
-  <header class="monitor-header"><div><p class="eyebrow">CAT NEST · OBSERVATORY</p><h1><span class="brand-paw" aria-hidden="true">✿</span>小窝观察台</h1><p class="intro">线上存档的近况，在这里一眼看见。</p></div><span class="local-badge"><i></i>本机专用 · 只读</span></header>
+  <header class="monitor-header"><div><p class="eyebrow">CAT NEST · OBSERVATORY</p><h1><span class="brand-paw" aria-hidden="true">✿</span>小窝观察台</h1><p class="intro">线上存档近况与新手向导管理。</p></div><span class="local-badge"><i></i>本机专用 · 进度只读</span></header>
   <section class="monitor-summary" aria-label="存档概况" id="monitor-summary"><article><span>存档入口</span><strong>—</strong><small>正在读取配置</small></article><article><span>云端可读</span><strong>—</strong><small>正在连接</small></article><article><span>待领取气泡</span><strong>—</strong><small>不会自动领取</small></article><article><span>需要照顾</span><strong>—</strong><small>正在检查小猫状态</small></article></section>
   <section class="version-strip" id="monitor-version" aria-label="共用版本"><span class="status-dot loading"></span><span>正在核对共用版本…</span></section>
   <section class="monitor-toolbar" aria-label="筛选存档"><div class="toolbar-title"><h2>所有小窝</h2><span id="home-count"></span></div><div class="toolbar-controls"><label class="monitor-search"><span aria-hidden="true">⌕</span><input id="monitor-search" placeholder="搜索小窝或猫咪" aria-label="搜索小窝或猫咪" type="search"></label><select id="monitor-sort" aria-label="排序"><option value="registry">默认顺序</option><option value="level">等级从高到低</option><option value="recent">最近有更新</option></select><button class="refresh-button" id="monitor-refresh">刷新数据 <span aria-hidden="true">↻</span></button></div></section>
@@ -18,6 +19,7 @@ root.innerHTML=`<main class="observatory">
 </main>`;
 
 let snapshot=null,busy=false,timer=null,filter='all',search='',sort='registry';
+let armedGuide=null,resettingGuide=null,resetOperation=null;
 const statusLabel={ready:'云端可读',stale:'快照已过期',error:'暂不可读',temporary:'浏览器临时存档'};
 const label={hunger:'饱饱',mood:'开心',energy:'活力'};
 const icon={steven:'S',evian:'E',todd:'T',test:'✧'};
@@ -25,7 +27,7 @@ const icon={steven:'S',evian:'E',todd:'T',test:'✧'};
 function homeCard(home) {
   const header=`<header class="home-card-header"><span class="home-avatar ${escape(home.id)}">${escape(icon[home.id] || home.label.slice(0,1))}</span><div><h3>${escape(home.label)}<span class="home-path">/${escape(home.id)}/</span></h3><span class="home-status ${escape(home.status)}"><i></i>${statusLabel[home.status] || '未知状态'}</span></div><a class="visit-link" href="${escape(home.href)}" target="_blank" rel="noopener noreferrer" aria-label="打开 ${escape(home.label)} 小窝">↗</a></header>`;
   if(home.status==='temporary')return `<article class="home-card temporary">${header}<div class="temporary-art" aria-hidden="true">✧<span>⌁</span>✧</div><h4>每次打开，都是新的开始</h4><p class="temporary-note">${escape(home.note)}</p><div class="temporary-meta"><span>同版功能</span><span>刷新重置</span><span>不写入云端</span></div></article>`;
-  if(!home.level)return `<article class="home-card unavailable">${header}<div class="unavailable-body"><span aria-hidden="true">☁</span><h4>暂时联系不上这个小窝</h4><p>${escape(home.note)}</p><small>读取失败不会将原存档显示成 0 级或重置数据。</small></div></article>`;
+  if(!home.level)return `<article class="home-card unavailable">${header}<div class="unavailable-body"><span aria-hidden="true">☁</span><h4>暂时联系不上这个小窝</h4><p>${escape(home.note)}</p><small>读取失败不会将原存档显示成 0 级或重置数据。</small></div>${guideMonitorMarkup(home,{enabled:snapshot.guideControl===true,armed:armedGuide,busy:resettingGuide})}</article>`;
   const progress=Math.max(0,Math.min(100,home.level.progress/home.level.target*100));
   return `<article class="home-card ${home.status==='stale' ? 'stale':''}" data-home="${escape(home.id)}">${header}
     ${home.status==='stale' ? `<p class="stale-note">${escape(home.note)} 采集于 ${date(home.sampledAt)}</p>`:''}
@@ -34,6 +36,7 @@ function homeCard(home) {
     <div class="pet-needs">${Object.entries(home.needs).map(([key,value])=>`<div class="need ${value<30 ? 'low':''}"><span>${label[key]}</span><strong>${number(value)}<small>/100</small></strong><div><i style="width:${value}%"></i></div></div>`).join('')}</div>
     <div class="home-small-stats"><span>已领取成长<strong>${number(home.xp)}</strong></span><span>亲密度<strong>${formatAffection(home.love)}</strong></span><span>图鉴入住<strong>${number(home.cats)}</strong></span><span>待领取<strong class="pending-amount">${number(home.pending.count)} 个<small> +${number(home.pending.amount)}</small></strong></span></div>
     <div class="home-meals">${home.meals.map(meal=>`<span><b>${escape(meal.label)}</b><span class="${meal.fed ? 'fed':''}">${meal.fed ? '本轮已喂':meal.food ? '上餐未结束':'本轮未喂'}</span><small>${meal.food ? `${escape(meal.food)} · ${Math.max(0,Math.ceil((meal.expiresAt-Date.now())/60_000))} 分钟`:'餐盘空空'}</small></span>`).join('')}</div>
+    ${guideMonitorMarkup(home,{enabled:snapshot.guideControl===true,armed:armedGuide,busy:resettingGuide})}
     <footer class="home-card-footer"><span>照顾者 ${home.owners.filter(owner=>owner.joined).length}/2 · 修订 ${number(home.revision)}</span><time title="最后保存时间">${date(home.updatedAt)}</time></footer>
   </article>`;
 }
@@ -58,7 +61,7 @@ function renderSnapshot() {
 }
 function schedule() {clearTimeout(timer);timer=setTimeout(()=>{if(document.hidden)schedule();else refresh();},60_000);}
 async function refresh() {
-  if(busy)return;
+  if(busy||resettingGuide)return;
   busy=true;const button=document.querySelector('#monitor-refresh');button.disabled=true;button.textContent='正在读取…';
   const error=document.querySelector('#monitor-error');error.hidden=true;
   try {
@@ -72,6 +75,24 @@ async function refresh() {
   } finally {busy=false;button.disabled=false;button.innerHTML='刷新数据 <span aria-hidden="true">↻</span>';document.querySelector('#home-grid').setAttribute('aria-busy','false');schedule();}
 }
 document.querySelector('#monitor-refresh').addEventListener('click',refresh);
+document.querySelector('#home-grid').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-guide-reset]');if(!button||button.disabled||resettingGuide||busy)return;
+  const action=button.dataset.guideReset;
+  if(action==='cancel'){armedGuide=null;resetOperation=null;renderHomes();return;}
+  const home=snapshot?.entries.find(home=>home.id===button.dataset.home),role=button.dataset.role;
+  const record=home?.guide?.roles?.[role];if(!record||!snapshot.guideControl||home.guide.status!=='ready')return;
+  const key=`${home.id}:${role}`;
+  if(action==='arm'){armedGuide=key;resetOperation=crypto.randomUUID();renderHomes();return;}
+  if(action!=='confirm'||armedGuide!==key||!resetOperation)return;
+  resettingGuide=key;renderHomes();const error=document.querySelector('#monitor-error');error.hidden=true;
+  try {
+    const response=await fetch('/__monitor/guide-reset',{method:'POST',headers:{'Content-Type':'application/json','X-Monitor-Token':document.querySelector('meta[name="monitor-token"]').content},body:JSON.stringify({home:home.id,role,expectedGeneration:record.generation,operationId:resetOperation}),signal:AbortSignal.timeout(25_000)});
+    const value=await response.json();if(!response.ok||value.record?.generation!==record.generation+1)throw Error();
+    home.guide.roles[role]=value.record;armedGuide=null;resetOperation=null;
+    document.querySelector('#monitor-time').textContent=`已安排 ${home.label} · ${role==='male'?'男方':'女方'} 下次进入重新引导`;
+  } catch {error.textContent='重播设定尚未确认，请刷新状态再重试；游戏存档没有改动。';error.hidden=false;}
+  finally{resettingGuide=null;renderHomes();schedule();}
+});
 document.querySelector('#monitor-search').addEventListener('input',event=>{search=event.target.value.trim().toLowerCase();renderHomes();});
 document.querySelector('#monitor-sort').addEventListener('change',event=>{sort=event.target.value;renderHomes();});
 for(const button of document.querySelectorAll('[data-filter]'))button.addEventListener('click',()=>{filter=button.dataset.filter;renderHomes();});

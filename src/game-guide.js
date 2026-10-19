@@ -2,17 +2,17 @@ import { gameGuideChapters, guideCatalog, searchGuide, GUIDE_ASSET_ROOT } from '
 import { GAME_TOUR, PANEL_TOURS, guideTourRoute, tourStepForChapter, tourLayout } from './game-guide-tour.js';
 
 const esc=value=>String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const blank=()=>({version:1,chapter:'welcome',seen:[],tour:0,tourComplete:false,tourStarted:false,panels:{}});
+const blank=()=>({version:1,chapter:'welcome',seen:[],tour:0,tourComplete:false,tourStarted:false,resetGeneration:0,panels:{}});
 export function loadGameGuide(storage,role) {
   try {
     const value=JSON.parse(storage.getItem(`catnest.handbook.v1.${role}`));
     if(value?.version!==1)return blank();
     const panels=Object.fromEntries(Object.keys(PANEL_TOURS).filter(key=>value.panels?.[key]?.seen===true).map(key=>[key,{seen:true,complete:value.panels[key].complete===true,step:PANEL_TOURS[key].includes(value.panels[key].step)?value.panels[key].step:PANEL_TOURS[key][0]}]));
-    return { ...blank(),chapter:typeof value.chapter==='string'?value.chapter:'welcome',seen:Array.isArray(value.seen)?value.seen.filter(id=>typeof id==='string').slice(0,100):[],tour:Number.isInteger(value.tour)?Math.max(0,Math.min(GAME_TOUR.length-1,value.tour)):0,tourComplete:value.tourComplete===true,tourStarted:value.tourStarted===true||value.tourComplete===true||Number.isInteger(value.tour)&&value.tour>0,panels };
+    return { ...blank(),resetGeneration:Number.isSafeInteger(value.resetGeneration)&&value.resetGeneration>=0?value.resetGeneration:0,chapter:typeof value.chapter==='string'?value.chapter:'welcome',seen:Array.isArray(value.seen)?value.seen.filter(id=>typeof id==='string').slice(0,100):[],tour:Number.isInteger(value.tour)?Math.max(0,Math.min(GAME_TOUR.length-1,value.tour)):0,tourComplete:value.tourComplete===true,tourStarted:value.tourStarted===true||value.tourComplete===true||Number.isInteger(value.tour)&&value.tour>0,panels };
   } catch { return blank(); }
 }
 
-export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTest=false,assetBase='./',view=window,autoStart=false}) {
+export function createGameGuide({storage,getContext,navigate,onClose=()=>{},onStatus=()=>{},isTest=false,assetBase='./',view=window,autoStart=false}) {
   const chapters=gameGuideChapters({isTest});
   const dialog=document.createElement('dialog');
   dialog.className='game-guide-dialog';
@@ -20,6 +20,18 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
   let progress=blank(),role,mode='book',current=chapters[0],query='',toc=false,opener=null,busy=false,serial=0,frame=0,destroyed=false,changing=false;
   let route=guideTourRoute(),routeIndex=0,panel=null,lastGeometry='',autoQueued=false;
   const automaticSeen=new Set();
+  let overviewActive=false,shown=false;
+  function report(phase){try{onStatus({role,phase,generation:progress.resetGeneration});}catch{}}
+  function applyRemote(record,requestedRole){
+    if(dialog.open||busy||!['male','female'].includes(requestedRole))return false;
+    const saved=loadGameGuide(storage,requestedRole);
+    if(record.generation<saved.resetGeneration)return false;
+    const next=record.generation>saved.resetGeneration?{...blank(),resetGeneration:record.generation}:saved;
+    if(record.generation>saved.resetGeneration)automaticSeen.delete(requestedRole);
+    if(record.phase!=='unknown'){next.tourStarted=true;next.tourComplete=record.phase==='completed'||next.tourComplete;}
+    try{storage.setItem(`catnest.handbook.v1.${requestedRole}`,JSON.stringify(next));}catch{}
+    return true;
+  }
   const stepNow=()=>GAME_TOUR.find(step=>step.id===route[routeIndex]);
   const asset=name=>`${assetBase}${GUIDE_ASSET_ROOT}${name}-v1.webp`;
   function remember(){if(role)try{storage.setItem(`catnest.handbook.v1.${role}`,JSON.stringify(progress));}catch{/* Reading also works without local preferences. */}}
@@ -81,6 +93,7 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
       const target=visibleTarget(step.target);
       if(target&&step.view!=='home'&&step.view!=='collection')target.scrollIntoView?.({block:'center',behavior:'instant'});
       renderTour();dialog.showModal();positionTour();
+      if(overviewActive&&!shown){shown=true;report('shown');}
       dialog.querySelector('#game-tour-title')?.focus({preventScroll:true});trackTour();
     } catch {
       if(!destroyed&&token===serial){current=chapters.find(c=>c.id===step.chapter)||current;renderBook();if(!dialog.open)dialog.showModal();}
@@ -93,6 +106,7 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
     if(book){++serial;changing=true;if(dialog.open)dialog.close();renderBook();dialog.showModal();changing=false;}
     else {
       panel=Object.hasOwn(PANEL_TOURS,requestedPanel||'')?requestedPanel:null;
+      overviewActive=!panel;shown=false;
       route=guideTourRoute(panel).filter(id=>getContext().canOpen?.(GAME_TOUR.find(step=>step.id===id).view)!==false);
       if(!route.length){renderBook();if(!dialog.open)dialog.showModal();return true;}
       const saved=panel?progress.panels[panel]?.step:GAME_TOUR[progress.tour]?.id;
@@ -117,7 +131,7 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
       if(!latest.tourStarted&&!latest.tourComplete)void start();
     });
   }
-  function close(){++serial;busy=false;dialog.close();}
+  function close(){if(overviewActive&&shown){report(progress.tourComplete?'completed':'paused');overviewActive=false;}++serial;busy=false;dialog.close();}
   function onDialogClose(){
     if(changing||dialog.open)return;
     cancelAnimationFrame(frame);remember();onClose();
@@ -163,5 +177,5 @@ export function createGameGuide({storage,getContext,navigate,onClose=()=>{},isTe
     const saved=loadGameGuide(storage,getContext().role);if(saved.panels[name]?.seen)return;
     queueMicrotask(()=>{if(!destroyed&&!dialog.open&&!busy)void start({panel:name});});
   }
-  return {start,sync,panelOpened,isOpen:()=>dialog.open||busy,destroy(){destroyed=true;++serial;cancelAnimationFrame(frame);document.removeEventListener('click',panelClick);view.removeEventListener('resize',reposition);view.removeEventListener('scroll',reposition,true);view.visualViewport?.removeEventListener('resize',reposition);dialog.remove();}};
+  return {start,sync,applyRemote,panelOpened,isOpen:()=>dialog.open||busy,destroy(){destroyed=true;++serial;cancelAnimationFrame(frame);document.removeEventListener('click',panelClick);view.removeEventListener('resize',reposition);view.removeEventListener('scroll',reposition,true);view.visualViewport?.removeEventListener('resize',reposition);dialog.remove();}};
 }
