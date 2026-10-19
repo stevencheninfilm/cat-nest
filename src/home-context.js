@@ -6,14 +6,14 @@ export function validateHomes(entries) {
   const ids=new Set(),prefixes=new Set(),rooms=new Set();
   let original=0,test=0;
   for(const item of entries) {
-    if(!item || !/^[a-z][a-z0-9-]{0,39}$/.test(item.id) || ['assets','api','model','index','404','monitor'].includes(item.id) || ids.has(item.id))throw new Error('存档网址无效或重复');
+    if(!item || !/^[a-z][a-z0-9-]{0,39}$/i.test(item.id) || ['assets','api','model','index','404','monitor'].includes(item.id.toLowerCase()) || ids.has(item.id.toLowerCase()))throw new Error('存档网址无效或重复');
     if(typeof item.label!=='string' || !item.label.trim() || !['couple','room','test'].includes(item.source))throw new Error('存档配置无效');
     if(item.title!==undefined && (typeof item.title!=='string' || !item.title.trim()))throw new Error('存档标题无效');
     if(typeof item.storagePrefix!=='string' || prefixes.has(item.storagePrefix) || (item.id==='steven' ? item.storagePrefix!=='' : item.storagePrefix!==`${item.id}:`))throw new Error('存档缓存空间无效或重复');
     if(item.source==='couple') { if(item.id!=='steven' || item.roomId!==null)throw new Error('原存档绑定不可替换'); original++; }
     else if(!/^[a-f0-9]{32}$/.test(item.roomId) || rooms.has(item.roomId))throw new Error('存档房间无效或重复');
     if(item.source==='test') { if(item.id!=='test')throw new Error('测试空间必须使用 test 入口');test++; }
-    ids.add(item.id);prefixes.add(item.storagePrefix);if(item.roomId)rooms.add(item.roomId);
+    ids.add(item.id.toLowerCase());prefixes.add(item.storagePrefix);if(item.roomId)rooms.add(item.roomId);
   }
   if(original!==1 || test!==1)throw new Error('必须保留原存档和测试入口');
   return entries;
@@ -30,7 +30,7 @@ const unknown=Object.freeze({id:'unknown',href:'./',roomId:null,storagePrefix:nu
 export function homeContext(pathname='') {
   const path=pathname.replace(/^\/cat-nest(?=\/|$)/,'').replace(/\/index\.html$/,'/');
   if(path==='' || path==='/')return main;
-  const match=/^\/([a-z][a-z0-9-]{0,39})\/?$/.exec(path);
+  const match=/^\/([a-z][a-z0-9-]{0,39})\/?$/i.exec(path);
   return match ? HOME_ENTRIES.find(item=>item.id===match[1]) || unknown : unknown;
 }
 export function homeStorageKey(key,context) {

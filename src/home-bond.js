@@ -37,7 +37,7 @@ export function homeBinding(state, members = [], known = false) {
   return { owners, count:owners.filter(owner => owner.joined).length, complete:owners.every(owner => owner.joined) };
 }
 export function homeInviteUrl(home, base, role) {
-  if (!home || !['couple','room','test'].includes(home.source) || !/^\.\/[a-z][a-z0-9-]*\/$/.test(home.href)) throw new Error('存档入口无效');
+  if (!home || !['couple','room','test'].includes(home.source) || !/^\.\/[a-z][a-z0-9-]*\/$/i.test(home.href)) throw new Error('存档入口无效');
   if (!['male','female'].includes(role)) throw new Error('请先选择身份');
   const url = new URL(home.href,base);
   url.search = new URLSearchParams({join:role === 'male' ? 'female':'male'}).toString();
