@@ -39,7 +39,7 @@ export function specialRecipeCardsMarkup(info,{recipes=info.specialRecipes}={}) 
 }
 
 export function restaurantGoldPanel(info,state){
-  return `<div class="re-earn-card"><div><strong>持有 ${number(state.goldFish)} 金鱼干</strong><b>银级与金级猫友的用餐谢礼</b></div><span>${goldImage()}</span><div class="re-guest-gold-rules"><span>银级猫友<strong>+1 金鱼干</strong></span><span>金级猫友<strong>+2 金鱼干</strong></span></div><p>仅银级、金级顾客完成两餐后掉落，结账时收取。每位来访顾客仅赠送一次。</p><button class="re-gold-guests" data-r-tab="customers">查看高级顾客与解锁条件 →</button></div><h3 class="r-mini-heading">金色招牌 <small>永久解锁配方</small></h3><div class="r-recipe-grid re-special-grid">${specialRecipeCardsMarkup(info)}</div><div class="r-info-links"><button data-r-tab="staff">伙伴与训练</button><button data-r-tab="themes">珍藏装扮</button></div>`;
+  return `<div class="re-earn-card"><div><strong>持有 ${number(state.goldFish)} 金鱼干</strong><b>银级与金级猫友的用餐谢礼</b></div><span>${goldImage()}</span><div class="re-guest-gold-rules"><span>银级猫友<strong>+1 金鱼干</strong></span><span>金级猫友<strong>+2 金鱼干</strong></span></div><p>仅银级、金级顾客完成两餐后掉落，结账时收取。每位来访顾客仅赠送一次。</p><button class="re-gold-guests" data-r-tab="customers">查看高级顾客与解锁条件 →</button></div><h3 class="r-mini-heading">金色招牌 <small>永久解锁配方</small></h3><div class="r-recipe-grid re-special-grid">${specialRecipeCardsMarkup(info)}</div>`;
 }
 
 export function premiumThemesMarkup(info){
