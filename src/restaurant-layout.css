@@ -27,3 +27,18 @@
   .restaurant .r-nav{grid-column:3;grid-row:1/3;flex-direction:column;gap:3px;margin:8px 8px 8px 0;padding:5px;border:1px solid #d1b890;border-radius:16px}
   .restaurant .r-nav button{flex-direction:row;justify-content:center;gap:5px;padding:3px;min-height:44px}.restaurant .r-nav button>span{width:21px;height:21px}.restaurant .r-nav button strong{font-size:10px}
 }
+
+/* Paired guests keep separate tap targets even when the art becomes narrower. */
+.restaurant .rg-order-seat{--r-order-clearance:max(0px,calc((48px - 19cqw) / 2))}
+.restaurant .rg-order-seat .r-order-bubble{width:clamp(44px,18cqw,75px)}
+.restaurant .rg-order-seat[data-r-seat="0"] .r-order-bubble{left:calc(50% - var(--r-order-clearance))}
+.restaurant .rg-order-seat[data-r-seat="1"] .r-order-bubble{left:calc(50% + var(--r-order-clearance))}
+@container(max-width:380px){
+  .restaurant .rg-order-seat .r-order-bubble{flex-direction:column;gap:0;padding:3px;min-height:44px}
+  .restaurant .rg-order-seat .r-order-bubble .r-food{width:23px;height:23px}
+  .restaurant .rg-order-seat .r-order-bubble strong{font-size:7px;line-height:1.3}
+  .restaurant .rg-order-seat .r-order-bubble small{display:none}
+  .restaurant .rg-order-seat.is-collectible .r-order-bubble strong{font-size:12px}
+}
+
+@media(max-width:420px){.restaurant .r-scene-controls{width:52px;gap:5px}.restaurant .r-scene-controls .rr-research-shortcut{transform:scale(.72);transform-origin:top center;margin-bottom:-23px}}
