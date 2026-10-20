@@ -270,3 +270,12 @@ test('overlapping caregiver batches claim the remaining original receipts once',
   await Promise.all([store.applyAction(room.roomId,incomeClaim([rewards[0].id,rewards[1].id],'claim-income-male')),store.applyAction(room.roomId,incomeClaim([rewards[1].id,rewards[2].id],'claim-income-female','client-two'))]);
   const saved=await store.getRoom(room.roomId);assert.equal(saved.state.xp,room.state.xp+27.3);assert.deepEqual(saved.state.pendingGrowth,[]);assert.deepEqual(h.saved(room.roomId).claimedGrowth,rewards);
 });
+
+test('a full journal of bounded restaurant claim manifests cannot exhaust the unrelated room size budget',async()=>{
+  const h=harness(),store=h.store(),room=await store.createRoom(),stored=h.saved(room.roomId);
+  const ids=Array.from({length:128},(_,i)=>`restaurant-${i}-`.padEnd(180,'x'));
+  stored.operations=Array.from({length:100},(_,i)=>({id:`journal-income-${i}`,event:{operationId:`journal-income-${i}`,actor:{id:'client-one',name:'猫友'},action:{type:'claim-restaurant-growth',rewardIds:ids}}}));
+  const read=await h.store().getRoom(room.roomId);assert.equal(read.state.xp,room.state.xp);privateReceipts(read);
+  stored.operations[0].event.action.rewardIds=[...ids,ids[0]+'x'];
+  await assert.rejects(h.store().getRoom(room.roomId),e=>e.code==='STORAGE_CORRUPT');
+});

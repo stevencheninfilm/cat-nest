@@ -177,6 +177,9 @@ export function createGitHubStore({
       // Growth receipts and cooperation memories have separately validated,
       // permanent ledgers. Keep the original size limit for other room fields.
       const withoutGrowth = { ...room, state: { ...room.state } };
+      // Batch manifests are bounded and validated below, independently of the
+      // ordinary room size budget, just like their original growth receipts.
+      withoutGrowth.operations = room.operations.map(operation => operation?.event?.action?.type === 'claim-restaurant-growth' ? { ...operation, event:{ ...operation.event, action:{ ...operation.event.action, rewardIds:[] } } } : operation);
       delete withoutGrowth.state.pendingGrowth;
       delete withoutGrowth.claimedGrowth;
       delete withoutGrowth.state.diary;
