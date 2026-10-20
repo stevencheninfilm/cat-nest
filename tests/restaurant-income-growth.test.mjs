@@ -5,10 +5,21 @@ import { growthSideSlots, growthBubbles, growthTray } from '../src/growth-ui.js'
 import { RESTAURANT_INCOME_ID, RESTAURANT_INCOME_ART, restaurantGrowthClaims, groupRestaurantGrowth, sanitizeRestaurantGrowthClaim } from '../src/restaurant-income-growth.js';
 import { restaurantProgressPreserved } from '../src/restaurant.js';
 import { sanitizeAction } from '../server/github-store.mjs';
+import { GROWTH_STAGES } from '../src/growth-stages.js';
 const at = Date.UTC(2026, 9, 20), actor = { id:'client-one', name:'猫友' };
 const income = (index, amount = 9.1) => ({ id:`income-reward-${index}`, kind:'restaurant-collect', orderId:`table-${index+1}`, recipeId:'coffee', amount, actorId:actor.id, actor:actor.name, at });
 const care = {id:'care-reward-pet',kind:'pet',amount:3,...{actorId:actor.id,actor:actor.name,at}};
 const seed = rewards => ({...initialState(at),pendingGrowth:rewards});
+
+test('restaurant bubble and tray artwork stay identical across every pet growth stage', () => {
+  const rewards = [income(0,35.5)];
+  for (const render of [growthBubbles, growthTray]) {
+    const initial = render(rewards, { stage:GROWTH_STAGES[0] });
+    for (const stage of GROWTH_STAGES.slice(1)) assert.equal(render(rewards, { stage }), initial);
+    assert.ok(initial.includes(RESTAURANT_INCOME_ART));
+    assert.doesNotMatch(initial, /data-heart-stage|--growth-/);
+  }
+});
 
 test('old restaurant receipts merge exactly into the upper-left slot without rewriting the save', () => {
   const rewards=[care,income(0,8.1),income(1,9.2),income(2,9.1),income(3,9.1)], before=structuredClone(rewards);

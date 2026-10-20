@@ -75,6 +75,7 @@
 @media(prefers-reduced-motion:reduce){.growth-side .growth-bubble{animation:none}}
 
 /* Restaurant income stays in the upper-left slot with its own collectible art. */
+.growth-bubble-restaurant{--growth-color:#f8c344;--growth-light:#fff2bf;--growth-deep:#a86117;--growth-edge:#e6af37;--growth-glow:#ffda75;--heart-saturation:1}
 .growth-bubble-restaurant .growth-orb{background:radial-gradient(circle at 50% 65%,#ffe0a64d,transparent 75%);border-color:#fff2d4;box-shadow:0 3px 9px #a95e482b,inset 0 0 7px #fff8db75}
 .growth-bubble-restaurant .growth-orb::after{display:none}
 .growth-bubble-restaurant .growth-heart-restaurant{filter:drop-shadow(0 2px 3px #ba704050)}
