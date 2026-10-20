@@ -8,7 +8,7 @@ import { validRestaurantWaitingParties, restaurantWaitingParties, createRestaura
 import { KITCHEN_ZONES, KITCHEN_FLOWS, createKitchenWorkflow, validKitchenWorkflow, validKitchenReservations, kitchenInfo } from './restaurant-kitchen.js';
 import { createInteractiveWorkflow, acceptInteractiveWorkflow, advanceInteractiveWorkflow, isInteractiveWorkflow, interactiveOrderStatus } from './restaurant-kitchen-interactive.js';
 import { SPECIAL_RESTAURANT_RECIPES, PROMOTED_SIGNATURE_RECIPE_IDS, PREMIUM_RESTAURANT_THEMES, specialRestaurantRecipe, premiumStaffHireCost, restaurantGoldReward, normalizeGoldFish, validGoldFish, GOLD_FISH_MAX } from './restaurant-economy.js';
-import { normalizeStaffTraining, validStaffTraining, reserveWorkerEnergy, trainingUpgradeResult, STAFF_TRAINING_STATS } from './restaurant-staff-training.js';
+import { normalizeStaffTraining, normalizeRestaurantStaffTraining, restaurantStaffLastInteractionAt, validStaffTraining, reserveWorkerEnergy, trainingUpgradeResult, STAFF_TRAINING_STATS, STAFF_IDLE_RECOVERY_MS } from './restaurant-staff-training.js';
 import { restaurantDecoration, ownedRestaurantDecorations, restaurantDecorationSnapshot, validDecorationSnapshot, createRestaurantConstruction, validRestaurantDecorations, normalizeRestaurantDecorations, restaurantDecorationInfo, decorationReward } from './restaurant-decor.js';
 import { RESTAURANT_DECORATIONS } from './restaurant-decor.js';
 import { levelInfo } from './growth-levels.js';
@@ -91,17 +91,18 @@ function createRestaurantGuestOrder(restaurant,recipe,createdAt,table,actor,deco
 }
 
 export function initialRestaurant(now=Date.now()) {
-  return {version:1,openedAt:safeNow(now),nextOrderId:1,parties:[],seenGuests:[],levels:{kitchen:1,fridge:1,tables:1,tips:1},recipeLevels:Object.fromEntries([...RESTAURANT_RECIPES.map(recipe=>recipe.id),...PROMOTED_SIGNATURE_RECIPE_IDS].map(id=>[id,1])),ownedSpecialRecipes:[],staff:0,theme:'cream',ownedThemes:['cream'],orders:[],stats:{served:0,ordinaryServed:0,earned:0,experience:0},progression:initialRestaurantProgression(),research:initialRestaurantResearch(),revision:0};
+  return {version:1,openedAt:safeNow(now),lastInteractionAt:safeNow(now),nextOrderId:1,parties:[],seenGuests:[],levels:{kitchen:1,fridge:1,tables:1,tips:1},recipeLevels:Object.fromEntries([...RESTAURANT_RECIPES.map(recipe=>recipe.id),...PROMOTED_SIGNATURE_RECIPE_IDS].map(id=>[id,1])),ownedSpecialRecipes:[],staff:0,theme:'cream',ownedThemes:['cream'],orders:[],stats:{served:0,ordinaryServed:0,earned:0,experience:0},progression:initialRestaurantProgression(),research:initialRestaurantResearch(),revision:0};
 }
 
 export function validRestaurant(value) {
-  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['parties','waitingParties','seenGuests','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['lastInteractionAt','parties','waitingParties','seenGuests','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(Object.hasOwn(value,'lastInteractionAt')&&(!validTime(value.lastInteractionAt)||value.lastInteractionAt<value.openedAt))return false;
   if(Object.hasOwn(value,'circlePalette')&&!restaurantCirclePalette(value.circlePalette))return false;
   if(Object.hasOwn(value,'ownedCirclePalettes')&&(!Array.isArray(value.ownedCirclePalettes)||new Set(value.ownedCirclePalettes).size!==value.ownedCirclePalettes.length||value.ownedCirclePalettes.some(id=>!restaurantCirclePalette(id))))return false;
   if(Object.hasOwn(value,'seenGuests')&&!validRestaurantSeenGuests(value.seenGuests))return false;
   const specials=value.ownedSpecialRecipes??[];
   if(!Array.isArray(specials)||new Set(specials).size!==specials.length||specials.some(id=>!specialRestaurantRecipe(id)))return false;
-  if(Object.hasOwn(value,'staffTraining')&&!validStaffTraining(value.staffTraining,value.staff))return false;
+  if(Object.hasOwn(value,'staffTraining')&&(!validStaffTraining(value.staffTraining,value.staff)||Object.values(value.staffTraining).some(record=>record.idleRecoveryAt!==undefined&&record.idleRecoveryAt<value.openedAt+STAFF_IDLE_RECOVERY_MS)))return false;
   if(!(exact(value.levels,['kitchen','tables','tips'])||exact(value.levels,['kitchen','fridge','tables','tips']))||!Object.values(value.levels).every(validLevel))return false;
   if(!plain(value.recipeLevels)||!ORIGINAL_RECIPE_IDS.every(id=>Object.hasOwn(value.recipeLevels,id))||Object.keys(value.recipeLevels).some(id=>!restaurantRecipe(id)||specialRestaurantRecipe(id)&&!specials.includes(id)&&!PROMOTED_SIGNATURE_RECIPE_IDS.includes(id))||specials.some(id=>!Object.hasOwn(value.recipeLevels,id))||!Object.values(value.recipeLevels).every(validRecipeLevel))return false;
   if(!Array.isArray(value.ownedThemes)||!value.ownedThemes.includes('cream')||new Set(value.ownedThemes).size!==value.ownedThemes.length||value.ownedThemes.some(id=>!restaurantTheme(id))||!value.ownedThemes.includes(value.theme))return false;
@@ -139,7 +140,8 @@ export function normalizeRestaurant(value,now=Date.now()) {
   restaurant.seenGuests=normalizeRestaurantSeenGuests(restaurant);
   restaurant.ownedSpecialRecipes??=[];
   restaurant.stats.ordinaryServed??=restaurant.stats.served;
-  restaurant.staffTraining=normalizeStaffTraining(restaurant.staffTraining,now,restaurant.staff);
+  restaurant.lastInteractionAt??=restaurantStaffLastInteractionAt(restaurant);
+  restaurant.staffTraining=normalizeRestaurantStaffTraining(restaurant,now);
   normalizeRestaurantDecorations(restaurant,safeNow(now));
   restaurant.recipeLevels=Object.fromEntries([...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES.filter(recipe=>restaurant.ownedSpecialRecipes.includes(recipe.id)||PROMOTED_SIGNATURE_RECIPE_IDS.includes(recipe.id))].map(recipe=>[recipe.id,value.recipeLevels[recipe.id]??1]));
   return restaurant;
@@ -409,6 +411,8 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     }
     restaurant.theme=theme.id;delete restaurant.decorationId;text=`给小馆换上${theme.name}`;
   }
+  // Background arrivals/queue changes must not keep an unattended kitchen awake.
+  if(!['restaurant-arrive','restaurant-wait'].includes(action.type))restaurant.lastInteractionAt=Math.max(restaurant.lastInteractionAt,now);
   restaurant.revision++;
   return {ok:true,restaurant,coins,goldFish,xp,text,...(growthReward?{growthReward}:{})};
 }

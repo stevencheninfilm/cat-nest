@@ -3,7 +3,7 @@ import { isInteractiveWorkflow, validInteractiveWorkflow, interactiveOrderProjec
 import { INTERACTIVE_KITCHEN_ZONES } from './restaurant-kitchen-layout.js';
 import { RESTAURANT_FACILITY_MAX_LEVEL, restaurantFacilityTimeMultiplier, restaurantTableCapacity } from './restaurant-facilities.js';
 export { createInteractiveWorkflow, acceptInteractiveWorkflow, advanceInteractiveWorkflow, isInteractiveWorkflow, interactiveOrderStatus } from './restaurant-kitchen-interactive.js';
-import { normalizeStaffTraining, workerAbilitySnapshot, workerDurationMultipliers, workerOrderEnergyCost, workerEnergyReadyAt, restaurantStaffRestInfo } from './restaurant-staff-training.js';
+import { normalizeRestaurantStaffTraining, workerAbilitySnapshot, workerDurationMultipliers, workerOrderEnergyCost, workerEnergyReadyAt, restaurantStaffRestInfo } from './restaurant-staff-training.js';
 
 /** Deterministic, shared kitchen rules. Coordinates are percentages of the full
  * restaurant stage; worker positions refer to the centre of their feet.
@@ -299,7 +299,7 @@ export function createKitchenWorkflow(restaurant,recipeId,now,{orderId,seat=0,ki
   const flow=KITCHEN_FLOWS[recipeId];
   if(!flow||!integer(now)||!integer(seat,0,KITCHEN_TABLE_POSITIONS.length-1)||!integer(kitchenLevel,1,RESTAURANT_FACILITY_MAX_LEVEL)||!integer(fridgeLevel,1,RESTAURANT_FACILITY_MAX_LEVEL)||!integer(staff)||!integer(cookSpeedBp,0,RESTAURANT_DECORATION_MAX_COOK_SPEED)||typeof orderId!=='string')return null;
   const existing=(restaurant?.orders||[]).filter(order=>order.workflow).map(order=>order.workflow);
-  const training=restaurant?.staffTraining?normalizeStaffTraining(restaurant.staffTraining,now,staff):null;
+  const training=restaurant?.staffTraining?normalizeRestaurantStaffTraining(restaurant,now):null;
   // With N live orders, one of the first N + 1 workers must be free. Avoid
   // allocating an array from a saved headcount, and allow later roster growth.
   // Trained employees may need real rest even when their last collected order
