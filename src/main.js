@@ -1,3 +1,4 @@
+import { RESTAURANT_INCOME_ID, RESTAURANT_INCOME_ART, restaurantGrowthClaims, growthClaimIds, growthAmount } from './restaurant-income-growth.js';
 import { formatAffection } from './affection.js';
 import { createPetNameLayout } from './pet-name-layout.js';
 import './onboarding.css';
@@ -177,6 +178,7 @@ let growthPage = 0, claimingRewardId = null, growthGlowTimer;
 let stagePreviewId = null, pendingUpgrade = null, upgradeTimer, lastCelebratedStage = 0;
 const rewardVisuals = new Map();
 const claimOrigins = new Map();
+const incomeClaimVisuals = new Map();
 let growthHomeSignature = '';
 
 
@@ -493,9 +495,9 @@ function renderGrowth() {
   }
   while (rewardVisuals.size > rewards.length + 100) rewardVisuals.delete(rewardVisuals.keys().next().value);
 }
-function animateGrowthCollection(rewardId, stage, operationId) {
+function animateGrowthCollection(rewardId, stage, operationId, restaurantIncome = false) {
   const origin = claimOrigins.get(rewardId) || $('#growth-rewards').getBoundingClientRect();
-  interactionFeedback.collect({ origin, target:$('.progress-track'), artwork:`${import.meta.env.BASE_URL}assets/growth-hearts/v1/${stage.id}.webp`, operationId });
+  interactionFeedback.collect({ origin, target:$('.progress-track'), artwork:`${import.meta.env.BASE_URL}${restaurantIncome ? RESTAURANT_INCOME_ART : `assets/growth-hearts/v1/${stage.id}.webp`}`, operationId });
   claimOrigins.delete(rewardId);
   $('.pet-card').classList.add('growth-collected');
   clearTimeout(growthGlowTimer);
@@ -546,27 +548,33 @@ function react(action, actor, { optimistic = false, previewed = false, operation
     chime();
     return;
   }
-  if (action.type === 'claim-growth') {
-    const reward = rewardVisuals.get(action.rewardId);
+  if (action.type === 'claim-growth' || action.type === 'claim-restaurant-growth') {
+    const batch = action.type === 'claim-restaurant-growth';
+    const visualId = batch ? action.rewardIds[0] : action.rewardId;
+    const reward = batch ? incomeClaimVisuals.get(visualId) || { visualXp:previousXp ?? state.xp, animate:false } : rewardVisuals.get(visualId);
     if (reward) {
-      if (!previewed) {
+      if (!previewed && (!batch || reward.animate)) {
         if (mine && $('#modal').open && $('#modal-content').dataset.view === 'growth') closeModal();
-        animateGrowthCollection(action.rewardId, growthStageForXp(reward.visualXp), operationId);
+        animateGrowthCollection(visualId, growthStageForXp(reward.visualXp), operationId, batch);
+        if (batch && mine) toast(`已收下累计 ${reward.total} 点餐厅经营经验 ♡`);
       }
       if (!optimistic) {
         const upgrade=growthUpgrade(previousXp ?? reward.visualXp, confirmedXp ?? state.xp);
         if (upgrade && upgrade.to.min>lastCelebratedStage && (!pendingUpgrade || upgrade.to.min>=pendingUpgrade.to.min)) {
           pendingUpgrade=upgrade; scheduleUpgrade();
         }
-        if (mine) toast(`已收下 ${reward.amount} 点成长 ♡`);
-        else toast(`${actor.name}收下了 ${reward.amount} 点成长 ♡`);
-        rewardVisuals.delete(action.rewardId);
+        if (!batch) {
+          if (mine) toast(`已收下 ${reward.amount} 点成长 ♡`);
+          else toast(`${actor.name}收下了 ${reward.amount} 点成长 ♡`);
+        }
+        for (const id of growthClaimIds(action)) rewardVisuals.delete(id);
+        if (batch) incomeClaimVisuals.delete(visualId);
       }
-      if (!previewed) catSpeech.say('collect');
+      if (!previewed && (!batch || reward.animate)) catSpeech.say('collect');
     }
     claimingRewardId = null;
     renderGrowth();
-    if (!previewed) chime();
+    if (!previewed && (!batch || reward?.animate)) chime();
     return;
   }
   if (mine && action.type === 'feed' && !previewed) toast(`${state.name}吃到${FOODS[action.food]?.name || '美味小餐'}啦 ♡`);
@@ -604,6 +612,7 @@ function rollbackReaction(action, actor, { operationId }) {
   catSpeech.say('idle');
   claimingRewardId = null;
   if (action.type === 'claim-growth') claimOrigins.delete(action.rewardId);
+  if (action.type === 'claim-restaurant-growth') { claimOrigins.delete(action.rewardIds[0]); incomeClaimVisuals.delete(action.rewardIds[0]); }
   if (action.type === 'dress') appearanceDraft = normalizeAppearance(state.appearance);
 }
 function careSaving() { return cloudConfigured && (pendingCloudActions > 0 || saveStatus.phase === 'saving'); }
@@ -651,7 +660,7 @@ function dispatch(action) {
     const bufferedGame=action.type.startsWith('game-')&&action.type!=='game-create'&&action.type!=='game-local-finish'&&gameConnected();
     if (!cloud || !careConnected()&&!bufferedGame) { toast('尚未读取小窝存档，请连接后再试'); return false; }
     if (!cloud.dispatch(action)) { toast('这次操作未能加入保存队列，请稍后重试'); return false; }
-    if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
+    if (['join-home','adopt-cat','rename','claim-restaurant-growth'].includes(action.type)) return true;
     actionLocked = true; setTimeout(() => actionLocked = false, 650); return true;
   }
   const actor = { id:clientId, name:profile.name };
@@ -660,7 +669,7 @@ function dispatch(action) {
   if (!next) { toast('这次互动暂时不能完成，请稍后再试'); updateCareControls(); return false; }
   const previousXp=state.xp;
   state = next; render(); react(action, actor, { operationId:localOperationId,previousXp,confirmedXp:state.xp });
-  if (['join-home','adopt-cat','rename'].includes(action.type)) return true;
+  if (['join-home','adopt-cat','rename','claim-restaurant-growth'].includes(action.type)) return true;
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
   return true;
 }
@@ -684,7 +693,7 @@ function startCloud() {
   const pending = read(pendingKey, []);
   pendingCloudActions = pending.length;
   queuedLocalGames=new Set(pending.filter(item=>item.action?.type==='game-local-finish').map(item=>item.action.session.id));
-  pendingGrowthClaims = new Set(pending.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId));
+  pendingGrowthClaims = new Set(pending.flatMap(item => growthClaimIds(item.action)));
   pendingInvitations = new Set(pending.filter(item=>item.action?.type==='invite-cat').map(item=>`${item.action.catId}:${item.action.sceneId || 'station'}`));
   cloud=createCloudRoom({ apiBase, coupleRole:chosenRole, ...(home.roomId ? {homeRoomId:home.roomId} : {}), initialState:state, storageLabel:runtime.storageLabel,
     fetchImpl:runtime.fetch,eventSourceFactory:runtime.eventSourceFactory,
@@ -726,7 +735,7 @@ function startCloud() {
     onPending(queue) {
       queuedLocalGames=new Set(queue.filter(item=>item.action?.type==='game-local-finish').map(item=>item.action.session.id));
       pendingCloudActions=queue.length;
-      pendingGrowthClaims=new Set(queue.filter(item => item.action?.type === 'claim-growth').map(item => item.action.rewardId));
+      pendingGrowthClaims=new Set(queue.flatMap(item => growthClaimIds(item.action)));
       const invitations=new Set(queue.filter(item=>item.action?.type==='invite-cat').map(item=>`${item.action.catId}:${item.action.sceneId || 'station'}`));
       if(invitations.size!==pendingInvitations.size||[...invitations].some(id=>!pendingInvitations.has(id)))cloudUi.request('invitations');
       pendingInvitations=invitations;
@@ -1068,6 +1077,23 @@ document.addEventListener('click', event => {
     return;
   }
   if (el.dataset.growthReward) {
+    if (el.dataset.growthReward === RESTAURANT_INCOME_ID) {
+      const rewards = (state.pendingGrowth || []).filter(reward => !pendingGrowthClaims.has(reward.id));
+      const actions = restaurantGrowthClaims(rewards), total = growthAmount(rewards.filter(reward => reward.kind === 'restaurant-collect'));
+      const origin = el.getBoundingClientRect();
+      let acceptedTenths = 0;
+      for (const [index, action] of actions.entries()) {
+        const id = action.rewardIds[0];
+        incomeClaimVisuals.set(id, { total, visualXp:state.xp, animate:index === 0 });
+        if (index === 0) claimOrigins.set(id, origin);
+        if (!dispatch(action)) { incomeClaimVisuals.delete(id); claimOrigins.delete(id); break; }
+        const ids = new Set(action.rewardIds);
+        acceptedTenths += Math.round(growthAmount(rewards.filter(reward => ids.has(reward.id))) * 10);
+        const first = incomeClaimVisuals.get(actions[0].rewardIds[0]);
+        if (first) first.total = acceptedTenths / 10;
+      }
+      renderGrowth(); return;
+    }
     const rewardId = el.dataset.growthReward;
     if (pendingGrowthClaims.has(rewardId) || claimingRewardId === rewardId) return;
     claimOrigins.set(rewardId, el.getBoundingClientRect());

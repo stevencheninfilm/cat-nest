@@ -89,6 +89,11 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
         s.collection.achievements={boost:3,dress:1,daily:{feed:10,pet:20,play:10,sleep:3}};
         replace(unlockRestaurantDecorations(s)); return '已解锁全部成长阶段、餐厅装扮和基础图鉴邀请条件；编号 25–36 按已解锁日记卡片开放';
       }
+      if (kind === 'restaurant-income') {
+        const s = clone(record.state), actor = DEMO_ACTORS[role];
+        for (const [index, amount] of [8.1, 9.2, 9.1, 9.1].entries()) s.pendingGrowth.push({ id:`demo-income-${crypto.randomUUID()}`, kind:'restaurant-collect', orderId:`table-${900001+index}`, recipeId:'coffee', amount, actorId:actor.id, actor:actor.name, at:now() });
+        replace(s); return '已加入 4 笔共 35.5 点餐厅经营经验，可验证合并领取与断网重试；仅影响本次测试存档';
+      }
       if (kind === 'clear-limits') { const s=clone(record.state); s.careLimits=initialState(now()).careLimits; s.sleeping=false; s.hunger=s.mood=s.energy=96; s.needsUpdatedAt=now(); replace(s); return '每日次数、冷却和体力已恢复，仅影响演示'; }
       if (kind === 'portion') {
         const s=clone(record.state); s.feedRecords=Object.values(DEMO_ACTORS).map((actor,i)=>({actorId:actor.id,actor:actor.name,food:i ? food:'water',at:now()-Math.round(foodCooldownMs(i ? food:'water')*.76)}));

@@ -1,3 +1,4 @@
+import { groupRestaurantGrowth, RESTAURANT_INCOME_ID, RESTAURANT_INCOME_ART } from './restaurant-income-growth.js';
 import { FOODS } from './state.js';
 import { GROWTH_STAGES, stageStyle } from './growth-stages.js';
 import { GAMES } from './minigames.js';
@@ -23,14 +24,19 @@ export function growthLabel(reward) {
 function rewardButton(reward, { blocked = false, claimingRewardId = null, pendingRewardIds = new Set(), detailed = false, stage = GROWTH_STAGES[0] } = {}) {
   const claiming = reward.id === claimingRewardId || pendingRewardIds.has(reward.id);
   const label = growthLabel(reward);
+  const restaurant = reward.id === RESTAURANT_INCOME_ID;
+  const artwork = restaurant ? `<span class="growth-heart growth-heart-restaurant"><img class="growth-heart-art" src="./${RESTAURANT_INCOME_ART}" width="512" height="512" alt="" decoding="async" draggable="false"/></span>` : jellyHeartMarkup(stage);
   const multiplier = reward.boosted ? (10 + (reward.boostCount ?? 1)) / 10 : 1;
-  return `<button class="growth-bubble ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${jellyHeartMarkup(stage)}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${escape(reward.actor)}的${reward.kind==='restaurant-collect'?'餐厅经营':'陪伴'}${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
+  return `<button class="growth-bubble ${restaurant ? 'growth-bubble-restaurant' : ''} ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${restaurant ? `累计 ${reward.count} 笔` : ''}${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${artwork}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${restaurant ? `累计 ${reward.count} 笔收入` : `${escape(reward.actor)}的陪伴`}${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
 }
 
 /** Keep existing rewards in their own side slots when another bubble is collected. */
 export function growthSideSlots(rewards = [], previous = []) {
-  const used = new Set();
+  rewards = groupRestaurantGrowth(rewards);
+  const income = rewards.find(reward => reward.id === RESTAURANT_INCOME_ID);
+  const used = new Set(income ? [income.id] : []);
   const slots = Array.from({ length:4 }, (_, index) => {
+    if (index === 0 && income) return income;
     const reward = previous[index] && rewards.find(item => item.id === previous[index].id);
     if (!reward || used.has(reward.id)) return null;
     used.add(reward.id); return reward;
@@ -46,6 +52,7 @@ export function growthSideSlots(rewards = [], previous = []) {
 
 let homeSlots = [];
 export function growthBubbles(rewards = [], options = {}) {
+  rewards = groupRestaurantGrowth(rewards);
   homeSlots = growthSideSlots(rewards, homeSlots);
   if (!rewards.length) return '';
   const side = (name, indices, footer) => `<div class="growth-side growth-side-${name}" role="group" aria-label="小猫${name === 'left' ? '左' : '右'}侧成长气泡">${indices.map(index => `<div class="growth-side-slot" data-growth-slot="${index}">${homeSlots[index] ? rewardButton(homeSlots[index], options) : ''}</div>`).join('')}${footer}</div>`;
@@ -59,6 +66,7 @@ export function createGrowthBubbleView(root) {
   let slots = [], signatures = [], elements = null, more;
   return {
     render(rewards = [], options = {}) {
+      rewards = groupRestaurantGrowth(rewards);
       if (!rewards.length) {
         if (elements) root.replaceChildren();
         slots = []; signatures = []; elements = null; more = null; return;
@@ -71,7 +79,7 @@ export function createGrowthBubbleView(root) {
       }
       slots = growthSideSlots(rewards, slots);
       slots.forEach((reward, index) => {
-        const signature = reward ? JSON.stringify([reward.id,reward.amount,reward.kind,reward.food,reward.game,reward.actor,reward.boosted,reward.boostCount,options.stage?.id]) : '';
+        const signature = reward ? JSON.stringify([reward.id,reward.amount,reward.count,reward.kind,reward.food,reward.game,reward.actor,reward.boosted,reward.boostCount,options.stage?.id]) : '';
         if (signatures[index] !== signature) {
           elements[index].innerHTML = reward ? rewardButton(reward, options) : '';
           signatures[index] = signature;
@@ -95,9 +103,10 @@ export function createGrowthBubbleView(root) {
 }
 
 export function growthTray(rewards = [], options = {}) {
+  rewards = groupRestaurantGrowth(rewards);
   const pageSize = 12;
   const pageCount = Math.max(1, Math.ceil(rewards.length / pageSize));
   const page = Math.min(pageCount - 1, Math.max(0, options.page || 0));
   const items = rewards.slice(page * pageSize, (page + 1) * pageSize);
-  return `<div class="growth-tray-heading"><span class="eyebrow">LITTLE HEARTS, READY FOR YOU</span><h2>把这份成长收下吧</h2><p>每一次陪伴，都变成了一颗小心意。<br/>点击气泡才计入成长，未领取会一直保留。</p></div>${rewards.length ? `<div class="growth-tray-count">${rewards.length} 个气泡 · 共 ${rewards.reduce((sum, reward) => sum + Math.round(reward.amount * 10), 0) / 10} 点待领取</div><div class="growth-tray-grid">${items.map(reward => rewardButton(reward, { ...options, detailed:true })).join('')}</div>${pageCount > 1 ? `<div class="growth-tray-pages"><button data-growth-page="${page - 1}" ${page === 0 ? 'disabled' : ''}>上一页</button><span>${page + 1} / ${pageCount}</span><button data-growth-page="${page + 1}" ${page === pageCount - 1 ? 'disabled' : ''}>下一页</button></div>` : ''}` : '<p class="growth-empty">小心意都收好啦 ♡<br/>下一次陪伴，会再带来新的成长气泡。</p>'}`;
+  return `<div class="growth-tray-heading"><span class="eyebrow">LITTLE HEARTS, READY FOR YOU</span><h2>把这份成长收下吧</h2><p>餐厅经营经验会合并累计，陪伴心意也会保留。<br/>点击气泡才计入成长，未领取会一直保留。</p></div>${rewards.length ? `<div class="growth-tray-count">${rewards.length} 个气泡 · 共 ${rewards.reduce((sum, reward) => sum + Math.round(reward.amount * 10), 0) / 10} 点待领取</div><div class="growth-tray-grid">${items.map(reward => rewardButton(reward, { ...options, detailed:true })).join('')}</div>${pageCount > 1 ? `<div class="growth-tray-pages"><button data-growth-page="${page - 1}" ${page === 0 ? 'disabled' : ''}>上一页</button><span>${page + 1} / ${pageCount}</span><button data-growth-page="${page + 1}" ${page === pageCount - 1 ? 'disabled' : ''}>下一页</button></div>` : ''}` : '<p class="growth-empty">小心意都收好啦 ♡<br/>下一次陪伴，会再带来新的成长气泡。</p>'}`;
 }

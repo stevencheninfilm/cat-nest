@@ -30,8 +30,8 @@ test('home and tray identify restaurant experience with its source and preserve 
   const cared=reduceAction(initialState(NOW),{type:'pet'},OWNER,NOW,'restaurant-care-first');
   const {state}=meal(cared);
   const html=growthBubbles(state.pendingGrowth),tray=growthTray(state.pendingGrowth);
-  assert.match(html,/领取餐厅经营经验的 6 点成长/);assert.match(html,/领取摸摸的/);
-  assert.match(tray,/男方的餐厅经营/);assert.equal(state.xp,cared.xp);
+  assert.match(html,/领取累计 1 笔餐厅经营经验的 6 点成长/);assert.match(html,/领取摸摸的/);
+  assert.match(tray,/累计 1 笔收入/);assert.equal(state.xp,cared.xp);
 });
 test('old saved restaurant XP is never reissued during migration, normalization or unrelated edits',()=>{
   const old=initialState(NOW);old.xp=888;old.restaurant.stats.experience=132;old.restaurant.stats.served=22;old.restaurant.nextOrderId=23;
