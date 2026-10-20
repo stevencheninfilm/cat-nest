@@ -68,6 +68,7 @@ body.restaurant-mode .demo-launcher{display:none}
 .r-cat:is(.r-cat-staff-pudding,.r-cat-staff-mint,.r-cat-staff-chestnut){background-image:var(--r-staff-image);background-size:300% 200%;background-position:0 0}
 .r-cat.r-cat-staff-mint{background-position:50% 0}.r-cat.r-cat-staff-chestnut{background-position:100% 0}
 .r-cat.r-cat-staff-sesame{background-image:var(--r-sesame-image);background-size:100% 200%;background-position:0 0}
+.r-cat.r-cat-staff-milky{background-image:var(--r-milky-image);background-size:100% 200%;background-position:0 0}
 .r-extra-staff{position:absolute;width:17%;z-index:4;pointer-events:none}.r-worker-pudding{left:52%;top:76%}.r-worker-pudding>.r-cat{animation:r-chef-chop 1.4s ease-in-out infinite}
 .r-worker-mint{left:21%;top:69%;width:16%}.r-worker-mint>.r-cat{animation:r-barista-shake 2s ease-in-out infinite}
 .r-worker-chestnut{left:46%;top:56%;width:15%;animation:r-runner-route 11s ease-in-out infinite}.r-worker-chestnut>.r-cat{animation:r-waddle .4s ease-in-out infinite alternate,r-runner-facing 11s steps(1) infinite}
