@@ -1,7 +1,8 @@
 import { KITCHEN_FLOWS } from './restaurant-kitchen.js';
 import { KITCHEN_RECIPE_DETAILS, kitchenShortStep } from './restaurant-kitchen-recipes-ui.js';
 import { kitchenPropUrl, KITCHEN_FOOD_PROPS } from './restaurant-kitchen-assets.js';
-import { restaurantQualityFood } from './restaurant-order-tiers-ui.js';
+import { restaurantRecipeStageMarkup } from './restaurant-recipe-celebration.js';
+import { restaurantQualityAttributes, restaurantQualityFood } from './restaurant-order-tiers-ui.js';
 import { restaurantLockedAttributes, restaurantLockIcon } from './restaurant-locked-ui.js';
 import { restaurantTipsMultiplier, restaurantTableIncomeMultiplier } from './restaurant-facilities.js';
 import { restaurantRecipeMenuOrder } from './restaurant-recipe-order.js';
@@ -43,8 +44,8 @@ export function restaurantRecipeDetailMarkup(info,recipeId){
   return `<header><h2 id="r-recipe-detail-title">菜品详情</h2><button class="r-round" data-r-recipe-detail-close aria-label="关闭菜品详情"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
     <div class="r-recipe-detail-content">
       <section class="r-recipe-detail-hero" ${restaurantLockedAttributes(locked)} aria-label="${esc(recipe.name)}的基本信息">
-        <div class="r-recipe-detail-art">${restaurantQualityFood(recipe.id,recipe.grade,food)}</div>
-        <div class="r-recipe-detail-copy"><span class="r-recipe-detail-category">${esc(recipe.category)}${recipe.special?' · 金色招牌':''}</span><h3>${esc(recipe.name)}</h3><span class="r-recipe-detail-quality" aria-label="菜品品质 ${esc(recipe.grade??'B')}">${esc(recipe.grade??'B')}</span><dl><div><dt>售价</dt><dd>${price}<small>小鱼干</small></dd></div><div><dt>成长</dt><dd>+${experience}<small>经验</small></dd></div></dl></div>
+        <div class="r-recipe-detail-art rr-quality-card" ${restaurantQualityAttributes(recipe.grade)} role="img" aria-label="${esc(recipe.name)} · ${esc(recipe.grade??'B')} 级品质展示">${restaurantRecipeStageMarkup(recipe)}</div>
+        <div class="r-recipe-detail-copy"><span class="r-recipe-detail-category">${esc(recipe.category)}${recipe.special?' · 金色招牌':''}</span><h3>${esc(recipe.name)}</h3><span class="r-recipe-detail-quality rr-quality-card" ${restaurantQualityAttributes(recipe.grade)} aria-label="菜品品质 ${esc(recipe.grade??'B')}">${esc(recipe.grade??'B')}</span><dl><div><dt>售价</dt><dd>${price}<small>小鱼干</small></dd></div><div><dt>成长</dt><dd>+${experience}<small>经验</small></dd></div></dl></div>
         ${locked?`<p class="r-recipe-detail-lock">${restaurantLockIcon()}${info.level<recipe.unlockLevel?`Lv.${recipe.unlockLevel} 解锁`:recipe.special?'使用金鱼干解锁后开售':'尚未解锁'}</p>`:''}
       </section>
       ${researchMarkup(detail)}

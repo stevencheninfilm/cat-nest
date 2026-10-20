@@ -39,9 +39,9 @@
 .rr-promotion-heading small{font-size:7px;letter-spacing:2px;color:var(--rq-muted)}.rr-promotion-heading h2{font-size:19px;line-height:1.4;margin:4px 0}.rr-promotion-heading p{font-size:10px;margin:0;color:var(--rq-muted)}
 .rr-promotion-stage{position:relative;height:185px;margin:7px -4px 0;isolation:isolate;overflow:hidden}
 .rr-promotion-rays{position:absolute;left:calc(50% - 110px);top:calc(48% - 110px);width:220px;height:220px;border-radius:50%;background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#fff5 15deg 24deg,#fff0 25deg 40deg);mask-image:radial-gradient(circle,#0008 20%,transparent 70%);animation:rr-rays-turn 28s linear infinite;z-index:-1}
-.rr-celebration[data-r-quality=S] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#d6a53899 15deg 24deg,#fff0 25deg 40deg)}
-.rr-celebration[data-r-quality=SS] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#9572bc99 15deg 24deg,#fff0 25deg 40deg)}
-.rr-celebration[data-r-quality=SSS] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#f6d58e66 15deg 24deg,#fff0 25deg 40deg)}
+.rr-quality-card[data-r-quality=S] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#d6a53899 15deg 24deg,#fff0 25deg 40deg)}
+.rr-quality-card[data-r-quality=SS] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#9572bc99 15deg 24deg,#fff0 25deg 40deg)}
+.rr-quality-card[data-r-quality=SSS] .rr-promotion-rays{background:repeating-conic-gradient(from 10deg,#fff0 0deg 14deg,#f6d58e66 15deg 24deg,#fff0 25deg 40deg)}
 .rr-promotion-platter{position:absolute;left:50%;top:35%;width:196px;height:103px;transform:translateX(-50%);border:4px solid var(--rq-rim);border-radius:50%;background:radial-gradient(ellipse,#ffffff59 45%,#ffffff08 70%),var(--rq-wash);box-shadow:inset 0 0 0 3px #fff5,inset 0 -5px 0 #3e324112,0 6px 0 var(--rq-metal),0 14px 14px #28334926}
 .rr-promotion-platter>.r-food{position:absolute;left:50%;bottom:3%;width:154px;height:154px;transform:translateX(-50%);filter:drop-shadow(0 5px 3px #37231925);animation:rr-food-arrive .65s cubic-bezier(.2,.8,.3,1.2)}
 .rr-promotion-stage>.r-cat{position:absolute;width:55px;height:55px;filter:drop-shadow(0 3px 1px #3e304126);z-index:2}.rr-promotion-chef{left:0;bottom:19px;transform:rotate(-8deg)}.rr-promotion-waiter{right:-2px;bottom:22px;transform:scaleX(-1) rotate(-8deg)}
