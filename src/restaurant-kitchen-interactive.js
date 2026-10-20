@@ -283,11 +283,15 @@ function advanceRestWorkflow(restaurant,order,stepId,now){
   }
   const ability=workerAbilitySnapshot(worker,training,now),runLevels={...ability.levels},cost=restEnergyCost(workflow,runLevels),energyBefore=ability.energy;
   if(energyBefore<=0)return reject('员工体力耗尽，请等待休息室恢复。');
-  const replaced=workflow.workerId!==null&&worker!==workflow.workerId;
+  // A released employee may have completed other jobs before returning to
+  // this order. Even the same worker starts a new assignment with today's
+  // energy and location, then collects the dish from its actual worktop.
+  const reassigned=Boolean(lastRun?.rest)&&worker===workflow.workerId&&training[worker].rest?.departAt!==lastRun.rest.departAt;
+  const replaced=workflow.workerId!==null&&(worker!==workflow.workerId||reassigned);
   if(replaced){
     for(const run of workflow.runs)run.workerId??=workflow.workerId;
   }
-  if(worker!==workflow.workerId){workflow.workerId=worker;workflow.workerLevels={...runLevels};}
+  if(worker!==workflow.workerId||reassigned){workflow.workerId=worker;workflow.workerLevels={...runLevels};}
   const energyAfter=Math.max(0,energyBefore-cost),durationMultiplier=energyAfter===0?STAFF_EXHAUSTED_DURATION_MULTIPLIER:1;
   const previous=workflow.segments.at(-1),prepared=workflow.segments.filter(s=>s.phase==='work').at(-1),position=training[worker].rest?STAFF_REST_ROOM_POSITION:replaced?kitchenWorkerIdlePoint(Number(worker.slice(7))-1,restaurant.staff+1):previous?.to??KITCHEN_ORIGIN,carrying=replaced?null:previous?.carrying??null;
   const pickup=replaced&&prepared?{position:prepared.to,carrying:prepared.carrying}:null;
@@ -299,7 +303,7 @@ function advanceRestWorkflow(restaurant,order,stepId,now){
   if(rest)rest.fullAt=rest.arriveAt+ability.maxEnergy*STAFF_ENERGY_RECOVERY_MS;
   if(rest&&!integer(rest.fullAt))return reject('餐厅时钟正在同步，请稍后再试。');
   training[worker]={levels:{...training[worker].levels},energyBase:staffEnergyBase(training[worker]),...staffIdleRecoverySnapshot(training[worker]),energy:energyAfter,energyAt:rest?.arriveAt??scheduled.endAt,energyMode:'rest-room',rest:structuredClone(rest)};
-  workflow.runs.push({stepId,commandAt:now,startAt:now,endAt:scheduled.endAt,energyCost:cost,energyBefore,energyAfter,energyBase:ability.energyBase,...staffIdleRecoverySnapshot(training[worker]),energyLevels:{...training[worker].levels},startPosition:clonePoint(position),durationMultiplier,rest:structuredClone(rest),...(workflow.runs.some(run=>run.workerId)?{workerId:worker}:{})});
+  workflow.runs.push({stepId,commandAt:now,startAt:now,endAt:scheduled.endAt,energyCost:cost,energyBefore,energyAfter,energyBase:ability.energyBase,...staffIdleRecoverySnapshot(training[worker]),energyLevels:{...training[worker].levels},startPosition:clonePoint(position),durationMultiplier,rest:structuredClone(rest),...(workflow.runs.some(run=>run.workerId)?{workerId:worker}:{}),...(reassigned?{reassigned:true}:{})});
   workflow.segments.push(...scheduled.segments,...(rest?.segments??[]));
   if(stepId==='delivery'){workflow.servedAt=scheduled.servedAt;workflow.completedAt=scheduled.endAt;}
   else if(workflow.runs.length===KITCHEN_FLOWS[workflow.recipeId].length)workflow.readyAt=scheduled.endAt;
@@ -325,11 +329,13 @@ function validRestWorkflow(workflow,order,restaurant){
   const latestByWorker=new Map();
   for(let index=0;index<workflow.runs.length;index++){
     const run=workflow.runs[index],owner=handoff?run.workerId:workflow.workerId,ownerMatch=typeof owner==='string'&&/^worker-([1-9][0-9]?)$/.exec(owner),ownerLevels=restaurant.staffTraining?.[owner]?.levels,changed=index>0&&owner!==(handoff?previous.workerId:workflow.workerId),ownPrevious=latestByWorker.get(owner);
-    if(!ownerMatch||!integer(Number(ownerMatch[1]),1,(restaurant.staff??0)+1)||!validLevels(ownerLevels)||!exact(run,[...REST_RUN_KEYS,...energySnapshotKeys(run),...(handoff?['workerId']:[])])||!validStaffEnergyBase(run)||!validStaffIdleRecovery(run,run.commandAt)||run.stepId!==(flow[index]?.id??'delivery')||!integer(run.commandAt,cursor)||run.startAt!==run.commandAt||!integer(run.endAt,run.startAt+1)||!validLevels(run.energyLevels)||LEVEL_KEYS.some(key=>run.energyLevels[key]>ownerLevels[key])||run.energyCost!==restEnergyCost(workflow,run.energyLevels)||!Number.isFinite(run.energyBefore)||run.energyBefore<=0||run.energyBefore>maxEnergy(run)||!Number.isFinite(run.energyAfter)||!close(run.energyAfter,Math.max(0,run.energyBefore-run.energyCost))||run.durationMultiplier!==(run.energyAfter===0?STAFF_EXHAUSTED_DURATION_MULTIPLIER:1)||!validPoint(run.startPosition))return false;
+    const reassigned=run?.reassigned===true,newAssignment=changed||reassigned;
+    if(Object.hasOwn(run??{},'reassigned')&&(!reassigned||index===0||changed||!previous.rest))return false;
+    if(!ownerMatch||!integer(Number(ownerMatch[1]),1,(restaurant.staff??0)+1)||!validLevels(ownerLevels)||!exact(run,[...REST_RUN_KEYS,...energySnapshotKeys(run),...(handoff?['workerId']:[]),...(reassigned?['reassigned']:[])])||!validStaffEnergyBase(run)||!validStaffIdleRecovery(run,run.commandAt)||run.stepId!==(flow[index]?.id??'delivery')||!integer(run.commandAt,cursor)||run.startAt!==run.commandAt||!integer(run.endAt,run.startAt+1)||!validLevels(run.energyLevels)||LEVEL_KEYS.some(key=>run.energyLevels[key]>ownerLevels[key])||run.energyCost!==restEnergyCost(workflow,run.energyLevels)||!Number.isFinite(run.energyBefore)||run.energyBefore<=0||run.energyBefore>maxEnergy(run)||!Number.isFinite(run.energyAfter)||!close(run.energyAfter,Math.max(0,run.energyBefore-run.energyCost))||run.durationMultiplier!==(run.energyAfter===0?STAFF_EXHAUSTED_DURATION_MULTIPLIER:1)||!validPoint(run.startPosition))return false;
     if(ownPrevious&&((run.idleRecoveryAt??0)!==(ownPrevious.idleRecoveryAt??0)&&!rechargedSince(run,ownPrevious)||staffEnergyBase(run)<staffEnergyBase(ownPrevious)||LEVEL_KEYS.some(key=>run.energyLevels[key]<ownPrevious.energyLevels[key])||ownPrevious.rest&&run.commandAt<ownPrevious.rest.fullAt))return false;
-    if(index===0||changed){
-      const workerIndex=Number(owner.slice(7))-1,idleStart=changed&&Array.from({length:restaurant.staff+1-workerIndex},(_,offset)=>kitchenWorkerIdlePoint(workerIndex,workerIndex+1+offset)).some(point=>samePoint(run.startPosition,point));
-      if(changed&&!previous.rest||!samePoint(run.startPosition,KITCHEN_ORIGIN)&&!samePoint(run.startPosition,STAFF_REST_ROOM_POSITION)&&!idleStart)return false;
+    if(index===0||newAssignment){
+      const workerIndex=Number(owner.slice(7))-1,idleStart=newAssignment&&Array.from({length:restaurant.staff+1-workerIndex},(_,offset)=>kitchenWorkerIdlePoint(workerIndex,workerIndex+1+offset)).some(point=>samePoint(run.startPosition,point));
+      if(newAssignment&&!previous.rest||!samePoint(run.startPosition,KITCHEN_ORIGIN)&&!samePoint(run.startPosition,STAFF_REST_ROOM_POSITION)&&!idleStart)return false;
       position=run.startPosition;carrying=null;assignmentFirst=run;
     }else{
       if(LEVEL_KEYS.some(key=>run.energyLevels[key]<previous.energyLevels[key])||!samePoint(run.startPosition,position))return false;
@@ -342,7 +348,7 @@ function validRestWorkflow(workflow,order,restaurant){
     // by their first waypoint at the rest-room door, then reconstructed fully.
     const firstSegment=workflow.segments.find(segment=>segment?.phase!=='rest-walk'&&segment?.startAt===run.startAt);
     const safeRestExit=samePoint(position,STAFF_REST_ROOM_POSITION)&&validPoint(firstSegment?.to)&&samePoint(firstSegment.to,STAFF_REST_ROOM_ENTRANCE);
-    const expected=runSegments({...workflow,workerLevels:run.energyLevels},run.stepId,run.commandAt,position,carrying,run.durationMultiplier,safeRestExit,changed?prepared:null);
+    const expected=runSegments({...workflow,workerLevels:run.energyLevels},run.stepId,run.commandAt,position,carrying,run.durationMultiplier,safeRestExit,newAssignment?prepared:null);
     if(run.endAt!==expected.endAt)return false;
     segments.push(...expected.segments);position=expected.position;carrying=expected.carrying;prepared={position:clonePoint(position),carrying};
     if(run.energyAfter===0){
