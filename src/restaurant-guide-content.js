@@ -6,7 +6,7 @@ export const RESTAURANT_TOUR=Object.freeze([
   {id:'welcome',label:'欢迎开张',view:'business',target:'.r-shop-sign',title:'欢迎来到猫猫的小食光',body:'我来陪你认认小馆。先迎接猫友，再把一份热乎乎的料理送上桌，慢慢经营自己的猫猫餐厅。',hint:'跟着金色框和箭头看，随时可以暂停。',next:'带我认识小馆'},
   {id:'wallet',label:'两种鱼干',view:'business',target:'.r-hud',title:'小鱼干和金鱼干，各有用处',body:'小鱼干与小窝的猫爪币共用钱包，用来升级和雇佣。银级、金级猫友吃完两餐后，会送来金鱼干，可永久解锁招牌菜与珍藏装扮。'},
   {id:'orders',label:'接下点餐',view:'business',target:['.r-order-bubble[data-r-action="kitchen-accept"]','.r-order-bubble','.rg-empty-table','.r-shop-sign'],title:'看到“想吃这份”，先记下点餐',body:'空桌会自然迎来猫友，朋友也可能两位同桌。入座后，点头顶的菜品气泡接单；同桌两位客人各有自己的订单。',hint:'现在先认识位置，关闭指引后再亲手接单。'},
-  {id:'ingredients',label:'取料与工序',view:'kitchen',target:['.rk-action-circle','.rk-surface-10','.rk-focus-tools'],title:'做菜从点一下食材圈开始',body:'接单后进入厨房，点冰箱附近的食材圈，员工才会去取料。之后跟着菜品图标，逐步点击清洗、切配、加工和装盘。',hint:'不同料理有不同工序，不需要连续快速点。'},
+  {id:'ingredients',label:'取料与工序',view:'kitchen',target:['.rk-action-circle','.rk-surface-10','.rk-focus-tools'],title:'做菜从点一下食材圈开始',body:'接单后看下方厨房，点冰箱附近的食材圈，员工才会去取料。之后跟着菜品图标，逐步点击清洗、切配、加工和装盘。',hint:'不同料理有不同工序，不需要连续快速点。'},
   {id:'timing',label:'等待蓝圈',view:'kitchen',target:['.rk-worker-progress','.rk-action-circle','.rk-surface-10'],title:'蓝色圆环结束，再做下一步',body:'员工会先走到工位，再开始加工。蓝色圆环表示这一步的进度；完成后会出现下一个操作圈，等你点击才继续。',hint:'离开页面后，已开始的工序继续计时；未点击的工序会等你。'},
   {id:'serving',label:'送餐上桌',view:'business',target:['.r-order-bubble[data-r-step="delivery"]','.r-order-bubble','.rg-empty-table','.r-shop-sign'],title:'装盘后，还要把菜送到桌边',body:'料理做好时，餐桌上会出现“送餐啦”。点一下，员工就会端餐过去；等客人吃完，气泡会变成可以收取的小鱼干。'},
   {id:'checkout',label:'结账与成长',view:'business',target:'.r-level',title:'收好鱼干，小馆也会长大',body:'点用餐结束的鱼干气泡结账，小馆获得营业经验，也为小窝留下一颗“餐厅经营经验”气泡。回小窝点击领取，才计入小猫成长。',hint:'点这里的等级，可以查看下一步开放哪些资源。'},

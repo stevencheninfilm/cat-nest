@@ -25,11 +25,16 @@ test('the kitchen scene exposes all ten named work areas and the phone flow cont
   assert.ok(html.includes('data-rk-next-action'));
   assert.equal((html.match(/aria-hidden="true" tabindex="-1"/g)||[]).length,10,'only the guide exposes station names to keyboard and assistive navigation');
   assert.ok(html.includes('data-r-kitchen-tutorial'));
+  assert.ok(!html.includes('data-r-kitchen-focus'),'every operation stays in the same fitted scene');
   const info=restaurantInfo(initialState(NOW),NOW),terminal=kitchenTerminalMarkup(info);
   assert.ok(terminal.includes('data-r-debug-dish="rice"'));
   assert.ok(terminal.includes('data-r-debug-dish="coffee"'));
   const game=restaurantMarkup(initialState(NOW),{isTest:true});
   assert.ok(!game.includes('rk-live-detail'));assert.ok(!game.includes('rk-tracker'));
+  assert.ok(!game.includes('class="r-header"'));assert.ok(!game.includes('FOOD BAR STORY'));
+  assert.ok(game.includes('data-r-level-value'));
+  assert.match(game, /r-scene-controls[^]*?data-r-back[^]*?rr-research-shortcut/);
+  assert.match(game, /r-tools[^]*?data-r-audio-open[^]*?r-info-entry/);
   assert.ok(!game.includes('厨房实时工序'));assert.ok(!game.includes('当前制作流程'));
   const guide=kitchenGuideMarkup(info);
   assert.ok(guide.includes('料理工序教材'));assert.ok(guide.includes('取鸡蛋、米饭、鸡腿肉和蔬菜'));

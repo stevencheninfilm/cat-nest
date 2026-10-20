@@ -17,7 +17,7 @@ export function kitchenSceneMarkup(){
   return `<div class="rk-scene" data-rk-scene aria-label="十个独立厨房工作区">${KITCHEN_ZONES.map(zone=>{
     const b=zone.bounds;
     return `<button class="rk-zone rk-zone-${zone.id}" data-r-kitchen-zone="${zone.id}" style="--zx:${b.x}%;--zy:${b.y}%;--zw:${b.w}%;--zh:${b.h}%" aria-label="${zone.id}号${esc(zone.name)}，空闲" aria-hidden="true" tabindex="-1"><span class="rk-zone-tag"><b>${zone.id}</b><span>${esc(zone.name)}</span></span></button>`;
-  }).join('')}<div class="rk-surfaces" aria-hidden="true">${KITCHEN_ZONES.map(zone=>`<span class="rk-surface rk-surface-${zone.id}" data-rk-surface="${zone.id}" style="left:${zone.prop.x}%;top:${zone.prop.y}%;width:${zone.prop.width}%" ${zone.id===10?'':'hidden'}>${zone.id===10?propImage('fridge-closed'):''}</span>`).join('')}<span class="rk-fridge-task" data-rk-fridge-task hidden></span></div><aside class="rk-tutorial-coach" data-rk-guide hidden><div><strong>新手引导</strong><button data-r-kitchen-tutorial-close aria-label="结束厨房新手引导">结束</button></div><p data-rk-guide-text></p><button data-r-kitchen-tutorial-next>下一步 →</button></aside><div class="rk-workers" data-rk-workers></div><div class="rk-next-actions" data-rk-next-actions></div><div class="rk-focus-tools"><button data-r-kitchen-focus aria-label="切换餐厅全景和厨房视角">查看厨房</button><button data-r-kitchen-tutorial aria-pressed="false" aria-label="厨房新手引导">操作教程</button></div></div>`;
+  }).join('')}<div class="rk-surfaces" aria-hidden="true">${KITCHEN_ZONES.map(zone=>`<span class="rk-surface rk-surface-${zone.id}" data-rk-surface="${zone.id}" style="left:${zone.prop.x}%;top:${zone.prop.y}%;width:${zone.prop.width}%" ${zone.id===10?'':'hidden'}>${zone.id===10?propImage('fridge-closed'):''}</span>`).join('')}<span class="rk-fridge-task" data-rk-fridge-task hidden></span></div><aside class="rk-tutorial-coach" data-rk-guide hidden><div><strong>新手引导</strong><button data-r-kitchen-tutorial-close aria-label="结束厨房新手引导">结束</button></div><p data-rk-guide-text></p><button data-r-kitchen-tutorial-next>下一步 →</button></aside><div class="rk-workers" data-rk-workers></div><div class="rk-next-actions" data-rk-next-actions></div><div class="rk-focus-tools"><button data-r-kitchen-tutorial aria-pressed="false" aria-label="厨房新手引导">操作教程</button></div></div>`;
 }
 
 export function kitchenFlowPanel(info,{orderId=null,recipeId='rice',zoneId=null,now=Date.now()}={}){
@@ -38,7 +38,7 @@ export function kitchenFlowPanel(info,{orderId=null,recipeId='rice',zoneId=null,
     const status=step.status||'pending',done=['done','complete','completed'].includes(status),current=['active','work','working'].includes(status);
     const seconds=step.endAt&&step.startAt?Math.max(0,Math.ceil((step.endAt-(current?now:step.startAt))/1000)):Math.max(1,Math.round(step.durationMs/1000));
     return `<li class="${done?'is-done':current?'is-current':''}" data-rk-step="${esc(step.id)}"><button class="rk-step-number" data-r-kitchen-zone="${step.zoneId}" aria-label="查看${step.zoneId}号${zoneName(step.zoneId)}">${done?'✓':step.zoneId}</button><div><strong>${esc(step.label)}</strong><small>${esc(zoneName(step.zoneId))}${current?` · ${seconds}秒`:done?' · 已完成':step.startAt&&step.startAt>now?' · 等待前序工序':` · 约${seconds}秒`}</small>${current?`<span class="rk-inline-progress"><i style="width:${step.progress*100}%"></i></span>`:''}</div>${propImage(step.prop,'rk-step-prop')}</li>`;
-  }).join('')}<li class="rk-final-step"><span class="rk-step-number">↗</span><div><strong>端到客人的餐桌</strong><small>负责送餐的员工按通道返回厨房</small></div></li></ol><p class="r-fine">接下顾客的需求后，每一步都要点击对应食材圈才会开始。完成后员工会停下来等你；最后再点击餐桌送餐。升级冰箱加快取料，升级料理台加快加工。</p>${!active?`<p class="r-fine">${!recipe.unlocked?(recipe.special?'先解锁这份金色招牌':`Lv.${recipe.unlockLevel} 解锁后制作`):'顾客会从已开售菜品中随机点餐。'}</p>`:'<button class="r-primary" data-r-kitchen-watch>回厨房继续操作</button>'}`;
+  }).join('')}<li class="rk-final-step"><span class="rk-step-number">↗</span><div><strong>端到客人的餐桌</strong><small>负责送餐的员工按通道返回厨房</small></div></li></ol><p class="r-fine">接下顾客的需求后，每一步都要点击对应食材圈才会开始。完成后员工会停下来等你；最后再点击餐桌送餐。升级冰箱加快取料，升级料理台加快加工。</p>${!active?`<p class="r-fine">${!recipe.unlocked?(recipe.special?'先解锁这份金色招牌':`Lv.${recipe.unlockLevel} 解锁后制作`):'顾客会从已开售菜品中随机点餐。'}</p>`:'<button class="r-primary" data-r-kitchen-watch>回到餐厅继续操作</button>'}`;
 }
 
 /** Read-only selection model shared by scene and phone instructions. */
@@ -105,8 +105,8 @@ const guidePages=[
 ];
 
 /** A frame only paints saved runs. It never submits a cooking action. */
-export function createKitchenScene({container,getRestaurant,onFocus=()=>{},palette='cream'}){
-  let snapshot=null,selectedId=null,frame=0,running=false,lastFrame=0,lastSignature='',lastLayout='',focused=false,tutorial=false,guideIndex=0,blocked=false;
+export function createKitchenScene({container,getRestaurant,palette='cream'}){
+  let snapshot=null,selectedId=null,frame=0,running=false,lastFrame=0,lastSignature='',lastLayout='',tutorial=false,guideIndex=0,blocked=false;
   const actors=new Map(),props=new Map(),prompts=new Map(),root=container.closest('.restaurant');
   let currentPalette=kitchenCirclePalette(palette).id;
   function setPalette(id){currentPalette=kitchenCirclePalette(id).id;container.dataset.rkPalette=currentPalette;container.style.cssText=kitchenCircleStyle(currentPalette);}
@@ -124,7 +124,7 @@ export function createKitchenScene({container,getRestaurant,onFocus=()=>{},palet
     for(const element of container.querySelectorAll('[data-r-kitchen-zone]')){element.setAttribute('aria-hidden',String(!value));element.tabIndex=value?0:-1;}
     container.querySelector('[data-r-kitchen-tutorial]').setAttribute('aria-pressed',String(value));
     const guide=root.querySelector('[data-rk-guide]');guide.hidden=!value;
-    if(value){guideIndex=0;paintGuide();focus(true);}
+    if(value){guideIndex=0;paintGuide();}
   }
   function paintGuide(){
     root.querySelector('[data-rk-guide-text]').textContent=guidePages[guideIndex];
@@ -190,17 +190,15 @@ export function createKitchenScene({container,getRestaurant,onFocus=()=>{},palet
     const signature=JSON.stringify([active?.id,phase,next?.id]);
     if(signature!==lastSignature){
       lastSignature=signature;
-      if(phase==='awaiting-delivery'&&focused)focus(false);
       container.dispatchEvent(new CustomEvent('kitchen:step',{bubbles:true,detail:{orderId:active?.id,phase}}));
     }
     return model;
   }
   function loop(time){if(!running)return;if(time-lastFrame>(reduced?250:45)){lastFrame=time;update(Date.now());}frame=requestAnimationFrame(loop);}
-  function focus(value=true){focused=value;root.classList.toggle('is-kitchen-focus',value);container.querySelector('[data-r-kitchen-focus]').textContent=value?'返回全景':'查看厨房';onFocus(value);}
   return {
     sync(restaurant,options={}){snapshot=restaurant;blocked=options.blocked===true;return update(Date.now());},
     select(orderId){selectedId=orderId;update(Date.now());},
-    get selectedId(){return selectedId;},get palette(){return currentPalette;},setPalette,focus,toggleFocus(){focus(!focused);},
+    get selectedId(){return selectedId;},get palette(){return currentPalette;},setPalette,
     toggleTutorial(){setGuide(!tutorial);},endTutorial(){setGuide(false);},
     nextTutorial(){if(guideIndex===guidePages.length-1)setGuide(false);else{guideIndex++;paintGuide();}},
     toggleZones(){setGuide(!tutorial);},
