@@ -236,6 +236,13 @@ export function createCloudRoom(options) {
           try{apply(await request(`/api/rooms/${room}`));}catch{}
           if(destroyed)break;
           if(seen.has(item.operationId)){queue.shift();saveQueue();publishState();continue;}
+          // The other owner can claim the shared gift first. Only a canonical
+          // receipt settles this race; never synthesize currency after a 409.
+          if(item.action.type==='restaurant-daily-login'&&authoritativeState?.restaurant?.dailyLogin?.day>=item.action.day){
+            queue.shift();saveQueue();publishState();
+            onSaveStatus({phase:queue.length?'saving':'saved',message:queue.length?'正在保存到云端…':`已保存到 ${storageLabel}`,at:Date.now()});
+            continue;
+          }
           const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
           if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
         }
@@ -328,6 +335,7 @@ export function createCloudRoom(options) {
       if (!ready || destroyed || queue.length >= (restaurantAction(action)?200:20)) return false;
       if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
       if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return false;
+      if(action?.type==='restaurant-daily-login'&&queue.some(item=>item.action?.type==='restaurant-daily-login'&&item.action.day===action.day))return false;
       if(action?.type==='restaurant-research-draw'&&queue.some(item=>item.action?.type==='restaurant-research-draw'&&item.action.draw===action.draw))return false;
       if(action?.type==='restaurant-research-fuse'&&queue.some(item=>item.action?.type==='restaurant-research-fuse'&&item.action.expectedFusion===action.expectedFusion))return false;
       const item = {operationId:crypto.randomUUID(),clientId:me.id,name:me.name,action};

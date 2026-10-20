@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "asset": "daily-gift.webp",
+  "purpose": "餐厅每日登录奖励弹窗美术",
+  "generation": "built-in imagegen; referenced existing chef and user-provided round-cat artwork",
+  "source": "exec-57670b2e-f235-4410-938b-efb7c2fa9da4.png",
+  "transparent": true,
+  "width": 768,
+  "height": 512,
+  "prompt": "docs/assets/restaurant-daily-login-prompt.md"
+}

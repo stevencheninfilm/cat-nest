@@ -17,6 +17,7 @@ import './companion.css';
 import './catbook.css';
 import './restaurant.css';
 import './restaurant-audio.css';
+import './restaurant-daily-login.css';
 import './restaurant-decor.css';
 import './restaurant-guests.css';
 import './restaurant-street.css';
@@ -1204,7 +1205,7 @@ function showRestaurant({fromHome=false}={}) {
   restaurantReturnHome=fromHome;
   if(fromHome){homeScroll=window.scrollY;$('.nest').hidden=true;interactionFeedback.clear();}
   if(!restaurant)restaurant=createRestaurant({container:restaurantContainer,getState:()=>state,
-    getAvailability:()=>({connected:!cloudConfigured||status.phase==='online',ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,saving:careSaving(),savePhase:saveStatus.phase,retrying:saveStatus.retrying===true}),onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,testActions:runtime.testActions,
+    getAvailability:()=>({connected:!cloudConfigured||status.phase==='online',ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,saving:careSaving(),savePhase:saveStatus.phase,retrying:saveStatus.retrying===true,pendingDailyLoginDay:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-daily-login')?.action.day??null}),onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,testActions:runtime.testActions,
     onBack(){const url=new URL(location.href);url.hash='';history.replaceState(null,'',url);if(restaurantReturnHome){$('.nest').hidden=false;document.body.classList.remove('catbook-mode');updateModelPause();scheduleUpgrade();window.scrollTo(0,homeScroll);$('[data-open="restaurant"]')?.focus({preventScroll:true});}else{document.body.classList.add('catbook-mode');catbook.open();updateModelPause();}},
   });
   catbook.close();document.body.classList.remove('catbook-mode');
