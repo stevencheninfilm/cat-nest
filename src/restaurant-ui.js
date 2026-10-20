@@ -194,7 +194,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     },
     message(text){log(text);toast(text);render();},
   });
-  function tableMarkup(info,availability){return restaurantGuestTables(info,{icon:restaurantIcon,food,blocked:pending||restaurantInputBlocked(availability),replaying:guests?.replaying()||[],pendingCourses:[...pendingCourseOrders]});}
+  function tableMarkup(info,availability){return restaurantGuestTables(info,{icon:restaurantIcon,food,blocked:pending||restaurantInputBlocked(availability),replaying:guests?.replaying()||[],pendingCourses:[...pendingCourseOrders,...(availability.pendingRestaurantCollections??[])]});}
   function welcomeGuests(size=null,{manual=false,recipeId=null,keepPanel=false,waiting=false}={}){
     const availability=getAvailability(),info=restaurantInfo(getState());
     if(pending||restaurantInputBlocked(availability)){if(manual)toast('小馆正在读取，稍后再迎客');return false;}
@@ -367,7 +367,8 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     $('[data-r-pet-level]').textContent=`成长 Lv.${levelInfo(state.xp).level}`;
     $('[data-r-save]').textContent=restaurantSaveLabel(availability,isTest);
     $('[data-r-kitchen-level]').textContent=`Lv.${info.restaurant.levels.kitchen}`;
-    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible')?'小鱼干在闪闪发光，点一下收好它':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCook.enabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCook.enabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
+    const thinkingCourse=order=>order.hasNextCourse&&(pendingCourseOrders.has(order.id)||availability.pendingRestaurantCollections?.includes(order.id));
+    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible'&&!thinkingCourse(o))?'小鱼干在闪闪发光，点一下收好它':info.orders.some(thinkingCourse)?'猫猫正在看菜单，想好后就能接第二道餐':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCook.enabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCook.enabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
     $('[data-r-hint]').textContent=hint;
     const nextSignature=JSON.stringify([[...pendingCourseOrders],info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,availability,pending]);
     if(nextSignature!==signature){
@@ -407,14 +408,14 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     const result=restaurantActionResult(before,action);
     if(!result.ok){toast(result.reason);return;}
     if(type==='research-draw'&&!researchReveal.start(action.draw))return;
+    const firstCourse=type==='collect'&&info.orders.find(order=>order.id===action.orderId)?.hasNextCourse;
+    if(firstCourse)pendingCourseOrders.add(action.orderId);
     pending=true;render();
     try {
-      const firstCourse=type==='collect'&&info.orders.find(order=>order.id===action.orderId)?.hasNextCourse;
-      if(firstCourse)pendingCourseOrders.add(action.orderId);
       const accepted=onAction(action);
       if(accepted===false){pendingCourseOrders.delete(action.orderId);if(type==='research-draw')researchReveal.fail();return;}
       if(type!=='research-draw')sound(restaurantActionSound(type,action.stepId));
-      if(firstCourse)toast('正在结算第一餐，记下第二份料理');
+      if(firstCourse)toast('猫猫正在看菜单，想好后就能接第二道餐');
       log(type==='collect'?'提交订单结账':type==='serve'?'提交送餐':`提交${type}操作`);
       if(type==='start'){dismiss();toast('接单成功，主厨开始制作啦');}
       if(type==='decoration'){dismiss();dismissTerminal();toast('两位施工猫带着工具出发啦，约 12 秒完成布置');}

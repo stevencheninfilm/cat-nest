@@ -9,11 +9,13 @@ import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { restaurantGuestDebugResult } from '../demo/restaurant-guests.js';
 import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
 import { prepareRestaurantMealForCollection } from './restaurant-meal-fixtures.mjs';
+import { restaurantGuestTables } from '../src/restaurant-guests-ui.js';
 const NOW=Date.parse('2026-10-18T12:00:00Z'),ROOM='e'.repeat(32),ACTOR={id:'queue-owner',name:'店长'};
 const clone=value=>structuredClone(value),response=(data,status=200)=>({ok:status>=200&&status<300,status,json:async()=>clone(data)});
 const snapshot=(state,revision=0,event)=>({roomId:ROOM,state,revision,...(event?{event}:{})});
 const receipt=(item,state,revision=1)=>snapshot(state,revision,{operationId:item.operationId,action:item.action,actor:{id:item.clientId,name:item.name}});
 const flush=async()=>{for(let index=0;index<50;index++)await Promise.resolve();};
+const tableView=h=>restaurantGuestTables(restaurantInfo(h.latest(),Date.now()),{icon:()=>'',food:()=>'',pendingCourses:h.cloud.getPendingActions().filter(item=>item.action.type==='restaurant-collect').map(item=>item.action.orderId)});
 function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};}
 function requested(recipeId='coffee',count=1){
   let state=initialState(NOW-6000);state.restaurant.stats.experience=levelStartXp(restaurantRecipe(recipeId).unlockLevel);if(restaurantRecipe(recipeId).special){state.restaurant.ownedSpecialRecipes=[recipeId];state.restaurant.recipeLevels[recipeId]=1;}for(let index=0;index<count;index++)state=reduceAction(state,{type:'restaurant-arrive',partySize:1,recipeId},ACTOR,NOW-6000,`seed-arrival-${index}`);
@@ -124,6 +126,7 @@ test('a first-course collection waits for its canonical next ID while other exis
   assert.equal(h.cloud.dispatch(collect),true);assert.equal(h.cloud.dispatch(collect),false,'same collection cannot queue twice');
   assert.equal(h.latest().restaurant.nextOrderId,3);assert.equal(h.latest().coins,base.coins);assert.equal(h.latest().goldFish,base.goldFish);
   assert.equal(h.latest().restaurant.parties[0].members[0].service.round,1,'no guessed next-course ID enters the display');
+  assert.match(tableView(h),/正在看菜单…/);assert.match(tableView(h),/role="progressbar"/);
   assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-3'}),false,'a speculative new ID cannot be clicked');
   assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-2'}),true);
   assert.equal(h.latest().restaurant.orders.find(order=>order.id==='table-2').workflow.acceptedAt,NOW);
@@ -132,6 +135,7 @@ test('a first-course collection waits for its canonical next ID while other exis
   saved=apply(saved,h.posts()[0].body);assert.equal(saved.restaurant.parties[0].members[0].orderId,'table-4');
   ack.resolve(response(receipt(h.posts()[0].body,saved,++revision)));await flush();
   assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.parties[0].members[0].orderId,'table-4');
+  assert.doesNotMatch(tableView(h),/is-course-thinking/);assert.match(tableView(h),/data-r-action="kitchen-accept" data-r-order-id="table-4"/);
   assert.equal(h.latest().restaurant.orders.find(order=>order.id==='table-2').workflow.acceptedAt,NOW);
   assert.equal(h.latest().restaurant.stats.served,1);assert.equal(h.latest().goldFish,base.goldFish);assert.equal(h.observed.rollbacks.length,0);
 });
@@ -148,8 +152,10 @@ test('restoring a queued first-course collection never invents another order or 
   },{state:base,pending});await h.cloud.start();await flush();
   assert.equal(h.latest().restaurant.nextOrderId,2);assert.equal(h.latest().restaurant.parties[0].members[0].service.round,1);
   assert.equal(h.latest().coins,base.coins);assert.equal(h.latest().goldFish,base.goldFish);assert.equal(h.pending().length,1);
+  assert.match(tableView(h),/正在看菜单…/);assert.match(tableView(h),/aria-busy="true"/);
   offline=false;t.mock.timers.tick(8000);await flush();
   assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.nextOrderId,3);assert.equal(h.latest().restaurant.parties[0].members[0].service.round,2);
+  assert.doesNotMatch(tableView(h),/is-course-thinking|rg-menu-progress/);assert.match(tableView(h),/data-r-action="kitchen-accept" data-r-order-id="table-2"/);
   assert.equal(h.latest().restaurant.parties[0].members[0].service.history.length,1);assert.equal(h.latest().goldFish,base.goldFish);
   assert.ok(h.posts().every(req=>req.body.operationId==='restore-first-course'));assert.equal(h.observed.actions.filter(action=>action.optimistic).length,0);
 });
