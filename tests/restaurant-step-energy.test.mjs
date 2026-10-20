@@ -17,9 +17,9 @@ function apply(restaurant,order,result){
   assert.equal(validKitchenWorkflow(order.workflow,order,restaurant),true);
 }
 
-test('manual operations start at ten stamina and preserve the existing endurance discount at every level',()=>{
+test('manual operations start at ten stamina and apply the doubled endurance discount at every level',()=>{
   assert.equal(STAFF_WORK_STEP_ENERGY_BASE,10);
-  assert.deepEqual(Array.from({length:10},(_,i)=>workerStepEnergyCost({endurance:i+1})),[10,10,9,9,8,8,7,7,6,6]);
+  assert.deepEqual(Array.from({length:10},(_,i)=>workerStepEnergyCost({endurance:i+1})),[10,9,8,7,6,5,4,3,2,1]);
 });
 
 for(const version of [3,4])for(const endurance of [1,10])test(`v${version}, endurance ${endurance}: every recipe charges each accepted operation exactly once`,()=>{
@@ -55,7 +55,7 @@ test('a busy workstation cannot consume the waiting employee stamina before the 
 });
 
 test('employee training displays the actual discounted step cost beside its ten-point base',()=>{
-  for(const [endurance,cost] of [[1,10],[3,9],[10,6]]){
+  for(const [endurance,cost] of [[1,10],[3,8],[10,1]]){
     const {restaurant}=fixture('rice',{endurance}),html=restaurantTrainingPanel({restaurant,level:50},{now:NOW});
     assert.ok(html.includes(`data-r-step-energy>每道工序 ${cost}–${workerStepEnergyCost({endurance},15)} 点体力 · 随菜谱和品质缓增`));
   }

@@ -16,7 +16,7 @@ import { kitchenWorkflowBoardMarkup } from '../src/restaurant-kitchen-board.js';
 const NOW=Date.parse('2026-10-18T20:00:00Z'),ACTOR={id:'recipe-energy-test',name:'店长'};
 function fixture(recipeId,{grade=1,endurance=1,legacy=false,energy=235}={}){
   const restaurant={staff:0,levels:{kitchen:1,fridge:1,tables:1},orders:[],recipeLevels:{[recipeId]:grade},staffTraining:normalizeStaffTraining(null,NOW,0)};
-  restaurant.staffTraining['worker-1']={levels:{speed:1,stamina:10,endurance,skill:1},energyBase:200,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
+  restaurant.staffTraining['worker-1']={levels:{speed:1,stamina:10,endurance,skill:1},energyBase:200,abilityVersion:2,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
   const order={id:'table-1',recipeId,createdAt:NOW,readyAt:NOW,servedAt:null,recipeLevel:grade,tipsLevel:1,kitchenLevel:1,staffLevel:0,actorId:ACTOR.id,workflow:createInteractiveWorkflow(restaurant,recipeId,NOW,{orderId:'table-1',version:4,...(legacy?{}:{stepEnergyBase:recipeStepEnergyBase(recipeId,grade)})})};
   restaurant.orders.push(order);return {restaurant,order};
 }
@@ -32,7 +32,7 @@ test('all menu recipes have gentle monotonic stage costs and a maximum two-point
     assert.ok(starter>=10&&starter<=13);
     assert.deepEqual(Array.from({length:5},(_,i)=>recipeStepEnergyBase(recipe.id,i+1)),[starter,starter+.5,starter+1,starter+1.5,starter+2]);
     for(let grade=1;grade<=5;grade++)for(let endurance=1;endurance<=10;endurance++){
-      const cost=workerStepEnergyCost({endurance},recipeStepEnergyBase(recipe.id,grade));assert.ok(cost>=6&&cost<=15);
+      const cost=workerStepEnergyCost({endurance},recipeStepEnergyBase(recipe.id,grade));assert.ok(cost>=1&&cost<=15);
     }
   }
   assert.equal(recipeStepEnergyBase('unknown'),null);assert.equal(recipeStepEnergyBase('rice',6),null);
@@ -54,7 +54,7 @@ test('recipe research during an order cannot change its energy base, and employe
   const {restaurant:r,order:o}=fixture('pancake');apply(r,o,acceptInteractiveWorkflow(r,o,NOW));apply(r,o,advanceInteractiveWorkflow(r,o,'gather',NOW));
   const first=structuredClone(o.workflow.runs[0]);r.recipeLevels.pancake=5;r.staffTraining['worker-1'].levels.endurance=10;
   apply(r,o,advanceInteractiveWorkflow(r,o,KITCHEN_FLOWS.pancake[1].id,first.endAt));
-  assert.equal(o.workflow.stepEnergyBase,11);assert.deepEqual(o.workflow.runs[0],first);assert.equal(o.workflow.runs[1].energyCost,7);
+  assert.equal(o.workflow.stepEnergyBase,11);assert.deepEqual(o.workflow.runs[0],first);assert.equal(o.workflow.runs[1].energyCost,2);
 });
 
 test('older workflows without the energy snapshot retain their flat ten-point policy and exact saved runs',()=>{

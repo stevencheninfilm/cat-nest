@@ -11,23 +11,23 @@ import { STAFF_BASE_ENERGY, normalizeStaffTraining, workerAbilitySnapshot, staff
 const { now:NOW, fixtures }=JSON.parse(await readFile(new URL('./fixtures/restaurant-stamina-100.json',import.meta.url)));
 const ACTOR={id:'balance-manager',name:'店长'};
 
-test('new employees start at 200 and capacity training retains its fifteen-point increment',()=>{
+test('new employees start at 200 and capacity training uses the doubled thirty-point increment',()=>{
   assert.equal(STAFF_BASE_ENERGY,200);
   const training=normalizeStaffTraining(null,NOW,6);
   assert.equal(Object.keys(training).length,7);
   for(const record of Object.values(training))assert.equal(record.energy,200);
-  for(let level=1;level<=10;level++)assert.deepEqual(staffAbilityLevelEffects('stamina',level),{maxEnergy:200+15*(level-1),capacityPercent:7.5*(level-1)});
+  for(let level=1;level<=10;level++)assert.deepEqual(staffAbilityLevelEffects('stamina',level),{maxEnergy:200+30*(level-1),capacityPercent:15*(level-1)});
 });
 
-test('old employees gain the extra hundred once while spent stamina, upgrades and booked clocks survive',()=>{
+test('old employees gain the added base and trained capacity once while spent stamina, upgrades and booked clocks survive',()=>{
   const old={'worker-1':{levels:{speed:2,stamina:4,endurance:5,skill:3},energy:60,energyAt:NOW+30000,energyMode:'rest-room',rest:null}};
   const migrated=normalizeStaffTraining(old,NOW,0);
-  assert.equal(migrated['worker-1'].energy,160);
-  assert.equal(workerAbilitySnapshot('worker-1',migrated,NOW).maxEnergy,245);
+  assert.equal(migrated['worker-1'].energy,205);
+  assert.equal(workerAbilitySnapshot('worker-1',migrated,NOW).maxEnergy,290);
   assert.deepEqual(migrated['worker-1'].levels,old['worker-1'].levels);
   assert.equal(migrated['worker-1'].energyAt,old['worker-1'].energyAt);
   assert.deepEqual(normalizeStaffTraining(JSON.parse(JSON.stringify(migrated)),NOW+86400000,0),migrated);
-  assert.equal(workerAbilitySnapshot('worker-1',migrated,NOW+86400000).energy,160,'standing does not recover');
+  assert.equal(workerAbilitySnapshot('worker-1',migrated,NOW+86400000).energy,205,'standing does not recover');
   assert.equal(old['worker-1'].energy,60,'normalization does not mutate the input');
 });
 

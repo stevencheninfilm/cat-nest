@@ -2,7 +2,7 @@ import { restaurantGuestDebugResult } from './restaurant-guests.js';
 import { restaurantResearchDebugResult } from './restaurant-research.js';
 import { RESTAURANT_STAFF, RESTAURANT_RECIPES, normalizeRestaurant, validRestaurant, restaurantActionResult } from '../src/restaurant.js';
 import { SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
-import { normalizeStaffTraining, staffMaxEnergy, createStaffExhaustionTestPreset, STAFF_REST_ROOM_ENTRANCE, STAFF_REST_ROOM_POSITION, STAFF_ENERGY_RECOVERY_MS } from '../src/restaurant-staff-training.js';
+import { staffAbilitySnapshot, normalizeStaffTraining, staffMaxEnergy, createStaffExhaustionTestPreset, STAFF_REST_ROOM_ENTRANCE, STAFF_REST_ROOM_POSITION, STAFF_ENERGY_RECOVERY_MS } from '../src/restaurant-staff-training.js';
 import { RESTAURANT_ARRIVAL_MS } from '../src/restaurant-guests.js';
 
 const exact=(value,keys)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
@@ -51,7 +51,7 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
       // employee then recovers independently using their existing capacity.
       const arriveAt=now+900;
       record.energy=0;record.energyAt=arriveAt;record.energyMode='rest-room';
-      record.rest={departAt:now,arriveAt,fullAt:arriveAt+maxEnergy*STAFF_ENERGY_RECOVERY_MS,speedLevel:record.levels.speed,segments:[{phase:'rest-walk',startAt:now,endAt:arriveAt,from:{...STAFF_REST_ROOM_ENTRANCE},to:{...STAFF_REST_ROOM_POSITION},zoneId:null,stepId:'rest',carrying:null}]};
+      record.rest={...staffAbilitySnapshot(record),departAt:now,arriveAt,fullAt:arriveAt+maxEnergy*STAFF_ENERGY_RECOVERY_MS,speedLevel:record.levels.speed,segments:[{phase:'rest-walk',startAt:now,endAt:arriveAt,from:{...STAFF_REST_ROOM_ENTRANCE},to:{...STAFF_REST_ROOM_POSITION},zoneId:null,stepId:'rest',carrying:null}]};
     }
     restaurant.revision++;next.updatedAt=now;
     if(!validRestaurant(restaurant))return reject('休息室测试状态未通过检查，请刷新后再试。');

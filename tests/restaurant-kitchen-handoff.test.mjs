@@ -43,7 +43,7 @@ test('training extra capacity does not enable ordinary standing recovery before 
   let state=initialState(NOW);state.coins=10000;state.restaurant.stats.experience=levelStartXp(50);
   state=act(state,{type:'restaurant-train',workerId:'worker-1',statId:'stamina'},NOW+8000);
   assert.equal(state.restaurant.staffTraining['worker-1'].energyMode,'rest-room');
-  assert.equal(energy(state,NOW+8000+STAFF_IDLE_RECOVERY_MS-1),200);assert.equal(restaurantStaffRestInfo(state.restaurant,NOW+86400000)[0].maxEnergy,215);
+  assert.equal(energy(state,NOW+8000+STAFF_IDLE_RECOVERY_MS-1),200);assert.equal(restaurantStaffRestInfo(state.restaurant,NOW+86400000)[0].maxEnergy,230);
 });
 
 test('the next bubble, terminal and workflow board open at the exhausted operation end while its employee is still walking to rest',()=>{
@@ -119,8 +119,8 @@ test('an occupied replacement is not stolen by another order, while a recovered 
 test('replacement abilities determine their own cost and animation times without rewriting the first employee snapshots',()=>{
   let seed=fixture();Object.assign(seed.restaurant.staffTraining['worker-2'].levels,{speed:4,skill:3,endurance:3});
   let {state,at}=requested(seed);state=click(state,'gather',at);at=last(state).endAt;state=click(state,'espresso',at);
-  const flow=order(state).workflow;assert.equal(flow.runs[0].energyCost,10);assert.equal(last(state).energyCost,9);
-  assert.equal(last(state).energyAfter,91);assert.deepEqual(flow.workerLevels,seed.restaurant.staffTraining['worker-2'].levels);assert.ok(validKitchenWorkflow(flow,order(state),state.restaurant));
+  const flow=order(state).workflow;assert.equal(flow.runs[0].energyCost,10);assert.equal(last(state).energyCost,8);
+  assert.equal(last(state).energyAfter,92);assert.deepEqual(flow.workerLevels,seed.restaurant.staffTraining['worker-2'].levels);assert.ok(validKitchenWorkflow(flow,order(state),state.restaurant));
   const rest=state.restaurant.staffTraining['worker-1'].rest;state=act(state,{type:'restaurant-train',workerId:'worker-1',statId:'stamina'},rest.arriveAt+800);
   assert.ok(validRestaurant(state.restaurant));assert.equal(energy(state,rest.arriveAt+800),1);
 });

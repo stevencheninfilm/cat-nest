@@ -71,7 +71,7 @@ test('six-person recovery respects individual stamina capacities and the fixture
   seed.restaurant.staffTraining['worker-5'].levels.speed=10;
   const state=sixRest(seed),at=NOW+160900,workers=restaurantStaffRestInfo(state.restaurant,at);
   assert.equal(workers.find(worker=>worker.id==='worker-3').rest.phase,'recovering');
-  assert.equal(workers.find(worker=>worker.id==='worker-3').rest.remainingMs,12000);
+  assert.equal(workers.find(worker=>worker.id==='worker-3').rest.remainingMs,24000);
   assert.equal(workers.filter(worker=>worker.rest?.phase==='ready').length,5);
   assert.equal(validRestaurant(state.restaurant),true);
   assert.equal(sanitizeRestaurantAction({type:'restaurant-rest-six'}),null);
