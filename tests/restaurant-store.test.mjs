@@ -1,3 +1,4 @@
+import { initialState } from '../src/state.js';
 import { restaurantGuestDebugResult } from '../demo/restaurant-guests.js';
 import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
 import test from 'node:test';
@@ -315,4 +316,17 @@ test('home XP claims survive lost acknowledgments, concurrent partners and recei
   await assert.rejects(reloaded.applyAction(room.roomId,{...request,action:{type:'restaurant-collect',orderId:'table-2'}}),error=>error.code==='OPERATION_CONFLICT');
   await assert.rejects(reloaded.applyAction(room.roomId,payload('claim-growth',{rewardId},'home-bridge-late-claim')),error=>error.code==='REWARD_ALREADY_CLAIMED');
   assert.equal(file.room.claimedGrowth.length,1);assert.equal(mock.files.size,1);
+});
+
+test('permanent guest conditions survive storage restart and remain outside the strict legacy public restaurant schema',async()=>{
+  const mock=mockGitHub(),store=makeStore(mock,()=>NOW),state=initialState(NOW);
+  state.restaurant.stats.experience=levelStartXp(50);state.restaurant.seenGuests=['guest-baker'];state.restaurant.ownedThemes.push('mint');
+  const room=await store.createRoom({initialState:state});
+  assert.ok(room.restaurantGuestConditions.includes('decoration:cream-bakery'));assert.equal(Object.hasOwn(room.state.restaurant,'completedGuestConditions'),false);
+  const changed=await store.applyAction(room.roomId,payload('restaurant-theme',{themeId:'mint'},'conditions-switch-mint'));
+  assert.ok(changed.restaurantGuestConditions.includes('decoration:cream-bakery'));assert.equal(changed.state.restaurant.theme,'mint');
+  const disk=mock.files.get(room.roomId).room;assert.ok(disk.state.restaurant.completedGuestConditions.includes('decoration:cream-bakery'));
+  const before=structuredClone(disk),reloaded=await makeStore(mock,()=>NOW+86400000).getRoom(room.roomId);
+  assert.deepEqual(reloaded.restaurantGuestConditions,changed.restaurantGuestConditions);assert.deepEqual(mock.files.get(room.roomId).room,before,'GET derives progress without rewriting the room');
+  assert.equal(reloaded.state.coins,state.coins);assert.equal(reloaded.state.xp,state.xp);assert.deepEqual(reloaded.state.restaurant.levels,state.restaurant.levels);
 });

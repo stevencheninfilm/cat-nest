@@ -55,10 +55,11 @@ for(const [id,level,cost,price,seconds] of recipes){
   });
 }
 
-test('the tea master now requires a purchased sushi recipe, and test preparation uses the same ownership gate',()=>{
+test('the tea master requires sushi to be achieved once, and later ownership changes do not erase that achievement',()=>{
   const result=restaurantGuestDebugResult(high(),{mode:'guest',guestId:'guest-tea-master'},NOW);assert.ok(result.ok);
   assert.ok(result.state.restaurant.ownedSpecialRecipes.includes('sushi'));
   assert.ok(eligibleRestaurantGuestCats(result.state.restaurant,NOW).includes('guest-tea-master'));
   result.state.restaurant.ownedSpecialRecipes=result.state.restaurant.ownedSpecialRecipes.filter(id=>id!=='sushi');
-  assert.ok(!eligibleRestaurantGuestCats(result.state.restaurant,NOW).includes('guest-tea-master'));
+  assert.ok(eligibleRestaurantGuestCats(result.state.restaurant,NOW).includes('guest-tea-master'),'a completed requirement remains achieved');
+  assert.equal(restaurantInfo(high(),NOW).customerBook.customers.find(guest=>guest.id==='guest-tea-master').requirements.find(item=>item.kind==='recipe').met,false,'a never-achieved recipe stays locked');
 });

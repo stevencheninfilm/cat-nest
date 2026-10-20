@@ -121,7 +121,7 @@ test('legacy single-theme saves retain their piece until explicitly removed, wit
   assert.equal(restaurantInfo(loaded,NOW).customerBook.customers.find(guest=>guest.id==='guest-astronomer').requirements.find(item=>item.kind==='theme').met,true);
   const removed=reduceAction(loaded,place('starlight',false),actor,NOW);assert.deepEqual(equippedPremiumDecorations(removed.restaurant),[]);assert.equal(removed.restaurant.theme,'starlight');assert.equal(removed.goldFish,original.goldFish);
   assert.deepEqual(equippedPremiumDecorations(normalizeState(JSON.parse(JSON.stringify(removed)),NOW).restaurant),[],'a legacy theme name cannot silently re-enable a removed piece');
-  assert.equal(restaurantInfo(removed,NOW).customerBook.customers.find(guest=>guest.id==='guest-astronomer').requirements.find(item=>item.kind==='theme').met,false,'a removed legacy collectible no longer meets the guest requirement');
+  assert.equal(restaurantInfo(removed,NOW).customerBook.customers.find(guest=>guest.id==='guest-astronomer').requirements.find(item=>item.kind==='theme').met,true,'a previously achieved decoration condition stays met after the piece is put away');
   const restored=reduceAction(removed,place('starlight',true),actor,NOW);assert.deepEqual(equippedPremiumDecorations(restored.restaurant),['starlight']);assert.equal(restored.goldFish,original.goldFish);
 });
 

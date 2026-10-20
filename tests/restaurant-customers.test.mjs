@@ -115,7 +115,7 @@ test('encyclopedia is player-accessible, distinguishes encounters from eligibili
   assert.doesNotMatch(html,/data-r-customer-detail=|rc-customer-intro/,'the list does not open a guest by default');
   assert.equal((html.match(/aria-haspopup="dialog"/g)||[]).length,32);
   const detail=restaurantCustomerDetail(info,{selectedId:'guest-baker'});
-  assert.ok(detail.includes('全部满足后随机来访'));assert.ok(detail.includes('装扮需正在使用'));
+  assert.ok(detail.includes('全部满足后随机来访'));assert.ok(detail.includes('每项达成后永久保留'));assert.ok(!detail.includes('装扮需正在使用'));
   for(const panel of ['progression','recipes','staff','upgrades','themes'])assert.ok(detail.includes(`data-r-tab="${panel}"`));
   assert.equal(restaurantCustomerDetail(info,{selectedId:'not-a-guest'}),'');
   assert.match(restaurantMarkup(initialState(NOW)),/id="rc-customer-dialog" class="rc-customer-dialog" aria-labelledby="rc-customer-title"/);

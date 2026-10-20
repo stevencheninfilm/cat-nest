@@ -2,7 +2,7 @@ import { recipeStepEnergyBase } from './restaurant-recipe-energy.js';
 import { restaurantDailyLoginInfo, validRestaurantDailyLogin } from './restaurant-daily-login.js';
 import { RESTAURANT_GUEST_DINING_MS, initialRestaurantGuestService, restaurantGuestHasNextCourse, restaurantGuestCompletionBonus, nextRestaurantGuestService, nextRestaurantGuestRecipe } from './restaurant-guest-service.js';
 import { initialRestaurantResearch, normalizeRestaurantResearch, restaurantInspirationGift, awardRestaurantInspiration, validRestaurantResearch, restaurantResearchInfo, restaurantResearchCost, restaurantDishGrade, drawRestaurantResearch, restaurantResearchPool, restaurantFragmentSurplus, fuseRestaurantResearch, RESEARCH_INSPIRATION_MAX } from './restaurant-research.js';
-import { validRestaurantSeenGuests, normalizeRestaurantSeenGuests, restaurantCustomerInfo } from './restaurant-customers.js';
+import { validRestaurantSeenGuests, normalizeRestaurantSeenGuests, restaurantCustomerInfo, validRestaurantGuestConditions, completedRestaurantGuestConditions } from './restaurant-customers.js';
 import { addGrowthExperience } from './pet-needs.js';
 import { normalizeRestaurantParties, validRestaurantParties, restaurantArrivalPlan, RESTAURANT_GUEST_CATS } from './restaurant-guests.js';
 import { validRestaurantWaitingParties, restaurantWaitingParties, createRestaurantWaitingParty, RESTAURANT_WAITING_LIMIT } from './restaurant-street.js';
@@ -96,12 +96,13 @@ export function initialRestaurant(now=Date.now()) {
 }
 
 export function validRestaurant(value) {
-  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','lastInteractionAt','parties','waitingParties','seenGuests','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','lastInteractionAt','parties','waitingParties','seenGuests','completedGuestConditions','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
   if(Object.hasOwn(value,'dailyLogin')&&!validRestaurantDailyLogin(value.dailyLogin))return false;
   if(Object.hasOwn(value,'lastInteractionAt')&&(!validTime(value.lastInteractionAt)||value.lastInteractionAt<value.openedAt))return false;
   if(Object.hasOwn(value,'circlePalette')&&!restaurantCirclePalette(value.circlePalette))return false;
   if(Object.hasOwn(value,'ownedCirclePalettes')&&(!Array.isArray(value.ownedCirclePalettes)||new Set(value.ownedCirclePalettes).size!==value.ownedCirclePalettes.length||value.ownedCirclePalettes.some(id=>!restaurantCirclePalette(id))))return false;
   if(Object.hasOwn(value,'seenGuests')&&!validRestaurantSeenGuests(value.seenGuests))return false;
+  if(Object.hasOwn(value,'completedGuestConditions')&&!validRestaurantGuestConditions(value.completedGuestConditions))return false;
   const specials=value.ownedSpecialRecipes??[];
   if(!Array.isArray(specials)||new Set(specials).size!==specials.length||specials.some(id=>!specialRestaurantRecipe(id)))return false;
   if(Object.hasOwn(value,'staffTraining')&&(!validStaffTraining(value.staffTraining,value.staff)||Object.values(value.staffTraining).some(record=>record.idleRecoveryAt!==undefined&&record.idleRecoveryAt<value.openedAt+STAFF_IDLE_RECOVERY_MS)))return false;
@@ -136,7 +137,8 @@ export function restaurantProgressPreserved(before,after){
   return after.openedAt===before.openedAt&&after.revision>=before.revision&&after.nextOrderId>=before.nextOrderId&&after.staff>=before.staff
     &&['served','earned','experience'].every(key=>after.stats[key]>=before.stats[key])
     &&Object.entries(before.levels).every(([key,value])=>after.levels[key]>=value)
-    &&Object.entries(before.recipeLevels).every(([key,value])=>after.recipeLevels[key]>=value);
+    &&Object.entries(before.recipeLevels).every(([key,value])=>after.recipeLevels[key]>=value)
+    &&(before.completedGuestConditions??[]).every(key=>(after.completedGuestConditions??[]).includes(key));
 }
 
 /** Old homes get an empty restaurant without touching wallet, pet or room IDs. */
@@ -153,8 +155,10 @@ export function normalizeRestaurant(value,now=Date.now()) {
   restaurant.stats.ordinaryServed??=restaurant.stats.served;
   restaurant.lastInteractionAt??=restaurantStaffLastInteractionAt(restaurant);
   restaurant.staffTraining=normalizeRestaurantStaffTraining(restaurant,now);
-  normalizeRestaurantDecorations(restaurant,safeNow(now));
   restaurant.recipeLevels=Object.fromEntries([...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES.filter(recipe=>restaurant.ownedSpecialRecipes.includes(recipe.id)||PROMOTED_SIGNATURE_RECIPE_IDS.includes(recipe.id))].map(recipe=>[recipe.id,value.recipeLevels[recipe.id]??1]));
+  const completedConditions=completedRestaurantGuestConditions(restaurant,safeNow(now));
+  if(completedConditions.length)restaurant.completedGuestConditions=completedConditions;
+  normalizeRestaurantDecorations(restaurant,safeNow(now));
   return restaurant;
 }
 
@@ -433,6 +437,8 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
   // Background arrivals/queue changes must not keep an unattended kitchen awake.
   if(!['restaurant-arrive','restaurant-wait'].includes(action.type))restaurant.lastInteractionAt=Math.max(restaurant.lastInteractionAt,now);
   restaurant.revision++;
+  const completedConditions=completedRestaurantGuestConditions(restaurant,now);
+  if(completedConditions.length)restaurant.completedGuestConditions=completedConditions;
   // Never let normalization turn an invalid operation result into a new save.
   if(!validRestaurant(restaurant))return reject('餐厅工序数据校验未通过，已保留原进度，请稍后重试。');
   return {ok:true,restaurant,coins,goldFish,xp,text,...(growthReward?{growthReward}:{})};

@@ -32,7 +32,7 @@ test('three base scenes have two complete suites each, with only one or two 1–
 
 test('old ownership grants permanent bonuses without rewriting the save or equipping a scene',()=>{
   const state=initialState(NOW),before=structuredClone(state.restaurant),restored=normalizeRestaurant(state.restaurant,NOW);
-  const {staffTraining,waitingParties,...rest}=restored;assert.deepEqual(rest,before);assert.deepEqual(waitingParties,[]);assert.equal(Object.hasOwn(restored,'decorationId'),false);assert.deepEqual(state.restaurant,before);
+  const {staffTraining,waitingParties,completedGuestConditions,...rest}=restored;assert.deepEqual(completedGuestConditions,['recipe:coffee']);assert.deepEqual(rest,before);assert.deepEqual(waitingParties,[]);assert.equal(Object.hasOwn(restored,'decorationId'),false);assert.deepEqual(state.restaurant,before);
   const info=restaurantInfo(state,NOW).decorationInfo;
   assert.equal(info.decoration.id,'cream-bakery');assert.equal(info.activeDecorationId,null);
   assert.deepEqual(info.activeBuffs,{coins:100,experience:0,cookSpeed:0});
