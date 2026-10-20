@@ -57,6 +57,6 @@ test('a busy workstation cannot consume the waiting employee stamina before the 
 test('employee training displays the actual discounted step cost beside its ten-point base',()=>{
   for(const [endurance,cost] of [[1,10],[3,8],[10,1]]){
     const {restaurant}=fixture('rice',{endurance}),html=restaurantTrainingPanel({restaurant,level:50},{now:NOW});
-    assert.ok(html.includes(`data-r-step-energy>每道工序 ${cost}–${workerStepEnergyCost({endurance},15)} 点体力 · 随菜谱和品质缓增`));
+    assert.ok(html.includes(`每步 ${cost}–${workerStepEnergyCost({endurance},15)} 体力 · 离线/闲置 30 分钟回满`));
   }
 });

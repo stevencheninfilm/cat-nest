@@ -149,7 +149,7 @@ test('invalid activity clocks, forged refill checkpoints and client-supplied rec
 
 test('the employee panel explains the thirty-minute full recovery rule',()=>{
   const html=restaurantTrainingPanel(restaurantInfo(fixture(),NOW),{now:NOW});
-  assert.match(html,/离线或餐厅闲置 30 分钟，员工体力自动回满/);
+  assert.match(html,/离线\/闲置 30 分钟回满/);
 });
 
 test('old v2–v4 save snapshots keep their recorded history when continuing after long inactivity',async()=>{

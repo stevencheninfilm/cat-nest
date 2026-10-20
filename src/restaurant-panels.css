@@ -2,7 +2,9 @@
 .r-sheet{--r-panel-height:52dvh;height:var(--r-panel-height);max-height:calc(100dvh - 64px);padding:6px 12px max(10px,env(safe-area-inset-bottom));border-width:1px;border-bottom:0;border-radius:20px 20px 0 0;container-type:inline-size}
 .r-sheet[data-panel=staff]{--r-panel-height:auto;padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .r-sheet[data-panel=staff]>.r-sheet-content{flex:0 1 auto;padding-bottom:0}
-.r-sheet[data-panel=training]{--r-panel-height:48dvh}
+.r-sheet[data-panel=training]{--r-panel-height:auto;height:auto;max-height:calc(100dvh - 16px);padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.r-sheet[data-panel=training]>.r-sheet-content{flex:0 0 auto;overflow:visible;padding-bottom:0}
+.r-sheet[data-panel=training] [data-r-step-energy]{white-space:nowrap}
 .r-sheet[data-panel=upgrades]{--r-panel-height:44dvh}
 .r-sheet[data-panel=themes],.r-sheet[data-panel=info]{--r-panel-height:50dvh}
 .r-sheet::backdrop{background:#39351f25;backdrop-filter:blur(1px)}
@@ -192,3 +194,32 @@
   .r-sheet .re-ability-head{gap:3px}
 }
 @media(prefers-reduced-motion:reduce){.r-sheet[open]{animation:none}}
+
+/* Short screens keep the full training view visible at its natural height. */
+@media(max-height:680px){
+  .r-sheet[data-panel=training] .r-panel-switch{padding:2px;margin-bottom:5px}
+  .r-sheet[data-panel=training] .r-panel-switch>button{min-height:25px}
+  .r-sheet[data-panel=training] .re-roster-label{min-height:18px;margin-bottom:2px}
+  .r-sheet[data-panel=training] .re-training-roster .re-worker-tabs button{min-height:31px}
+  .r-sheet[data-panel=training] .re-training-chief .re-worker-tabs button,.r-sheet[data-panel=training] .re-roster-empty{height:67px;min-height:67px}
+  .r-sheet[data-panel=training] .re-training-chief .r-cat{width:39px;height:39px}
+  .r-sheet[data-panel=training] .re-energy{padding-block:6px}
+  .r-sheet[data-panel=training] .re-ability{padding:6px;gap:3px}
+  .r-sheet[data-panel=training] .re-ability .re-skill-segments{height:5px;margin:2px 0}
+  .r-sheet[data-panel=training] .re-ability .ru-effects{margin:2px 0;gap:2px 6px}
+  .r-sheet[data-panel=training] .ru-effects>div{min-height:15px}
+  .r-sheet[data-panel=training] .re-ability .r-buy{min-height:27px;padding:3px;margin-top:1px}
+}
+@media(max-height:520px) and (min-width:650px){
+  .r-sheet[data-panel=training]{width:min(100%,760px);max-width:760px}
+  .r-sheet[data-panel=training]>header{min-height:33px;padding-bottom:4px}
+  .r-sheet[data-panel=training]>.r-sheet-content{padding-top:6px}
+  .r-sheet[data-panel=training] .re-energy{margin:3px 0 4px}
+  .r-sheet[data-panel=training] .ru-help-link{min-height:22px;height:22px;padding-block:2px;margin-top:3px;box-sizing:border-box}
+  .r-sheet[data-panel=training] .re-ability-list{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .r-sheet[data-panel=training] .re-training-roster{grid-template-columns:100px minmax(0,1fr);margin-bottom:4px}
+  .r-sheet[data-panel=training] .re-training-partners .re-worker-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .r-sheet[data-panel=training] .re-training-chief .re-worker-tabs button{height:36px;min-height:36px;flex-direction:row}
+  .r-sheet[data-panel=training] .re-training-chief .r-cat{width:27px;height:27px}
+  .r-sheet[data-panel=training] .re-roster-empty{height:36px;min-height:36px}
+}
