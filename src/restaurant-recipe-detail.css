@@ -13,13 +13,23 @@
 .r-recipe-dialog>header .r-round svg{width:16px;height:16px}
 .r-recipe-detail-content{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-top:14px}
 .r-recipe-detail-hero{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);align-items:center;gap:12px;background:transparent!important}
-.r-recipe-detail-art{display:grid;place-items:center;aspect-ratio:1;border:1px solid #e8dbc0;border-radius:16px;background:radial-gradient(ellipse,#f0e7c8 0,#fbf5e4 68%)}
-.r-recipe-detail-art>.rg-tier-food{width:100%;height:auto;aspect-ratio:1}
-.r-recipe-detail-art>.rg-tier-food:not([data-r-coating])>.r-food{width:92%!important;height:92%!important}
-.restaurant .r-recipe-detail-art>.rg-tier-food>.rg-dish-grade{display:none}
+/* A compact, centred crop of the same quality showcase used after promotion. */
+.r-recipe-detail-art{position:relative;isolation:isolate;min-width:0;aspect-ratio:16/15;border:1px solid var(--rq-rim);border-radius:16px;background:var(--rq-texture),linear-gradient(145deg,var(--rq-paper) 30%,var(--rq-wash));overflow:hidden;container-type:inline-size}
+.r-recipe-detail-art>.rr-promotion-stage{position:absolute;inset:0;height:100%;margin:0}
+.r-recipe-detail-art .rr-promotion-rays{left:-5cqw;top:calc(45% - 55cqw);width:110cqw;height:110cqw}
+.r-recipe-detail-art .rr-promotion-platter{top:43%;width:80cqw;height:42cqw;border-width:1.2cqw;box-shadow:inset 0 0 0 1.2cqw #fff5,inset 0 -2cqw 0 #3e324112,0 2.5cqw 0 var(--rq-metal),0 6cqw 6cqw #28334926}
+.r-recipe-detail-art .rr-promotion-platter>.r-food{width:72cqw;height:72cqw}
+.r-recipe-detail-art .rr-promotion-stage>.r-cat{width:22cqw;height:22cqw;bottom:10%}
+.r-recipe-detail-art .rr-promotion-chef{left:1%}
+.r-recipe-detail-art .rr-promotion-waiter{right:0}
+.r-recipe-detail-art .rr-spark-one{left:7%;top:17%;font-size:9cqw}
+.r-recipe-detail-art .rr-spark-two{right:7%;top:32%;font-size:10cqw}
+.r-recipe-detail-art .rr-spark-three{right:23%;top:6%;font-size:5cqw}
+.r-recipe-detail-art .rr-promotion-laurel{bottom:1%;font-size:12cqw}
 .r-recipe-detail-category{display:block;font-size:10px;color:#a28a65;line-height:1.5}
 .r-recipe-detail-copy h3{margin:5px 0 6px;font-size:19px;line-height:1.35;letter-spacing:0;overflow-wrap:anywhere}
-.r-recipe-detail-quality{display:inline-block;font-size:10px;line-height:1.5;color:#8c9b63;background:#eaf0da;border-radius:6px;padding:2px 7px}
+.r-recipe-detail-quality.rr-quality-card{position:relative;display:inline-block;font-size:10px;line-height:1.5;color:var(--rq-ink);background:var(--rq-texture),var(--rq-paper);border:1px solid var(--rq-rim);border-radius:6px;padding:2px 7px}
+.restaurant .r-recipe-detail-quality.rr-quality-card[data-r-quality]::before,.restaurant .r-recipe-detail-quality.rr-quality-card[data-r-quality]::after{display:none}
 .r-recipe-detail-copy dl{display:flex;gap:17px;margin:11px 0 0}
 .r-recipe-detail-copy dl>div{min-width:0}
 .r-recipe-detail-copy dt{font-size:9px;line-height:1.5;color:#aa9575}
