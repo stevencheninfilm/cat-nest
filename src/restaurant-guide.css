@@ -1,0 +1,28 @@
+/* The same gold spotlight and storybook speech card as the home guide. */
+.restaurant-guide-dialog{font-family:Nunito,"PingFang SC","Microsoft YaHei",sans-serif}
+.restaurant-guide-dialog .guide-tour-toolbar{max-width:456px;margin-inline:auto}
+.restaurant-guide-dialog .guide-tour-card{width:min(456px,calc(100% - 24px));padding-left:44px}
+.restaurant-guide-dialog .guide-tour-mascot{left:-8px;bottom:10px;width:106px;height:166px}
+.restaurant-guide-dialog .guide-tour-speech{max-height:calc(100dvh - 110px);overflow-y:auto;overscroll-behavior:contain;padding:18px 18px 14px 38px;border-radius:20px}
+.restaurant-guide-dialog .guide-tour-speech h1{font-size:18px;line-height:1.5;margin:10px 0}
+.restaurant-guide-dialog .guide-tour-speech p{font-size:13px;line-height:1.85}
+.restaurant-guide-dialog .guide-tour-hint{font-size:10px;line-height:1.75;margin-top:9px}
+.restaurant-guide-dialog .guide-tour-controls{margin-top:14px}
+.restaurant-guide-dialog .guide-tour-controls button{min-height:40px;font-size:11px;padding:9px 10px}
+.restaurant-guide-progress{display:flex;gap:3px;margin-top:9px}
+.restaurant-guide-progress i{flex:1;height:3px;background:#e3d5b9;border-radius:3px}
+.restaurant-guide-progress i.is-lit{background:#bf9652;box-shadow:0 1px 0 #fff4d5}
+.restaurant-guide-index{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:14px}
+.restaurant-guide-index button{display:flex;align-items:center;gap:7px;min-height:38px;border:1px solid #dec99f;border-radius:9px;background:#fff8e8;font-size:11px;text-align:left;padding:7px 9px}
+.restaurant-guide-index button span{font-size:9px;color:#ad8a50;font-variant-numeric:tabular-nums}
+.restaurant-guide-index button[aria-current]{border-color:#a8874f;background:#eee3c8;font-weight:800}
+.restaurant-guide-return{display:block;margin:12px 0 0 auto;min-height:38px;border:0;background:transparent;color:#826744;font-size:11px}
+.restaurant-guide-copy-short{display:none}
+.restaurant-guide-toc .guide-tour-target,.restaurant-guide-toc .guide-tour-arrow{display:none}
+.restaurant-guide-toc .shade-top{height:100%}
+.restaurant-guide-toc .guide-tour-card{top:50%;transform:translate(-50%,-50%)}
+.r-info-guide{display:flex;align-items:center;gap:10px;width:100%;margin-bottom:10px;padding:11px 12px;border:1px solid #d5bf91;border-radius:12px;background:#f4e8cc;color:#795b38;text-align:left}
+.r-info-guide>svg{width:23px;height:23px}.r-info-guide>span{display:grid;gap:3px;flex:1}.r-info-guide strong{font-size:12px}.r-info-guide small{font-size:10px;color:#9c8157}.r-info-guide>b{font-size:18px}
+@media(max-width:360px){.restaurant-guide-dialog .guide-tour-card{padding-left:30px}.restaurant-guide-dialog .guide-tour-mascot{width:78px;height:126px;left:-5px}.restaurant-guide-dialog .guide-tour-speech{padding:14px 13px 12px 27px}.restaurant-guide-dialog .guide-tour-speech h1{font-size:16px}.restaurant-guide-dialog .guide-tour-speech p{font-size:12px}.restaurant-guide-dialog .guide-tour-controls{gap:3px}.restaurant-guide-dialog .guide-tour-controls button{padding:9px 7px;font-size:10px}}
+@media(max-height:680px){.restaurant-guide-copy-full{display:none}.restaurant-guide-copy-short{display:inline}.restaurant-guide-dialog .guide-tour-speech h1{font-size:15px;line-height:1.4;margin:7px 0}.restaurant-guide-dialog .guide-tour-speech p{font-size:11.5px;line-height:1.7}.restaurant-guide-dialog .guide-tour-hint{font-size:9px;line-height:1.6}.restaurant-guide-dialog .guide-tour-controls{margin-top:9px}}
+@media(max-height:550px){.restaurant-guide-dialog .guide-tour-mascot{width:75px;height:118px}.restaurant-guide-dialog .guide-tour-speech{max-height:calc(100dvh - 86px);padding:11px 15px 10px 27px}.restaurant-guide-dialog .guide-tour-speech h1{font-size:15px;margin:6px 0}.restaurant-guide-dialog .guide-tour-speech p{font-size:11px;line-height:1.65}.restaurant-guide-dialog .guide-tour-hint{font-size:9px;margin-top:6px}.restaurant-guide-dialog .guide-tour-controls{margin-top:7px}.restaurant-guide-progress{margin-top:5px}.restaurant-guide-index{gap:4px;margin-top:8px}.restaurant-guide-index button{min-height:30px;padding:4px 7px}}
