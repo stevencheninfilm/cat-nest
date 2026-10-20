@@ -13,7 +13,7 @@ export function restaurantGuestDebugResult(state,command,now=Date.now()){
   if(!command||Object.keys(command).length!==2||command.mode!=='guest'||typeof command.guestId!=='string')return reject('这项顾客测试操作无效。');
   const guest=RESTAURANT_GUESTS.find(item=>item.id===command.guestId&&item.advanced);
   if(!guest||!Number.isSafeInteger(now)||now<0||!validRestaurant(state?.restaurant)||now<state.restaurant.openedAt)return reject('测试小馆尚未准备好。');
-  const next=structuredClone(state),r=normalizeRestaurant(state.restaurant,now),seen=[...r.seenGuests];next.restaurant=r;
+  const next=structuredClone(state),r=normalizeRestaurant(state.restaurant,now),seen=[...r.seenGuests];next.restaurant=r;r.lastInteractionAt=Math.max(r.lastInteractionAt,now);
   r.orders=[];r.parties=[];r.construction=null;
   for(const requirement of guest.requirements){
     if(requirement.kind==='level')r.stats.experience=Math.max(r.stats.experience,levelStartXp(requirement.minimum));

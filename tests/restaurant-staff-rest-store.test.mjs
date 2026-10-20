@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
 import { initialState } from '../src/state.js';
 import { validRestaurant, restaurantInfo } from '../src/restaurant.js';
-import { normalizeStaffTraining } from '../src/restaurant-staff-training.js';
+import { normalizeStaffTraining, STAFF_IDLE_RECOVERY_MS, restaurantStaffIdleAt } from '../src/restaurant-staff-training.js';
 const NOW=Date.parse('2026-10-18T12:00:00Z');
 function mockGitHub(){
   const files=new Map();let seq=0,gate=null;
@@ -131,4 +131,39 @@ test('an existing 100-point cloud save migrates once across a lost acknowledgeme
   const again=await store().getRoom(room.roomId);
   assert.deepEqual(again.state.restaurant,retry.state.restaurant);
   assert.equal(again.state.coins,before.state.coins);
+});
+
+test('a long-offline cloud read refills without writing and a lost action acknowledgement never repeats that refill',async()=>{
+  const context=await setup(40),{mock,room,store}=context;
+  let result=await store().applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'gather'},'idle-gather'));
+  const firstRun=structuredClone(result.state.restaurant.orders[0].workflow.runs[0]),at=restaurantStaffIdleAt(result.state.restaurant);
+  const raw=structuredClone(mock.files.get(room.roomId));
+  context.setClock(at-1);assert.equal((await store().getRoom(room.roomId)).state.restaurant.staffTraining['worker-1'].energy,30);
+  context.setClock(at);const read=await store().getRoom(room.roomId);
+  assert.equal(read.state.restaurant.staffTraining['worker-1'].energy,200);
+  assert.deepEqual(mock.files.get(room.roomId),raw,'GET cannot write the room or advance its revision');
+  const request=payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'wash'},'idle-wash');
+  mock.controls.lose=true;await assert.rejects(store().applyAction(room.roomId,request));
+  result=await store().applyAction(room.roomId,request);assert.equal(result.duplicate,true);
+  let run=result.state.restaurant.orders[0].workflow.runs[1];
+  assert.equal(run.energyBefore,200);assert.equal(run.energyAfter,190);assert.equal(run.idleRecoveryAt,at);
+  assert.deepEqual(result.state.restaurant.orders[0].workflow.runs[0],firstRun);
+  context.setClock(run.endAt);
+  result=await store().applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'beat-eggs'},'idle-beat','rest-client-two'));
+  run=result.state.restaurant.orders[0].workflow.runs[2];assert.equal(run.energyBefore,190);assert.equal(run.energyAfter,180);
+  assert.equal(result.state.restaurant.stats.served,0);
+  assert.deepEqual((await store().getRoom(room.roomId)).state.restaurant,result.state.restaurant);
+});
+
+test('two clients resuming after inactivity share one refill and one accepted deduction',async()=>{
+  const context=await setup(40),{mock,first,room,store}=context;
+  context.setClock(context.clock+STAFF_IDLE_RECOVERY_MS);mock.controls.pair();
+  const attempts=await Promise.allSettled([
+    first.applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'gather'},'idle-client-one')),
+    store().applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'gather'},'idle-client-two','rest-client-two'))
+  ]);
+  assert.equal(attempts.filter(attempt=>attempt.status==='fulfilled').length,1);assert.ok(mock.controls.conflicts>0);
+  const saved=(await store().getRoom(room.roomId)).state;
+  assert.equal(saved.restaurant.staffTraining['worker-1'].energy,190);assert.equal(saved.restaurant.orders[0].workflow.runs.length,1);
+  assert.ok(validRestaurant(saved.restaurant));
 });

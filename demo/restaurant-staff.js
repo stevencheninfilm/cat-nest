@@ -24,7 +24,7 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
   if(!Number.isSafeInteger(now)||now<0||!validRestaurant(state?.restaurant)||now<state.restaurant.openedAt)return reject('测试小馆尚未准备好。');
   const next=structuredClone(state),restaurant=normalizeRestaurant(state.restaurant,now);
   if(restaurant.revision>=Number.MAX_SAFE_INTEGER-8)return reject('请刷新测试小馆后再试。');
-  next.restaurant=restaurant;
+  next.restaurant=restaurant;restaurant.lastInteractionAt=Math.max(restaurant.lastInteractionAt,now);
   if(reset){
     // Cancelling demo assignments releases them now, without granting energy
     // for the time they were previously waiting on an unfinished order.

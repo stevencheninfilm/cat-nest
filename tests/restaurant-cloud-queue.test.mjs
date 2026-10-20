@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createCloudRoom } from '../src/cloud.js';
 import { initialState,reduceAction,levelStartXp } from '../src/state.js';
 import { validRestaurant,restaurantInfo,restaurantRecipe } from '../src/restaurant.js';
+import { restaurantStaffIdleAt } from '../src/restaurant-staff-training.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { restaurantGuestDebugResult } from '../demo/restaurant-guests.js';
 import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
@@ -311,4 +312,23 @@ test('real demo business and simulated explicit refusals both settle instead of 
     const count=demoEngine.logs.filter(log=>log.method==='POST').length;t.mock.timers.tick(8000);await flush();assert.equal(demoEngine.logs.filter(log=>log.method==='POST').length,count);
     cloud.destroy();
   }
+});
+
+test('a post-idle click immediately previews the refilled ledger and keeps its progress clock after delayed acknowledgement',async t=>{
+  let base=requested();Object.assign(base.restaurant.staffTraining['worker-1'],{energy:40,energyMode:'rest-room',rest:null});
+  base=reduceAction(base,{type:'restaurant-kitchen-accept',orderId:'table-1'},ACTOR,NOW);
+  base=reduceAction(base,{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'},ACTOR,NOW);
+  const first=clone(base.restaurant.orders[0].workflow.runs[0]),at=restaurantStaffIdleAt(base.restaurant),ack=deferred();let saved=base;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved)):ack.promise,{state:base});
+  t.mock.timers.tick(at-NOW);await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'}),true);
+  assert.equal(h.posts().length,1);
+  const local=h.latest(),run=local.restaurant.orders[0].workflow.runs[1];
+  assert.equal(run.commandAt,at);assert.equal(run.energyBefore,200);assert.equal(run.energyAfter,190);assert.equal(run.idleRecoveryAt,at);assert.ok(validRestaurant(local.restaurant));
+  t.mock.timers.tick(650);saved=apply(saved,h.posts()[0].body);ack.resolve(response(receipt(h.posts()[0].body,saved)));await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.observed.rollbacks.length,0);
+  assert.equal(h.latest().restaurant.staffTraining['worker-1'].energy,190);
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs[1].commandAt,at,'the ring keeps the click time instead of jumping to the receipt');
+  assert.deepEqual(h.latest().restaurant.orders[0].workflow.runs[0],first);
+  assert.ok(validRestaurant(h.latest().restaurant));
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { initialState, reduceAction, normalizeState, levelStartXp } from '../src/state.js';
 import { restaurantActionResult, restaurantInfo, restaurantRecipe, validRestaurant, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { KITCHEN_FLOWS, kitchenInfo, validKitchenReservations, validKitchenWorkflow } from '../src/restaurant-kitchen.js';
-import { normalizeStaffTraining, restaurantStaffRestInfo } from '../src/restaurant-staff-training.js';
+import { normalizeStaffTraining, STAFF_IDLE_RECOVERY_MS, restaurantStaffIdleAt, restaurantStaffRestInfo } from '../src/restaurant-staff-training.js';
 import { kitchenViewModel, kitchenActionPresentation } from '../src/restaurant-kitchen-ui.js';
 import { kitchenWorkflowBoardState } from '../src/restaurant-kitchen-board.js';
 import { kitchenTerminalState } from '../src/restaurant-kitchen-terminal.js';
@@ -30,19 +30,19 @@ function exhausted(energies=[10,100],recipeId='coffee'){
 }
 const energy=(state,at,id='worker-1')=>restaurantStaffRestInfo(state.restaurant,at).find(w=>w.id===id).energy;
 
-test('standing, guest arrival, acceptance and uncollected completed work never recover stamina outside the rest room',()=>{
-  let state=fixture([80]);assert.equal(energy(state,NOW+86400000),80);
+test('standing and unfinished work do not recover stamina before the long-inactivity threshold',()=>{
+  let state=fixture([80]);assert.equal(energy(state,NOW+STAFF_IDLE_RECOVERY_MS-1),80);
   let at;({state,at}=requested(state));assert.equal(energy(state,at+8000),80);
   for(const step of [...KITCHEN_FLOWS.coffee,{id:'delivery'}]){state=click(state,step.id,at);at=last(state).endAt;}
-  const after=last(state).energyAfter;assert.ok(after>0);assert.equal(energy(state,at+86400000),after);
+  const after=last(state).energyAfter;assert.ok(after>0);assert.equal(energy(state,restaurantStaffIdleAt(state.restaurant)-1),after);
   assert.equal(order(state).workflow.runs.length,KITCHEN_FLOWS.coffee.length+1);
 });
 
-test('training a fresh employee extra capacity does not enable recovery while standing',()=>{
+test('training extra capacity does not enable ordinary standing recovery before the inactivity threshold',()=>{
   let state=initialState(NOW);state.coins=10000;state.restaurant.stats.experience=levelStartXp(50);
   state=act(state,{type:'restaurant-train',workerId:'worker-1',statId:'stamina'},NOW+8000);
   assert.equal(state.restaurant.staffTraining['worker-1'].energyMode,'rest-room');
-  assert.equal(energy(state,NOW+86400000),200);assert.equal(restaurantStaffRestInfo(state.restaurant,NOW+86400000)[0].maxEnergy,215);
+  assert.equal(energy(state,NOW+8000+STAFF_IDLE_RECOVERY_MS-1),200);assert.equal(restaurantStaffRestInfo(state.restaurant,NOW+86400000)[0].maxEnergy,215);
 });
 
 test('the next bubble, terminal and workflow board open at the exhausted operation end while its employee is still walking to rest',()=>{
