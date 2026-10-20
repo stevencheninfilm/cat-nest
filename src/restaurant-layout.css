@@ -40,3 +40,5 @@
   .restaurant .rg-order-seat .r-order-bubble small{display:none}
   .restaurant .rg-order-seat.is-collectible .r-order-bubble strong{font-size:12px}
 }
+
+@media(max-width:420px){.restaurant .r-scene-controls{width:52px;gap:5px}.restaurant .r-scene-controls .rr-research-shortcut{transform:scale(.72);transform-origin:top center;margin-bottom:-23px}}
