@@ -13,7 +13,7 @@ const NOW=Date.parse('2026-10-18T12:00:00Z'),ACTOR={id:'route-manager',name:'店
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
 function fixture({recipeId='coffee',tables=3,seat=0,version=4,energy=100,speed=1,stamina=1}={}){
   const r={staff:0,levels:{kitchen:1,fridge:1,tables},orders:[],staffTraining:normalizeStaffTraining(null,NOW,0)};
-  r.staffTraining['worker-1']={levels:{speed,stamina,endurance:1,skill:1},energy,energyAt:NOW,energyMode:'rest-room',rest:null};
+  r.staffTraining['worker-1']={levels:{speed,stamina,endurance:1,skill:1},energyBase:200,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
   const workflow=createInteractiveWorkflow(r,recipeId,NOW,{orderId:'table-1',seat,version});
   const o={id:'table-1',recipeId,createdAt:NOW,readyAt:NOW,servedAt:null,recipeLevel:1,tipsLevel:1,kitchenLevel:1,staffLevel:0,actorId:ACTOR.id,workflow};
   r.orders.push(o);return {r,o};
@@ -102,7 +102,7 @@ test('a rested employee exits the side door, takes the second-row aisle and cros
     apply(r,o,advanceInteractiveWorkflow(r,o,'espresso',at));const run=o.workflow.runs[1],walk=o.workflow.segments.filter(s=>s.phase==='walk'&&s.startAt>=at);
     assert.deepEqual(run.startPosition,STAFF_REST_ROOM_POSITION);assert.deepEqual(walk[0].from,STAFF_REST_ROOM_POSITION);
     assert.ok(walk.some(s=>same(s.to,{x:90,y:52})));assert.ok(walk.some(s=>same(s.to,{x:54.5,y:65.5})));
-    assertOrthogonal(walk);assertDoor(walk);assertNoTables(walk,2*tables);assert.equal(run.energyBefore,100);assert.equal(run.energyCost,10);
+    assertOrthogonal(walk);assertDoor(walk);assertNoTables(walk,2*tables);assert.equal(run.energyBefore,200);assert.equal(run.energyCost,10);
     assert.deepEqual(walk.at(-1).to,INTERACTIVE_KITCHEN_ZONES[0].work);
   }
 });

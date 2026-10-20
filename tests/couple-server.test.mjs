@@ -97,7 +97,7 @@ test('common home preserves the existing GitHub save and feeding identities whil
   const training=data.state.restaurant.staffTraining;
   assert.deepEqual(Object.keys(training),['worker-1']);
   assert.deepEqual(training['worker-1'].levels,{speed:1,stamina:1,endurance:1,skill:1});
-  assert.equal(training['worker-1'].energy,100);
+  assert.equal(training['worker-1'].energy,200);
   assert.ok(training['worker-1'].energyAt>=state.updatedAt);
   const expected={...state,restaurant:{...state.restaurant,waitingParties:[],staffTraining:training}};
   assert.deepEqual(data.state, expected);

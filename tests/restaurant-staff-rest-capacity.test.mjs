@@ -15,10 +15,10 @@ test('six hired employees rest independently while the chef remains available an
   const seed=initialState(NOW),before=structuredClone(seed),state=sixRest(seed);
   const inside=restaurantStaffRestInfo(state.restaurant,NOW+40900);
   assert.equal(state.restaurant.staff,6);assert.equal(state.restaurant.orders.length,0);assert.equal(state.restaurant.parties.length,0);
-  assert.equal(inside[0].rest,null);assert.equal(inside[0].energy,100);
+  assert.equal(inside[0].rest,null);assert.equal(inside[0].energy,200);
   assert.deepEqual(inside.slice(1).map(worker=>worker.rest.phase),Array(6).fill('recovering'));
   assert.deepEqual(inside.slice(1).map(worker=>worker.energy),Array(6).fill(50));
-  assert.deepEqual(inside.slice(1).map(worker=>worker.rest.remainingMs),Array(6).fill(40000));
+  assert.deepEqual(inside.slice(1).map(worker=>worker.rest.remainingMs),Array(6).fill(120000));
   for(const key of Object.keys(seed).filter(key=>!['restaurant','updatedAt'].includes(key)))assert.deepEqual(state[key],seed[key],key);
   assert.deepEqual(state.restaurant.stats,seed.restaurant.stats);assert.deepEqual(seed,before);
   const reload=normalizeState(JSON.parse(JSON.stringify(state)),NOW+40900);
@@ -33,7 +33,7 @@ test('the collapsed right-edge entrance contains no long status banner and expan
   const summary=restaurantRestSummaryMarkup(workers,at),room=restaurantRestRoomPanel(restaurantInfo(state,at),{now:at});
   assert.equal((summary.match(/data-r-rest-summary-worker=/g)||[]).length,6);
   assert.equal((room.match(/data-r-resting-worker=/g)||[]).length,6);
-  assert.equal((room.match(/恢复 00:40/g)||[]).length,6);
+  assert.equal((room.match(/恢复 02:00/g)||[]).length,6);
   for(let index=2;index<=7;index++){
     assert.equal((summary.match(new RegExp(`data-r-rest-summary-worker="worker-${index}"`,'g'))||[]).length,1);
     assert.equal((room.match(new RegExp(`data-r-resting-worker="worker-${index}"`,'g'))||[]).length,1);
@@ -56,12 +56,12 @@ test('six restored employees remain inside with no automatic work until one vali
   state=act(state,{type:'restaurant-kitchen-accept',orderId:second},secondAt);
   const before=structuredClone(state),blocked=restaurantActionResult(state,{type:'restaurant-kitchen-step',orderId:second,stepId:'gather'},ACTOR,secondAt);
   assert.equal(blocked.ok,false);assert.match(blocked.reason,/体力恢复中/);assert.deepEqual(state,before);
-  const fullAt=NOW+80900,allReady=restaurantStaffRestInfo(state.restaurant,fullAt+1000000).slice(1);
-  assert.equal(allReady.length,6);assert.ok(allReady.every(worker=>worker.energy===100&&worker.rest.phase==='ready'));
+  const fullAt=NOW+160900,allReady=restaurantStaffRestInfo(state.restaurant,fullAt+1000000).slice(1);
+  assert.equal(allReady.length,6);assert.ok(allReady.every(worker=>worker.energy===200&&worker.rest.phase==='ready'));
   assert.equal(state.restaurant.orders[1].workflow.runs.length,0);
   state=act(state,{type:'restaurant-kitchen-step',orderId:second,stepId:'gather'},fullAt+1);
   assert.equal(state.restaurant.orders[1].workflow.workerId,'worker-2');
-  assert.equal(state.restaurant.staffTraining['worker-2'].energy,90);assert.equal(state.restaurant.staffTraining['worker-2'].rest,null);
+  assert.equal(state.restaurant.staffTraining['worker-2'].energy,190);assert.equal(state.restaurant.staffTraining['worker-2'].rest,null);
   assert.equal(restaurantStaffRestInfo(state.restaurant,fullAt+1).filter(worker=>worker.rest?.phase==='ready').length,5);
 });
 
@@ -69,7 +69,7 @@ test('six-person recovery respects individual stamina capacities and the fixture
   const seed=restaurantStaffDebugResult(initialState(NOW),{mode:'preset',staff:6},NOW).state;
   seed.restaurant.staffTraining['worker-3'].levels.stamina=2;
   seed.restaurant.staffTraining['worker-5'].levels.speed=10;
-  const state=sixRest(seed),at=NOW+80900,workers=restaurantStaffRestInfo(state.restaurant,at);
+  const state=sixRest(seed),at=NOW+160900,workers=restaurantStaffRestInfo(state.restaurant,at);
   assert.equal(workers.find(worker=>worker.id==='worker-3').rest.phase,'recovering');
   assert.equal(workers.find(worker=>worker.id==='worker-3').rest.remainingMs,12000);
   assert.equal(workers.filter(worker=>worker.rest?.phase==='ready').length,5);

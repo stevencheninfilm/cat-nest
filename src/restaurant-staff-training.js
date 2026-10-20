@@ -3,6 +3,12 @@
  * time cannot also regenerate stamina. Only authoritative reducers write this. */
 export const STAFF_TRAINING_MAX_LEVEL=10;
 export const STAFF_WORK_STEP_ENERGY_BASE=10;
+export const STAFF_BASE_ENERGY=200;
+const LEGACY_STAFF_BASE_ENERGY=100;
+/** Missing snapshots belong to the original 100-point balance. */
+export const staffEnergyBase=record=>record?.energyBase??LEGACY_STAFF_BASE_ENERGY;
+export const staffMaxEnergy=(levels,base=STAFF_BASE_ENERGY)=>base+15*(levels.stamina-1);
+export const validStaffEnergyBase=record=>!Object.hasOwn(record??{},'energyBase')||[LEGACY_STAFF_BASE_ENERGY,STAFF_BASE_ENERGY].includes(record.energyBase);
 export const STAFF_ENERGY_RECOVERY_MS=800;
 export const STAFF_REST_ROOM_ENTRANCE=Object.freeze({x:94,y:47});
 export const STAFF_REST_ROOM_POSITION=Object.freeze({x:97,y:47});
@@ -24,12 +30,13 @@ const exact=(value,keys)=>plain(value)&&Object.keys(value).length===keys.length&
 const safeTime=now=>integer(now)?now:0;
 const validWorkerId=value=>typeof value==='string'&&WORKER_ID.test(value);
 const activeWorkerCount=staffCount=>1+(integer(staffCount,0,98)?staffCount:0);
-const maxEnergyFor=levels=>100+15*(levels.stamina-1);
+const maxEnergyFor=staffMaxEnergy;
+const recordMaxEnergy=record=>maxEnergyFor(record.levels,staffEnergyBase(record));
 const normalizedLevels=value=>Object.fromEntries(STAT_IDS.map(id=>[id,integer(value?.[id],1,STAFF_TRAINING_MAX_LEVEL)?value[id]:1]));
-const initialRecord=now=>({levels:normalizedLevels(null),energy:100,energyAt:safeTime(now)});
+const initialRecord=now=>({levels:normalizedLevels(null),energyBase:STAFF_BASE_ENERGY,energy:STAFF_BASE_ENERGY,energyAt:safeTime(now)});
 const point=value=>exact(value,['x','y'])&&Number.isFinite(value.x)&&Number.isFinite(value.y)&&value.x>=0&&value.x<=100&&value.y>=0&&value.y<=100;
 const validRest=value=>value===null||exact(value,['departAt','arriveAt','fullAt','speedLevel','segments'])&&integer(value.departAt)&&integer(value.arriveAt,value.departAt+1)&&integer(value.fullAt,value.arriveAt)&&integer(value.speedLevel,1,10)&&Array.isArray(value.segments)&&value.segments.length>0&&value.segments.length<20&&value.segments.every((s,i)=>exact(s,['phase','startAt','endAt','from','to','zoneId','stepId','carrying'])&&s.phase==='rest-walk'&&integer(s.startAt)&&integer(s.endAt,s.startAt+1)&&s.startAt===(i?value.segments[i-1].endAt:value.departAt)&&point(s.from)&&point(s.to)&&s.zoneId===null&&s.stepId==='rest'&&s.carrying===null&&(s.from.x===s.to.x||s.from.y===s.to.y)&&s.endAt-s.startAt===5*Math.max(180,Math.round(Math.round((Math.abs(s.to.x-s.from.x)+Math.abs(s.to.y-s.from.y))*45)/(1+.075*(value.speedLevel-1))))&&(i===0||s.from.x===value.segments[i-1].to.x&&s.from.y===value.segments[i-1].to.y))&&value.segments.at(-1).endAt===value.arriveAt&&value.segments.at(-1).to.x===STAFF_REST_ROOM_POSITION.x&&value.segments.at(-1).to.y===STAFF_REST_ROOM_POSITION.y;
-const recordIsValid=value=>exact(value,['levels','energy','energyAt',...(Object.hasOwn(value??{},'energyMode')?['energyMode','rest']:[])])&&exact(value.levels,STAT_IDS)&&Object.values(value.levels).every(level=>integer(level,1,STAFF_TRAINING_MAX_LEVEL))&&Number.isFinite(value.energy)&&value.energy>=0&&value.energy<=maxEnergyFor(value.levels)&&integer(value.energyAt)&&(!Object.hasOwn(value,'energyMode')||value.energyMode==='rest-room'&&validRest(value.rest)&&(!value.rest||value.energyAt>=value.rest.arriveAt&&value.rest.fullAt===value.energyAt+Math.ceil((maxEnergyFor(value.levels)-value.energy)*STAFF_ENERGY_RECOVERY_MS)));
+const recordIsValid=value=>exact(value,['levels','energy','energyAt',...(Object.hasOwn(value??{},'energyBase')?['energyBase']:[]),...(Object.hasOwn(value??{},'energyMode')?['energyMode','rest']:[])])&&validStaffEnergyBase(value)&&exact(value.levels,STAT_IDS)&&Object.values(value.levels).every(level=>integer(level,1,STAFF_TRAINING_MAX_LEVEL))&&Number.isFinite(value.energy)&&value.energy>=0&&value.energy<=recordMaxEnergy(value)&&integer(value.energyAt)&&(!Object.hasOwn(value,'energyMode')||value.energyMode==='rest-room'&&validRest(value.rest)&&(!value.rest||value.energyAt>=value.rest.arriveAt&&value.rest.fullAt===value.energyAt+Math.ceil((recordMaxEnergy(value)-value.energy)*STAFF_ENERGY_RECOVERY_MS)));
 
 /** Snapshot-friendly duration factors, independent of a worker's live ledger. */
 export function workerDurationMultipliers(levels) {
@@ -42,7 +49,7 @@ export function workerDurationMultipliers(levels) {
 export function staffAbilityLevelEffects(statId,level){
   const levels=normalizedLevels({[statId]:level}),factors=workerDurationMultipliers(levels),round=value=>Math.round(value*1000)/10;
   if(statId==='speed')return {ratePercent:round(1/factors.walkMsMultiplier-1),timeReductionPercent:round(1-factors.walkMsMultiplier)};
-  if(statId==='stamina')return {maxEnergy:maxEnergyFor(levels),capacityPercent:round(maxEnergyFor(levels)/100-1)};
+  if(statId==='stamina')return {maxEnergy:maxEnergyFor(levels),capacityPercent:round(maxEnergyFor(levels)/STAFF_BASE_ENERGY-1)};
   if(statId==='endurance'){
     const stepEnergyCost=workerStepEnergyCost(levels);
     return {factorReductionPercent:round(1-factors.enduranceMultiplier),stepEnergyCost,actualReductionPercent:round(1-stepEnergyCost/STAFF_WORK_STEP_ENERGY_BASE)};
@@ -64,7 +71,10 @@ export function normalizeStaffTraining(value,now=Date.now(),staffCount=0) {
     const id=`worker-${index+1}`,saved=plain(value)?value[id]:null;
     if(!plain(saved))return [id,initialRecord(now)];
     const levels=normalizedLevels(saved.levels),maxEnergy=maxEnergyFor(levels);
-    return [id,{levels,energy:Number.isFinite(saved.energy)&&saved.energy>=0?Math.min(maxEnergy,saved.energy):maxEnergy,energyAt:integer(saved.energyAt)?saved.energyAt:now,...(saved.energyMode==='rest-room'&&validRest(saved.rest)?{energyMode:'rest-room',rest:structuredClone(saved.rest)}:{})}];
+    // Grant the added capacity once, preserving spent stamina and booked clocks.
+    // Both sides of an existing rest deficit grow equally, so fullAt is stable.
+    const capacityBonus=STAFF_BASE_ENERGY-(saved.energyBase===STAFF_BASE_ENERGY?STAFF_BASE_ENERGY:LEGACY_STAFF_BASE_ENERGY);
+    return [id,{levels,energyBase:STAFF_BASE_ENERGY,energy:Number.isFinite(saved.energy)&&saved.energy>=0?Math.min(maxEnergy,saved.energy+capacityBonus):maxEnergy,energyAt:integer(saved.energyAt)?saved.energyAt:now,...(saved.energyMode==='rest-room'&&validRest(saved.rest)?{energyMode:'rest-room',rest:structuredClone(saved.rest)}:{})}];
   }));
 }
 
@@ -77,10 +87,10 @@ export function validStaffTraining(value,staffCount=0) {
  * current timings. Skill and speed affect distinct parts of the workflow. */
 export function workerAbilitySnapshot(workerId,training,now=Date.now()) {
   const saved=validWorkerId(workerId)&&recordIsValid(training?.[workerId])?training[workerId]:initialRecord(now);
-  const levels={...saved.levels},maxEnergy=maxEnergyFor(levels),at=safeTime(now);
+  const levels={...saved.levels},energyBase=staffEnergyBase(saved),maxEnergy=maxEnergyFor(levels,energyBase),at=safeTime(now);
   const canRecover=saved.energyMode!=='rest-room'||!!saved.rest&&at>=saved.rest.arriveAt;
   const energy=Math.min(maxEnergy,saved.energy+(canRecover?Math.max(0,at-saved.energyAt)/STAFF_ENERGY_RECOVERY_MS:0));
-  return {workerId,levels,maxEnergy,energy,stepEnergyCost:workerStepEnergyCost(levels),energyAt:saved.energyAt,recovering:canRecover&&at>=saved.energyAt&&energy<maxEnergy,
+  return {workerId,levels,energyBase,maxEnergy,energy,stepEnergyCost:workerStepEnergyCost(levels),energyAt:saved.energyAt,recovering:canRecover&&at>=saved.energyAt&&energy<maxEnergy,
     fullEnergyAt:saved.energyMode==='rest-room'&&!saved.rest?null:saved.energyAt+Math.ceil((maxEnergy-saved.energy)*STAFF_ENERGY_RECOVERY_MS),qualityMultiplier:1+.015*(levels.skill-1),
     ...workerDurationMultipliers(levels)};
 }
@@ -103,8 +113,8 @@ export function workerOrderEnergyCost(flowOrStepCount,abilities={enduranceMultip
  * real rest. A future energyAt includes already-booked work and cannot recover
  * before that work finishes. A cost beyond max stamina is unschedulable. */
 export function workerEnergyReadyAt(record,earliestStart,energyCost) {
-  if(!recordIsValid(record)||!integer(earliestStart)||!Number.isFinite(energyCost)||energyCost<=0||energyCost>maxEnergyFor(record.levels))return null;
-  const availableAt=Math.max(earliestStart,record.energyAt),maxEnergy=maxEnergyFor(record.levels);
+  if(!recordIsValid(record)||!integer(earliestStart)||!Number.isFinite(energyCost)||energyCost<=0||energyCost>recordMaxEnergy(record))return null;
+  const availableAt=Math.max(earliestStart,record.energyAt),maxEnergy=recordMaxEnergy(record);
   if(record.energyMode==='rest-room'){
     if(record.rest&&earliestStart<record.rest.fullAt)return {startAt:record.rest.fullAt,restMs:record.rest.fullAt-earliestStart,energyBefore:maxEnergy,energyCost};
     const ability=workerAbilitySnapshot('worker-1',{'worker-1':record},availableAt);
@@ -124,7 +134,7 @@ export function reserveWorkerEnergy(training,workerId,{startAt,completedAt,energ
   if(!validWorkerId(workerId)||!recordIsValid(training?.[workerId])||!integer(startAt)||!integer(completedAt)||completedAt<=startAt)return null;
   const plan=workerEnergyReadyAt(training[workerId],startAt,energyCost);
   if(!plan||plan.startAt!==startAt)return null;
-  return {...training,[workerId]:{levels:{...training[workerId].levels},energy:Math.max(0,plan.energyBefore-energyCost),energyAt:completedAt,...(training[workerId].energyMode==='rest-room'?{energyMode:'rest-room',rest:null}:{})}};
+  return {...training,[workerId]:{levels:{...training[workerId].levels},energyBase:staffEnergyBase(training[workerId]),energy:Math.max(0,plan.energyBefore-energyCost),energyAt:completedAt,...(training[workerId].energyMode==='rest-room'?{energyMode:'rest-room',rest:null}:{})}};
 }
 
 /** Upgrade intents choose only worker/stat. The reducer supplies trusted wallet
@@ -140,7 +150,7 @@ export function trainingUpgradeResult(training,workerId,statId,wallet,now=Date.n
   // Rebase idle recovery before capacity changes; never erase future booked work.
   if(now>=record.energyAt){record.energy=workerAbilitySnapshot(workerId,next,now).energy;record.energyAt=now;}
   record.levels[statId]=cost.targetLevel;
-  if(record.rest)record.rest.fullAt=record.energyAt+Math.ceil((maxEnergyFor(record.levels)-record.energy)*STAFF_ENERGY_RECOVERY_MS);
+  if(record.rest)record.rest.fullAt=record.energyAt+Math.ceil((recordMaxEnergy(record)-record.energy)*STAFF_ENERGY_RECOVERY_MS);
   return {ok:true,training:next,coins:wallet.coins-(cost.currency==='coins'?cost.amount:0),goldFish:wallet.goldFish-(cost.currency==='goldFish'?cost.amount:0),workerId,statId,level:cost.targetLevel,cost};
 }
 
@@ -167,5 +177,5 @@ export function restaurantStaffRestInfo(restaurant,now=Date.now()){
 export function createStaffExhaustionTestPreset(restaurant,now=Date.now(),workerId='worker-1'){
   const training=normalizeStaffTraining(restaurant?.staffTraining,now,restaurant?.staff??0);
   if(!training[workerId]||!integer(now)||(restaurant?.orders??[]).some(order=>{const flow=order.workflow;return flow?.workerId===workerId&&(flow.runs?.length?flow.completedAt===null||flow.completedAt>now:flow.completedAt>now);}))return null;
-  return {...training,[workerId]:{levels:{...training[workerId].levels},energy:1,energyAt:now,energyMode:'rest-room',rest:null}};
+  return {...training,[workerId]:{levels:{...training[workerId].levels},energyBase:staffEnergyBase(training[workerId]),energy:1,energyAt:now,energyMode:'rest-room',rest:null}};
 }

@@ -68,7 +68,7 @@ test('lost handoff acknowledgement and concurrent next clicks preserve both empl
   mock.controls.lose=true;await assert.rejects(first.applyAction(room.roomId,request));
   const retried=await store().applyAction(room.roomId,request);assert.equal(retried.duplicate,true);
   assert.deepEqual(retried.state.restaurant.orders[0].workflow.runs.map(run=>run.workerId),['worker-1','worker-2']);
-  assert.deepEqual(retried.state.restaurant.staffTraining['worker-1'].rest,rest);assert.equal(retried.state.restaurant.staffTraining['worker-2'].energy,90);
+  assert.deepEqual(retried.state.restaurant.staffTraining['worker-1'].rest,rest);assert.equal(retried.state.restaurant.staffTraining['worker-2'].energy,190);
   const {workerId,...preserved}=retried.state.restaurant.orders[0].workflow.runs[0];assert.equal(workerId,'worker-1');assert.deepEqual(preserved,firstRun);
   const nextAt=retried.state.restaurant.orders[0].workflow.runs[1].endAt;context.setClock(nextAt);mock.controls.pair();
   const attempts=await Promise.allSettled([
@@ -76,7 +76,7 @@ test('lost handoff acknowledgement and concurrent next clicks preserve both empl
     store().applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'beat-eggs'},'handoff-beat-b','rest-client-two'))
   ]);
   assert.equal(attempts.filter(r=>r.status==='fulfilled').length,1);
-  const loaded=(await store().getRoom(room.roomId)).state;assert.equal(loaded.restaurant.orders[0].workflow.runs.length,3);assert.equal(loaded.restaurant.staffTraining['worker-2'].energy,80);
+  const loaded=(await store().getRoom(room.roomId)).state;assert.equal(loaded.restaurant.orders[0].workflow.runs.length,3);assert.equal(loaded.restaurant.staffTraining['worker-2'].energy,180);
   assert.equal(restaurantInfo(loaded,rest.arriveAt+800).kitchen.workers[0].energy,1);assert.ok(validRestaurant(loaded.restaurant));
 });
 
@@ -88,7 +88,7 @@ test('lost acknowledgement, refresh and another role preserve the same fatigue a
   assert.equal(reload.state.restaurant.orders[0].workflow.runs.length,1);assert.equal(restaurantInfo(reload.state,context.clock).kitchen.workers[0].energy,10);assert.deepEqual(mock.files.get(room.roomId).room,saved);
   await assert.rejects(store().applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'wash'},'rest-too-soon','rest-client-two')),error=>error.code==='RESTAURANT_ACTION_REJECTED'&&/体力恢复中/.test(error.message));
   context.setClock(run.rest.fullAt);const next=await store().applyAction(room.roomId,payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'wash'},'rest-finished','rest-client-two'));
-  assert.deepEqual(next.state.restaurant.orders[0].workflow.runs[1].startPosition,{x:97,y:47});assert.equal(next.state.restaurant.orders[0].workflow.runs[1].energyAfter,90);assert.equal(next.state.restaurant.staffTraining['worker-1'].rest,null);
+  assert.deepEqual(next.state.restaurant.orders[0].workflow.runs[1].startPosition,{x:97,y:47});assert.equal(next.state.restaurant.orders[0].workflow.runs[1].energyAfter,190);assert.equal(next.state.restaurant.staffTraining['worker-1'].rest,null);
 });
 
 test('a resting employee cannot be assigned to a second order and room recovery creates no automatic run or reward',async()=>{
@@ -112,4 +112,23 @@ test('corrupt persisted rest clocks and shortened room travel fail closed withou
     const file=mock.files.get(room.roomId);mutate(file.room.state.restaurant.staffTraining['worker-1'].rest);file.sha='corrupt-rest';
     await assert.rejects(store().getRoom(room.roomId),error=>error.code==='STORAGE_CORRUPT');assert.equal(mock.files.size,1);
   }
+});
+
+test('an existing 100-point cloud save migrates once across a lost acknowledgement and another client',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const {fixtures}=JSON.parse(await readFile(new URL('./fixtures/restaurant-stamina-100.json',import.meta.url)));
+  const context=await setup(),{mock,room,store}=context,file=mock.files.get(room.roomId);
+  file.room.state.restaurant=structuredClone(fixtures.activeV4);file.sha='legacy-stamina-100';
+  const at=fixtures.activeV4.orders[0].workflow.runs[0].endAt;context.setClock(at);
+  const before=structuredClone(file.room),loaded=await store().getRoom(room.roomId);
+  assert.equal(loaded.state.restaurant.staffTraining['worker-1'].energy,190);
+  assert.deepEqual(mock.files.get(room.roomId).room,before,'reading cannot rewrite a cloud save');
+  const request=payload('restaurant-kitchen-step',{orderId:'table-1',stepId:'espresso'},'stamina-migration-step');
+  mock.controls.lose=true;await assert.rejects(store().applyAction(room.roomId,request));
+  const retry=await store().applyAction(room.roomId,request);assert.equal(retry.duplicate,true);
+  assert.equal(retry.state.restaurant.staffTraining['worker-1'].energy,180);
+  assert.equal(retry.state.restaurant.orders[0].workflow.runs.length,2);
+  const again=await store().getRoom(room.roomId);
+  assert.deepEqual(again.state.restaurant,retry.state.restaurant);
+  assert.equal(again.state.coins,before.state.coins);
 });

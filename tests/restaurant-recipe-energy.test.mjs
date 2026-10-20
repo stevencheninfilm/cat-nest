@@ -16,7 +16,7 @@ import { kitchenWorkflowBoardMarkup } from '../src/restaurant-kitchen-board.js';
 const NOW=Date.parse('2026-10-18T20:00:00Z'),ACTOR={id:'recipe-energy-test',name:'店长'};
 function fixture(recipeId,{grade=1,endurance=1,legacy=false,energy=235}={}){
   const restaurant={staff:0,levels:{kitchen:1,fridge:1,tables:1},orders:[],recipeLevels:{[recipeId]:grade},staffTraining:normalizeStaffTraining(null,NOW,0)};
-  restaurant.staffTraining['worker-1']={levels:{speed:1,stamina:10,endurance,skill:1},energy,energyAt:NOW,energyMode:'rest-room',rest:null};
+  restaurant.staffTraining['worker-1']={levels:{speed:1,stamina:10,endurance,skill:1},energyBase:200,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
   const order={id:'table-1',recipeId,createdAt:NOW,readyAt:NOW,servedAt:null,recipeLevel:grade,tipsLevel:1,kitchenLevel:1,staffLevel:0,actorId:ACTOR.id,workflow:createInteractiveWorkflow(restaurant,recipeId,NOW,{orderId:'table-1',version:4,...(legacy?{}:{stepEnergyBase:recipeStepEnergyBase(recipeId,grade)})})};
   restaurant.orders.push(order);return {restaurant,order};
 }

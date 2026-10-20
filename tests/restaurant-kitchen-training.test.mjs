@@ -122,7 +122,8 @@ test('consistent timestamp edits cannot shorten real work, walking, delivery or 
 });
 
 test('stamina waits persist after collected orders disappear and do not recover during reserved work',()=>{
-  const restaurant=kitchen({training:{}}),first=addOrder(restaurant,'rice',NOW,{reserve:true}),second=addOrder(restaurant,'rice',NOW,{reserve:true});
+  const restaurant=kitchen({training:{}});restaurant.staffTraining['worker-1'].energy=100;
+  const first=addOrder(restaurant,'rice',NOW,{reserve:true}),second=addOrder(restaurant,'rice',NOW,{reserve:true});
   assert.equal(second.workflow.workerId,first.workflow.workerId);
   assert.equal(second.workflow.segments[0].endAt,first.workflow.completedAt);
   assert.equal(restaurant.staffTraining['worker-1'].energy,4);

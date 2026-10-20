@@ -51,7 +51,7 @@ test('two running dishes retain independent rings and countdowns without changin
   const now=Math.max(...works.map(s=>s.startAt))+1,all=actions(state,now);
   assert.equal(all.length,2);assert.ok(all.every(a=>a.running&&a.counting));
   for(const action of all){const work=works.find(s=>s.stepId===action.step.id);assert.equal(action.seconds,Math.ceil((work.endAt-now)/1000));assert.equal(action.progress,(now-work.startAt)/(work.endAt-work.startAt));}
-  assert.deepEqual(Object.values(state.restaurant.staffTraining).map(r=>r.energy),[80,80]);
+  assert.deepEqual(Object.values(state.restaurant.staffTraining).map(r=>r.energy),[180,180]);
 });
 
 test('two orders at the same workstation both retain their circles while the waiting one respects occupancy',()=>{
