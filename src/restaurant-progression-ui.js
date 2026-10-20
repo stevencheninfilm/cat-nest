@@ -11,13 +11,14 @@ const level=value=>Number.isSafeInteger(value)&&value>0?value:1;
 const slug=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]+$/.test(value)?value:null;
 const asset=file=>new URL(`${import.meta.env?.BASE_URL||'./'}assets/restaurant/${file}`,globalThis.document?.baseURI||import.meta.url).href;
 const CATEGORIES=Object.freeze([
-  ['all','全部'],['recipe','菜谱'],['staff','员工'],['facility','设施'],
+  ['all','全部'],['feature','功能'],['recipe','菜谱'],['staff','员工'],['facility','设施'],
   ['research','研发'],['training','训练'],['decoration','装扮'],['station','厨房'],
 ]);
 const LABELS=Object.fromEntries(CATEGORIES);
-const PANELS=Object.freeze({recipe:'recipes',staff:'staff',facility:'upgrades',research:'research',training:'training',decoration:'themes',station:'flow'});
-const PANEL_NAMES=Object.freeze({recipes:'菜谱',research:'研发室',staff:'员工',upgrades:'设施',training:'训练',themes:'装扮',flow:'厨房',gold:'金色招牌'});
+const PANELS=Object.freeze({feature:'business',recipe:'recipes',staff:'staff',facility:'upgrades',research:'research',training:'training',decoration:'themes',station:'flow'});
+const PANEL_NAMES=Object.freeze({business:'营业',recipes:'菜谱',research:'研发室',staff:'员工',upgrades:'设施',training:'训练',themes:'装扮',flow:'厨房',gold:'金色招牌'});
 const ICONS=Object.freeze({
+  feature:'<path d="M7 14C-2 12 4 2 9 5c3-7 11-3 10 2 7 2 4 9-2 8v6H7v-7Zm0 3h10"/>',
   star:'<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>',
   recipe:'<path d="M12 5C8 3 4 4 4 4v15s4-1 8 1c4-2 8-1 8-1V4s-4-1-8 1Zm0 0v15"/>',
   staff:'<path d="m5 10-1-7 6 4h4l6-4-1 7c5 14-19 14-14 0Z"/><path d="M8 13h.1M16 13h.1m-6 4 2-1 2 1"/>',
@@ -58,14 +59,14 @@ function price(item,state){
   return `<span class="rp-price ${item.currency==='goldFish'?'is-gold':''}"><b>${number(item.cost)}</b> ${item.currency==='goldFish'?'金鱼干':'小鱼干'}</span>`;
 }
 function resourceDescription(item){
-  if(item.cost===null)return item.description;
+  if(item.kind==='feature'||item.cost===null)return item.description;
   if(item.kind==='training')return '每人每项';
   if((item.kind==='facility'&&item.cost>0)||(item.kind==='decoration'&&item.currency==='goldFish'))return item.description;
   return '';
 }
 function resourceMarkup(item){
   const state=status(item),tab=route(item),opened=level(item.level),target=Number.isSafeInteger(item.targetLevel)&&item.targetLevel>0?item.targetLevel:null;
-  const label={owned:'已拥有',available:'可购买',locked:'未到级'}[state];
+  const label=item.kind==='feature'?(state==='locked'?'未到级':'已解锁'):{owned:'已拥有',available:'可购买',locked:'未到级'}[state];
   const name=target?String(item.name??'').replace(new RegExp(`\\s*(?:可升至|至)?\\s*Lv\\.\\s*${target}\\s*$`),'').trim():item.name;
   const description=resourceDescription(item);
   return `<article class="rp-resource is-${state}" data-r-progression-key="${esc(item.key)}" data-r-progression-kind="${esc(item.kind)}" data-r-resource-level="${opened}" ${restaurantLockedAttributes(state!=='owned')}><span class="rp-preview">${preview(item)}</span><div class="rp-resource-copy"><div class="rp-resource-heading"><h4>${esc(name)}</h4>${target?`<small class="rp-target" data-r-target-level="${target}" aria-label="${item.kind==='training'?'能力':'目标'}等级 ${target}">Lv.${target}</small>`:''}</div>${description?`<p>${esc(description)}</p>`:''}<div class="rp-resource-bottom"><span class="rp-status">${state==='owned'?icon('check'):restaurantLockIcon()}${label}</span>${price(item,state)}</div></div><button class="rp-resource-link" type="button" data-r-tab="${tab}" data-r-progression-resource="${esc(item.key)}" aria-label="前往${PANEL_NAMES[tab]}查看${esc(item.name)}">${icon('arrow')}</button></article>`;

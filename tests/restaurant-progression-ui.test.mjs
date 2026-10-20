@@ -98,10 +98,10 @@ test('experience continues past the fifty-level resource map while employee abil
   assert.doesNotMatch(markup,/已满级|最高等级|等级上限/);
 });
 
-test('all eight category controls filter actual catalog kinds and retain accessible selected state',()=>{
+test('all nine category controls filter actual catalog kinds and retain accessible selected state',()=>{
   const info=fixture(),all=restaurantProgressionPanel(info);
-  assert.equal((all.match(/data-r-progression-category=/g)||[]).length,8);
-  for(const category of ['recipe','staff','facility','research','training','decoration','station']){
+  assert.equal((all.match(/data-r-progression-category=/g)||[]).length,9);
+  for(const category of ['feature','recipe','staff','facility','research','training','decoration','station']){
     const markup=restaurantProgressionPanel(info,{category}),expected=info.progression.catalog.filter(item=>item.kind===category);
     assert.equal(articles(markup).length,expected.length,category);
     for(const item of info.progression.catalog)assert.equal(articles(markup).some(article=>article[1]===item.key),item.kind===category);

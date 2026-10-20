@@ -1,3 +1,5 @@
+import { createRestaurantAutoCook, paintRestaurantAutoCook } from './restaurant-auto-cook.js';
+import { RESTAURANT_AUTO_COOK_LEVEL } from './restaurant-progression.js';
 import { STAFF_IDLE_RECOVERY_MS } from './restaurant-staff-training.js';
 import { restaurantLockedAttributes, restaurantLockIcon } from './restaurant-locked-ui.js';
 import { createRestaurantRecipeCelebration } from './restaurant-recipe-celebration.js';
@@ -116,7 +118,7 @@ export function restaurantMarkup(state, {isTest=false,debugEnabled=isTest}={}) {
     ${debugEnabled?`<aside id="rg-terminal" class="rg-terminal-window" aria-labelledby="rg-terminal-title" hidden><header><h2 id="rg-terminal-title">调试终端</h2><button data-r-terminal-close aria-label="关闭餐厅控制终端" title="关闭">${restaurantIcon('close')}</button></header><div data-r-terminal-panel></div></aside>`:''}
     <div class="r-open-sign" role="status"><i></i>营业中</div>
     <div class="r-hud"><div class="r-wallet"><span class="r-fish-medallion">${restaurantIcon('fish')}</span><span><small>小鱼干</small><strong data-r-wallet>${number(state.coins)}</strong></span><button class="round-button r-wallet-guide" data-r-guide-open aria-label="餐厅新手引导" title="餐厅新手引导">${restaurantIcon('book')}</button></div>${goldWalletMarkup(state.goldFish)}<button class="r-level" data-r-tab="progression" aria-label="查看小馆等级和资源解锁进度">${restaurantStageStars(1,{compact:true})}<span class="r-level-copy"><strong data-r-stage-title>小馆</strong><span data-r-level>Lv.1</span><span class="r-level-track" role="progressbar" aria-label="营业经验" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i data-r-level-bar></i></span><span class="r-level-value" data-r-level-value></span></span></button><aside class="rx-gain" data-r-experience-gain role="status" aria-live="polite" aria-atomic="true" hidden></aside></div>
-    <section class="r-viewport" aria-label="完整餐厅全景，顾客与厨房同屏"><div class="r-scene-controls"><button class="r-round r-back" data-r-back aria-label="返回猫猫图鉴">${restaurantIcon('back')}</button>${restaurantResearchShortcut()}</div><aside class="r-header-actions r-tools" aria-label="餐厅工具"><button class="r-round ra-entry" data-r-audio-open aria-label="声音设置" title="声音设置">${restaurantAudioIcon}</button><button class="r-round r-info-entry" data-r-tab="info" aria-label="查看小馆营业信息">${restaurantIcon('info')}</button>${debugEnabled?`<button class="r-round rg-terminal-entry" data-r-tab="terminal" aria-label="打开餐厅控制终端" aria-controls="rg-terminal" aria-expanded="false">${restaurantIcon('terminal')}<small>终端</small></button>`:`<button class="r-round" data-r-tab="help" aria-label="餐厅玩法说明">${restaurantIcon('help')}</button>`}${restaurantDailyLoginMarkup()}</aside><div class="r-stage"><img class="r-scene-art" src="${asset('restaurant-scene.webp')}" alt="暖暖的猫猫小馆，花园旁摆着小餐桌，厨房里亮着灯" draggable="false"/><div class="r-sunlight" aria-hidden="true"></div>
+    <section class="r-viewport" aria-label="完整餐厅全景，顾客与厨房同屏"><div class="r-scene-controls"><button class="r-round r-back" data-r-back aria-label="返回猫猫图鉴">${restaurantIcon('back')}</button>${restaurantResearchShortcut()}</div><aside class="r-header-actions r-tools" aria-label="餐厅工具"><button class="r-round ra-entry" data-r-audio-open aria-label="声音设置" title="声音设置">${restaurantAudioIcon}</button><button class="r-round r-info-entry" data-r-tab="info" aria-label="查看小馆营业信息">${restaurantIcon('info')}</button>${debugEnabled?`<button class="r-round rg-terminal-entry" data-r-tab="terminal" aria-label="打开餐厅控制终端" aria-controls="rg-terminal" aria-expanded="false">${restaurantIcon('terminal')}<small>终端</small></button>`:`<button class="r-round" data-r-tab="help" aria-label="餐厅玩法说明">${restaurantIcon('help')}</button>`}${restaurantDailyLoginMarkup()}<button class="r-round r-auto-cook" data-r-auto-cook aria-label="一键制作，小馆 Lv.10 解锁" aria-pressed="false" data-locked="true"><span>${restaurantIcon('chef')}<svg class="r-auto-spark" viewBox="0 0 16 20" aria-hidden="true"><path d="M9 1 2 11h5l-1 8 8-11H9z"/></svg></span><small>Lv.10</small></button></aside><div class="r-stage"><img class="r-scene-art" src="${asset('restaurant-scene.webp')}" alt="暖暖的猫猫小馆，花园旁摆着小餐桌，厨房里亮着灯" draggable="false"/><div class="r-sunlight" aria-hidden="true"></div>
       <div class="r-shop-sign" title="${esc(state.name)}的小食光"><strong>${esc(state.name)}的小食光</strong></div>
       ${restaurantStreetMarkup()}<div class="rg-guest-layer" data-r-guests></div>
       ${decorationSceneMarkup()}${premiumSceneMarkup()}<div class="r-tables" data-r-tables></div>${kitchenSceneMarkup()}${restRoomSceneMarkup()}
@@ -155,6 +157,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
   }
   function startGuide(options={}){void guide?.start(options).then(started=>{if(!started)toast('正在读取小馆，准备好后就可以查看指引。');});}
   const sound=id=>void audio.unlock().then(()=>audio.play(id));
+  const autoCook=createRestaurantAutoCook({getState,getAvailability,onAction,preferences,onStep:action=>sound(restaurantActionSound('kitchen-step',action.stepId))});
   function decorationComplete(suite){
     void audio.play('decoration-complete');
     toast(`${suite.name}场景布置完成`);
@@ -271,7 +274,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(panel==='upgrades')return restaurantUpgradesPanel(info);
     if(panel==='staff')return restaurantStaffPanel(info,{staffId:staffPreview,workerId:trainingWorker});
     if(panel==='themes')return restaurantAppearancePanel(info,{view:themeView});
-    return `${restaurantGuideEntryMarkup()}<div class="r-help-hero">${cat('chef')}<div><small>欢迎光临</small><strong>${esc(state.name)}的小食光</strong></div></div><ol class="r-help-steps"><li><b>迎接猫友</b><span>客人从门外走进来，入座后每人点一道菜；也可能两位朋友同桌。</span></li><li><b>热乎乎出锅</b><span>先点顾客需求接单，再逐步点击食材圈。工位上的蓝色圆环结束后，继续点下一步；装盘后点击餐桌送出。</span></li><li><b>收获好心情</b><span>客人吃完后，点小鱼干结账，金币同步回小窝，并生成餐厅经营经验气泡。</span></li><li><b>小馆慢慢长大</b><span>升级厨房、扩建座位、研发菜谱，还可以雇佣自动送餐的猫猫。</span></li></ol><p class="r-fine">小鱼干与小窝的猫爪币使用同一钱包，结账时小馆获得营业经验，并按 1:1 生成「餐厅经营经验」气泡；回小窝点击气泡，领取同等的小猫成长经验。餐厅首次升级需 60 经验，之后每级增加 15；点击上方小馆等级查看全部解锁路线。营业时空桌会自然迎来新客；已经点击的操作会继续计时，尚未点击的工序会等你回来。离线或餐厅连续 ${STAFF_IDLE_RECOVERY_MS/60_000} 分钟没有操作时，所有员工自动回满体力，菜品保留当前工序。${isTest?'这里是测试小馆，刷新会恢复默认。':'餐厅进度保存在当前小窝，两位主人共同经营。'}</p><button class="r-primary" data-r-dismiss>一起开张吧 ${restaurantIcon('fish')}</button><button class="r-primary" data-r-kitchen-tutorial>厨房新手引导</button>${restaurantUpgradeHelp(info)}${kitchenGuideMarkup(info)}`;
+    return `${restaurantGuideEntryMarkup()}<div class="r-help-hero">${cat('chef')}<div><small>欢迎光临</small><strong>${esc(state.name)}的小食光</strong></div></div><ol class="r-help-steps"><li><b>迎接猫友</b><span>客人从门外走进来，入座后每人点一道菜；也可能两位朋友同桌。</span></li><li><b>热乎乎出锅</b><span>先点顾客需求接单，再逐步点击食材圈。工位上的蓝色圆环结束后，继续点下一步；装盘后点击餐桌送出。</span></li><li><b>收获好心情</b><span>客人吃完后，点小鱼干结账，金币同步回小窝，并生成餐厅经营经验气泡。</span></li><li><b>小馆慢慢长大</b><span>升级厨房、扩建座位、研发菜谱，还可以雇佣自动送餐的猫猫。</span></li></ol><p class="r-fine">小鱼干与小窝的猫爪币使用同一钱包，结账时小馆获得营业经验，并按 1:1 生成「餐厅经营经验」气泡；回小窝点击气泡，领取同等的小猫成长经验。餐厅首次升级需 60 经验，之后每级增加 15；点击上方小馆等级查看全部解锁路线。小馆 Lv.10 解锁一键制作：开启右侧厨师帽开关后，点击顾客点餐即可自动完成工序和上桌，结账仍需点击小鱼干。营业时空桌会自然迎来新客；已经点击的操作会继续计时，尚未点击的工序会等你回来。离线或餐厅连续 ${STAFF_IDLE_RECOVERY_MS/60_000} 分钟没有操作时，所有员工自动回满体力，菜品保留当前工序。${isTest?'这里是测试小馆，刷新会恢复默认。':'餐厅进度保存在当前小窝，两位主人共同经营。'}</p><button class="r-primary" data-r-dismiss>一起开张吧 ${restaurantIcon('fish')}</button><button class="r-primary" data-r-kitchen-tutorial>厨房新手引导</button>${restaurantUpgradeHelp(info)}${kitchenGuideMarkup(info)}`;
   }
   function updatePanel(info,state,force=false) {
     if(!panel)return;
@@ -360,10 +363,11 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     levelTrack.setAttribute('aria-valuenow',String(Math.round(info.progression.progress*100)));
     levelTrack.setAttribute('aria-valuetext',`${number(info.progression.levelExperience)} / ${number(info.progression.levelTarget)} 经验`);
     $('[data-r-tab="progression"].r-level').setAttribute('aria-label',`${growthStage.title} Lv.${info.level}，${growthStage.stars}星，还差 ${number(info.progression.remaining)} 经验升级，查看资源解锁进度`);
+    paintRestaurantAutoCook($('[data-r-auto-cook]'),info,autoCook.enabled);
     $('[data-r-pet-level]').textContent=`成长 Lv.${levelInfo(state.xp).level}`;
     $('[data-r-save]').textContent=restaurantSaveLabel(availability,isTest);
     $('[data-r-kitchen-level]').textContent=`Lv.${info.restaurant.levels.kitchen}`;
-    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible')?'小鱼干在闪闪发光，点一下收好它':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?'点食材圈，员工才会继续下一步':info.orders.some(o=>['ready','dish-ready'].includes(o.status))?'料理做好啦，点击餐桌送餐':info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
+    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible')?'小鱼干在闪闪发光，点一下收好它':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCook.enabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCook.enabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
     $('[data-r-hint]').textContent=hint;
     const nextSignature=JSON.stringify([[...pendingCourseOrders],info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,availability,pending]);
     if(nextSignature!==signature){
@@ -379,6 +383,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     dailyLogin.sync(info.dailyLogin,availability,{autoShow:!guide.isOpen()&&!document.hidden&&!panel&&!terminalOpen&&!container.querySelector('dialog[open]:not(.rdl-dialog)')});
     const nextGuest=arrivalRhythm.poll(info,Date.now(),{enabled:autoGuests&&!guide.isOpen()&&!$('.rdl-dialog').open&&!$('.rr-celebration').open&&!$('.rr-draw-scene').open&&!info.decorationInfo.construction&&!panel&&!terminalOpen&&!document.hidden,blocked:availability.saving||pending||!availability.connected||restaurantInputBlocked(availability)});
     if(nextGuest)welcomeGuests(null,{waiting:nextGuest.type==='restaurant-wait'});
+    autoCook.tick({active:opened&&!document.hidden&&!pending&&!guide.isOpen()&&!$('.rdl-dialog').open&&!$('.rr-celebration').open&&!$('.rr-draw-scene').open});
   }
   function dismiss() {closeRecipeDetails(false);closeCustomerDetails(false);panel=null;audio.setTrack($('.rr-draw-scene')?.open?'research':'restaurant');panelSignature='';$('.r-sheet')?.close();for(const button of container.querySelectorAll('.r-nav button')){const selected=button.dataset.rTab==='business';button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}}
   function openPanel(id) {closeRecipeDetails(false);closeCustomerDetails(false);if(id==='restroom'){const rest=$('[data-r-rest-summary]');if(rest)rest.open=false;}if(id==='terminal'){if(!debugEnabled)return;dismiss();terminalOpen=!terminalOpen;updateTerminal(restaurantInfo(getState()));return;}dismissTerminal();if(id==='business'){dismiss();return;}const previousPanel=panel;if(id==='research')researchShowcase=createRestaurantResearchShowcase(restaurantInfo(getState()));panel=id;audio.setTrack(id==='research'?'research':'restaurant');updatePanel(restaurantInfo(getState()),getState(),true);const dialog=$('.r-sheet');if(!dialog.open)dialog.showModal();if(previousPanel!==panel)$('[data-r-panel]').scrollTop=0;if(['staff','training'].includes(previousPanel)&&['staff','training'].includes(id))$(`.r-panel-switch [data-r-tab="${id}"]`)?.focus({preventScroll:true});for(const button of container.querySelectorAll('.r-nav button')){const selected=button.dataset.rTab===(id==='training'?'staff':id==='research'?'recipes':id);button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}}
@@ -417,7 +422,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       if(type==='kitchen-accept'||type==='kitchen-step'){
         flowOrderId=action.orderId;terminalOrderId=action.orderId;kitchenScene.select(action.orderId);
         if(!fromTerminal){dismiss();dismissTerminal();}
-        if(type==='kitchen-accept')toast('点冰箱上的食材圈，员工才会去取料');
+        if(type==='kitchen-accept')toast(autoCook.enabled?'已记下订单，员工会自动制作并送到桌上':'点冰箱上的食材圈，员工才会去取料');
       }
       if(['train','unlock-special','hire','theme','recipe','palette','premium-decoration'].includes(type))toast(result.text);
     }catch(error){if(type!=='research-draw')throw error;researchReveal.fail('灵感还在路上，请稍后查看手账中的最新记录。');toast('暂时无法完成探索，请稍后再试');}finally{pending=false;render();}
@@ -442,6 +447,10 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       recipeCelebration.reset();researchReveal.reset();const result=testActions.restaurantStaff({mode:'research-fusion'});log(result.message);toast(result.message);if(result.ok)openPanel('research');render();return;
     }
     if(button.hasAttribute('data-r-customer-close')){closeCustomerDetails();return;}
+    if(button.hasAttribute('data-r-auto-cook')){
+      if(!autoCook.toggle()){toast(`小馆 Lv.${RESTAURANT_AUTO_COOK_LEVEL} 解锁一键制作`);return;}
+      sound('click');toast(autoCook.enabled?'一键制作已开启：点击顾客点餐，自动制作至上桌':'已切回手动：当前工序完成后，等待你点击下一步');render();return;
+    }
     if(button.hasAttribute('data-r-back')){close();onBack();return;}
     if(button.hasAttribute('data-r-terminal-close')){dismissTerminal(true);return;}
     if(button.hasAttribute('data-r-dismiss')){dismiss();return;}

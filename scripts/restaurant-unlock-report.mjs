@@ -8,7 +8,7 @@ import { STAFF_TRAINING_STATS } from '../src/restaurant-staff-training.js';
 import { restaurantResourceLevel } from '../src/restaurant-progression.js';
 
 const {progression}=restaurantInfo({restaurant:initialRestaurant(0)},0);
-const categories={recipe:'菜谱',staff:'员工',facility:'设施',research:'研发',training:'员工训练',decoration:'装扮',station:'厨房工位'};
+const categories={feature:'功能',recipe:'菜谱',staff:'员工',facility:'设施',research:'研发',training:'员工训练',decoration:'装扮',station:'厨房工位'};
 const price=item=>item.cost===0?'免费':item.cost===null?'按项目分别付费':`${item.cost} ${item.currency==='goldFish'?'金鱼干':'小鱼干'}`;
 const rows=progression.milestones.map(m=>`| Lv.${m.level} | ${m.startExperience} | ${levelInfo(m.startExperience).target} | ${m.items.map(item=>`${item.name}（${categories[item.kind]}；${price(item)}）`).join('<br>')} |`).join('\n');
 const stageRows=RESTAURANT_GROWTH_STAGES.map(stage=>`| Lv.${stage.min}–${stage.max} | ${stage.title} | ${'★'.repeat(stage.stars)} | ${stage.color} |`).join('\n');
@@ -23,6 +23,8 @@ const source=`# 餐厅等级与资源开放路线
 餐厅独立累计结账获得的营业经验，来源为 \`restaurant.stats.experience\`。同一笔实际结账经验按 1:1 生成小窝的「餐厅经营经验」气泡，回小窝点击领取后才计入主猫猫 \`state.xp\`。购买、研发、训练、施工和升级设施不会增加经验，重试同一结账不会重复发放。
 
 餐厅采用 \`src/growth-levels.js\` 的营业经验阶梯：首次升级需 60 经验，此后每级增加 15，即 60、75、90、105……；达到 L 级的累计门槛为 \`7.5 × (L−1) × (L+6)\`。当前资源分布在 1–50 级，每一级都有现有资源开放；50 级之后仍继续积累等级，不改变主猫猫的升级阶梯。达到 50 级累计需 20,580 经验。主猫猫仍采用 120 起、每级增加 30 的原阶梯。
+
+小馆 Lv.10 免费解锁一键制作；右侧厨师帽开关开启后，点击顾客的点餐气泡即可逐步自动制作并送到桌上。沿用原走位、蓝色进度圆环、工位互斥、体力和休息室规则，工位忙碌或员工休息时自动等待，结账仍由玩家点击。关闭后当前工序做完即等待手动点击。开关按当前小窝独立保存，重新进入餐厅后继续已接订单；离开餐厅期间不会代替玩家接新订单或结账。
 
 等级只开放购买、研发或训练的资格，不自动赠送需要付费的内容；菜谱、员工、设施、装扮仍支付原价格。员工按招聘顺序加入，设施与能力逐级提升。员工四项能力与四类设施各自最高 10 级；菜品品质为 B、A、S、SS、SSS 五档。
 
