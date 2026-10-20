@@ -246,3 +246,36 @@ test('conflicting claim writes from two store instances persist one receipt and 
   assert.deepEqual(h.saved(room.roomId).claimedGrowth, [reward]);
   assert.deepEqual(h.saved(room.roomId).state.pendingGrowth, []);
 });
+
+const restaurantReward = (index, amount=9.1) => ({ id:`restaurant-income-${index}`, kind:'restaurant-collect', orderId:`table-${index+1}`, recipeId:'coffee', amount, actorId:'client-one', actor:'猫友', at:START });
+const incomeClaim = (ids, op='claim-restaurant-batch', actor='client-one') => input(op,{type:'claim-restaurant-growth',rewardIds:ids},actor);
+
+test('restaurant batch saves original receipts atomically and survives lost acknowledgements and journal eviction',async()=>{
+  const h=harness(),store=h.store(),rewards=[restaurantReward(0,8.1),restaurantReward(1,9.2)];
+  const room=await store.createRoom({initialState:{...initialState(START),pendingGrowth:rewards}});
+  const action=incomeClaim(rewards.map(r=>r.id));
+  h.controls.loseAcknowledgment=true;
+  await assert.rejects(store.applyAction(room.roomId,action));
+  const saved=h.saved(room.roomId);assert.equal(saved.state.xp,room.state.xp+17.3);assert.deepEqual(saved.claimedGrowth,rewards);assert.deepEqual(saved.state.pendingGrowth,[]);
+  const replay=await h.store().applyAction(room.roomId,action);assert.equal(replay.duplicate,true);assert.equal(replay.state.xp,saved.state.xp);
+  await evictOperations(h.store(),room.roomId,'evict-restaurant-batch');
+  const before=await h.store().getRoom(room.roomId),again=await h.store().applyAction(room.roomId,action);
+  assert.equal(again.duplicate,true);assert.equal(again.revision,before.revision);assert.equal(again.state.xp,saved.state.xp);privateReceipts(again);
+  await assert.rejects(h.store().applyAction(room.roomId,incomeClaim(['restaurant-missing-reward'],'forged-income-batch')),e=>e.code==='GROWTH_REWARD_UNAVAILABLE');
+});
+
+test('overlapping caregiver batches claim the remaining original receipts once',async()=>{
+  const h=harness(),store=h.store(),rewards=[restaurantReward(0),restaurantReward(1),restaurantReward(2)];
+  const room=await store.createRoom({initialState:{...initialState(START),pendingGrowth:rewards}});
+  await Promise.all([store.applyAction(room.roomId,incomeClaim([rewards[0].id,rewards[1].id],'claim-income-male')),store.applyAction(room.roomId,incomeClaim([rewards[1].id,rewards[2].id],'claim-income-female','client-two'))]);
+  const saved=await store.getRoom(room.roomId);assert.equal(saved.state.xp,room.state.xp+27.3);assert.deepEqual(saved.state.pendingGrowth,[]);assert.deepEqual(h.saved(room.roomId).claimedGrowth,rewards);
+});
+
+test('a full journal of bounded restaurant claim manifests cannot exhaust the unrelated room size budget',async()=>{
+  const h=harness(),store=h.store(),room=await store.createRoom(),stored=h.saved(room.roomId);
+  const ids=Array.from({length:128},(_,i)=>`restaurant-${i}-`.padEnd(180,'x'));
+  stored.operations=Array.from({length:100},(_,i)=>({id:`journal-income-${i}`,event:{operationId:`journal-income-${i}`,actor:{id:'client-one',name:'猫友'},action:{type:'claim-restaurant-growth',rewardIds:ids}}}));
+  const read=await h.store().getRoom(room.roomId);assert.equal(read.state.xp,room.state.xp);privateReceipts(read);
+  stored.operations[0].event.action.rewardIds=[...ids,ids[0]+'x'];
+  await assert.rejects(h.store().getRoom(room.roomId),e=>e.code==='STORAGE_CORRUPT');
+});

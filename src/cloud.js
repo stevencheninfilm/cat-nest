@@ -1,3 +1,4 @@
+import { growthClaimIds } from './restaurant-income-growth.js';
 import { restaurantGuestHasNextCourse } from './restaurant-guest-service.js';
 import { getCoupleProfile } from './couple-profile.js';
 import { duoPreviewable, previewDuoGameAction, redundantDuoTransition } from './minigames-duo-preview.js';
@@ -34,10 +35,10 @@ export function createCloudRoom(options) {
   // confirmedState and never change the payload sent to the server.
   const restaurantTimelines = new Map();
   const liveReceipts = new Map();
-  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
+  const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'claim-restaurant-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
   let authoritativeState = null, displayedState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
-  if(optimisticReducer)for(const item of queue)if(restaurantPreview(item.action))previews.set(item.operationId,{at:Number.isSafeInteger(item.restaurantPreviewAt)?item.restaurantPreviewAt:Date.now(),active:true,animated:false});
+  if(optimisticReducer)for(const item of queue)if(restaurantPreview(item.action)||item.action?.type==='claim-restaurant-growth')previews.set(item.operationId,{at:Number.isSafeInteger(item.restaurantPreviewAt)?item.restaurantPreviewAt:Date.now(),active:true,animated:item.action?.type==='claim-restaurant-growth'});
   const outgoing=item=>restaurantAction(item.action)?{operationId:item.operationId,clientId:item.clientId,name:item.name,action:item.action}:item;
   const restaurantOrder=(state,action)=>state?.restaurant?.orders?.find(order=>order.id===action?.orderId);
   function restaurantAllocatesCourse(state,action){
@@ -148,7 +149,7 @@ export function createCloudRoom(options) {
       if (next) {
         display = next; optimistic = true;if(game)pendingGames.push(item.action);
         if(restaurant){const order=restaurantOrder(next,item.action);preview.order=order?structuredClone(order):null;preview.training=order?.workflow?.workerId?structuredClone(next.restaurant.staffTraining?.[order.workflow.workerId]):null;preview.workers=restaurantWorkerClocks(next,order);}
-      }else if(!restaurant){preview.active = false; withdrawn.push(item);}
+      }else if(!restaurant&&item.action.type!=='claim-restaurant-growth'){preview.active = false; withdrawn.push(item);}
       // A later authoritative timestamp can temporarily make a restaurant
       // dependency unplayable. Keep its intent and preview active until its
       // own durable receipt or an explicit business refusal resolves it.
@@ -246,7 +247,7 @@ export function createCloudRoom(options) {
           const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
           if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
         }
-        if (error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!transientRestaurant) {
+        if (error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!(item.action.type==='claim-restaurant-growth'&&error.status===425)&&!transientRestaurant) {
           if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* Fall back to the latest live snapshot. */ }
             if(destroyed)break;
@@ -280,6 +281,7 @@ export function createCloudRoom(options) {
           // An unknown upload result is not a rejection. Keep the local result
           // and original operation ID until a durable receipt or refusal arrives.
           if(restaurant)queuedStatus();
+          else if(item.action.type==='claim-restaurant-growth'&&(!error.status||[408,425,429].includes(error.status)))queuedStatus('餐厅经营经验已暂存，连接恢复后自动保存');
           else onSaveStatus({ phase:'error', message:'保存暂未确认，操作已暂存在本机，将自动重试；请勿清除浏览器数据' });
           scheduleDrain();
         }
@@ -333,7 +335,8 @@ export function createCloudRoom(options) {
     start,
     dispatch(action) {
       if (!ready || destroyed || queue.length >= (restaurantAction(action)?200:20)) return false;
-      if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
+      const claimIds = new Set(growthClaimIds(action));
+      if (claimIds.size && queue.some(item => growthClaimIds(item.action).some(id => claimIds.has(id)))) return false;
       if(action?.type==='restaurant-kitchen-accept'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId))return false;
       if(action?.type==='restaurant-kitchen-step'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId&&item.action.stepId===action.stepId))return false;
       if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return false;

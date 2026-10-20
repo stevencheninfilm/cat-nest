@@ -262,3 +262,50 @@ test('an unresolved bubble is disabled individually while another saved bubble r
   assert.match(buttons.find(match => match[1] === 'pending-bubble')[0], /disabled/);
   assert.doesNotMatch(buttons.find(match => match[1] === 'other-bubble')[0], /disabled/);
 });
+
+const restaurantIncome=(index,amount=9.1)=>({id:`restaurant-income-${index}`,kind:'restaurant-collect',recipeId:'coffee',orderId:`table-${index+1}`,amount,actorId:male.id,actor:male.name,at:Date.now()});
+const claimIncome=ids=>({type:'claim-restaurant-growth',rewardIds:ids});
+
+test('restaurant income reacts immediately offline, permits care, and retries the same saved manifest silently',async t=>{
+  const rewards=[restaurantIncome(0,8.1),restaurantIncome(1,9.2)],base={...initialState(),pendingGrowth:rewards};let online=false,saved=base,revision=0;
+  const h=harness(t,req=>{if(req.method==='GET')return response(snapshot(saved,revision));if(!online)throw new TypeError('offline');saved=reduceAction(saved,req.body.action,male,Date.now(),req.body.operationId);return response(receipt(req.body,saved,++revision));});
+  await h.room.start();const action=claimIncome(rewards.map(r=>r.id));assert.equal(h.room.dispatch(action),true);
+  assert.equal(h.latest().xp,base.xp+17.3);assert.deepEqual(h.latest().pendingGrowth,[]);assert.equal(h.observed.actions[0].optimistic,true);
+  assert.equal(h.room.dispatch({type:'pet'}),true,'saving income does not block unrelated care');
+  await flush();const original=clone(h.observed.pending.at(-1));assert.equal(original.length,2);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'queued');
+  online=true;h.room.retryPending();await flush();assert.deepEqual(h.observed.pending.at(-1),[]);assert.equal(h.latest().xp,base.xp+17.3);assert.equal(h.latest().pendingGrowth.length,1);
+  assert.deepEqual(h.requests.filter(r=>r.method==='POST').slice(0,2).map(r=>r.body.operationId),[original[0].operationId,original[0].operationId]);assert.equal(h.observed.actions.filter(a=>a.action.type===action.type&&a.optimistic).length,1);
+});
+
+test('restaurant claim survives timeout and refresh using original IDs without replaying feedback',async t=>{
+  const reward=restaurantIncome(0),base={...initialState(),pendingGrowth:[reward]},ack=deferred();
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);
+  await h.room.start();h.room.dispatch(claimIncome([reward.id]));const pending=clone(h.observed.pending.at(-1));
+  h.room.destroy();t.mock.timers.reset();const reloaded=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise,pending);await reloaded.room.start();
+  assert.equal(reloaded.latest().xp,base.xp+reward.amount);assert.deepEqual(reloaded.latest().pendingGrowth,[]);assert.equal(reloaded.observed.actions.length,0);
+  const item=reloaded.requests.at(-1).body;assert.equal(item.operationId,pending[0].operationId);ack.resolve(response(receipt(item,reduceAction(base,item.action,male,Date.now(),item.operationId))));await flush();
+  assert.equal(reloaded.observed.actions.at(-1).previewed,true);assert.deepEqual(reloaded.observed.pending.at(-1),[]);
+});
+
+test('explicit restaurant claim refusal restores XP and receipts and stops retrying',async t=>{
+  const reward=restaurantIncome(0),base={...initialState(),pendingGrowth:[reward]},ack=deferred();
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);await h.room.start();h.room.dispatch(claimIncome([reward.id]));
+  assert.equal(h.latest().xp,base.xp+reward.amount);ack.resolve(response({error:{code:'GROWTH_REWARD_UNAVAILABLE',message:'领取记录不匹配'}},409));await flush();
+  assert.deepEqual(h.latest(),base);assert.equal(h.observed.rollbacks.length,1);assert.deepEqual(h.observed.pending.at(-1),[]);t.mock.timers.tick(8000);await flush();assert.equal(h.requests.filter(r=>r.method==='POST').length,1);
+});
+
+test('another caregiver collecting part of a queued restaurant batch rebases without double XP or rollback',async t=>{
+  const rewards=[restaurantIncome(0),restaurantIncome(1)],base={...initialState(),pendingGrowth:rewards},ack=deferred();
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);await h.room.start();h.room.dispatch(claimIncome(rewards.map(r=>r.id)));const item=h.requests.at(-1).body;
+  const partnerAction=claimIncome([rewards[0].id]),partner=reduceAction(base,partnerAction,female,Date.now(),'partner-income-claim');h.sources[0].emit('action',snapshot(partner,1,{operationId:'partner-income-claim',action:partnerAction,actor:female}));
+  assert.equal(h.latest().xp,base.xp+18.2);assert.equal(h.observed.rollbacks.length,0);
+  const final=reduceAction(partner,item.action,male,Date.now(),item.operationId);ack.resolve(response(receipt(item,final,2)));await flush();assert.equal(h.latest().xp,base.xp+18.2);assert.deepEqual(h.observed.pending.at(-1),[]);
+});
+
+test('a restaurant income timeout preserves its immediate result and silently schedules a retry',async t=>{
+  const reward=restaurantIncome(0),base={...initialState(),pendingGrowth:[reward]};
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):new Promise((resolve,reject)=>req.signal.addEventListener('abort',()=>reject(new Error('timed out')))));
+  await h.room.start();h.room.dispatch(claimIncome([reward.id]));const queued=clone(h.observed.pending.at(-1));t.mock.timers.tick(15000);await flush();
+  assert.equal(h.latest().xp,base.xp+9.1);assert.deepEqual(h.observed.pending.at(-1),queued);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'queued');
+  t.mock.timers.tick(8000);await flush();assert.equal(h.requests.filter(r=>r.method==='POST').length,2);assert.deepEqual(h.requests.filter(r=>r.method==='POST').map(r=>r.body),[queued[0],queued[0]]);
+});

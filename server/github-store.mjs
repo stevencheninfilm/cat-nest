@@ -1,3 +1,4 @@
+import { sanitizeRestaurantGrowthClaim, isRestaurantGrowth } from '../src/restaurant-income-growth.js';
 import { validHomeBond } from '../src/home-bond.js';
 import { randomBytes } from 'node:crypto';
 import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth, levelInfo } from '../src/state.js';
@@ -38,6 +39,7 @@ export function sanitizeAction(value) {
   if (keys.length===2 && keys.includes('furniture') && validFurnitureCare(value)) return {type:value.type,furniture:value.furniture};
   if (value.type === 'dress' && keys.length === 2 && keys.includes('appearance') && validAppearance(value.appearance)) return { type:'dress', appearance:{...value.appearance} };
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) return { type: 'rename', name: value.name.trim() };
+  if (value.type === 'claim-restaurant-growth') return sanitizeRestaurantGrowthClaim(value);
   if (value.type === 'claim-growth' && keys.length === 2 && keys.includes('rewardId') && typeof value.rewardId === 'string' && OPERATION_ID.test(value.rewardId)) return { type: 'claim-growth', rewardId: value.rewardId };
   if (value.type === 'invite-cat' && keys.length === 2 && keys.includes('catId') && validCollectionCatId(value.catId)) return { type:'invite-cat', catId:value.catId };
   if (value.type === 'invite-cat' && keys.length === 3 && keys.includes('catId') && keys.includes('sceneId') && validCollectionCatId(value.catId) && validCollectionSceneId(value.sceneId)) return {type:'invite-cat',catId:value.catId,sceneId:value.sceneId};
@@ -175,6 +177,9 @@ export function createGitHubStore({
       // Growth receipts and cooperation memories have separately validated,
       // permanent ledgers. Keep the original size limit for other room fields.
       const withoutGrowth = { ...room, state: { ...room.state } };
+      // Batch manifests are bounded and validated below, independently of the
+      // ordinary room size budget, just like their original growth receipts.
+      withoutGrowth.operations = room.operations.map(operation => operation?.event?.action?.type === 'claim-restaurant-growth' ? { ...operation, event:{ ...operation.event, action:{ ...operation.event.action, rewardIds:[] } } } : operation);
       delete withoutGrowth.state.pendingGrowth;
       delete withoutGrowth.claimedGrowth;
       delete withoutGrowth.state.diary;
@@ -261,6 +266,14 @@ export function createGitHubStore({
             if (produced.actorId !== actor.id || produced.kind !== action.type || produced.furniture !== action.furniture || (action.type === 'feed' && produced.food !== action.food) || (action.type === 'restaurant-collect' && produced.orderId !== action.orderId)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
             return { ...publicRoom(room), event: { operationId, action, actor }, duplicate: true };
           }
+          if (action.type === 'claim-restaurant-growth') {
+            const pending = new Map(room.state.pendingGrowth.map(reward => [reward.id, reward]));
+            const claimed = new Map(room.claimedGrowth.map(reward => [reward.id, reward]));
+            if (action.rewardIds.some(id => !isRestaurantGrowth(pending.get(id) || claimed.get(id)))) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '餐厅经验记录已更新，请按最新气泡领取。', 409);
+            // A lost acknowledgement or another caregiver's collection cannot
+            // mint XP again, even after the short operation journal rolls over.
+            if (action.rewardIds.every(id => claimed.has(id))) return { ...publicRoom(room), event: { operationId, action, actor }, duplicate: true };
+          }
           const actionAt = now();
           const info = careActionInfo(room.state, action, actor.id, actionAt);
           if (!info.allowed) throw careRejection(action, info, actionAt);
@@ -273,13 +286,12 @@ export function createGitHubStore({
           if (!reduced && action.type.startsWith('restaurant-')) throw new StorageError('RESTAURANT_ACTION_REJECTED',restaurantActionResult(normalizeState(room.state,actionAt),action,actor,actionAt).reason||'餐桌已更新，请按最新小馆继续操作。',409);
           if (!reduced && action.type.startsWith('nest-')) throw new StorageError('NEST_ACTION_REJECTED','布置已更新，或金币、空间不足。请按最新小窝继续摆放。',409);
           if (!reduced && action.type.startsWith('game-')) throw new StorageError('GAME_ACTION_REJECTED', '对局已更新，请按最新回合操作；只有本局玩家可以参与。', 409);
-          if (!reduced && action.type === 'claim-growth') throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
+          if (!reduced && ['claim-growth','claim-restaurant-growth'].includes(action.type)) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
           if (!reduced && action.type === 'invite-cat') throw new StorageError('CAT_SCENE_UNAVAILABLE', '这个庭院尚未开放，或这位猫友会在其他庭院相遇。', 409);
           if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
           const event = { operationId, action:journalAction, actor };
-          const claimedGrowth = action.type === 'claim-growth'
-            ? [...room.claimedGrowth, copy(room.state.pendingGrowth.find(reward => reward.id === action.rewardId))]
-            : room.claimedGrowth;
+          const claimIds = new Set(action.type === 'claim-growth' ? [action.rewardId] : action.type === 'claim-restaurant-growth' ? action.rewardIds : []);
+          const claimedGrowth = claimIds.size ? [...room.claimedGrowth, ...room.state.pendingGrowth.filter(reward => claimIds.has(reward.id)).map(copy)] : room.claimedGrowth;
           const savedState=safeState(reduced,actionAt);
           if(!restaurantProgressPreserved(room.state.restaurant,savedState.restaurant))throw new StorageError('RESTAURANT_SAVE_GUARD','餐厅存档保护已拦截异常更新，原进度保持不变，请联系维护者。');
           const next = { ...room, revision: room.revision + 1, state: savedState, claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };

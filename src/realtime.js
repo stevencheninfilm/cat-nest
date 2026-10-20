@@ -1,3 +1,4 @@
+import { sanitizeRestaurantGrowthClaim } from './restaurant-income-growth.js';
 import Peer from 'peerjs';
 import { FOODS, validPendingGrowth } from './state.js';
 import { validCollectionCatId, validCollectionSceneId } from './cat-collection.js';
@@ -42,6 +43,7 @@ export function validateAction(value) {
   if (value.type === 'rename' && keys.length === 2 && keys.includes('name') && validText(value.name, 16)) {
     return { type: 'rename', name: value.name.trim() };
   }
+  if (value.type === 'claim-restaurant-growth') return sanitizeRestaurantGrowthClaim(value);
   if (value.type === 'claim-growth' && keys.length === 2 && keys.includes('rewardId') && typeof value.rewardId === 'string' && REWARD_PATTERN.test(value.rewardId)) return { type: 'claim-growth', rewardId: value.rewardId };
   if (value.type === 'invite-cat' && keys.length === 2 && keys.includes('catId') && validCollectionCatId(value.catId)) return { type:'invite-cat', catId:value.catId };
   if (value.type === 'invite-cat' && keys.length === 3 && keys.includes('catId') && keys.includes('sceneId') && validCollectionCatId(value.catId) && validCollectionSceneId(value.sceneId)) return {type:'invite-cat',catId:value.catId,sceneId:value.sceneId};

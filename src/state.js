@@ -1,3 +1,4 @@
+import { sanitizeRestaurantGrowthClaim, isRestaurantGrowth, growthAmount } from './restaurant-income-growth.js';
 import { emptyHomeBond, normalizeHomeBond, joinHome, isNewPet } from './home-bond.js';
 import { normalizeAppearance, validAppearance } from './mage-cat-config.js';
 import { emptyCollection, normalizeCollection, canInviteCat, getCollectionCat, recordCollectionCare, recordCollectionVictory, recordCollectionAchievements } from './cat-collection.js';
@@ -408,6 +409,18 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     case 'sleep':
       next.sleeping = !next.sleeping; next.energy = cap(next.energy + (next.sleeping ? CARE_NEED_EFFECTS.sleep.energy : 0)); growth = next.sleeping ? GROWTH_AMOUNTS.sleep : 0;
       text = next.sleeping ? '陪小猫打了个盹' : '轻轻叫醒了小猫'; break;
+    case 'claim-restaurant-growth': {
+      if (!sanitizeRestaurantGrowthClaim(action)) return null;
+      const ids = new Set(action.rewardIds);
+      const rewards = next.pendingGrowth.filter(reward => ids.has(reward.id));
+      if (!rewards.length || !rewards.every(isRestaurantGrowth)) return null;
+      const amount = growthAmount(rewards), experience = addGrowthExperience(next.xp, amount);
+      if (experience === null) return null;
+      next.pendingGrowth = next.pendingGrowth.filter(reward => !ids.has(reward.id));
+      next.xp = experience;
+      text = `收下累计餐厅经营经验，获得${amount}点成长`;
+      break;
+    }
     case 'claim-growth': {
       if (typeof action.rewardId !== 'string' || !GROWTH_ID.test(action.rewardId)) return null;
       const index = next.pendingGrowth.findIndex(reward => reward.id === action.rewardId);

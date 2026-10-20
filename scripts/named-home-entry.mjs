@@ -19,8 +19,10 @@ export function namedHomeEntry() {
     configResolved(config) { root=config.root; outDir=resolve(root, config.build.outDir); command=config.command; base=config.base; },
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
-        const path = new URL(request.url || '/', 'http://localhost').pathname;
-        if (['/','/index.html'].includes(path)) { response.writeHead(302,{Location:'/test/','Cache-Control':'no-store'});response.end();return; }
+        const requestedPath = new URL(request.url || '/', 'http://localhost').pathname;
+        const mount = /^\/cat-nest(?:\/|$)/.test(requestedPath) ? '/cat-nest' : '';
+        const path = requestedPath.slice(mount.length) || '/';
+        if (['/','/index.html'].includes(path)) { response.writeHead(302,{Location:`${mount}/test/`,'Cache-Control':'no-store'});response.end();return; }
         if (!HOME_ENTRIES.some(home=>[ `/${home.id}`, `/${home.id}/`, `/${home.id}/index.html` ].includes(path))) return next();
         try {
           const html = namedHomeHtml(await readFile(resolve(root,'index.html'),'utf8'), '/');

@@ -134,3 +134,10 @@ test('closed transport blocks production hosts and unknown endpoints',async()=>{
   assert.equal(result.status,409);assert.deepEqual(demoEngine.snapshot(),before);
   demoEngine.setOffline(true);await assert.rejects(()=>demoFetch('https://demo.cat-nest.invalid/api/couple/home'),/网络已断开/);demoEngine.setOffline(false);
 });
+
+test('restaurant income preset adds cumulative receipts to this visit without changing restaurant progress',()=>{
+  const {engine}=setup(),before=engine.snapshot();engine.scenario('restaurant-income');const after=engine.snapshot();
+  assert.equal(after.state.xp,before.state.xp);assert.equal(after.state.coins,before.state.coins);assert.deepEqual(after.state.restaurant,before.state.restaurant);
+  const income=after.state.pendingGrowth.filter(r=>r.kind==='restaurant-collect');assert.equal(income.length,4);assert.equal(income.reduce((sum,r)=>sum+Math.round(r.amount*10),0),355);
+  const result=engine.action({clientId:DEMO_ACTORS.male.id,operationId:'demo-income-test-batch',action:{type:'claim-restaurant-growth',rewardIds:income.map(r=>r.id)}});assert.equal(result.status,200);assert.equal(engine.snapshot().state.xp,before.state.xp+35.5);
+});

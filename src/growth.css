@@ -73,3 +73,14 @@
   .growth-side .growth-more strong{max-width:18px;font-size:9px}.growth-side .growth-more span{margin:0}
 }
 @media(prefers-reduced-motion:reduce){.growth-side .growth-bubble{animation:none}}
+
+/* Restaurant income stays in the upper-left slot with its own collectible art. */
+.growth-bubble-restaurant .growth-orb{background:radial-gradient(circle at 50% 65%,#ffe0a64d,transparent 75%);border-color:#fff2d4;box-shadow:0 3px 9px #a95e482b,inset 0 0 7px #fff8db75}
+.growth-bubble-restaurant .growth-orb::after{display:none}
+.growth-bubble-restaurant .growth-heart-restaurant{filter:drop-shadow(0 2px 3px #ba704050)}
+.growth-side .growth-bubble-restaurant .growth-orb>.growth-heart{height:55px;width:55px;left:50%;top:-10px;transform:translateX(-50%)}
+.growth-bubble-restaurant .growth-orb strong{padding:0 3px;white-space:nowrap;letter-spacing:-.3px}
+.growth-side .growth-bubble-restaurant .growth-label{max-width:76px;overflow:visible;color:#925b35}
+.growth-bubble-detailed.growth-bubble-restaurant .growth-heart{height:87px;top:-10px}
+@media(max-width:360px){.growth-side .growth-bubble-restaurant .growth-orb>.growth-heart{height:47px;width:47px;top:-9px}.growth-side .growth-bubble-restaurant .growth-label{max-width:68px}}
+@container cat-care-scene (max-height:249px){.growth-side .growth-bubble-restaurant .growth-orb>.growth-heart{height:39px;width:39px;top:-7px}}
