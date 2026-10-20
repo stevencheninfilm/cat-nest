@@ -55,7 +55,7 @@ test('a recovered employee uses the saved route continuously and does not telepo
   }
   const reloaded=normalizeState(JSON.parse(JSON.stringify(state)),walks[3].startAt+1);
   assert.deepEqual(restaurantInfo(reloaded,walks[3].startAt+1).kitchen,restaurantInfo(state,walks[3].startAt+1).kitchen);
-  assert.equal(state.restaurant.staffTraining['worker-1'].energy,90);assert.equal(state.restaurant.staffTraining['worker-1'].rest,null);
+  assert.equal(state.restaurant.staffTraining['worker-1'].energy,190);assert.equal(state.restaurant.staffTraining['worker-1'].rest,null);
 });
 
 test('a legacy v3 order waiting for a rested employee also uses the doorway for its next new click',()=>{
@@ -101,5 +101,5 @@ test('an old rice order resting after plating also returns through the kitchen d
   const flow=state.restaurant.orders[0].workflow,appended=flow.segments.slice(before.segments.length);
   assert.deepEqual(flow.segments.slice(0,before.segments.length),before.segments);
   assertSafeExit(appended.map(segment=>segment.to));
-  assert.ok(flow.servedAt>fullAt+1);assert.equal(state.restaurant.staffTraining['worker-1'].energy,90);
+  assert.ok(flow.servedAt>fullAt+1);assert.equal(state.restaurant.staffTraining['worker-1'].energy,190);
 });

@@ -25,7 +25,7 @@ test('manual operations start at ten stamina and preserve the existing endurance
 for(const version of [3,4])for(const endurance of [1,10])test(`v${version}, endurance ${endurance}: every recipe charges each accepted operation exactly once`,()=>{
   for(const recipeId of Object.keys(KITCHEN_FLOWS)){
     const {restaurant:r,order:o}=fixture(recipeId,{version,endurance});
-    apply(r,o,acceptInteractiveWorkflow(r,o,NOW));assert.equal(r.staffTraining['worker-1'].energy,100,'acceptance does not charge energy');
+    apply(r,o,acceptInteractiveWorkflow(r,o,NOW));assert.equal(r.staffTraining['worker-1'].energy,200,'acceptance does not charge energy');
     let now=NOW;
     for(const stepId of [...KITCHEN_FLOWS[recipeId].map(step=>step.id),'delivery']){
       apply(r,o,advanceInteractiveWorkflow(r,o,stepId,now));
@@ -49,9 +49,9 @@ test('a busy workstation cannot consume the waiting employee stamina before the 
   apply(r,first,acceptInteractiveWorkflow(r,first,NOW));apply(r,second,acceptInteractiveWorkflow(r,second,NOW));
   apply(r,first,advanceInteractiveWorkflow(r,first,'gather',NOW));
   const saved=JSON.stringify(r),result=advanceInteractiveWorkflow(r,second,'gather',NOW);
-  assert.equal(result.ok,false);assert.equal(JSON.stringify(r),saved);assert.equal(r.staffTraining['worker-2'].energy,100);
+  assert.equal(result.ok,false);assert.equal(JSON.stringify(r),saved);assert.equal(r.staffTraining['worker-2'].energy,200);
   apply(r,second,advanceInteractiveWorkflow(r,second,'gather',first.workflow.runs[0].endAt));
-  assert.equal(second.workflow.runs[0].energyCost,10);assert.equal(r.staffTraining['worker-2'].energy,90);
+  assert.equal(second.workflow.runs[0].energyCost,10);assert.equal(r.staffTraining['worker-2'].energy,190);
 });
 
 test('employee training displays the actual discounted step cost beside its ten-point base',()=>{

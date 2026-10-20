@@ -2,7 +2,7 @@ import { restaurantGuestDebugResult } from './restaurant-guests.js';
 import { restaurantResearchDebugResult } from './restaurant-research.js';
 import { RESTAURANT_STAFF, RESTAURANT_RECIPES, normalizeRestaurant, validRestaurant, restaurantActionResult } from '../src/restaurant.js';
 import { SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
-import { normalizeStaffTraining, createStaffExhaustionTestPreset, STAFF_REST_ROOM_ENTRANCE, STAFF_REST_ROOM_POSITION, STAFF_ENERGY_RECOVERY_MS } from '../src/restaurant-staff-training.js';
+import { normalizeStaffTraining, staffMaxEnergy, createStaffExhaustionTestPreset, STAFF_REST_ROOM_ENTRANCE, STAFF_REST_ROOM_POSITION, STAFF_ENERGY_RECOVERY_MS } from '../src/restaurant-staff-training.js';
 import { RESTAURANT_ARRIVAL_MS } from '../src/restaurant-guests.js';
 
 const exact=(value,keys)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
@@ -42,7 +42,7 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
     restaurant.staff=RESTAURANT_STAFF.length;restaurant.orders=[];restaurant.parties=[];restaurant.waitingParties=[];
     restaurant.staffTraining=normalizeStaffTraining(restaurant.staffTraining,now,restaurant.staff);
     for(const [id,record] of Object.entries(restaurant.staffTraining)){
-      const maxEnergy=100+15*(record.levels.stamina-1);
+      const maxEnergy=staffMaxEnergy(record.levels);
       if(id==='worker-1'){
         record.energy=maxEnergy;record.energyAt=now;if(record.energyMode==='rest-room')record.rest=null;
         continue;
@@ -70,7 +70,7 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
   if(!unlock){
     restaurant.orders=[];restaurant.parties=[];restaurant.waitingParties=[];
     if(!reset)for(const record of Object.values(restaurant.staffTraining)){
-      record.energy=100+15*(record.levels.stamina-1);record.energyAt=now;if(record.energyMode==='rest-room')record.rest=null;
+      record.energy=staffMaxEnergy(record.levels);record.energyAt=now;if(record.energyMode==='rest-room')record.rest=null;
     }
   }
   restaurant.revision++;

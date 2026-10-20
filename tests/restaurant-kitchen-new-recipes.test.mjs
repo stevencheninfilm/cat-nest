@@ -119,7 +119,7 @@ test('two employees making equal or different new dishes wait for a shared fridg
     for(const id of ids)state=act(state,{type:'restaurant-kitchen-accept',orderId:id},at);
     state=step(state,first.id,'gather',at);const firstGather=order(state,first.id).workflow.runs[0],before=structuredClone(state);
     const blocked=restaurantActionResult(state,{type:'restaurant-kitchen-step',orderId:second.id,stepId:'gather'},ACTOR,at);assert.equal(blocked.ok,false);assert.match(blocked.reason,/工位/);assert.deepEqual(state,before);
-    assert.equal(order(state,second.id).workflow.workerId,null);assert.equal(state.restaurant.staffTraining['worker-2'].energy,100);
+    assert.equal(order(state,second.id).workflow.workerId,null);assert.equal(state.restaurant.staffTraining['worker-2'].energy,200);
     state=step(state,second.id,'gather',firstGather.endAt);const secondGather=order(state,second.id).workflow.runs[0];
     assert.equal(order(state,first.id).workflow.workerId,'worker-1');assert.equal(order(state,second.id).workflow.workerId,'worker-2');
     const firstWash=KITCHEN_FLOWS[recipes[0]][1],secondWash=KITCHEN_FLOWS[recipes[1]][1];state=step(state,first.id,firstWash.id,secondGather.endAt-300);

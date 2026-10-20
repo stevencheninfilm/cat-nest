@@ -41,10 +41,10 @@ test('the lounge renders recovery countdowns and keeps fully restored employees 
   const {state,rest}=tiredChef(),before=structuredClone(state),at=rest.arriveAt+8000;
   let html=restaurantRestRoomPanel(restaurantInfo(state,at),{now:at});
   assert.match(html,/data-r-resting-worker="worker-1" data-rest-phase="recovering"/);
-  assert.match(html,/恢复体力 01:12/);assert.match(html,/aria-valuenow="10"/);
+  assert.match(html,/恢复体力 02:32/);assert.match(html,/aria-valuenow="10"/);
   assert.match(html,/恢复中 <b>1<\/b>/);
   html=restaurantRestRoomPanel(restaurantInfo(state,rest.fullAt+3600000),{now:rest.fullAt+3600000});
-  assert.match(html,/data-rest-phase="ready"/);assert.match(html,/体力已满 · 等你派工/);assert.match(html,/aria-valuenow="100"/);
+  assert.match(html,/data-rest-phase="ready"/);assert.match(html,/体力已满 · 等你派工/);assert.match(html,/aria-valuenow="200"/);
   assert.deepEqual(state,before,'viewing a lounge never starts a step or spends energy');
 });
 test('travelling employees are reported at the entrance and appear inside only after arrival',()=>{

@@ -10,7 +10,7 @@ test('legacy saves create independent level-one training and full stamina for ea
   const data=training(2);
   assert.deepEqual(Object.keys(data),['worker-1','worker-2','worker-3']);
   assert.equal(validStaffTraining(data,2),true);
-  assert.deepEqual(data['worker-1'],{levels:{speed:1,stamina:1,endurance:1,skill:1},energy:100,energyAt:NOW});
+  assert.deepEqual(data['worker-1'],{levels:{speed:1,stamina:1,endurance:1,skill:1},energyBase:200,energy:200,energyAt:NOW});
   data['worker-1'].levels.speed=5;
   assert.equal(data['worker-2'].levels.speed,1);
   assert.deepEqual(Object.keys(training(8)).at(-1),'worker-9','future roster rows can be registered without a source-code branch');
@@ -18,7 +18,7 @@ test('legacy saves create independent level-one training and full stamina for ea
 
 test('training validation rejects impossible levels, energy, timestamps and unauthorised workers',()=>{
   for(const mutate of [
-    data=>{data['worker-1'].levels.skill=11;},data=>{data['worker-1'].energy=101;},
+    data=>{data['worker-1'].levels.skill=11;},data=>{data['worker-1'].energy=201;},
     data=>{data['worker-1'].energy=-1;},data=>{data['worker-1'].energyAt=1.2;},
     data=>{data['worker-1'].levels.happiness=3;},data=>{data['worker-2']=structuredClone(data['worker-1']);},
   ]){const data=training(0);mutate(data);assert.equal(validStaffTraining(data,0),false);}
@@ -26,7 +26,7 @@ test('training validation rejects impossible levels, energy, timestamps and unau
   const repaired=normalizeStaffTraining({'worker-1':{levels:{speed:999,stamina:3},energy:999,energyAt:-1}},NOW,0);
   assert.equal(validStaffTraining(repaired,0),true);
   assert.equal(repaired['worker-1'].levels.speed,1);assert.equal(repaired['worker-1'].levels.stamina,3);
-  assert.equal(repaired['worker-1'].energy,130);assert.equal(repaired['worker-1'].energyAt,NOW);
+  assert.equal(repaired['worker-1'].energy,230);assert.equal(repaired['worker-1'].energyAt,NOW);
 });
 
 test('training charges ordinary currency through target level 7 and gold only for target levels 8–10',()=>{
@@ -70,13 +70,13 @@ test('insufficient currency, foreign staff and forged statistic IDs leave the in
 
 test('each skill has an independent observable effect and level-one timings stay unchanged',()=>{
   const data=training(1),base=workerAbilitySnapshot('worker-1',data,NOW);
-  assert.equal(base.walkMsMultiplier,1);assert.equal(base.workMsMultiplier,1);assert.equal(base.enduranceMultiplier,1);assert.equal(base.maxEnergy,100);assert.equal(base.qualityMultiplier,1);
+  assert.equal(base.walkMsMultiplier,1);assert.equal(base.workMsMultiplier,1);assert.equal(base.enduranceMultiplier,1);assert.equal(base.maxEnergy,200);assert.equal(base.qualityMultiplier,1);
   data['worker-1'].levels={speed:10,stamina:10,endurance:10,skill:10};
   const trained=workerAbilitySnapshot('worker-1',data,NOW),other=workerAbilitySnapshot('worker-2',data,NOW);
   assert.ok(trained.walkMsMultiplier<base.walkMsMultiplier);assert.ok(trained.workMsMultiplier<base.workMsMultiplier);
   assert.ok(trained.maxEnergy>base.maxEnergy);assert.ok(trained.enduranceMultiplier<base.enduranceMultiplier);
   assert.equal(trained.qualityMultiplier,1.135);assert.equal(other.qualityMultiplier,1);
-  assert.equal(other.walkMsMultiplier,1);assert.equal(other.maxEnergy,100);
+  assert.equal(other.walkMsMultiplier,1);assert.equal(other.maxEnergy,200);
   assert.equal(workerOrderEnergyCost(9,base),48);assert.equal(workerOrderEnergyCost(9,trained),27);
   assert.equal(workerOrderEnergyCost(Array.from({length:4}),base),28);
 });
@@ -84,16 +84,16 @@ test('each skill has an independent observable effect and level-one timings stay
 test('stamina is spent once per reserved order and cannot regenerate during work',()=>{
   const original=training(0),cost=48;
   const reserved=reserveWorkerEnergy(original,'worker-1',{startAt:NOW,completedAt:NOW+30000,energyCost:cost});
-  assert.equal(reserved['worker-1'].energy,52);assert.equal(reserved['worker-1'].energyAt,NOW+30000);
-  assert.equal(original['worker-1'].energy,100);
-  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+10000).energy,52);
-  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+30000).energy,52);
-  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+30000+STAFF_ENERGY_RECOVERY_MS*10).energy,62);
-  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+86400000).energy,100);
+  assert.equal(reserved['worker-1'].energy,152);assert.equal(reserved['worker-1'].energyAt,NOW+30000);
+  assert.equal(original['worker-1'].energy,200);
+  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+10000).energy,152);
+  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+30000).energy,152);
+  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+30000+STAFF_ENERGY_RECOVERY_MS*10).energy,162);
+  assert.equal(workerAbilitySnapshot('worker-1',reserved,NOW+86400000).energy,200);
 });
 
 test('repeated work exhausts stamina and forces a measured rest before the next order',()=>{
-  let data=training(0);
+  let data=training(0);data['worker-1'].energy=100;
   data=reserveWorkerEnergy(data,'worker-1',{startAt:NOW,completedAt:NOW+30000,energyCost:48});
   data=reserveWorkerEnergy(data,'worker-1',{startAt:NOW+30000,completedAt:NOW+60000,energyCost:48});
   assert.equal(data['worker-1'].energy,4);
@@ -106,7 +106,7 @@ test('repeated work exhausts stamina and forces a measured rest before the next 
 
 test('an idle worker recovers before scheduling and future reservations cannot overlap',()=>{
   const data=training(0);data['worker-1'].energy=10;data['worker-1'].energyAt=NOW;
-  assert.deepEqual(workerEnergyReadyAt(data['worker-1'],NOW+80000,48),{startAt:NOW+80000,restMs:0,energyBefore:100,energyCost:48});
+  assert.deepEqual(workerEnergyReadyAt(data['worker-1'],NOW+80000,48),{startAt:NOW+80000,restMs:0,energyBefore:110,energyCost:48});
   const reserved=reserveWorkerEnergy(data,'worker-1',{startAt:NOW+80000,completedAt:NOW+110000,energyCost:48});
   const plan=workerEnergyReadyAt(reserved['worker-1'],NOW+90000,48);
   assert.equal(plan.startAt,NOW+110000);
@@ -129,7 +129,7 @@ test('stamina upgrades retain spent energy and future recovery timestamps',()=>{
   const data=training(0);data['worker-1'].energy=20;data['worker-1'].energyAt=NOW+30000;
   const result=trainingUpgradeResult(data,'worker-1','stamina',wallet,NOW,0);
   assert.equal(result.ok,true);assert.equal(result.training['worker-1'].energy,20);assert.equal(result.training['worker-1'].energyAt,NOW+30000);
-  assert.equal(workerAbilitySnapshot('worker-1',result.training,NOW).maxEnergy,115);
+  assert.equal(workerAbilitySnapshot('worker-1',result.training,NOW).maxEnergy,215);
   const idle=training(0);idle['worker-1'].energy=20;idle['worker-1'].energyAt=NOW-8000;
   const recovered=trainingUpgradeResult(idle,'worker-1','stamina',wallet,NOW,0);
   assert.equal(recovered.training['worker-1'].energy,30);assert.equal(recovered.training['worker-1'].energyAt,NOW);
@@ -137,7 +137,7 @@ test('stamina upgrades retain spent energy and future recovery timestamps',()=>{
 
 test('energy helpers reject impossible or malformed reservations',()=>{
   const data=training(0),record=data['worker-1'];
-  for(const cost of [0,-1,101,Infinity,NaN])assert.equal(workerEnergyReadyAt(record,NOW,cost),null);
+  for(const cost of [0,-1,201,Infinity,NaN])assert.equal(workerEnergyReadyAt(record,NOW,cost),null);
   assert.equal(workerEnergyReadyAt(record,-1,20),null);
   assert.equal(workerOrderEnergyCost(0),null);assert.equal(workerOrderEnergyCost(2,{enduranceMultiplier:0}),null);
   assert.equal(reserveWorkerEnergy(data,'worker-2',{startAt:NOW,completedAt:NOW+100,energyCost:20}),null);

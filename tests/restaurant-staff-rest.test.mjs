@@ -8,7 +8,7 @@ import { normalizeStaffTraining, validStaffTraining, workerAbilitySnapshot, rest
 const NOW=Date.parse('2026-10-18T12:00:00Z'),ACTOR={id:'stamina-manager',name:'店长'};
 function fixture({energy=100,speed=1,stamina=1,endurance=1,version=3}={}){
   const restaurant={staff:0,levels:{kitchen:1,fridge:1,tables:1},orders:[],staffTraining:normalizeStaffTraining(null,NOW,0)};
-  restaurant.staffTraining['worker-1']={levels:{speed,stamina,endurance,skill:1},energy,energyAt:NOW,energyMode:'rest-room',rest:null};
+  restaurant.staffTraining['worker-1']={levels:{speed,stamina,endurance,skill:1},energyBase:200,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
   const workflow=createInteractiveWorkflow(restaurant,'rice',NOW,{orderId:'table-1',version}),order={id:'table-1',recipeId:'rice',createdAt:NOW,readyAt:NOW,servedAt:null,recipeLevel:1,tipsLevel:1,kitchenLevel:1,staffLevel:0,actorId:ACTOR.id,workflow};
   restaurant.orders.push(order);return {restaurant,order};
 }
@@ -39,23 +39,23 @@ test('the exhausted employee walks continuously through the right-hand door and 
   assert.deepEqual(rest.segments[0].from,o.workflow.segments.find(s=>s.phase==='work').to);assert.equal(rest.departAt,run.endAt);assert.deepEqual(rest.segments.at(-2).to,STAFF_REST_ROOM_ENTRANCE);assert.deepEqual(rest.segments.at(-1).to,STAFF_REST_ROOM_POSITION);
   assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,rest.arriveAt-1).energy,0);
   assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,rest.arriveAt+800).energy,1);
-  assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,rest.fullAt).energy,100);
+  assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,rest.fullAt).energy,200);
   for(const segment of rest.segments){const start=kitchenInfo(r,segment.startAt).workers[0],end=kitchenInfo(r,segment.endAt).workers[0];assert.deepEqual(start.position,segment.from);assert.deepEqual(end.position,segment.to);}
 });
 
 test('travel and partial recovery reject the next click with an authoritative reason and countdown',()=>{
   const {r,o,rest}=exhaust(),before=structuredClone(r);
   assert.match(advanceInteractiveWorkflow(r,o,'wash',rest.departAt).reason,/正在前往休息室/);
-  assert.match(advanceInteractiveWorkflow(r,o,'wash',rest.arriveAt+800).reason,/体力恢复中，还需 80 秒/);
+  assert.match(advanceInteractiveWorkflow(r,o,'wash',rest.arriveAt+800).reason,/体力恢复中，还需 160 秒/);
   assert.equal(advanceInteractiveWorkflow(r,o,'wash',rest.fullAt-1).ok,false);assert.deepEqual(r,before);
 });
 
 test('fully recovered staff stay inside indefinitely until the next valid player click and walk out from the room',()=>{
   const {r,o,rest}=exhaust();
   const before=structuredClone(r),at=rest.fullAt+86400000,worker=kitchenInfo(r,at).workers[0];
-  assert.equal(worker.phase,'rest-ready');assert.equal(worker.rest.phase,'ready');assert.deepEqual(worker.position,STAFF_REST_ROOM_POSITION);assert.equal(worker.energy,100);assert.equal(o.workflow.runs.length,1);assert.deepEqual(r,before);
+  assert.equal(worker.phase,'rest-ready');assert.equal(worker.rest.phase,'ready');assert.deepEqual(worker.position,STAFF_REST_ROOM_POSITION);assert.equal(worker.energy,200);assert.equal(o.workflow.runs.length,1);assert.deepEqual(r,before);
   assert.equal(advanceInteractiveWorkflow(r,o,'plate',at).ok,false);assert.deepEqual(r,before);
-  step(r,o,'wash',at);const run=o.workflow.runs[1];assert.equal(run.energyBefore,100);assert.equal(run.energyAfter,90);assert.equal(run.durationMultiplier,1);assert.deepEqual(run.startPosition,STAFF_REST_ROOM_POSITION);assert.equal(r.staffTraining['worker-1'].rest,null);
+  step(r,o,'wash',at);const run=o.workflow.runs[1];assert.equal(run.energyBefore,200);assert.equal(run.energyAfter,190);assert.equal(run.durationMultiplier,1);assert.deepEqual(run.startPosition,STAFF_REST_ROOM_POSITION);assert.equal(r.staffTraining['worker-1'].rest,null);
   assert.deepEqual(o.workflow.segments.find(s=>s.startAt===at).from,STAFF_REST_ROOM_POSITION);
 });
 
@@ -68,19 +68,19 @@ test('speed levels shorten employee walking, pickup and rest travel while preser
 
 test('endurance reduces each clicked step cost and stamina increases the actual room recovery target',()=>{
   const {restaurant:r,order:o}=fixture({endurance:10});accept(r,o);step(r,o,'gather',NOW);assert.equal(o.workflow.runs[0].energyCost,6);assert.equal(o.workflow.runs[0].energyAfter,94);
-  const tired=exhaust({stamina:3});assert.equal(tired.rest.fullAt-tired.rest.arriveAt,130*800);assert.equal(restaurantStaffRestInfo(tired.r,tired.rest.fullAt)[0].maxEnergy,130);
+  const tired=exhaust({stamina:3});assert.equal(tired.rest.fullAt-tired.rest.arriveAt,230*800);assert.equal(restaurantStaffRestInfo(tired.r,tired.rest.fullAt)[0].maxEnergy,230);
   assert.match(STAFF_TRAINING_STATS.find(stat=>stat.id==='endurance').description,/每道工序/);
 });
 
 test('training during room recovery preserves earned stamina and extends capacity without gifting a full bar',()=>{
   const {r,o,rest}=exhaust();const at=rest.arriveAt+8000;
   const result=trainingUpgradeResult(r.staffTraining,'worker-1','stamina',{coins:10000,goldFish:0},at,0);assert.equal(result.ok,true);r.staffTraining=result.training;
-  assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).energy,10);assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).maxEnergy,115);assert.equal(r.staffTraining['worker-1'].rest.fullAt,at+105*800);assert.equal(validStaffTraining(r.staffTraining,0),true);
-  assert.equal(advanceInteractiveWorkflow(r,o,'wash',rest.fullAt).ok,false);step(r,o,'wash',r.staffTraining['worker-1'].rest.fullAt);assert.equal(o.workflow.runs[1].energyBefore,115);
+  assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).energy,10);assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).maxEnergy,215);assert.equal(r.staffTraining['worker-1'].rest.fullAt,at+205*800);assert.equal(validStaffTraining(r.staffTraining,0),true);
+  assert.equal(advanceInteractiveWorkflow(r,o,'wash',rest.fullAt).ok,false);step(r,o,'wash',r.staffTraining['worker-1'].rest.fullAt);assert.equal(o.workflow.runs[1].energyBefore,215);
 });
 
-test('normal rice preparation uses nine explicit ten-point steps, then exhausted delivery still permits dining and collection',()=>{
-  let state=initialState(NOW);state=act(state,{type:'restaurant-arrive',recipeId:'rice',partySize:1},NOW);
+test('rice preparation starting at half stamina uses nine explicit ten-point steps, then exhausted delivery still permits dining and collection',()=>{
+  let state=initialState(NOW);state.restaurant.staffTraining=normalizeStaffTraining(null,NOW,0);Object.assign(state.restaurant.staffTraining['worker-1'],{energy:100,energyMode:'rest-room',rest:null});state=act(state,{type:'restaurant-arrive',recipeId:'rice',partySize:1},NOW);
   const id=state.restaurant.orders[0].id;assert.equal(state.restaurant.orders[0].workflow.version,4);let at=state.restaurant.orders[0].createdAt;
   state=act(state,{type:'restaurant-kitchen-accept',orderId:id},at);
   for(const work of KITCHEN_FLOWS.rice){state=act(state,{type:'restaurant-kitchen-step',orderId:id,stepId:work.id},at);at=state.restaurant.orders[0].workflow.runs.at(-1).endAt;}
@@ -141,5 +141,5 @@ test('an unstarted old v2 order can adopt a rested v3 employee while both saved 
   const workflow=createInteractiveWorkflow(r,'coffee',NOW,{orderId:'table-2',seat:1,version:2}),old={...o,id:'table-2',recipeId:'coffee',createdAt:NOW,readyAt:NOW,workflow};r.orders.push(old);accept(r,old);
   assert.equal(advanceInteractiveWorkflow(r,old,'gather',rest.arriveAt).ok,false);
   step(r,old,'gather',rest.fullAt);const first=old.workflow.runs[0];assert.equal(first.energyCost,4);assert.equal(validKitchenWorkflow(o.workflow,o,r),true);
-  step(r,old,'espresso',first.endAt+100000);assert.equal(old.workflow.runs[1].energyBefore,100);assert.equal(validKitchenWorkflow(o.workflow,o,r),true);
+  step(r,old,'espresso',first.endAt+100000);assert.equal(old.workflow.runs[1].energyBefore,200);assert.equal(validKitchenWorkflow(o.workflow,o,r),true);
 });

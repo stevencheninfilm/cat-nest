@@ -42,7 +42,7 @@ test('training a fresh employee extra capacity does not enable recovery while st
   let state=initialState(NOW);state.coins=10000;state.restaurant.stats.experience=levelStartXp(50);
   state=act(state,{type:'restaurant-train',workerId:'worker-1',statId:'stamina'},NOW+8000);
   assert.equal(state.restaurant.staffTraining['worker-1'].energyMode,'rest-room');
-  assert.equal(energy(state,NOW+86400000),100);assert.equal(restaurantStaffRestInfo(state.restaurant,NOW+86400000)[0].maxEnergy,115);
+  assert.equal(energy(state,NOW+86400000),200);assert.equal(restaurantStaffRestInfo(state.restaurant,NOW+86400000)[0].maxEnergy,215);
 });
 
 test('the next bubble, terminal and workflow board open at the exhausted operation end while its employee is still walking to rest',()=>{
@@ -78,7 +78,7 @@ test('without a spare employee the next bubble stays visible, rejected clicks do
     const result=restaurantActionResult(state,{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'},ACTOR,time);
     assert.equal(result.ok,false);assert.match(result.reason,/休息室|恢复体力|体力恢复中/);assert.ok(kitchenViewModel(state.restaurant,null,time).next);
   }
-  assert.deepEqual(state,before);state=click(state,'espresso',rest.fullAt);assert.equal(last(state).energyBefore,100);assert.equal(last(state).energyAfter,90);
+  assert.deepEqual(state,before);state=click(state,'espresso',rest.fullAt);assert.equal(last(state).energyBefore,200);assert.equal(last(state).energyAfter,190);
   assert.equal(order(state).workflow.runs.some(run=>Object.hasOwn(run,'workerId')),false,'a single employee log keeps its original shape');
 });
 

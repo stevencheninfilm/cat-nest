@@ -3,7 +3,7 @@ import { normalizeRestaurant, validRestaurant, restaurantActionResult } from '..
 import { RESTAURANT_GUESTS, eligibleRestaurantGuestCats } from '../src/restaurant-customers.js';
 import { restaurantDecoration } from '../src/restaurant-decor.js';
 import { levelStartXp } from '../src/growth-levels.js';
-import { normalizeStaffTraining } from '../src/restaurant-staff-training.js';
+import { normalizeStaffTraining, staffMaxEnergy } from '../src/restaurant-staff-training.js';
 import { initialRestaurantGuestService } from '../src/restaurant-guest-service.js';
 
 /** Explicitly isolated test fixture, never a shared/server intent. It prepares
@@ -36,7 +36,7 @@ export function restaurantGuestDebugResult(state,command,now=Date.now()){
   }
   r.staffTraining=normalizeStaffTraining(r.staffTraining,now,r.staff);
   for(const record of Object.values(r.staffTraining)){
-    record.energy=100+15*(record.levels.stamina-1);record.energyAt=now;
+    record.energy=staffMaxEnergy(record.levels);record.energyAt=now;
     if(record.energyMode==='rest-room')record.rest=null;
   }
   if(!validRestaurant(r)||!eligibleRestaurantGuestCats(r,now).includes(guest.id))return reject('这位顾客的测试条件尚未准备完成。');
