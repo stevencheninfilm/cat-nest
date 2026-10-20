@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
-import { namespacedStorage, DEMO_PREFIX, DEMO_PREFERENCES_PREFIX, createMemoryStorage, clearLegacyDemoProgress } from '../demo/storage.js';
+import { namespacedStorage, DEMO_PREFIX, DEMO_PREFERENCES_PREFIX, createMemoryStorage, createDemoLocalStorage, clearLegacyDemoProgress } from '../demo/storage.js';
+import { createRestaurantAudio, RESTAURANT_AUDIO_KEY } from '../src/restaurant-audio.js';
 import { initializeDemoVisit } from '../demo/visit.js';
 import { createDemoEngine, DEMO_ACTORS, DEMO_ROOM } from '../demo/engine.js';
 import { createDemoCourt } from '../demo/court-engine.js';
@@ -81,6 +82,27 @@ test('a restored browser history page reloads while an ordinary first load does 
   initializeDemoVisit({location:{href:'https://example.com/test/?court=oldcase&room=oldroom&mode=judge&campaign=demo',reload(){reloads++;}},history:{replaceState(_state,_title,url){cleaned=new URL(url);}},addEventListener:(name,handler)=>listeners.set(name,handler)});
   assert.equal(cleaned.searchParams.has('court'),false);assert.equal(cleaned.searchParams.has('room'),false);assert.equal(cleaned.searchParams.has('mode'),false);assert.equal(cleaned.searchParams.get('campaign'),'demo');
   listeners.get('pageshow')({persisted:false});assert.equal(reloads,0);listeners.get('pageshow')({persisted:true});assert.equal(reloads,1);
+});
+test('test and public demo visits default to the restaurant while keeping explicit routes and query context',()=>{
+  for(const path of ['/cat-nest/test/','/cat-nest/test/index.html'])for(const hash of ['', '#restaurant', '#collection']) {
+    const href=`https://example.com${path}?campaign=demo${hash}`;let replaced;
+    initializeDemoVisit({location:{href},history:{replaceState(_state,_title,url){replaced=url;}},addEventListener(){}});
+    const next=new URL(replaced||href);
+    assert.equal(next.hash,hash||'#restaurant');assert.equal(next.pathname,path);assert.equal(next.searchParams.get('campaign'),'demo');
+    if(hash)assert.equal(replaced,undefined,'an explicit route is not rewritten');
+  }
+});
+test('demo audio starts muted, can be enabled during the visit, and resets without changing formal preferences',async()=>{
+  const formal=createMemoryStorage();formal.setItem(RESTAURANT_AUDIO_KEY,JSON.stringify({muted:false,music:.6}));
+  const visit=createDemoLocalStorage();const audio=createRestaurantAudio({preferences:visit,page:null});
+  assert.equal(audio.snapshot().muted,true);audio.setActive(true);assert.equal(audio.snapshot().status,'muted');
+  assert.equal(await audio.play('click'),false);assert.equal(await audio.play('serve'),false);
+  audio.setSettings({muted:false});assert.equal(audio.snapshot().muted,false);
+  assert.equal(JSON.parse(visit.getItem(RESTAURANT_AUDIO_KEY)).muted,false);audio.destroy();
+  const fresh=createRestaurantAudio({preferences:createDemoLocalStorage(),page:null});assert.equal(fresh.snapshot().muted,true);fresh.destroy();
+  const saved=createRestaurantAudio({preferences:formal,page:null});assert.equal(saved.snapshot().muted,false);assert.equal(saved.snapshot().music,.6);saved.destroy();
+  assert.deepEqual(JSON.parse(formal.getItem(RESTAURANT_AUDIO_KEY)),{muted:false,music:.6});
+  assert.equal(createMemoryStorage().getItem(RESTAURANT_AUDIO_KEY),null,'generic storage has no demo defaults');
 });
 test('simulated partner joins and plays a real duo game without exposing hidden hands',()=>{
   const {engine}=setup();
