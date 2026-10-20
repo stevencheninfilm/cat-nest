@@ -1,3 +1,5 @@
+import { RESTAURANT_AUDIO_KEY } from '../src/restaurant-audio.js';
+
 export const DEMO_PREFIX = 'catnest.demo.v1.';
 export const DEMO_PREFERENCES_PREFIX = 'catnest.demo.ui.v1.';
 
@@ -9,6 +11,13 @@ export function createMemoryStorage() {
     setItem(key, value) { values.set(String(key), String(value)); },
     removeItem(key) { values.delete(String(key)); },
   };
+}
+
+// Demo sound choices last for this visit only; every new document starts quiet.
+export function createDemoLocalStorage() {
+  const storage=createMemoryStorage();
+  storage.setItem(RESTAURANT_AUDIO_KEY,JSON.stringify({muted:true}));
+  return storage;
 }
 
 export function clearLegacyDemoProgress(storage) {
@@ -40,5 +49,5 @@ try {
 } catch {}
 clearLegacyDemoProgress(local);
 clearLegacyDemoProgress(session);
-export const demoLocalStorage = createMemoryStorage();
+export const demoLocalStorage = createDemoLocalStorage();
 export const demoSessionStorage = createMemoryStorage();
