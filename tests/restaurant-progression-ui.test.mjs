@@ -65,7 +65,7 @@ test('a next level with several resources keeps every preview in a keyboard-acce
   assert.match(preview,/保鲜冰箱升级/);assert.match(preview,/奶盖/);assert.doesNotMatch(preview,/data-r-action=/);
 });
 
-test('the fifty-level live roadmap opens every native range and level by default',()=>{
+test('the live roadmap collapses past levels and completed chapters as the restaurant advances',()=>{
   const now=Date.parse('2026-10-18T12:00:00Z'),state=initialState(now),initial=restaurantInfo(state,now);
   assert.ok(initial.progression.catalog.length>=80);assert.equal(initial.progression.milestones.length,50);
   assert.equal(initial.progression.milestones.filter(milestone=>milestone.level>1).every(milestone=>milestone.items.length>0),true);
@@ -75,9 +75,21 @@ test('the fifty-level live roadmap opens every native range and level by default
   for(const range of ranges.slice(1))assert.match(range[1],/\bopen\b/);
   for(const group of initialMarkup.matchAll(/<details\b([^>]*data-r-progression-level="(\d+)"[^>]*)>/g))assert.match(group[1],/\bopen\b/,'starter and future resources all start expanded');
   assert.equal(articles(initialMarkup).length,initial.progression.catalog.length,'expanding ranges retains every catalog node');
+  for(const current of [3,5,10,11,25,50]){
+    state.restaurant.stats.experience=levelStartXp(current);
+    const before=structuredClone(state),markup=restaurantProgressionPanel(restaurantInfo(state,now));
+    for(const group of markup.matchAll(/<details\b([^>]*data-r-progression-level="(\d+)"[^>]*)>/g)){
+      assert.equal(/\bopen\b/.test(group[1]),Number(group[2])>=current,`Lv.${current}: level ${group[2]}`);
+    }
+    for(const range of markup.matchAll(/<details\b([^>]*data-r-progression-range="(\d+)-(\d+)"[^>]*)>/g)){
+      assert.equal(/\bopen\b/.test(range[1]),Number(range[3])>=current,`Lv.${current}: chapter ${range[2]}–${range[3]}`);
+    }
+    assert.equal(articles(markup).length,initial.progression.catalog.length,'collapsed resources remain available to expand manually');
+    assert.deepEqual(state,before,'folding the roadmap never changes saved progress');
+  }
   state.restaurant.stats.experience=levelStartXp(25);
   const middle=restaurantProgressionPanel(restaurantInfo(state,now)),middleRanges=[...middle.matchAll(/<details\b([^>]*data-r-progression-range="([^"]+)"[^>]*)>/g)];
-  assert.deepEqual(middleRanges.filter(range=>/\bopen\b/.test(range[1])).map(range=>range[2]),['1-10','11-20','21-30','31-40','41-50']);
+  assert.deepEqual(middleRanges.filter(range=>/\bopen\b/.test(range[1])).map(range=>range[2]),['21-30','31-40','41-50']);
   assert.match(middle,/<b>Lv\.26<\/b>/,'the next-stop preview remains visible without opening distant ranges');
   assert.doesNotMatch(middle,/data-r-action=/);
 });
@@ -90,7 +102,7 @@ test('experience continues past the fifty-level resource map while employee abil
   assert.match(markup,/<h3>Lv\.51<\/h3>/);assert.match(markup,/<b>Lv\.52<\/b>/);
   assert.match(markup,/现有资源门槛均已达到，经验继续增长/);
   assert.ok(markup.includes(`已开放 <b>${info.progression.catalog.length}/${info.progression.catalog.length}</b>`));
-  for(const range of markup.matchAll(/<details\b([^>]*data-r-progression-range="([^"]+)"[^>]*)>/g))assert.match(range[1],/\bopen\b/,'past ranges also remain expanded by default');
+  for(const range of markup.matchAll(/<details\b([^>]*data-r-progression-range="([^"]+)"[^>]*)>/g))assert.doesNotMatch(range[1],/\bopen\b/,'completed ranges start collapsed and remain available to expand');
   const training=restaurantProgressionPanel(info,{category:'training'});
   assert.equal(articles(training).length,9);
   assert.equal(Math.max(...info.progression.catalog.filter(item=>item.kind==='training').map(item=>item.targetLevel)),10);
@@ -110,12 +122,13 @@ test('all nine category controls filter actual catalog kinds and retain accessib
   assert.equal(restaurantProgressionPanel(info,{category:'unknown'}),all,'a stale category restores the complete roadmap');
 });
 
-test('levels are ordered and all start expanded while the next one stays highlighted',()=>{
+test('levels stay ordered with past entries folded and the current and next entries highlighted',()=>{
   const markup=restaurantProgressionPanel(fixture());
   const groups=[...markup.matchAll(/<details\b([^>]*data-r-progression-level="(\d+)"[^>]*)>/g)];
   assert.deepEqual(groups.map(group=>Number(group[2])),[1,2,3,4,6,8,10]);
   for(const [attributes,expected] of [[groups.find(group=>group[2]==='2')[1],'is-current'],[groups.find(group=>group[2]==='3')[1],'is-next']])assert.ok(attributes.includes(expected));
   assert.match(groups.find(group=>group[2]==='2')[1],/\bopen\b/);
+  assert.doesNotMatch(groups.find(group=>group[2]==='1')[1],/\bopen\b/);
   for(const group of groups.filter(group=>Number(group[2])>2))assert.match(group[1],/\bopen\b/,'future content starts expanded and native details remains clickable to collapse');
   assert.match(markup,/<h3>Lv\.3<small>下一站<\/small><\/h3>/);
   assert.doesNotMatch(markup,/累计 240 经验/,'each milestone keeps only its level and count');
