@@ -105,13 +105,33 @@ test('legacy active advanced visitors gain a first-course snapshot without chang
 test('table overlays, course labels, waiting feedback, catalog rewards and isolated test controls are visible',()=>{
   const first=readyToCollect(fixture('guest-dawn-duke'),'table-1'),info=restaurantInfo(first.state,first.at),icon=()=>'',food=id=>`<i class="food-${id}"></i>`;
   const html=restaurantGuestTables(info,{icon,food});assert.ok(!html.includes('gold-overlay.webp'));assert.match(html,/data-r-dish-grade="B"/);assert.ok(html.includes('金级 · 1/2 餐'));assert.ok(html.includes('再点一道'));assert.ok(!html.includes('额外 +2 金鱼干'));
-  assert.ok(restaurantGuestTables(info,{icon,food,pendingCourses:['table-1']}).includes('记录第二餐'));
+  assert.ok(restaurantGuestTables(info,{icon,food,pendingCourses:['table-1']}).includes('正在看菜单…'));
   const next=act(first.state,{type:'restaurant-collect',orderId:'table-1'},first.at),final=readyToCollect(next,next.restaurant.orders[0].id);
   const finalHtml=restaurantGuestTables(restaurantInfo(final.state,final.at),{icon,food});assert.ok(finalHtml.includes('金级 · 2/2 餐'));assert.ok(finalHtml.includes('额外 +2 金鱼干'));
   const book=restaurantCustomersPanel(info,{selectedId:'guest-dawn-duke'});assert.ok(!book.includes('data-r-customer-detail'));
   const detail=restaurantCustomerDetail(info,{selectedId:'guest-dawn-duke',testing:true,food});assert.ok(detail.includes('完成两餐，额外 +2 金鱼干'));assert.ok(detail.includes('data-r-debug-guest="guest-dawn-duke"'));
   assert.ok(!restaurantCustomerDetail(info,{selectedId:'guest-dawn-duke',food}).includes('data-r-debug-guest'));
   assert.ok(restaurantTerminalPanel(info,{icon,staffTesting:true}).includes('高级顾客测试'));assert.ok(!restaurantTerminalPanel(info,{icon,staffTesting:false}).includes('高级顾客测试'));
+});
+
+test('silver and gold guests show an inert menu indicator until the real second order arrives',()=>{
+  const icon=()=>'<svg></svg>',food=()=>'<i></i>';
+  for(const guest of ['guest-baker','guest-dawn-duke']){
+    const first=readyToCollect(fixture(guest),'table-1'),info=restaurantInfo(first.state,first.at);
+    const waiting=restaurantGuestTables(info,{icon,food,pendingCourses:['table-1']});
+    const bubble=waiting.match(/<button class="r-order-bubble"[^]*?<\/button>/)[0];
+    assert.match(bubble,/disabled/);assert.match(bubble,/aria-busy="true"/);
+    assert.match(bubble,/正在看菜单…/);assert.match(bubble,/思考第二道餐中/);
+    assert.match(bubble,/role="progressbar"/);assert.doesNotMatch(bubble,/aria-valuenow|data-r-action|data-r-order-id|再点一道|rr-order-inspiration/);
+    assert.match(waiting,/is-course-thinking/);
+    const second=act(first.state,{type:'restaurant-collect',orderId:'table-1'},first.at);
+    const ready=restaurantGuestTables(restaurantInfo(second,first.at),{icon,food,pendingCourses:['table-1']});
+    assert.doesNotMatch(ready,/is-course-thinking|rg-menu-progress|aria-busy/);
+    assert.match(ready,/data-r-action="kitchen-accept" data-r-order-id="table-2"/);
+    assert.match(ready,/想吃这份/);
+    const final=readyToCollect(second,'table-2');
+    assert.doesNotMatch(restaurantGuestTables(restaurantInfo(final.state,final.at),{icon,food,pendingCourses:['table-2']}),/is-course-thinking|rg-menu-progress/,'final collection is not another menu round');
+  }
 });
 
 test('new four cats use their own two-row atlas and metallic PNG overlays preserve genuine transparency',async()=>{
