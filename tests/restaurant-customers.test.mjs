@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initialState, normalizeState, reduceAction } from '../src/state.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantInfo, validRestaurant, sanitizeRestaurantAction } from '../src/restaurant.js';
 import { RESTAURANT_DECORATIONS, createRestaurantConstruction } from '../src/restaurant-decor.js';
 import { SPECIAL_RESTAURANT_RECIPES, PREMIUM_RESTAURANT_THEMES } from '../src/restaurant-economy.js';

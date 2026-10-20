@@ -4,7 +4,7 @@ import { initialState, reduceAction } from '../src/state.js';
 import { restaurantInfo, normalizeRestaurant, validRestaurant, RESTAURANT_UPGRADES } from '../src/restaurant.js';
 import { restaurantFacilityTimeMultiplier, restaurantFacilityEffect, restaurantTableCapacity } from '../src/restaurant-facilities.js';
 import { restaurantResourceLevel } from '../src/restaurant-progression.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { KITCHEN_FLOWS, kitchenStepDuration } from '../src/restaurant-kitchen.js';
 import { createInteractiveWorkflow } from '../src/restaurant-kitchen-interactive.js';
 import { restaurantFacilityCards, staffEffectCopy, staffAbilityEffectsMarkup, restaurantUpgradeHelp } from '../src/restaurant-upgrade-ui.js';

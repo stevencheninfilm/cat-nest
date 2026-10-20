@@ -2,7 +2,7 @@ import { specialRestaurantRecipe } from '../src/restaurant-economy.js';
 import { normalizeRestaurant, validRestaurant, restaurantActionResult } from '../src/restaurant.js';
 import { RESTAURANT_GUESTS, eligibleRestaurantGuestCats } from '../src/restaurant-customers.js';
 import { restaurantDecoration } from '../src/restaurant-decor.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { normalizeStaffTraining, staffMaxEnergy } from '../src/restaurant-staff-training.js';
 import { initialRestaurantGuestService } from '../src/restaurant-guest-service.js';
 

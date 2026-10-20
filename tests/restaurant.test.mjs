@@ -1,7 +1,8 @@
 import { SPECIAL_RESTAURANT_RECIPES, PROMOTED_SIGNATURE_RECIPE_IDS } from '../src/restaurant-economy.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, normalizeState, reduceAction, levelStartXp } from '../src/state.js';
+import { initialState, normalizeState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { initialRestaurant, validRestaurant, normalizeRestaurant, restaurantInfo, restaurantActionResult, sanitizeRestaurantAction, RESTAURANT_DINING_MS, RESTAURANT_RECIPES, RESTAURANT_NEW_RECIPE_IDS, RESTAURANT_RECIPE_CATEGORIES } from '../src/restaurant.js';
 
 const NOW=Date.parse('2026-10-18T12:00:00Z');
@@ -86,16 +87,16 @@ test('dining capacity is shared and expansion grows from two to eight seats',()=
 test('restaurant progression unlocks recipes independently of pet level',()=>{
   let state=initialState(NOW);state.xp=0;
   assert.equal(action(state,'restaurant-start',{recipeId:'pancake'}),null);
-  for(let i=0;i<74;i++)state=finishOrder(state,NOW+i*60000);
-  assert.equal(restaurantInfo(state,NOW+4440000).level,3);
-  assert.equal(state.restaurant.stats.experience,444);
-  assert.equal(action(state,'restaurant-start',{recipeId:'pancake'},NOW+4440000),null);
-  state=finishOrder(state,NOW+4440000);
-  const info=restaurantInfo(state,NOW+4500000);
+  for(let i=0;i<37;i++)state=finishOrder(state,NOW+i*60000);
+  assert.equal(restaurantInfo(state,NOW+2220000).level,3);
+  assert.equal(state.restaurant.stats.experience,222);
+  assert.equal(action(state,'restaurant-start',{recipeId:'pancake'},NOW+2220000),null);
+  state=finishOrder(state,NOW+2220000);
+  const info=restaurantInfo(state,NOW+2280000);
   assert.equal(info.level,4);assert.equal(info.recipes.find(recipe=>recipe.id==='pancake').unlocked,true);
-  assert.equal(state.restaurant.stats.experience,450);
-  assert.ok(action(state,'restaurant-start',{recipeId:'pancake'},NOW+4500000));
-  assert.equal(action(state,'restaurant-start',{recipeId:'pizza'},NOW+4500000),null);
+  assert.equal(state.restaurant.stats.experience,228);
+  assert.ok(action(state,'restaurant-start',{recipeId:'pancake'},NOW+2280000));
+  assert.equal(action(state,'restaurant-start',{recipeId:'pizza'},NOW+2280000),null);
 });
 
 test('facilities and staff spend coins, research spends fragments, and existing orders retain their prices',()=>{

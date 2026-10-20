@@ -1,5 +1,5 @@
 import { normalizeRestaurant, validRestaurant } from '../src/restaurant.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { RESEARCH_INSPIRATION_MAX } from '../src/restaurant-research.js';
 
 /** Reachable only through the isolated demo adapter, never a server intent. */

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, normalizeState, reduceAction, levelStartXp } from '../src/state.js';
+import { initialState, normalizeState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantInfo, restaurantRecipe, validRestaurant, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { restaurantRecipeUnlocked } from '../src/restaurant-progression.js';
 import { restaurantResearchPool } from '../src/restaurant-research.js';

@@ -2,7 +2,7 @@ import { KITCHEN_CIRCLE_PALETTES } from '../src/restaurant-circle-palettes.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, normalizeState } from '../src/state.js';
-import { levelInfo, levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelInfo as levelInfo, levelStartXp as legacyLevelStartXp, restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { initialRestaurant, normalizeRestaurant, validRestaurant, restaurantInfo, restaurantLevel, RESTAURANT_RECIPES, RESTAURANT_STAFF, RESTAURANT_UPGRADES } from '../src/restaurant.js';
 import { SPECIAL_RESTAURANT_RECIPES, PREMIUM_RESTAURANT_THEMES } from '../src/restaurant-economy.js';
 import { RESTAURANT_DECORATIONS } from '../src/restaurant-decor.js';
@@ -19,9 +19,9 @@ const roadmap=restaurant=>restaurantProgressionInfo(restaurant,catalogs);
 const OLD_RECIPE_LEVELS={rice:1,coffee:1,sandwich:1,donut:1,lemontea:1,pancake:2,pudding:2,matcha:2,burger:3,udon:3,waffle:3,strawberrymilk:3,pizza:4,sushi:4,grape:4,parfait:5,cheesecake:5,cocoa:5};
 const oldRecipesAt=level=>Object.keys(OLD_RECIPE_LEVELS).filter(id=>OLD_RECIPE_LEVELS[id]<=level).sort();
 
-test('restaurant effective experience follows the exact shared pet ladder at every tested boundary',()=>{
+test('restaurant effective experience follows the restaurant half-cost ladder at every tested boundary',()=>{
   for(const level of [1,2,3,5,8,10,11,20,49,50,51,100,1000000]) {
-    const start=levelStartXp(level),target=120+30*(level-1);
+    const start=levelStartXp(level),target=60+15*(level-1);
     for(const xp of [start,Math.max(0,start-.1),start+.1,start+target-.1,start+target]) {
       const restaurant=restaurantWithExperience(xp),growth=levelInfo(xp),info=restaurantExperienceInfo(restaurant);
       assert.equal(restaurantExperience(restaurant),xp);
@@ -45,7 +45,7 @@ test('effective experience adds decimal migration credit exactly without alterin
 test('restaurant growth continues beyond the fifty-level resource map and preserves large save boundaries',()=>{
   for(const level of [51,100,1000000]) {
     const restaurant=restaurantWithExperience(levelStartXp(level)),info=roadmap(restaurant);
-    assert.equal(info.level,level);assert.equal(info.nextLevel,level+1);assert.equal(info.levelTarget,120+30*(level-1));
+    assert.equal(info.level,level);assert.equal(info.nextLevel,level+1);assert.equal(info.levelTarget,60+15*(level-1));
     assert.equal(info.lastUnlockLevel,50);assert.equal(info.nextUnlockLevel,null);
     assert.equal(info.catalog.every(item=>item.available),true,'the finite resource map does not cap experience');
   }
@@ -60,7 +60,7 @@ test('legacy six-order and twenty-four-order restaurants retain reached levels w
     state.restaurant.stats={served,earned:913,experience:earned};state.restaurant.nextOrderId=served+1;delete state.restaurant.progression;
     const before=structuredClone(state),pure=normalizeRestaurantProgression(state.restaurant),restored=normalizeState(state,NOW);
     assert.deepEqual({...pure,legacyRecipes:[...pure.legacyRecipes].sort()},{version:2,experienceOffset:offset,legacyRecipes:oldRecipesAt(expectedLevel)});assert.equal(validRestaurant(restored.restaurant),true);
-    assert.equal(restaurantInfo(restored,NOW).level,expectedLevel);
+    assert.equal(restaurantInfo(restored,NOW).level,levelInfo(earned+offset).level);
     assert.equal(restored.restaurant.stats.experience,earned);assert.equal(restored.restaurant.stats.earned,913);assert.equal(restored.restaurant.stats.served,served);
     assert.equal(restored.coins,417);assert.equal(restored.goldFish,9);assert.equal(restored.xp,777.1);
     assert.deepEqual(state,before,'migration does not mutate the loaded object');
@@ -95,7 +95,7 @@ test('v2 legacy recipe permissions are unique arrays of known ordinary recipe ID
 
 test('v1 migration freezes precisely the already-open ordinary menu under the old one-through-five rules',()=>{
   for(const level of [1,2,3,4,5,10,49,50]) {
-    const legacy=restaurantWithExperience(levelStartXp(level));legacy.progression={version:1,experienceOffset:0};
+    const legacy=restaurantWithExperience(legacyLevelStartXp(level));legacy.progression={version:1,experienceOffset:0};
     const before=structuredClone(legacy),migrated=normalizeRestaurant(legacy,NOW);
     assert.equal(migrated.progression.version,2);assert.deepEqual([...migrated.progression.legacyRecipes].sort(),oldRecipesAt(level));
     assert.equal(migrated.stats.experience,legacy.stats.experience);assert.equal(restaurantExperience(migrated),restaurantExperience(legacy));
@@ -215,10 +215,10 @@ test('level fifty opens every purchase permission without claiming unpurchased r
   assert.deepEqual(restaurant,before,'viewing the entire roadmap never buys, hires or trains anything');
 });
 
-test('levels forty-nine and fifty follow the unchanged XP thresholds and leave final resources locked until fifty',()=>{
-  const before49=roadmap(restaurantWithExperience(39599.9)),at49=roadmap(restaurantWithExperience(39600)),before50=roadmap(restaurantWithExperience(41159.9)),at50=roadmap(restaurantWithExperience(41160));
+test('levels forty-nine and fifty follow the halved XP thresholds and leave final resources locked until fifty',()=>{
+  const before49=roadmap(restaurantWithExperience(19799.9)),at49=roadmap(restaurantWithExperience(19800)),before50=roadmap(restaurantWithExperience(20579.9)),at50=roadmap(restaurantWithExperience(20580));
   assert.equal(before49.level,48);assert.equal(at49.level,49);assert.equal(before50.level,49);assert.equal(at50.level,50);
-  assert.equal(at49.startExperience,39600);assert.equal(at50.startExperience,41160);
+  assert.equal(at49.startExperience,19800);assert.equal(at50.startExperience,20580);
   assert.equal(at49.nextUnlockLevel,50);assert.equal(at50.nextUnlockLevel,null);
   const last=at49.catalog.filter(item=>item.level===50);assert.ok(last.length>0);
   assert.equal(last.every(item=>!item.available&&!item.owned),true);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,normalizeState,reduceAction} from '../src/state.js';
 import {restaurantInfo,validRestaurant} from '../src/restaurant.js';
-import {levelStartXp} from '../src/growth-levels.js';
+import {restaurantLevelStartXp as levelStartXp} from '../src/growth-levels.js';
 import {RESTAURANT_DECORATIONS,restaurantDecorationSnapshot,validDecorationSnapshot} from '../src/restaurant-decor.js';
 import {restaurantDecorationsPanel} from '../src/restaurant-decor-ui.js';
 const NOW=Date.parse('2026-10-19T16:00:00Z'),actor={id:'permanent-decor',name:'店长'};

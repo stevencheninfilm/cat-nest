@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { levelInfo, levelStartXp } from '../src/growth-levels.js';
+import { levelInfo, levelStartXp, restaurantLevelInfo, restaurantLevelStartXp } from '../src/growth-levels.js';
 import { levelInfo as stateLevelInfo, levelStartXp as stateLevelStartXp } from '../src/state.js';
 
 test('state retains the identical shared growth function exports',()=>{
@@ -71,4 +71,28 @@ test('large save boundaries and the safe integer limit agree with an independent
     for(const offset of [-1n,0n,1n])samples.add(Number(boundary+offset));
   }
   for(const xp of samples)assert.deepEqual(levelInfo(xp),integerOracle(xp),`large xp=${xp}`);
+});
+
+test('restaurant upgrades use sixty then fifteen-more XP while pet thresholds retain their original values',()=>{
+  let start=0;
+  for(let level=1;level<=1000;level++){
+    const target=60+15*(level-1);
+    assert.equal(restaurantLevelStartXp(level),start);assert.equal(restaurantLevelStartXp(level)*2,levelStartXp(level));
+    assert.deepEqual(restaurantLevelInfo(start),{level,progress:0,target});
+    assert.deepEqual(restaurantLevelInfo(start+target-.1),{level,progress:target-.1,target});
+    assert.deepEqual(restaurantLevelInfo(start+target),{level:level+1,progress:0,target:target+15});
+    start+=target;
+  }
+  assert.equal(restaurantLevelStartXp(50),20580);assert.equal(levelStartXp(50),41160);
+  assert.equal(restaurantLevelInfo(60).level,2);assert.equal(levelInfo(60).level,1);
+  assert.deepEqual(restaurantLevelInfo(59.95),{level:2,progress:0,target:75});
+});
+
+test('restaurant large balances use the full safe-integer range without losing XP to a doubled-input clamp',()=>{
+  for(const xp of [0,60,135,20580,Number.MAX_SAFE_INTEGER-1,Number.MAX_SAFE_INTEGER]){
+    const total=BigInt(xp);let low=0n,high=100000000n;
+    const threshold=n=>15n*n*(n+7n)/2n;
+    while(low+1n<high){const middle=(low+high)/2n;if(threshold(middle)<=total)low=middle;else high=middle;}
+    assert.deepEqual(restaurantLevelInfo(xp),{level:Number(low+1n),progress:Number(total-threshold(low)),target:Number(60n+15n*low)});
+  }
 });

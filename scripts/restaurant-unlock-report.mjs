@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { initialRestaurant, restaurantInfo } from '../src/restaurant.js';
-import { levelInfo } from '../src/growth-levels.js';
+import { restaurantLevelInfo as levelInfo } from '../src/growth-levels.js';
 import { RESTAURANT_GROWTH_STAGES } from '../src/restaurant-growth-stages.js';
 import { RESTAURANT_FACILITIES } from '../src/restaurant-facilities.js';
 import { facilityEffectCopy, staffEffectCopy } from '../src/restaurant-upgrade-ui.js';
@@ -20,9 +20,9 @@ const source=`# 餐厅等级与资源开放路线
 
 ## 经验阶梯
 
-餐厅独立累计结账获得的营业经验，来源为 \`restaurant.stats.experience\`。同一笔实际结账经验仍同步计入主猫猫 \`state.xp\`。购买、研发、训练、施工和升级设施不会增加经验，重试同一结账不会重复发放。
+餐厅独立累计结账获得的营业经验，来源为 \`restaurant.stats.experience\`。同一笔实际结账经验按 1:1 生成小窝的「餐厅经营经验」气泡，回小窝点击领取后才计入主猫猫 \`state.xp\`。购买、研发、训练、施工和升级设施不会增加经验，重试同一结账不会重复发放。
 
-餐厅与主猫猫直接复用 \`src/growth-levels.js\` 的同一对函数：首次升级需 120 经验，此后每级增加 30；达到 L 级的累计门槛为 \`15 × (L−1) × (L+6)\`。当前资源分布在 1–50 级，每一级都有现有资源开放；50 级之后仍继续积累等级，不改变主猫猫的升级阶梯。达到 50 级累计需 41,160 经验。
+餐厅采用 \`src/growth-levels.js\` 的营业经验阶梯：首次升级需 60 经验，此后每级增加 15，即 60、75、90、105……；达到 L 级的累计门槛为 \`7.5 × (L−1) × (L+6)\`。当前资源分布在 1–50 级，每一级都有现有资源开放；50 级之后仍继续积累等级，不改变主猫猫的升级阶梯。达到 50 级累计需 20,580 经验。主猫猫仍采用 120 起、每级增加 30 的原阶梯。
 
 等级只开放购买、研发或训练的资格，不自动赠送需要付费的内容；菜谱、员工、设施、装扮仍支付原价格。员工按招聘顺序加入，设施与能力逐级提升。员工四项能力与四类设施各自最高 10 级；菜品品质为 B、A、S、SS、SSS 五档。
 
@@ -75,7 +75,7 @@ ${rows}
 
 新餐厅保存 \`progression = {version:2, experienceOffset:0, legacyRecipes:[]}\`。旧餐厅缺少此字段时，按旧的每六单升级、最高 5 级规则识别已达到的等级；必要时用一次性的营业经验折算量补齐到该等级门槛。折算量存放在 \`experienceOffset\`，不会改变真实营业经验、主猫猫经验或任何货币，重复读档和保存也不会叠加。
 
-从旧的十级路线迁移时，按迁移当时的营业等级，一次性记录原五级菜谱规则已开放的普通菜到 \`legacyRecipes\`；已研发或已接单的普通菜也保留。该清单固定保存，不会随以后等级增长套用旧规则继续追加，已购买的金色招牌可继续供应。餐厅实际等级保持原值，不把旧 Lv.10 抬高为 Lv.50。
+从旧的十级路线迁移时，按迁移当时的营业等级，一次性记录原五级菜谱规则已开放的普通菜到 \`legacyRecipes\`；已研发或已接单的普通菜也保留。该清单固定保存，不会随以后等级增长套用旧规则继续追加，已购买的金色招牌可继续供应。现有营业经验和旧折算量保持数值不变，餐厅等级按新的半价阶梯计算；旧迁移折算量仍按原上限验证，避免已有存档被误判无效。
 
 已经雇佣的员工、已有高阶设施、已训练的能力、研发星级和已拥有装扮不会被收回。以后购买或升级新内容时检查新的餐厅等级要求；已拥有的装扮可继续切换。已接订单仍保持原时间线、价格和能力快照。
 

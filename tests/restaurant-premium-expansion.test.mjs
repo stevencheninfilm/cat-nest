@@ -5,7 +5,7 @@ import {initialState,reduceAction,normalizeState} from '../src/state.js';
 import {restaurantInfo,validRestaurant,sanitizeRestaurantAction} from '../src/restaurant.js';
 import {PREMIUM_RESTAURANT_THEMES,premiumRestaurantTheme,equippedPremiumDecorations,premiumDecorationArt} from '../src/restaurant-premium-decorations.js';
 import {restaurantResourceLevel} from '../src/restaurant-progression.js';
-import {levelStartXp} from '../src/growth-levels.js';
+import {restaurantLevelStartXp as levelStartXp} from '../src/growth-levels.js';
 import {premiumThemesMarkup,premiumSceneMarkup,paintPremiumScene} from '../src/restaurant-economy-ui.js';
 import {restaurantProgressionPanel} from '../src/restaurant-progression-ui.js';
 import {createDemoEngine,DEMO_ACTORS} from '../demo/engine.js';

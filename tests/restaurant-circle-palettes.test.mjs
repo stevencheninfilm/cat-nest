@@ -4,7 +4,7 @@ import { initialState, reduceAction, normalizeState } from '../src/state.js';
 import { restaurantInfo, validRestaurant, sanitizeRestaurantAction, restaurantActionResult } from '../src/restaurant.js';
 import { KITCHEN_CIRCLE_PALETTES } from '../src/restaurant-circle-palettes.js';
 import { kitchenPaletteMarkup, kitchenCircleStyle } from '../src/restaurant-kitchen-colors.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { createDemoEngine, DEMO_ACTORS } from '../demo/engine.js';
 import { createMemoryStorage } from '../demo/storage.js';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
