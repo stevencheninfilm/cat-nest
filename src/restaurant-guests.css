@@ -117,7 +117,26 @@
 .rg-terminal-guide{display:block;width:100%;min-height:44px;padding:6px;margin:7px 0;border:1px solid #d4c5a9;border-radius:8px;background:#faf3e2;color:#99815c;font-size:9px;font-weight:700}
 /* Dock beside the phone frame whenever a usable right-hand gutter exists. */
 @media(min-width:968px){.rg-terminal-window{position:fixed;right:max(12px,env(safe-area-inset-right));width:min(264px,calc((100vw - 480px)/2 - 24px))}}
-.restaurant .rg-bonus-gold{display:flex;align-items:center;justify-content:center;gap:2px;font-style:normal;color:#a97820}
-.rg-bonus-gold>img{width:17px;height:14px;object-fit:contain;filter:drop-shadow(0 1px 1px #a9772e33);animation:rg-gold-drop 1.8s ease-in-out infinite}
-@keyframes rg-gold-drop{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-3px) rotate(5deg)}}
-@media(prefers-reduced-motion:reduce){.rg-bonus-gold>img{animation:none}}
+/* Keep customer prompts concise while work stays in the kitchen. */
+.restaurant .rg-order-seat:is(.is-awaiting,.is-preparing)>.r-order-bubble{width:88px;gap:2px}
+.restaurant .rg-order-seat:is(.is-awaiting,.is-preparing)>.r-order-bubble strong{white-space:normal;max-width:44px;line-height:1.45}
+.restaurant .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble{width:auto;min-width:64px;min-height:39px;padding:6px 8px;flex-direction:row;gap:4px}
+.restaurant .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble strong{font-size:14px;line-height:1.3}
+.restaurant .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble>.r-collect-fish{height:22px}
+.restaurant .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble>.r-collect-fish svg{width:23px;height:22px}
+.restaurant .rg-order-seat.is-collectible:not(.is-course-thinking)[data-r-guest-tier]>.r-order-bubble{padding-top:12px;min-height:45px}
+/* The gold layer survives table redraws and never intercepts a click. */
+.rg-gold-drops{position:absolute;inset:0;z-index:18;pointer-events:none;overflow:visible}
+.rg-gold-drop{position:absolute;width:clamp(27px,7cqw,43px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;isolation:isolate;transition:opacity .26s ease}
+.rg-gold-halo{position:absolute;inset:-14%;border:1px solid #ffe48ebf;border-radius:50%;background:radial-gradient(circle,#fff1a3b8 5%,#ffc83c60 40%,#fbb32912 65%,transparent 72%);box-shadow:0 0 10px #ffd556b3,inset 0 0 6px #ffeeb8a6;opacity:.85;animation:rg-gold-glow 1.2s ease-in-out infinite}
+.rg-gold-token{position:relative;display:block;width:100%;height:100%}
+.rg-gold-token>img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(-1px 0 0 #ffe080) drop-shadow(1px 0 0 #bf871d) drop-shadow(0 1px 0 #b67d15) drop-shadow(0 0 5px #ffdc58)}
+.rg-gold-token>strong{position:absolute;right:-6%;bottom:-6%;min-width:18px;padding:0 3px;border:1px solid #ffe9a4;border-radius:8px;background:#fff1bce8;color:#9b6718;font-size:10px;line-height:1.5;text-align:center;text-shadow:0 1px #fff7db;box-shadow:0 0 6px #ffc84990}
+.rg-gold-spark{position:absolute;font-style:normal;color:#ffe781;text-shadow:0 0 5px #ffb81b,0 0 2px #fff9db;animation:rg-gold-twinkle .95s ease-in-out infinite}
+.rg-gold-spark-a{left:-19%;top:2%;font-size:14px}.rg-gold-spark-b{right:-19%;top:33%;font-size:11px;animation-delay:-.45s}
+.rg-gold-drop.is-landed>.rg-gold-token{animation:rg-gold-land .32s ease-out}
+.rg-gold-drop.is-leaving{opacity:0}
+@keyframes rg-gold-land{0%{transform:scale(1.15,.8)}55%{transform:translateY(-3px) scale(.95,1.07)}100%{transform:none}}
+@keyframes rg-gold-glow{50%{opacity:1;transform:scale(1.1);box-shadow:0 0 16px #ffd04ddd,inset 0 0 7px #fff5c7}}
+@keyframes rg-gold-twinkle{50%{opacity:.5;transform:scale(.75) rotate(15deg)}}
+@media(prefers-reduced-motion:reduce){.rg-gold-drop .rg-gold-halo,.rg-gold-drop .rg-gold-token,.rg-gold-drop .rg-gold-spark{animation:none!important}}
