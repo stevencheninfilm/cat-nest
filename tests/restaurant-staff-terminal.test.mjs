@@ -61,7 +61,7 @@ test('switching from a busy full team to only the chef removes stale orders and 
   assert.equal(state.restaurant.staff,0);assert.equal(state.restaurant.orders.length,0);assert.equal(state.restaurant.parties.length,0);
   assert.deepEqual(Object.keys(state.restaurant.staffTraining),['worker-1']);
   assert.equal(state.restaurant.staffTraining['worker-1'].levels.stamina,3);
-  assert.equal(state.restaurant.staffTraining['worker-1'].energy,230);
+  assert.equal(state.restaurant.staffTraining['worker-1'].energy,260);
   assert.equal(state.restaurant.staffTraining['worker-1'].energyAt,NOW+1000);
   assert.equal(state.restaurant.nextOrderId,before.restaurant.nextOrderId,'discarded fixture order IDs are never reused');
   assert.equal(state.coins,busy.coins);assert.equal(state.goldFish,busy.goldFish);assert.equal(state.xp,busy.xp);

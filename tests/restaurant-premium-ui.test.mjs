@@ -72,6 +72,6 @@ test('skill upgrades change only future detailed dish quality and cannot reprice
   for(let i=0;i<9;i++)state=reduceAction(state,{type:'restaurant-train',workerId:'worker-1',statId:'skill'},actor,NOW);
   state=reduceAction(state,{type:'restaurant-start',recipeId:'rice'},actor,NOW);
   const info=restaurantInfo(state,NOW);
-  assert.equal(info.orders[0].rewardCoins,24);assert.equal(info.orders[1].rewardCoins,27);
+  assert.equal(info.orders[0].rewardCoins,24);assert.equal(info.orders[1].rewardCoins,30);
   assert.equal(info.orders[1].workflow.workerLevels.skill,10);
 });

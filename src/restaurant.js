@@ -9,7 +9,7 @@ import { validRestaurantWaitingParties, restaurantWaitingParties, createRestaura
 import { KITCHEN_ZONES, KITCHEN_FLOWS, createKitchenWorkflow, validKitchenWorkflow, validKitchenReservations, kitchenInfo } from './restaurant-kitchen.js';
 import { createInteractiveWorkflow, acceptInteractiveWorkflow, advanceInteractiveWorkflow, isInteractiveWorkflow, interactiveOrderStatus } from './restaurant-kitchen-interactive.js';
 import { SPECIAL_RESTAURANT_RECIPES, PROMOTED_SIGNATURE_RECIPE_IDS, PREMIUM_RESTAURANT_THEMES, specialRestaurantRecipe, premiumStaffHireCost, restaurantGoldReward, normalizeGoldFish, validGoldFish, GOLD_FISH_MAX } from './restaurant-economy.js';
-import { normalizeStaffTraining, normalizeRestaurantStaffTraining, restaurantStaffLastInteractionAt, validStaffTraining, reserveWorkerEnergy, trainingUpgradeResult, STAFF_TRAINING_STATS, STAFF_IDLE_RECOVERY_MS } from './restaurant-staff-training.js';
+import { staffQualityMultiplier, staffAbilityVersion, normalizeStaffTraining, normalizeRestaurantStaffTraining, restaurantStaffLastInteractionAt, validStaffTraining, reserveWorkerEnergy, trainingUpgradeResult, STAFF_TRAINING_STATS, STAFF_IDLE_RECOVERY_MS } from './restaurant-staff-training.js';
 import { restaurantDecoration, ownedRestaurantDecorations, restaurantDecorationSnapshot, validDecorationSnapshot, createRestaurantConstruction, validRestaurantDecorations, normalizeRestaurantDecorations, restaurantDecorationInfo, decorationReward } from './restaurant-decor.js';
 import { RESTAURANT_DECORATIONS } from './restaurant-decor.js';
 import { restaurantLevelInfo as levelInfo } from './growth-levels.js';
@@ -76,7 +76,7 @@ const restaurantTheme=id=>RESTAURANT_THEMES.find(theme=>theme.id===id)||PREMIUM_
 export const restaurantLevel = experience=>levelInfo(experience).level;
 export const restaurantRecipeUpgradeCost = (recipeId,level)=>restaurantRecipe(recipeId)?restaurantResearchCost(level):null;
 const cookingMs = (recipe,kitchenLevel,staffLevel,cookSpeed=0)=>Math.max(3000,Math.round(recipe.seconds*1000*restaurantFacilityTimeMultiplier(kitchenLevel)*(1-.08*staffLevel)/(1+cookSpeed/10000)));
-const rewardFor = order=>({coins:Math.round(restaurantRecipe(order.recipeId).price*(1+.3*(order.recipeLevel-1))*restaurantTipsMultiplier(order.tipsLevel)*restaurantTableIncomeMultiplier(order.tablesLevel??1)*(1+.015*((order.workflow?.workerLevels?.skill??1)-1))),xp:restaurantRecipe(order.recipeId).xp+2*(order.recipeLevel-1)});
+const rewardFor = order=>({coins:Math.round(restaurantRecipe(order.recipeId).price*(1+.3*(order.recipeLevel-1))*restaurantTipsMultiplier(order.tipsLevel)*restaurantTableIncomeMultiplier(order.tablesLevel??1)*staffQualityMultiplier(order.workflow?.workerLevels,staffAbilityVersion(order.workflow))),xp:restaurantRecipe(order.recipeId).xp+2*(order.recipeLevel-1)});
 const autoServeAt = order=>isInteractiveWorkflow(order.workflow)?order.workflow.servedAt:order.workflow?.servedAt??(order.staffLevel>0?order.readyAt+1500:null);
 const servedAt = order=>order.servedAt===null?autoServeAt(order):autoServeAt(order)===null?order.servedAt:Math.min(order.servedAt,autoServeAt(order));
 

@@ -3,7 +3,7 @@ import { isInteractiveWorkflow, validInteractiveWorkflow, interactiveOrderProjec
 import { INTERACTIVE_KITCHEN_ZONES } from './restaurant-kitchen-layout.js';
 import { RESTAURANT_FACILITY_MAX_LEVEL, restaurantFacilityTimeMultiplier, restaurantTableCapacity } from './restaurant-facilities.js';
 export { createInteractiveWorkflow, acceptInteractiveWorkflow, advanceInteractiveWorkflow, isInteractiveWorkflow, interactiveOrderStatus } from './restaurant-kitchen-interactive.js';
-import { normalizeRestaurantStaffTraining, workerAbilitySnapshot, workerDurationMultipliers, workerOrderEnergyCost, workerEnergyReadyAt, restaurantStaffRestInfo } from './restaurant-staff-training.js';
+import { STAFF_ABILITY_VERSION, staffAbilityVersion, staffAbilitySnapshot, validStaffAbilityVersion, normalizeRestaurantStaffTraining, workerAbilitySnapshot, workerDurationMultipliers, workerOrderEnergyCost, workerEnergyReadyAt, restaurantStaffRestInfo } from './restaurant-staff-training.js';
 
 /** Deterministic, shared kitchen rules. Coordinates are percentages of the full
  * restaurant stage; worker positions refer to the centre of their feet.
@@ -262,17 +262,17 @@ const TRAINING_KEYS=Object.freeze(['speed','stamina','endurance','skill']);
 const validWorkerLevels=levels=>exact(levels,TRAINING_KEYS)&&Object.values(levels).every(level=>integer(level,1,10));
 const validWorker=(id,staff)=>typeof id==='string'&&/^worker-[1-9][0-9]*$/.test(id)&&integer(Number(id.slice(7)),1,staff+1);
 /** An immutable order keeps its own ability levels after an employee upgrades. */
-export function kitchenWorkerMultipliers(levels=null) {
-  return workerDurationMultipliers(levels);
+export function kitchenWorkerMultipliers(levels=null,abilityVersion=STAFF_ABILITY_VERSION) {
+  return workerDurationMultipliers(levels,abilityVersion);
 }
-export function kitchenStepDuration(step,kitchenLevel=1,fridgeLevel=1,workerLevels=null,cookSpeedBp=0) {
-  const abilities=kitchenWorkerMultipliers(workerLevels);
+export function kitchenStepDuration(step,kitchenLevel=1,fridgeLevel=1,workerLevels=null,cookSpeedBp=0,abilityVersion=STAFF_ABILITY_VERSION) {
+  const abilities=kitchenWorkerMultipliers(workerLevels,abilityVersion);
   const base=Math.round(step.durationMs*restaurantFacilityTimeMultiplier(step.zoneId===10?fridgeLevel:kitchenLevel));
   // Pickup includes physically gathering ingredients, so employee speed helps
   // at the fridge as well as on the walk. Other processing uses skill alone.
   return Math.max(600,Math.round(base*abilities.workMsMultiplier*(step.zoneId===10?abilities.walkMsMultiplier:1)/(1+cookSpeedBp/10000)));
 }
-const walkDuration=(from,to,workerLevels=null)=>Math.max(180,Math.round(Math.round((Math.abs(to.x-from.x)+Math.abs(to.y-from.y))*KITCHEN_WALK_MS_PER_UNIT)*kitchenWorkerMultipliers(workerLevels).walkMsMultiplier));
+const walkDuration=(from,to,workerLevels=null,abilityVersion=STAFF_ABILITY_VERSION)=>Math.max(180,Math.round(Math.round((Math.abs(to.x-from.x)+Math.abs(to.y-from.y))*KITCHEN_WALK_MS_PER_UNIT)*kitchenWorkerMultipliers(workerLevels,abilityVersion).walkMsMultiplier));
 function corridorPath(from,to) {
   if(pointEqual(from,to))return [];
   if(from.x===to.x)return [to];
@@ -295,9 +295,9 @@ function reservations(restaurant) {
 
 /** Reserve a whole order at acceptance time. Later orders cannot steal a worker
  * or a workstation already reserved by an earlier order, including after reload. */
-export function createKitchenWorkflow(restaurant,recipeId,now,{orderId,seat=0,kitchenLevel=restaurant?.levels?.kitchen??1,fridgeLevel=restaurant?.levels?.fridge??1,staff=restaurant?.staff??0,cookSpeedBp=0}={}) {
+export function createKitchenWorkflow(restaurant,recipeId,now,{orderId,seat=0,kitchenLevel=restaurant?.levels?.kitchen??1,fridgeLevel=restaurant?.levels?.fridge??1,staff=restaurant?.staff??0,cookSpeedBp=0,abilityVersion=STAFF_ABILITY_VERSION}={}) {
   const flow=KITCHEN_FLOWS[recipeId];
-  if(!flow||!integer(now)||!integer(seat,0,KITCHEN_TABLE_POSITIONS.length-1)||!integer(kitchenLevel,1,RESTAURANT_FACILITY_MAX_LEVEL)||!integer(fridgeLevel,1,RESTAURANT_FACILITY_MAX_LEVEL)||!integer(staff)||!integer(cookSpeedBp,0,RESTAURANT_DECORATION_MAX_COOK_SPEED)||typeof orderId!=='string')return null;
+  if(![1,2].includes(abilityVersion)||!flow||!integer(now)||!integer(seat,0,KITCHEN_TABLE_POSITIONS.length-1)||!integer(kitchenLevel,1,RESTAURANT_FACILITY_MAX_LEVEL)||!integer(fridgeLevel,1,RESTAURANT_FACILITY_MAX_LEVEL)||!integer(staff)||!integer(cookSpeedBp,0,RESTAURANT_DECORATION_MAX_COOK_SPEED)||typeof orderId!=='string')return null;
   const existing=(restaurant?.orders||[]).filter(order=>order.workflow).map(order=>order.workflow);
   const training=restaurant?.staffTraining?normalizeRestaurantStaffTraining(restaurant,now):null;
   // With N live orders, one of the first N + 1 workers must be free. Avoid
@@ -308,7 +308,7 @@ export function createKitchenWorkflow(restaurant,recipeId,now,{orderId,seat=0,ki
   const workers=Array.from({length:candidateCount},(_,index)=>{
     const id=workerId(index),freeAt=Math.max(now,...existing.flatMap(workflow=>isInteractiveWorkflow(workflow)?interactiveWorkerReservations(workflow).filter(window=>window.workerId===id).map(window=>window.endAt):workflow.workerId===id?[workflow.completedAt]:[]));
     if(!training)return {id,index,freeAt,workerLevels:null,energyCost:null};
-    const abilities=workerAbilitySnapshot(id,training,now),energyCost=workerOrderEnergyCost(flow,abilities),plan=workerEnergyReadyAt(training[id],freeAt,energyCost);
+    const abilities=workerAbilitySnapshot(id,training,now),energyCost=workerOrderEnergyCost(flow,kitchenWorkerMultipliers(abilities.levels,abilityVersion)),plan=workerEnergyReadyAt(training[id],freeAt,energyCost);
     return {id,index,freeAt:plan?.startAt??MAX,workerLevels:abilities.levels,energyCost};
   });
   workers.sort((a,b)=>a.freeAt-b.freeAt||a.index-b.index);
@@ -323,22 +323,22 @@ export function createKitchenWorkflow(restaurant,recipeId,now,{orderId,seat=0,ki
   if(worker.freeAt>cursor)append('wait',worker.freeAt,position,null,flow[0].id);
   for(const work of flow) {
     const target=kitchenZone(work.zoneId).work,path=corridorPath(position,target);
-    const duration=kitchenStepDuration(work,kitchenLevel,fridgeLevel,worker.workerLevels,cookSpeedBp);
-    const travelMs=path.reduce((total,point,index)=>total+walkDuration(index?path[index-1]:position,point,worker.workerLevels),0);
+    const duration=kitchenStepDuration(work,kitchenLevel,fridgeLevel,worker.workerLevels,cookSpeedBp,abilityVersion);
+    const travelMs=path.reduce((total,point,index)=>total+walkDuration(index?path[index-1]:position,point,worker.workerLevels,abilityVersion),0);
     const startAt=firstFreeAt(cursor+travelMs,duration,blocks.filter(block=>block.zoneId===work.zoneId).sort((a,b)=>a.startAt-b.startAt));
     // Wait in the aisle before approaching an occupied work surface.
     if(startAt>cursor+travelMs)append('wait',cursor+(startAt-cursor-travelMs),position,work.zoneId,work.id);
-    for(const point of path)append('walk',cursor+walkDuration(position,point,worker.workerLevels),point,work.zoneId,work.id);
+    for(const point of path)append('walk',cursor+walkDuration(position,point,worker.workerLevels,abilityVersion),point,work.zoneId,work.id);
     append('work',cursor+duration,target,work.zoneId,work.id,work.carrying);
     carrying=work.carrying;
   }
   const readyAt=cursor,table=KITCHEN_TABLE_POSITIONS[seat];
-  for(const point of diningPath(position,table))append('delivery',cursor+walkDuration(position,point,worker.workerLevels),point,null,'delivery',recipeId);
+  for(const point of diningPath(position,table))append('delivery',cursor+walkDuration(position,point,worker.workerLevels,abilityVersion),point,null,'delivery',recipeId);
   const servedAt=cursor;
-  for(const point of [{x:50,y:table.y},KITCHEN_ORIGIN])if(!pointEqual(position,point))append('return',cursor+walkDuration(position,point,worker.workerLevels),point,null,'return',null);
+  for(const point of [{x:50,y:table.y},KITCHEN_ORIGIN])if(!pointEqual(position,point))append('return',cursor+walkDuration(position,point,worker.workerLevels,abilityVersion),point,null,'return',null);
   const completedAt=cursor;
   if(!integer(completedAt))return null;
-  return {version:1,recipeId,orderId,workerId:worker.id,seat,kitchenLevel,fridgeLevel,staffLevel:staff,createdAt:now,readyAt,servedAt,completedAt,segments,...(training?{workerLevels:{...worker.workerLevels},energyCost:worker.energyCost}:{}),...(cookSpeedBp?{cookSpeedBp}:{})};
+  return {version:1,abilityVersion,recipeId,orderId,workerId:worker.id,seat,kitchenLevel,fridgeLevel,staffLevel:staff,createdAt:now,readyAt,servedAt,completedAt,segments,...(training?{workerLevels:{...worker.workerLevels},energyCost:worker.energyCost}:{}),...(cookSpeedBp?{cookSpeedBp}:{})};
 }
 
 /** Validate immutable snapshots structurally, including exact work and walking
@@ -347,13 +347,13 @@ export function createKitchenWorkflow(restaurant,recipeId,now,{orderId,seat=0,ki
 export function validKitchenWorkflow(workflow,order,restaurant) {
   if(isInteractiveWorkflow(workflow))return validInteractiveWorkflow(workflow,order,restaurant);
   const keys=['version','recipeId','orderId','workerId','seat','kitchenLevel','fridgeLevel','staffLevel','createdAt','readyAt','servedAt','completedAt','segments'];
-  if(!exact(workflow,[...keys,...(Object.hasOwn(workflow||{},'workerLevels')?['workerLevels','energyCost']:[]),...(Object.hasOwn(workflow||{},'cookSpeedBp')?['cookSpeedBp']:[])])||workflow.version!==1)return false;
+  if(!exact(workflow,[...keys,...Object.keys(staffAbilitySnapshot(workflow)),...(Object.hasOwn(workflow||{},'workerLevels')?['workerLevels','energyCost']:[]),...(Object.hasOwn(workflow||{},'cookSpeedBp')?['cookSpeedBp']:[])])||workflow.version!==1||!validStaffAbilityVersion(workflow))return false;
   if(!integer(workflow.cookSpeedBp??0,0,RESTAURANT_DECORATION_MAX_COOK_SPEED)||(workflow.cookSpeedBp??0)!==(order.decorationSnapshot?.cookSpeed??0))return false;
   const flow=KITCHEN_FLOWS[workflow.recipeId];
   if(!flow||workflow.recipeId!==order.recipeId||workflow.orderId!==order.id||workflow.createdAt!==order.createdAt||workflow.readyAt!==order.readyAt||workflow.kitchenLevel!==order.kitchenLevel||workflow.staffLevel!==order.staffLevel||!integer(workflow.fridgeLevel,1,restaurant.levels.fridge??1)||!integer(workflow.seat,0,Math.min(KITCHEN_TABLE_POSITIONS.length,restaurantTableCapacity(restaurant.levels.tables))-1)||!validWorker(workflow.workerId,order.staffLevel))return false;
   if(Object.hasOwn(workflow,'workerLevels')) {
     const current=restaurant.staffTraining?.[workflow.workerId]?.levels;
-    if(!validWorkerLevels(workflow.workerLevels)||!validWorkerLevels(current)||TRAINING_KEYS.some(key=>workflow.workerLevels[key]>current[key])||workflow.energyCost!==workerOrderEnergyCost(flow,kitchenWorkerMultipliers(workflow.workerLevels)))return false;
+    if(!validWorkerLevels(workflow.workerLevels)||!validWorkerLevels(current)||TRAINING_KEYS.some(key=>workflow.workerLevels[key]>current[key])||workflow.energyCost!==workerOrderEnergyCost(flow,kitchenWorkerMultipliers(workflow.workerLevels,staffAbilityVersion(workflow))))return false;
   }
   if(![workflow.createdAt,workflow.readyAt,workflow.servedAt,workflow.completedAt].every(time=>integer(time))||workflow.readyAt<=workflow.createdAt||workflow.servedAt<=workflow.readyAt||workflow.completedAt<=workflow.servedAt||workflow.completedAt>workflow.servedAt+4500)return false;
   if(order.servedAt!==null&&order.servedAt!==workflow.servedAt||!Array.isArray(workflow.segments)||workflow.segments.length<flow.length||workflow.segments.length>100)return false;
@@ -364,22 +364,22 @@ export function validKitchenWorkflow(workflow,order,restaurant) {
     if(mode==='prepare') {
       if(!work)return false;
       if(segment.phase==='work') {
-        if(segment.stepId!==work.id||segment.zoneId!==work.zoneId||!pointEqual(segment.to,kitchenZone(work.zoneId).work)||!pointEqual(segment.from,segment.to)||segment.endAt-segment.startAt!==kitchenStepDuration(work,order.kitchenLevel,workflow.fridgeLevel,workflow.workerLevels,workflow.cookSpeedBp??0)||segment.carrying!==work.carrying)return false;
+        if(segment.stepId!==work.id||segment.zoneId!==work.zoneId||!pointEqual(segment.to,kitchenZone(work.zoneId).work)||!pointEqual(segment.from,segment.to)||segment.endAt-segment.startAt!==kitchenStepDuration(work,order.kitchenLevel,workflow.fridgeLevel,workflow.workerLevels,workflow.cookSpeedBp??0,staffAbilityVersion(workflow))||segment.carrying!==work.carrying)return false;
         carrying=work.carrying;index++;
         if(index===flow.length){mode='delivery';if(segment.endAt!==workflow.readyAt)return false;}
       }else if(segment.phase==='walk'||segment.phase==='wait') {
         if(segment.stepId!==work.id||segment.zoneId!==work.zoneId&&!(index===0&&segment.phase==='wait'&&segment.zoneId===null)||segment.carrying!==carrying)return false;
         if(segment.phase==='wait'&&!pointEqual(segment.from,segment.to))return false;
-        if(segment.phase==='walk'&&(segment.from.x!==segment.to.x&&segment.from.y!==segment.to.y||segment.endAt-segment.startAt!==walkDuration(segment.from,segment.to,workflow.workerLevels)||segment.from.x!==segment.to.x&&segment.from.y!==76))return false;
+        if(segment.phase==='walk'&&(segment.from.x!==segment.to.x&&segment.from.y!==segment.to.y||segment.endAt-segment.startAt!==walkDuration(segment.from,segment.to,workflow.workerLevels,staffAbilityVersion(workflow))||segment.from.x!==segment.to.x&&segment.from.y!==76))return false;
       }else return false;
     }else if(mode==='delivery') {
-      if(segment.phase!=='delivery'||segment.stepId!=='delivery'||segment.zoneId!==null||segment.carrying!==order.recipeId||segment.endAt-segment.startAt!==walkDuration(segment.from,segment.to,workflow.workerLevels)||segment.from.x!==segment.to.x&&segment.from.y!==segment.to.y)return false;
+      if(segment.phase!=='delivery'||segment.stepId!=='delivery'||segment.zoneId!==null||segment.carrying!==order.recipeId||segment.endAt-segment.startAt!==walkDuration(segment.from,segment.to,workflow.workerLevels,staffAbilityVersion(workflow))||segment.from.x!==segment.to.x&&segment.from.y!==segment.to.y)return false;
       if(segment.endAt===workflow.servedAt) {
         if(!pointEqual(segment.to,KITCHEN_TABLE_POSITIONS[workflow.seat]))return false;
         mode='return';
       }else if(segment.endAt>workflow.servedAt)return false;
     }else {
-      if(segment.phase!=='return'||segment.stepId!=='return'||segment.zoneId!==null||segment.carrying!==null||segment.endAt-segment.startAt!==walkDuration(segment.from,segment.to,workflow.workerLevels)||segment.from.x!==segment.to.x&&segment.from.y!==segment.to.y)return false;
+      if(segment.phase!=='return'||segment.stepId!=='return'||segment.zoneId!==null||segment.carrying!==null||segment.endAt-segment.startAt!==walkDuration(segment.from,segment.to,workflow.workerLevels,staffAbilityVersion(workflow))||segment.from.x!==segment.to.x&&segment.from.y!==segment.to.y)return false;
     }
     cursor=segment.endAt;position=segment.to;
   }
@@ -390,7 +390,7 @@ export function validKitchenWorkflow(workflow,order,restaurant) {
   // candidate the same full-energy record keeps route reconstruction separate
   // from the later training ledger and other orders' queue reservations.
   const staffTraining=workflow.workerLevels?Object.fromEntries(Array.from({length:1+order.staffLevel},(_,index)=>[workerId(index),{levels:workflow.workerLevels,energy:100,energyAt:order.createdAt}])):null;
-  const expected=createKitchenWorkflow({levels:restaurant.levels,staff:order.staffLevel,orders:[],...(staffTraining?{staffTraining}:{})},order.recipeId,order.createdAt,{orderId:order.id,seat:workflow.seat,kitchenLevel:order.kitchenLevel,fridgeLevel:workflow.fridgeLevel,staff:order.staffLevel,cookSpeedBp:workflow.cookSpeedBp??0});
+  const expected=createKitchenWorkflow({levels:restaurant.levels,staff:order.staffLevel,orders:[],...(staffTraining?{staffTraining}:{})},order.recipeId,order.createdAt,{orderId:order.id,seat:workflow.seat,kitchenLevel:order.kitchenLevel,fridgeLevel:workflow.fridgeLevel,staff:order.staffLevel,cookSpeedBp:workflow.cookSpeedBp??0,abilityVersion:staffAbilityVersion(workflow)});
   if(!expected)return false;
   const actualSegments=workflow.segments.filter(segment=>segment.phase!=='wait'),expectedSegments=expected.segments;
   return actualSegments.length===expectedSegments.length&&actualSegments.every((segment,i)=>{

@@ -8,7 +8,7 @@ import { normalizeStaffTraining, validStaffTraining, workerAbilitySnapshot, rest
 const NOW=Date.parse('2026-10-18T12:00:00Z'),ACTOR={id:'stamina-manager',name:'店长'};
 function fixture({energy=100,speed=1,stamina=1,endurance=1,version=3}={}){
   const restaurant={staff:0,levels:{kitchen:1,fridge:1,tables:1},orders:[],staffTraining:normalizeStaffTraining(null,NOW,0)};
-  restaurant.staffTraining['worker-1']={levels:{speed,stamina,endurance,skill:1},energyBase:200,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
+  restaurant.staffTraining['worker-1']={levels:{speed,stamina,endurance,skill:1},energyBase:200,abilityVersion:2,energy,energyAt:NOW,energyMode:'rest-room',rest:null};
   const workflow=createInteractiveWorkflow(restaurant,'rice',NOW,{orderId:'table-1',version}),order={id:'table-1',recipeId:'rice',createdAt:NOW,readyAt:NOW,servedAt:null,recipeLevel:1,tipsLevel:1,kitchenLevel:1,staffLevel:0,actorId:ACTOR.id,workflow};
   restaurant.orders.push(order);return {restaurant,order};
 }
@@ -67,16 +67,16 @@ test('speed levels shorten employee walking, pickup and rest travel while preser
 });
 
 test('endurance reduces each clicked step cost and stamina increases the actual room recovery target',()=>{
-  const {restaurant:r,order:o}=fixture({endurance:10});accept(r,o);step(r,o,'gather',NOW);assert.equal(o.workflow.runs[0].energyCost,6);assert.equal(o.workflow.runs[0].energyAfter,94);
-  const tired=exhaust({stamina:3});assert.equal(tired.rest.fullAt-tired.rest.arriveAt,230*800);assert.equal(restaurantStaffRestInfo(tired.r,tired.rest.fullAt)[0].maxEnergy,230);
+  const {restaurant:r,order:o}=fixture({endurance:10});accept(r,o);step(r,o,'gather',NOW);assert.equal(o.workflow.runs[0].energyCost,1);assert.equal(o.workflow.runs[0].energyAfter,99);
+  const tired=exhaust({stamina:3});assert.equal(tired.rest.fullAt-tired.rest.arriveAt,260*800);assert.equal(restaurantStaffRestInfo(tired.r,tired.rest.fullAt)[0].maxEnergy,260);
   assert.match(STAFF_TRAINING_STATS.find(stat=>stat.id==='endurance').description,/每道工序/);
 });
 
 test('training during room recovery preserves earned stamina and extends capacity without gifting a full bar',()=>{
   const {r,o,rest}=exhaust();const at=rest.arriveAt+8000;
   const result=trainingUpgradeResult(r.staffTraining,'worker-1','stamina',{coins:10000,goldFish:0},at,0);assert.equal(result.ok,true);r.staffTraining=result.training;
-  assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).energy,10);assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).maxEnergy,215);assert.equal(r.staffTraining['worker-1'].rest.fullAt,at+205*800);assert.equal(validStaffTraining(r.staffTraining,0),true);
-  assert.equal(advanceInteractiveWorkflow(r,o,'wash',rest.fullAt).ok,false);step(r,o,'wash',r.staffTraining['worker-1'].rest.fullAt);assert.equal(o.workflow.runs[1].energyBefore,215);
+  assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).energy,10);assert.equal(workerAbilitySnapshot('worker-1',r.staffTraining,at).maxEnergy,230);assert.equal(r.staffTraining['worker-1'].rest.fullAt,at+220*800);assert.equal(validStaffTraining(r.staffTraining,0),true);
+  assert.equal(advanceInteractiveWorkflow(r,o,'wash',rest.fullAt).ok,false);step(r,o,'wash',r.staffTraining['worker-1'].rest.fullAt);assert.equal(o.workflow.runs[1].energyBefore,230);
 });
 
 test('rice preparation starting at half stamina uses nine explicit ten-point steps, then exhausted delivery still permits dining and collection',()=>{
@@ -130,7 +130,7 @@ test('v3 freezes an active run while a later clicked operation snapshots newly t
   upgrade=trainingUpgradeResult(r.staffTraining,'worker-1','endurance',{coins:10000,goldFish:0},first.endAt,0);r.staffTraining=upgrade.training;
   step(r,o,'wash',first.endAt);const second=o.workflow.runs[1];
   assert.deepEqual(o.workflow.runs[0],snapshot);assert.deepEqual(o.workflow.segments.slice(0,segments.length),segments);
-  assert.equal(second.energyLevels.speed,2);assert.equal(second.energyLevels.endurance,2);assert.equal(second.energyBefore,90);assert.equal(second.energyCost,10);
+  assert.equal(second.energyLevels.speed,2);assert.equal(second.energyLevels.endurance,2);assert.equal(second.energyBefore,90);assert.equal(second.energyCost,9);
   const firstWalk=o.workflow.segments.find(segment=>segment.startAt===second.startAt);assert.ok(firstWalk.endAt-firstWalk.startAt<Math.round((Math.abs(firstWalk.to.x-firstWalk.from.x)+Math.abs(firstWalk.to.y-firstWalk.from.y))*45));
 });
 

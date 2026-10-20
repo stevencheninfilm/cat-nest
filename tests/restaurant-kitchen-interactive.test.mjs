@@ -114,7 +114,7 @@ test('training, fridge upgrades and decoration accelerate only newly clicked sna
   const ordinary=fixture(),rice=add(ordinary);accept(ordinary,rice);advance(ordinary,rice,'gather',NOW);
   const trained=fixture();trained.levels.fridge=2;trained.levels.kitchen=2;trained.staffTraining['worker-1'].levels={speed:4,stamina:2,endurance:4,skill:4};
   const fast=add(trained,'rice',NOW,0,{cookSpeedBp:200});accept(trained,fast);advance(trained,fast,'gather',NOW);
-  const first=rice.workflow.runs[0],quick=fast.workflow.runs[0];assert.ok(quick.endAt-quick.startAt<first.endAt-first.startAt);assert.equal(quick.energyCost,4);
+  const first=rice.workflow.runs[0],quick=fast.workflow.runs[0];assert.ok(quick.endAt-quick.startAt<first.endAt-first.startAt);assert.equal(quick.energyCost,3);
   assert.equal(fast.workflow.cookSpeedBp,200);assert.equal(fast.workflow.workerLevels.speed,4);
 });
 

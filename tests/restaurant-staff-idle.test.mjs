@@ -29,10 +29,10 @@ test('thirty minutes of inactivity refill every worker to their own trained capa
   const state=fixture(),records=state.restaurant.staffTraining;records['worker-2'].levels.stamina=3;records['worker-3'].levels.stamina=10;
   const before=structuredClone(state);
   assert.deepEqual(energy(state,NOW+STAFF_IDLE_RECOVERY_MS-1),[40,70,0]);
-  assert.deepEqual(energy(state,NOW+STAFF_IDLE_RECOVERY_MS),[200,230,335]);
+  assert.deepEqual(energy(state,NOW+STAFF_IDLE_RECOVERY_MS),[200,260,470]);
   assert.deepEqual(state,before,'a read projection never saves, spends or changes the source');
   const full=normalizeState(JSON.parse(JSON.stringify(state)),NOW+STAFF_IDLE_RECOVERY_MS);
-  assert.deepEqual(energy(full,NOW+STAFF_IDLE_RECOVERY_MS),[200,230,335]);
+  assert.deepEqual(energy(full,NOW+STAFF_IDLE_RECOVERY_MS),[200,260,470]);
   assert.deepEqual(full.restaurant.stats,before.restaurant.stats);
   assert.equal(full.coins,before.coins);assert.equal(full.xp,before.xp);
   assert.deepEqual(full.pendingGrowth,before.pendingGrowth);
@@ -96,7 +96,7 @@ test('upgrades and accepting an order restart the shared clock; a rejected comma
   let state=fixture([40]),at=NOW+STAFF_IDLE_RECOVERY_MS-1;
   state=act(state,{type:'restaurant-train',workerId:'worker-1',statId:'stamina'},at);
   assert.equal(state.restaurant.lastInteractionAt,at);assert.deepEqual(energy(state,at+STAFF_IDLE_RECOVERY_MS-1),[40]);
-  assert.deepEqual(energy(state,at+STAFF_IDLE_RECOVERY_MS),[215]);
+  assert.deepEqual(energy(state,at+STAFF_IDLE_RECOVERY_MS),[230]);
   const before=structuredClone(state);
   assert.equal(reduceAction(state,{type:'restaurant-kitchen-step',orderId:'table-99',stepId:'gather'},ACTOR,at+1),null);assert.deepEqual(state,before);
   state=act(state,{type:'restaurant-arrive',recipeId:'coffee',partySize:1},at+1);

@@ -80,16 +80,16 @@ test('level-ten facilities create valid workflows on all eight existing routes a
 });
 
 test('staff percentage previews distinguish rate, duration, capacity and rounded step costs at every level',()=>{
-  const stepCosts=[10,10,9,9,8,8,7,7,6,6];
-  const walkReductions=[0,7,13,18.4,23.1,27.3,31,34.4,37.5,40.3];
+  const stepCosts=[10,9,8,7,6,5,4,3,2,1];
+  const walkReductions=[0,13,23.1,31,37.5,42.9,47.4,51.2,54.5,57.4];
   for(let level=1;level<=10;level++){
-    assert.deepEqual(staffAbilityLevelEffects('speed',level),{ratePercent:7.5*(level-1),timeReductionPercent:walkReductions[level-1]});
-    assert.deepEqual(staffAbilityLevelEffects('stamina',level),{maxEnergy:200+15*(level-1),capacityPercent:7.5*(level-1)});
-    assert.deepEqual(staffAbilityLevelEffects('endurance',level),{factorReductionPercent:5*(level-1),stepEnergyCost:stepCosts[level-1],actualReductionPercent:(10-stepCosts[level-1])*10});
+    assert.deepEqual(staffAbilityLevelEffects('speed',level),{ratePercent:15*(level-1),timeReductionPercent:walkReductions[level-1]});
+    assert.deepEqual(staffAbilityLevelEffects('stamina',level),{maxEnergy:200+30*(level-1),capacityPercent:15*(level-1)});
+    assert.deepEqual(staffAbilityLevelEffects('endurance',level),{factorReductionPercent:10*(level-1),stepEnergyCost:stepCosts[level-1],actualReductionPercent:(10-stepCosts[level-1])*10});
   }
-  assert.deepEqual(staffAbilityLevelEffects('skill',10),{ratePercent:58.5,timeReductionPercent:36.9,incomePercent:13.5});
-  assert.equal(staffEffectCopy('speed',10).primary,'行走与取料速度 +67.5%');
-  assert.equal(staffEffectCopy('endurance',10).secondary,'每步 6 点 · 实际耗能 −40%');
+  assert.deepEqual(staffAbilityLevelEffects('skill',10),{ratePercent:117,timeReductionPercent:53.9,incomePercent:27});
+  assert.equal(staffEffectCopy('speed',10).primary,'行走与取料速度 +135%');
+  assert.equal(staffEffectCopy('endurance',10).secondary,'每步 1 点 · 实际耗能 −90%');
 });
 
 test('upgrade cards retain quick previews while all ten-level tables live in help without purchase intents',()=>{
@@ -102,7 +102,7 @@ test('upgrade cards retain quick previews while all ten-level tables live in hel
   assert.equal((help.match(/data-r-effect-level=/g)||[]).length,80);
   assert.equal((help.match(/data-r-upgrade-detail="facility:/g)||[]).length,4);
   assert.equal((help.match(/data-r-upgrade-detail="training:/g)||[]).length,4);
-  for(const value of ['加工基础耗时 −75%','取料基础耗时 −75%','小鱼干收入 +135%','舒适收益 +30%','小馆 Lv.50','行走与取料速度 +67.5%','体力上限 +67.5%','耗能系数 −45%','加工速度 +58.5%','7 金鱼干'])assert.ok(help.includes(value),value);
+  for(const value of ['加工基础耗时 −75%','取料基础耗时 −75%','小鱼干收入 +135%','舒适收益 +30%','小馆 Lv.50','行走与取料速度 +135%','体力上限 +135%','耗能系数 −90%','加工速度 +117%','7 金鱼干'])assert.ok(help.includes(value),value);
   assert.doesNotMatch(help,/data-r-action=/);
   for(const id of ['speed','stamina','endurance','skill']){
     const card=staffAbilityEffectsMarkup({id,level:1});
