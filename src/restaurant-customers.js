@@ -43,6 +43,27 @@ export function normalizeRestaurantSeenGuests(restaurant){
   return [...new Set([...(restaurant.seenGuests??[]),...(restaurant.parties??[]).flatMap(party=>party.members.map(member=>member.cat))])];
 }
 
+export const restaurantGuestConditionKey = condition => [condition.kind, condition.id, condition.minimum].filter(value => value !== undefined).join(':');
+const CONDITION_KEYS = Object.freeze([...new Set(RESTAURANT_GUESTS.flatMap(guest => guest.requirements.map(restaurantGuestConditionKey)))]);
+const CONDITION_KEY_SET = new Set(CONDITION_KEYS);
+export function validRestaurantGuestConditions(value) {
+  return Array.isArray(value) && value.length <= CONDITION_KEYS.length && new Set(value).size === value.length && value.every(key => CONDITION_KEY_SET.has(key));
+}
+/** Conditions are independent achievements. A past authoritative visit also
+ * proves its requirements for saves created before this ledger existed. */
+export function completedRestaurantGuestConditions(restaurant, now = Date.now()) {
+  const effective = normalizeRestaurantDecorations({...restaurant}, now), level = levelInfo(restaurantExperience(effective)).level;
+  const completed = new Set(restaurant.completedGuestConditions ?? []), seen = new Set(normalizeRestaurantSeenGuests(restaurant));
+  for (const guest of RESTAURANT_GUESTS) for (const condition of guest.requirements) {
+    if (seen.has(guest.id) || requirementMet(effective, condition, level)) completed.add(restaurantGuestConditionKey(condition));
+  }
+  // The saved construction origin proves the previously installed suite even
+  // when the old save is first opened after the new installation has finished.
+  const previousSuite = restaurant.construction?.fromDecorationId;
+  if (previousSuite) completed.add(`decoration:${previousSuite}`);
+  return CONDITION_KEYS.filter(key => completed.has(key));
+}
+
 function requirementMet(restaurant,condition,level){
   if(condition.kind==='level')return level>=condition.minimum;
   if(condition.kind==='recipe')return restaurantRecipeUnlocked(restaurant,{id:condition.id,unlockLevel:restaurantResourceLevel('recipe',condition.id),special:Boolean(specialRestaurantRecipe(condition.id))});
@@ -52,26 +73,22 @@ function requirementMet(restaurant,condition,level){
   if(condition.kind==='theme')return premiumRestaurantTheme(condition.id)?equippedPremiumDecorations(restaurant).includes(condition.id):restaurant.theme===condition.id;
   return false;
 }
-function eligibility(restaurant,now){
-  const effective=normalizeRestaurantDecorations({...restaurant},now),level=levelInfo(restaurantExperience(effective)).level;
-  return {effective,level};
-}
 /** Called by the authoritative arrival planner, never supplied by the client. */
 export function eligibleRestaurantGuestCats(restaurant,now){
-  const {effective,level}=eligibility(restaurant,now);
-  return RESTAURANT_GUESTS.filter(guest=>guest.requirements.every(condition=>requirementMet(effective,condition,level))).map(guest=>guest.id);
+  const completed=new Set(completedRestaurantGuestConditions(restaurant,now));
+  return RESTAURANT_GUESTS.filter(guest=>guest.requirements.every(condition=>completed.has(restaurantGuestConditionKey(condition)))).map(guest=>guest.id);
 }
 
 /** Names come from the same live catalogs as purchasing and upgrade panels. */
 export function restaurantCustomerInfo(restaurant,{recipes=[],staff=[],upgrades=[],decorations=[],themes=[]}={},now=Date.now()){
-  const {effective,level}=eligibility(restaurant,now),seen=new Set(normalizeRestaurantSeenGuests(restaurant));
+  const completed=new Set(completedRestaurantGuestConditions(restaurant,now)),seen=new Set(normalizeRestaurantSeenGuests(restaurant));
   const label=condition=>{
     const catalog=condition.kind==='recipe'?recipes:condition.kind==='staff'?staff:condition.kind==='facility'?upgrades:condition.kind==='decoration'?decorations:themes;
     const name=catalog.find(item=>item.id===condition.id)?.name??condition.id;
     return condition.kind==='level'?`小馆达到 Lv.${condition.minimum}`:condition.kind==='recipe'?`解锁 ${name}`:condition.kind==='staff'?`雇佣 ${name}`:condition.kind==='facility'?`${name} Lv.${condition.minimum}`:`布置 ${name}`;
   };
   const customers=RESTAURANT_GUESTS.map(guest=>{
-    const requirements=guest.requirements.map(condition=>({...condition,label:label(condition),met:requirementMet(effective,condition,level),panel:({level:'progression',recipe:'recipes',staff:'staff',facility:'upgrades',decoration:'themes',theme:'themes'})[condition.kind]}));
+    const requirements=guest.requirements.map(condition=>({...condition,label:label(condition),met:completed.has(restaurantGuestConditionKey(condition)),panel:({level:'progression',recipe:'recipes',staff:'staff',facility:'upgrades',decoration:'themes',theme:'themes'})[condition.kind]}));
     return {...guest,requirements,eligible:requirements.every(item=>item.met),seen:seen.has(guest.id),visiting:(restaurant.parties??[]).some(party=>party.members.some(member=>member.cat===guest.id))};
   });
   return {customers,total:customers.length,seen:customers.filter(item=>item.seen).length,eligible:customers.filter(item=>item.eligible).length,advanced:customers.filter(item=>item.advanced).length};

@@ -200,7 +200,8 @@ test('a six-dish saved restaurant retains all progress and existing order snapsh
   assert.equal(validRestaurant(legacy),true);
   assert.equal(Object.keys(restored.restaurant.recipeLevels).length,18);
   for(const id of RESTAURANT_NEW_RECIPE_IDS)assert.equal(restored.restaurant.recipeLevels[id],1);
-  const {recipeLevels,progression,...progress}=restored.restaurant,{recipeLevels:oldLevels,...oldProgress}=legacy;
+  const {recipeLevels,progression,completedGuestConditions,...progress}=restored.restaurant,{recipeLevels:oldLevels,completedGuestConditions:oldConditions,...oldProgress}=legacy;
+  assert.ok((oldConditions??[]).every(key=>completedGuestConditions.includes(key)),'migration keeps all recorded guest achievements');
   assert.deepEqual(progress,oldProgress);assert.equal(recipeLevels.rice,2);
   assert.equal(progression.version,2);assert.equal(progression.experienceOffset,0);
   assert.deepEqual([...progression.legacyRecipes].sort(),[...RESTAURANT_RECIPES.map(recipe=>recipe.id),...PROMOTED_SIGNATURE_RECIPE_IDS].sort());

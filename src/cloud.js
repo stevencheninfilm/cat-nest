@@ -1,3 +1,4 @@
+import { validRestaurantGuestConditions } from './restaurant-customers.js';
 import { growthClaimIds } from './restaurant-income-growth.js';
 import { restaurantGuestHasNextCourse } from './restaurant-guest-service.js';
 import { getCoupleProfile } from './couple-profile.js';
@@ -117,6 +118,7 @@ export function createCloudRoom(options) {
       const res = await fetchImpl(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
       const data = await res.json();
       if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
+      if(data?.restaurantGuestConditions!==undefined&&!validRestaurantGuestConditions(data.restaurantGuestConditions))throw new Error('来访条件确认结果不完整');
       return data;
     } finally { clearTimeout(timeout); }
   }
@@ -168,6 +170,8 @@ export function createCloudRoom(options) {
   }
   function apply(data, acknowledgement) {
     if (destroyed || !data?.state || !Number.isFinite(data.revision) || data.roomId!==undefined&&data.roomId!==room) return;
+    if(data.restaurantGuestConditions!==undefined&&!validRestaurantGuestConditions(data.restaurantGuestConditions))return;
+    const incomingState=data.restaurantGuestConditions!==undefined&&data.state.restaurant ? {...data.state,restaurant:{...data.state.restaurant,completedGuestConditions:data.restaurantGuestConditions}} : data.state;
     const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
     const preview = previews.get(event?.operationId || acknowledgement?.operationId);
     const previousXp = authoritativeState?.xp;
@@ -179,7 +183,7 @@ export function createCloudRoom(options) {
     // queue acknowledgement, but do not normalize and redraw that snapshot twice.
     if (data.revision === revision && event && seen.has(event.operationId) && !preview) return;
     const changed = data.revision >= revision;
-    if (changed) { revision=data.revision; authoritativeState=data.state; }
+    if (changed) { revision=data.revision; authoritativeState=incomingState; }
     if (changed || preview) publishState();
     if (event && !seen.has(event.operationId)) {
       seen.add(event.operationId); if (seen.size > 200) seen.delete(seen.values().next().value);
@@ -218,6 +222,7 @@ export function createCloudRoom(options) {
         liveReceipts.delete(item.operationId);
         if (destroyed) break;
         if (optimisticReducer && (data?.roomId!==undefined&&data.roomId!==room||!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
+        if(data?.restaurantGuestConditions!==undefined&&!validRestaurantGuestConditions(data.restaurantGuestConditions))throw new Error('来访条件确认结果不完整');
         apply(data, item); queue.shift(); saveQueue();
         onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
       } catch (error) {

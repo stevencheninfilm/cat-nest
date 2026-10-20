@@ -309,3 +309,18 @@ test('a restaurant income timeout preserves its immediate result and silently sc
   assert.equal(h.latest().xp,base.xp+9.1);assert.deepEqual(h.observed.pending.at(-1),queued);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'queued');
   t.mock.timers.tick(8000);await flush();assert.equal(h.requests.filter(r=>r.method==='POST').length,2);assert.deepEqual(h.requests.filter(r=>r.method==='POST').map(r=>r.body),[queued[0],queued[0]]);
 });
+
+test('guest condition envelope metadata is rehydrated before optimistic care and survives its confirmation',async t=>{
+  const base=initialState(),conditions=['recipe:coffee','decoration:cream-library'],ack=deferred(),envelope=(state,revision=0,event)=>({...snapshot(state,revision,event),restaurantGuestConditions:conditions});
+  const h=harness(t,req=>req.method==='GET'?response(envelope(base)):ack.promise);await h.room.start();
+  assert.deepEqual(h.latest().restaurant.completedGuestConditions,conditions);assert.equal(Object.hasOwn(base.restaurant,'completedGuestConditions'),false);
+  h.room.dispatch({type:'pet'});const item=h.requests.at(-1).body;assert.deepEqual(h.latest().restaurant.completedGuestConditions,conditions);
+  const saved=reduceAction(h.observed.states.at(-1).confirmedState,item.action,male,Date.now(),item.operationId);delete saved.restaurant.completedGuestConditions;
+  ack.resolve(response(envelope(saved,1,{operationId:item.operationId,action:item.action,actor:male})));await flush();assert.deepEqual(h.latest().restaurant.completedGuestConditions,conditions);assert.deepEqual(h.observed.pending.at(-1),[]);
+});
+
+test('malformed guest achievement metadata cannot confirm or discard a queued interaction',async t=>{
+  const base=initialState(),ack=deferred(),h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);await h.room.start();h.room.dispatch({type:'pet'});const item=h.requests.at(-1).body;
+  ack.resolve(response({...receipt(item,reduceAction(base,item.action,male,Date.now(),item.operationId)),restaurantGuestConditions:['forged-condition']}));await flush();
+  assert.equal(h.observed.pending.at(-1).length,1);assert.equal(h.observed.pending.at(-1)[0].operationId,item.operationId);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'error');
+});

@@ -78,7 +78,15 @@ function validStoredState(value) {
   return Array.isArray(value.history) && value.history.length <= 40 && value.history.every(item => plain(item) && typeof item.text === 'string' && item.text.length <= 200 && typeof item.actor === 'string' && item.actor.length <= 20 && Number.isFinite(item.at));
 }
 
-export function publicRoom(room) { const state = copy(room.state); if (state.games) state.games = publicGameHub(state.games); return { roomId: room.roomId, state, revision: room.revision }; }
+export function publicRoom(room) {
+  const state = copy(room.state);
+  if (state.games) state.games = publicGameHub(state.games);
+  // Older open pages strictly validate restaurant keys. Send the new ledger as
+  // envelope metadata so they keep reading their existing restaurant safely.
+  const restaurantGuestConditions = state.restaurant?.completedGuestConditions;
+  if (state.restaurant) delete state.restaurant.completedGuestConditions;
+  return { roomId:room.roomId, state, revision:room.revision, ...(restaurantGuestConditions ? {restaurantGuestConditions} : {}) };
+}
 
 function careRejection(action, info, now) {
   const label = { feed: '喂食', pet: '摸摸', play: '玩耍', sleep: '休息' }[action.type];

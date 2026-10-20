@@ -85,10 +85,11 @@ export function createPetHandler({
     if (result.revision <= hub.revision) return;
     hub.revision = result.revision;
     hub.state = result.state;
-    broadcast(hub, event, event === 'action' ? { state: result.state, revision: result.revision, event: result.event } : { state: result.state, revision: result.revision });
+    hub.restaurantGuestConditions = result.restaurantGuestConditions;
+    broadcast(hub, event, event === 'action' ? { state: result.state, revision: result.revision, restaurantGuestConditions:result.restaurantGuestConditions, event: result.event } : { state: result.state, revision: result.revision, restaurantGuestConditions:result.restaurantGuestConditions });
   }
   function makeHub(id, result) {
-    const hub = { members: new Map(), revision: result.revision, state: result.state, polling: false, heartbeat: null, poll: null };
+    const hub = { members: new Map(), revision: result.revision, state: result.state, restaurantGuestConditions:result.restaurantGuestConditions, polling: false, heartbeat: null, poll: null };
     hub.heartbeat = setInterval(() => {
       for (const member of hub.members.values()) for (const response of member.responses) if (!response.destroyed) response.write(': keepalive\n\n');
     }, heartbeatMs);
@@ -184,7 +185,7 @@ export function createPetHandler({
           member.responses.add(response);
           response.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
           response.write(': connected\n\n');
-          emit(response, 'state', { state: hub.state, revision: hub.revision });
+          emit(response, 'state', { state: hub.state, revision: hub.revision, restaurantGuestConditions:hub.restaurantGuestConditions });
           presence(hub);
           response.on('close', () => {
             member.responses.delete(response);
