@@ -6,6 +6,8 @@ import { staffTrainingUpgradeCost } from './restaurant-staff-training.js';
 import { KITCHEN_CIRCLE_PALETTES, restaurantCirclePaletteUnlocked } from './restaurant-circle-palettes.js';
 import { PREMIUM_RESTAURANT_THEMES } from './restaurant-premium-decorations.js';
 
+export const RESTAURANT_AUTO_COOK_LEVEL=10;
+
 /** Restaurant experience uses half the pet's thresholds and its own ledger.
  * These are purchase permissions; reaching a level never spends or grants a wallet. */
 export const RESTAURANT_UNLOCK_LEVELS=Object.freeze({
@@ -106,6 +108,7 @@ export function restaurantProgressionInfo(restaurant,{recipes,staff,upgrades,dec
     currency:'goldFish',cost:theme.priceGold,description:`珍藏道具 · ${theme.propName}`,preview:{type:'premium-decoration',id:theme.id}});
   for(const zone of zones)add({key:`station:${zone.id}`,kind:'station',id:String(zone.id),name:`${zone.id} 号 · ${zone.name}`,level:1,owned:true,currency:null,cost:0,
     description:'厨房独立工位，同一时间一位员工操作',preview:{type:'icon',id:'station'}});
+  add({key:'feature:auto-cook',kind:'feature',id:'auto-cook',name:'一键制作',level:RESTAURANT_AUTO_COOK_LEVEL,owned:level>=RESTAURANT_AUTO_COOK_LEVEL,cost:0,currency:null,description:'开启右侧厨师帽开关，点顾客需求后自动制作并上桌；结账仍需点击',preview:{type:'icon',id:'feature'}});
   catalog.sort((a,b)=>a.level-b.level);
   const lastUnlockLevel=Math.max(...catalog.map(item=>item.level));
   const milestones=Array.from({length:lastUnlockLevel},(_,index)=>{

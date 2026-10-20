@@ -159,7 +159,7 @@ test('the roadmap catalog comes from the live 21 dishes, seven staff, four facil
   assert.equal(catalogs.recipes.length,21);assert.equal(catalogs.staff.length+1,7);assert.equal(catalogs.upgrades.length,4);
   assert.equal(catalogs.decorations.length+catalogs.premiumThemes.length,15);assert.equal(catalogs.zones.length,10);
   assert.deepEqual(info.resourceCounts,{recipes:21,staff:7,facilities:4,decorations:20,abilities:4,stations:10});
-  const expected=21+7+catalogs.upgrades.reduce((sum,item)=>sum+item.maxLevel,0)+4+9+20+10;
+  const expected=21+7+catalogs.upgrades.reduce((sum,item)=>sum+item.maxLevel,0)+4+9+20+10+1;
   assert.equal(info.catalog.length,expected);assert.equal(new Set(info.catalog.map(item=>item.key)).size,expected);
   assert.equal(byKind('recipe').length,21);assert.equal(byKind('staff').length,7);assert.equal(byKind('facility').length,catalogs.upgrades.reduce((sum,item)=>sum+item.maxLevel,0));
   assert.equal(byKind('research').length,4);assert.equal(byKind('training').length,9);assert.equal(byKind('decoration').length,20);assert.equal(byKind('station').length,10);
@@ -188,7 +188,7 @@ test('the resource map contains no invented menu, employee, decoration, facility
   assert.deepEqual(ids('training'),Array.from({length:9},(_,index)=>`training-${index+2}`).sort());
   const expectedFacilityKeys=catalogs.upgrades.flatMap(upgrade=>Array.from({length:upgrade.maxLevel},(_,index)=>`facility:${upgrade.id}:${index+1}`));
   assert.deepEqual(info.catalog.filter(item=>item.kind==='facility').map(item=>item.key).sort(),expectedFacilityKeys.sort());
-  assert.deepEqual([...new Set(info.catalog.map(item=>item.kind))].sort(),['decoration','facility','recipe','research','staff','station','training']);
+  assert.deepEqual([...new Set(info.catalog.map(item=>item.kind))].sort(),['decoration','facility','feature','recipe','research','staff','station','training']);
 });
 
 test('training roadmap charges coins for target levels two through seven and gold only for eight through ten',()=>{

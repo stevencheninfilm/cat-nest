@@ -334,6 +334,8 @@ export function createCloudRoom(options) {
     dispatch(action) {
       if (!ready || destroyed || queue.length >= (restaurantAction(action)?200:20)) return false;
       if (action?.type === 'claim-growth' && queue.some(item => item.action?.type === 'claim-growth' && item.action.rewardId === action.rewardId)) return false;
+      if(action?.type==='restaurant-kitchen-accept'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId))return false;
+      if(action?.type==='restaurant-kitchen-step'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId&&item.action.stepId===action.stepId))return false;
       if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return false;
       if(action?.type==='restaurant-daily-login'&&queue.some(item=>item.action?.type==='restaurant-daily-login'&&item.action.day===action.day))return false;
       if(action?.type==='restaurant-research-draw'&&queue.some(item=>item.action?.type==='restaurant-research-draw'&&item.action.draw===action.draw))return false;
