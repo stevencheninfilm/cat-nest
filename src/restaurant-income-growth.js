@@ -1,6 +1,6 @@
 /** Original reward receipts remain the source of truth; grouping is only a view. */
 export const RESTAURANT_INCOME_ID = 'restaurant-income-total';
-export const RESTAURANT_INCOME_ART = 'assets/growth-hearts/v2/restaurant-income.webp';
+export const RESTAURANT_INCOME_ART = 'assets/growth-hearts/v3/restaurant-chef-gold.webp';
 export const RESTAURANT_CLAIM_BATCH_SIZE = 128;
 const rewardId = /^[a-zA-Z0-9_.:-]{8,180}$/;
 export const isRestaurantGrowth = reward => reward?.kind === 'restaurant-collect';

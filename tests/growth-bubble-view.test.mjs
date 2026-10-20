@@ -75,3 +75,16 @@ test('restaurant receipts keep one upper-left icon while its total grows and car
   f.view.render([...rewards,income(1,9.2)]);assert.match(f.button(0).markup,/\+17.3/);assert.equal(f.button(1),care);assert.equal(f.more.hidden,true);
   f.view.render(rewards.filter(r=>r.kind!=='restaurant-collect'));assert.equal(f.button(1),care);assert.notEqual(f.button(0)?.id,'restaurant-income-total');
 });
+
+test('pet level changes preserve the restaurant icon node while updating care hearts', () => {
+  const f = fixture(), rewards = [{ id:'income-reward-fixed', kind:'restaurant-collect', amount:35.5, actor:'男方' }, reward(0)];
+  f.view.render(rewards, { stage:GROWTH_STAGES[0] });
+  const restaurant = f.button(0);
+  for (const stage of GROWTH_STAGES.slice(1)) {
+    const care = f.button(1);
+    f.view.render(rewards, { stage });
+    assert.equal(f.button(0), restaurant, `restaurant artwork stays decoded at ${stage.id}`);
+    assert.notEqual(f.button(1), care, `care artwork follows ${stage.id}`);
+  }
+  assert.doesNotMatch(restaurant.markup, /data-heart-stage|--growth-/);
+});

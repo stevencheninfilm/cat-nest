@@ -25,9 +25,11 @@ function rewardButton(reward, { blocked = false, claimingRewardId = null, pendin
   const claiming = reward.id === claimingRewardId || pendingRewardIds.has(reward.id);
   const label = growthLabel(reward);
   const restaurant = reward.id === RESTAURANT_INCOME_ID;
+  // Restaurant income has its own fixed identity, independent of pet growth skins.
+  const style = restaurant ? '' : ` style="${stageStyle(stage)}"`;
   const artwork = restaurant ? `<span class="growth-heart growth-heart-restaurant"><img class="growth-heart-art" src="./${RESTAURANT_INCOME_ART}" width="512" height="512" alt="" decoding="async" draggable="false"/></span>` : jellyHeartMarkup(stage);
   const multiplier = reward.boosted ? (10 + (reward.boostCount ?? 1)) / 10 : 1;
-  return `<button class="growth-bubble ${restaurant ? 'growth-bubble-restaurant' : ''} ${detailed ? 'growth-bubble-detailed' : ''}" style="${stageStyle(stage)}" data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${restaurant ? `累计 ${reward.count} 笔` : ''}${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${artwork}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${restaurant ? `累计 ${reward.count} 笔收入` : `${escape(reward.actor)}的陪伴`}${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
+  return `<button class="growth-bubble ${restaurant ? 'growth-bubble-restaurant' : ''} ${detailed ? 'growth-bubble-detailed' : ''}"${style} data-growth-reward="${escape(reward.id)}" ${blocked || claiming ? 'disabled' : ''} aria-label="领取${restaurant ? `累计 ${reward.count} 笔` : ''}${escape(label)}的 ${reward.amount} 点成长${reward.boosted ? `，已含好状态 ${multiplier} 倍加成` : ''}" title="${reward.boosted ? `已含好状态 ×${multiplier} 加成；` : ''}点击领取，未领取的气泡会一直保留"><span class="growth-orb" aria-hidden="true">${artwork}<strong>+${reward.amount}</strong></span><span class="growth-label">${claiming ? '领取中…' : escape(label)}</span>${detailed ? `<span class="growth-actor">${restaurant ? `累计 ${reward.count} 笔收入` : `${escape(reward.actor)}的陪伴`}${reward.boosted ? ` · 好状态 ×${multiplier}` : ''}</span>` : ''}</button>`;
 }
 
 /** Keep existing rewards in their own side slots when another bubble is collected. */
@@ -79,7 +81,7 @@ export function createGrowthBubbleView(root) {
       }
       slots = growthSideSlots(rewards, slots);
       slots.forEach((reward, index) => {
-        const signature = reward ? JSON.stringify([reward.id,reward.amount,reward.count,reward.kind,reward.food,reward.game,reward.actor,reward.boosted,reward.boostCount,options.stage?.id]) : '';
+        const signature = reward ? JSON.stringify([reward.id,reward.amount,reward.count,reward.kind,reward.food,reward.game,reward.actor,reward.boosted,reward.boostCount,reward.id === RESTAURANT_INCOME_ID ? null : options.stage?.id]) : '';
         if (signatures[index] !== signature) {
           elements[index].innerHTML = reward ? rewardButton(reward, options) : '';
           signatures[index] = signature;
