@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { restaurantProgressionPanel, progressionEntryMarkup } from '../src/restaurant-progression-ui.js';
 import { initialState } from '../src/state.js';
 import { restaurantInfo } from '../src/restaurant.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 
 const resource=(kind,id,name,level,extra={})=>({key:`${kind}:${id}`,kind,id,name,level,description:'给小馆添一点新变化。',currency:'coins',cost:100,owned:false,available:false,status:'locked',...extra});
 function fixture(currentLevel=2){

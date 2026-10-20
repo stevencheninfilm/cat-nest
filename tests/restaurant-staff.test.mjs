@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initialState, normalizeState, reduceAction, levelStartXp } from '../src/state.js';
+import { initialState, normalizeState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { RESTAURANT_STAFF, restaurantInfo, validRestaurant, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { restaurantStaffPanel } from '../src/restaurant-ui.js';
 import { kitchenInfo, createKitchenWorkflow } from '../src/restaurant-kitchen.js';

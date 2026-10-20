@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
 import { initialRestaurant, restaurantInfo, normalizeRestaurant, validRestaurant, RESTAURANT_RECIPES } from '../src/restaurant.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { KITCHEN_FLOWS, validKitchenWorkflow } from '../src/restaurant-kitchen.js';
 import { createInteractiveWorkflow, acceptInteractiveWorkflow, advanceInteractiveWorkflow } from '../src/restaurant-kitchen-interactive.js';
 import { normalizeStaffTraining, workerStepEnergyCost } from '../src/restaurant-staff-training.js';

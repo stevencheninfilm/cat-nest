@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { restaurantExperienceGain, createRestaurantExperience } from '../src/restaurant-experience-ui.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantGrowthStage } from '../src/restaurant-growth-stages.js';
 
 const progression=(experience,earnedExperience=experience)=>({experience,earnedExperience});
@@ -45,53 +45,53 @@ function fixture({reducedMotion=false}={}) {
 test('one real earned increment produces one same-level segment without mutating authoritative progression',()=>{
   const before=progression(15,10),after=progression(21,16),saved=structuredClone({before,after});
   const gain=restaurantExperienceGain(before,after);
-  assert.deepEqual(gain,{earned:6,fromLevel:1,level:1,levelsGained:0,segments:[{level:1,fromExperience:15,experience:21,target:120,from:15/120,to:21/120}]});
+  assert.deepEqual(gain,{earned:6,fromLevel:1,level:1,levelsGained:0,segments:[{level:1,fromExperience:15,experience:21,target:60,from:15/60,to:21/60}]});
   assert.deepEqual({before,after},saved);
 });
 
-test('a tenth of earned XP at 119.9 fills the old bar before entering level two',()=>{
-  const gain=restaurantExperienceGain(progression(119.9),progression(120));
+test('a tenth of earned XP at 59.9 fills the old bar before entering level two',()=>{
+  const gain=restaurantExperienceGain(progression(59.9),progression(60));
   assert.equal(gain.earned,.1);assert.equal(gain.fromLevel,1);assert.equal(gain.level,2);assert.equal(gain.levelsGained,1);
   assert.deepEqual(gain.segments,[
-    {level:1,fromExperience:119.9,experience:120,target:120,from:119.9/120,to:1},
-    {level:2,fromExperience:0,experience:0,target:150,from:0,to:0},
+    {level:1,fromExperience:59.9,experience:60,target:60,from:59.9/60,to:1},
+    {level:2,fromExperience:0,experience:0,target:75,from:0,to:0},
   ]);
 });
 
 test('a batched payment crossing several levels reaches the final authoritative level with bounded feedback',()=>{
-  const gain=restaurantExperienceGain(progression(110),progression(500));
-  assert.equal(gain.earned,390);assert.equal(gain.fromLevel,1);assert.equal(gain.level,4);assert.equal(gain.levelsGained,3);
+  const gain=restaurantExperienceGain(progression(50),progression(250));
+  assert.equal(gain.earned,200);assert.equal(gain.fromLevel,1);assert.equal(gain.level,4);assert.equal(gain.levelsGained,3);
   assert.equal(gain.segments.length,2);
   assert.deepEqual(gain.segments.map(({level,fromExperience,experience,target})=>({level,fromExperience,experience,target})),[
-    {level:1,fromExperience:110,experience:120,target:120},{level:4,fromExperience:0,experience:50,target:210},
+    {level:1,fromExperience:50,experience:60,target:60},{level:4,fromExperience:0,experience:25,target:105},
   ]);
 });
 
 test('duplicate snapshots, offset-only migration credit, XP rollback and malformed data never create a gain',()=>{
   for(const [before,after] of [
-    [progression(120,36),progression(660,36)],
-    [progression(660,144),progression(660,144)],
-    [progression(660,144),progression(650,150)],
-    [progression(120,40),progression(130,39)],
+    [progression(60,36),progression(330,36)],
+    [progression(330,144),progression(330,144)],
+    [progression(330,144),progression(325,75)],
+    [progression(60,40),progression(65,39)],
   ])assert.equal(restaurantExperienceGain(before,after),null);
-  for(const invalid of [undefined,null,{},progression(-1),progression(Infinity),progression(10,-1),progression(10,NaN),{experience:'120',earnedExperience:120}]) {
-    assert.equal(restaurantExperienceGain(invalid,progression(120)),null);
+  for(const invalid of [undefined,null,{},progression(-1),progression(Infinity),progression(10,-1),progression(10,NaN),{experience:'60',earnedExperience:60}]) {
+    assert.equal(restaurantExperienceGain(invalid,progression(60)),null);
     assert.equal(restaurantExperienceGain(progression(0),invalid),null);
   }
 });
 
 test('first sync, duplicate sync and offset-only loading are silent and the next real reward uses the loaded baseline',()=>{
   const {controller,container,clock,node}=fixture();
-  controller.sync(progression(120,36));controller.sync(progression(120,36));controller.sync(progression(660,36));
+  controller.sync(progression(60,36));controller.sync(progression(60,36));controller.sync(progression(330,36));
   assert.equal(container.hidden,true);assert.equal(container.innerHTML,'');assert.equal(clock.pending.length,0);
-  controller.sync(progression(666,42));
+  controller.sync(progression(336,42));
   assert.equal(container.hidden,false);assert.equal(node('amount').textContent,'+6');assert.equal(node('level').textContent,'Lv.5');
-  clock.finishAnimations();assert.equal(node('value').textContent,'6 / 240');
-  assert.equal(node('fill').parentElement.getAttribute('aria-valuenow'),'3');
+  clock.finishAnimations();assert.equal(node('value').textContent,'6 / 120');
+  assert.equal(node('fill').parentElement.getAttribute('aria-valuenow'),'5');
 });
 
 test('cross-level controller feedback fills the previous level and then resets to the new level progress',()=>{
-  const {controller,clock,node}=fixture();controller.sync(progression(119.9));controller.sync(progression(120));
+  const {controller,clock,node}=fixture();controller.sync(progression(59.9));controller.sync(progression(60));
   assert.equal(node('level').textContent,'Lv.1');
   clock.runNext();clock.runNext();
   assert.equal(Number.parseFloat(node('fill').style.width),100);
@@ -99,7 +99,7 @@ test('cross-level controller feedback fills the previous level and then resets t
   clock.runNext();
   assert.equal(node('level').textContent,'Lv.2');assert.equal(Number.parseFloat(node('fill').style.width),0);
   clock.finishAnimations();
-  assert.equal(node('value').textContent,'0 / 150');assert.equal(node('fill').parentElement.getAttribute('aria-valuenow'),'0');
+  assert.equal(node('value').textContent,'0 / 75');assert.equal(node('fill').parentElement.getAttribute('aria-valuenow'),'0');
 });
 
 test('crossing each ten-level title boundary fills the old color before showing the new title and palette',()=>{
@@ -130,16 +130,16 @@ test('completion waits 1400 ms before the 180 ms fade, and duplicate sync never 
 });
 
 test('rapid rewards accumulate their heading and drain every queued bar to the final level and progress',()=>{
-  const {controller,container,clock,node}=fixture();controller.sync(progression(110));
-  controller.sync(progression(116));assert.equal(node('amount').textContent,'+6');
-  controller.sync(progression(122));assert.equal(node('amount').textContent,'+12');
-  controller.sync(progression(155));assert.equal(node('amount').textContent,'+45');
+  const {controller,container,clock,node}=fixture();controller.sync(progression(50));
+  controller.sync(progression(56));assert.equal(node('amount').textContent,'+6');
+  controller.sync(progression(62));assert.equal(node('amount').textContent,'+12');
+  controller.sync(progression(95));assert.equal(node('amount').textContent,'+45');
   clock.finishAnimations();
   assert.equal(container.hidden,false);assert.equal(node('amount').textContent,'+45');assert.equal(node('level').textContent,'Lv.2');
-  assert.equal(node('value').textContent,'35 / 150');assert.ok(Math.abs(Number.parseFloat(node('fill').style.width)-35/150*100)<1e-9);
+  assert.equal(node('value').textContent,'35 / 75');assert.ok(Math.abs(Number.parseFloat(node('fill').style.width)-35/75*100)<1e-9);
   assert.equal(clock.pending.length,1,'one final dismissal remains after all three gains complete');
   clock.advance(1580);assert.equal(container.hidden,true);
-  controller.sync(progression(156));assert.equal(node('amount').textContent,'+1','a later feedback session starts a new displayed total');
+  controller.sync(progression(96));assert.equal(node('amount').textContent,'+1','a later feedback session starts a new displayed total');
 });
 
 test('a reward arriving during fade cancels dismissal and preserves the running feedback total',()=>{
@@ -148,13 +148,13 @@ test('a reward arriving during fade cancels dismissal and preserves the running 
   controller.sync(progression(13));
   assert.equal(container.classList.contains('is-leaving'),false);assert.equal(node('amount').textContent,'+13');
   clock.advance(180);assert.equal(container.hidden,false,'the cancelled old fade cannot hide the new reward');
-  clock.finishAnimations();assert.equal(node('value').textContent,'13 / 120');
+  clock.finishAnimations();assert.equal(node('value').textContent,'13 / 60');
   clock.advance(1580);assert.equal(container.hidden,true);
 });
 
 test('reset and destroy cancel queued animations, frames and timers and clear the observation baseline',()=>{
   for(const phase of ['first-frame','second-frame','animation-timer','dismiss-timer','fade-timer'])for(const method of ['reset','destroy']) {
-    const {controller,container,clock,node}=fixture();controller.sync(progression(110));controller.sync(progression(116));controller.sync(progression(122));
+    const {controller,container,clock,node}=fixture();controller.sync(progression(50));controller.sync(progression(56));controller.sync(progression(62));
     if(phase==='second-frame')clock.runNext();
     if(phase==='animation-timer'){clock.runNext();clock.runNext();}
     if(['dismiss-timer','fade-timer'].includes(phase))clock.finishAnimations();
@@ -164,23 +164,23 @@ test('reset and destroy cancel queued animations, frames and timers and clear th
     assert.equal(container.classList.contains('is-leaving'),false);
     for(const callback of staleCallbacks)callback(clock.now);
     assert.equal(clock.pending.length,0);assert.equal(container.hidden,true);assert.equal(container.innerHTML,'','late callbacks from a cancelled generation stay inert');
-    clock.advance(100000);controller.sync(progression(122));assert.equal(container.hidden,true,'reopening at the latest snapshot establishes a silent baseline');
-    controller.sync(progression(123));assert.equal(node('amount').textContent,'+1');
+    clock.advance(100000);controller.sync(progression(62));assert.equal(container.hidden,true,'reopening at the latest snapshot establishes a silent baseline');
+    controller.sync(progression(63));assert.equal(node('amount').textContent,'+1');
   }
 });
 
 test('switching to a lower save stops current feedback and later sync never replays the previous room gain',()=>{
-  const {controller,container,clock,node}=fixture();controller.sync(progression(110));controller.sync(progression(122));controller.sync(progression(150));
+  const {controller,container,clock,node}=fixture();controller.sync(progression(50));controller.sync(progression(62));controller.sync(progression(75));
   controller.sync(progression(50));assert.equal(container.hidden,true);assert.equal(clock.pending.length,0);
   controller.sync(progression(50));assert.equal(container.hidden,true);
-  controller.sync(progression(52));assert.equal(node('amount').textContent,'+2');clock.finishAnimations();assert.equal(node('value').textContent,'52 / 120');
+  controller.sync(progression(52));assert.equal(node('amount').textContent,'+2');clock.finishAnimations();assert.equal(node('value').textContent,'52 / 60');
   controller.sync(progression(51,53));assert.equal(container.hidden,true,'effective XP rollback also resets when the earned counter rises');
   controller.sync(progression(52,54));assert.equal(node('amount').textContent,'+1');
 });
 
 test('reduced motion preserves level transitions, queued totals and the normal final dismissal',()=>{
-  const {controller,container,clock,node}=fixture({reducedMotion:true});controller.sync(progression(119.9));controller.sync(progression(120));controller.sync(progression(126));
-  clock.finishAnimations();assert.equal(node('amount').textContent,'+6.1');assert.equal(node('level').textContent,'Lv.2');assert.equal(node('value').textContent,'6 / 150');
+  const {controller,container,clock,node}=fixture({reducedMotion:true});controller.sync(progression(59.9));controller.sync(progression(60));controller.sync(progression(66));
+  clock.finishAnimations();assert.equal(node('amount').textContent,'+6.1');assert.equal(node('level').textContent,'Lv.2');assert.equal(node('value').textContent,'6 / 75');
   assert.equal(clock.pending.length,1);assert.equal(clock.pending[0].delay,1400);
   clock.advance(1580);assert.equal(container.hidden,true);assert.equal(clock.pending.length,0);
 });

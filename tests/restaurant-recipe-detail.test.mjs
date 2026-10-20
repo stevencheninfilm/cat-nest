@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { access } from 'node:fs/promises';
-import { initialState, levelStartXp, reduceAction } from '../src/state.js';
+import { initialState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantInfo } from '../src/restaurant.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { KITCHEN_FOOD_PROPS, kitchenPropUrl } from '../src/restaurant-kitchen-assets.js';

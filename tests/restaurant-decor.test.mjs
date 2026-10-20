@@ -4,7 +4,7 @@ import { initialState, normalizeState, reduceAction } from '../src/state.js';
 import { validRestaurant, normalizeRestaurant, restaurantInfo, sanitizeRestaurantAction, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { RESTAURANT_DECORATIONS, RESTAURANT_CONSTRUCTION_MS, restaurantDecoration, restaurantDecorationInfo, decorationReward } from '../src/restaurant-decor.js';
 import { KITCHEN_FLOWS, kitchenStepDuration, validKitchenReservations } from '../src/restaurant-kitchen.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { RESTAURANT_UNLOCK_LEVELS } from '../src/restaurant-progression.js';
 const NOW=Date.parse('2026-10-18T12:00:00Z'),ALICE={id:'decor-alice',name:'小鱼'},BOB={id:'decor-bob',name:'小猫'};
 const act=(state,type,fields={},at=NOW,actor=ALICE)=>reduceAction(state,{type,...fields},actor,at);

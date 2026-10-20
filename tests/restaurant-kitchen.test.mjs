@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, reduceAction, levelStartXp } from '../src/state.js';
+import { initialState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { initialRestaurant, normalizeRestaurant, validRestaurant, restaurantInfo, sanitizeRestaurantAction, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { KITCHEN_ZONES, KITCHEN_FLOWS, KITCHEN_ORIGIN, KITCHEN_TABLE_POSITIONS, createKitchenWorkflow, kitchenInfo, validKitchenWorkflow, validKitchenReservations } from '../src/restaurant-kitchen.js';
 const NOW=Date.parse('2026-10-18T12:00:00Z'),ACTOR={id:'kitchen-manager',name:'店长'};

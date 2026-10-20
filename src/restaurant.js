@@ -12,7 +12,7 @@ import { SPECIAL_RESTAURANT_RECIPES, PROMOTED_SIGNATURE_RECIPE_IDS, PREMIUM_REST
 import { normalizeStaffTraining, normalizeRestaurantStaffTraining, restaurantStaffLastInteractionAt, validStaffTraining, reserveWorkerEnergy, trainingUpgradeResult, STAFF_TRAINING_STATS, STAFF_IDLE_RECOVERY_MS } from './restaurant-staff-training.js';
 import { restaurantDecoration, ownedRestaurantDecorations, restaurantDecorationSnapshot, validDecorationSnapshot, createRestaurantConstruction, validRestaurantDecorations, normalizeRestaurantDecorations, restaurantDecorationInfo, decorationReward } from './restaurant-decor.js';
 import { RESTAURANT_DECORATIONS } from './restaurant-decor.js';
-import { levelInfo } from './growth-levels.js';
+import { restaurantLevelInfo as levelInfo } from './growth-levels.js';
 import { RESTAURANT_FACILITIES, RESTAURANT_FACILITY_MAX_LEVEL, restaurantFacilityTimeMultiplier, restaurantTipsMultiplier, restaurantTableCapacity, restaurantTableIncomeMultiplier } from './restaurant-facilities.js';
 import { restaurantCirclePalette, restaurantCirclePaletteUnlocked } from './restaurant-circle-palettes.js';
 import { premiumRestaurantTheme, equippedPremiumDecorations } from './restaurant-premium-decorations.js';

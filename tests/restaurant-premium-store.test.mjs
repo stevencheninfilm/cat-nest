@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
-import { initialState, levelStartXp } from '../src/state.js';
+import { initialState } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { validRestaurant } from '../src/restaurant.js';
 import { SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
 import { normalizeStaffTraining } from '../src/restaurant-staff-training.js';

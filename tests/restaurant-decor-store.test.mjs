@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
 import { initialState } from '../src/state.js';
 import { restaurantInfo, validRestaurant } from '../src/restaurant.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { RESTAURANT_UNLOCK_LEVELS } from '../src/restaurant-progression.js';
 const NOW=Date.parse('2026-10-18T12:00:00Z');
 function mockGitHub() {

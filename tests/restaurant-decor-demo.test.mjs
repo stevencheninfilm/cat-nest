@@ -8,7 +8,7 @@ import { RESTAURANT_THEMES, restaurantInfo, validRestaurant } from '../src/resta
 import { PREMIUM_RESTAURANT_THEMES } from '../src/restaurant-economy.js';
 import { createHomeRuntime } from '../src/app-runtime.js';
 import { HOME_ENTRIES } from '../src/home-context.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantResourceLevel } from '../src/restaurant-progression.js';
 const NOW=Date.parse('2026-10-18T12:00:00Z');
 const suiteIds=()=>RESTAURANT_DECORATIONS.map(suite=>suite.id).sort();

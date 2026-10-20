@@ -1,4 +1,4 @@
-import { levelInfo } from './growth-levels.js';
+import { restaurantLevelInfo as levelInfo } from './growth-levels.js';
 import { restaurantGrowthStage } from './restaurant-growth-stages.js';
 import { applyRestaurantGrowthStage } from './restaurant-growth-stage-ui.js';
 

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, reduceAction, levelStartXp } from '../src/state.js';
+import { initialState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantInfo } from '../src/restaurant.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { kitchenWorkflowBoardMarkup, kitchenWorkflowBoardState, paintKitchenWorkflowBoard } from '../src/restaurant-kitchen-board.js';

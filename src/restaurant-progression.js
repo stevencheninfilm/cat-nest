@@ -1,12 +1,12 @@
 import { restaurantDishGrade } from './restaurant-research.js';
-import { levelInfo, levelStartXp } from './growth-levels.js';
+import { restaurantLevelInfo as levelInfo, restaurantLevelStartXp as levelStartXp, levelInfo as legacyLevelInfo, levelStartXp as legacyLevelStartXp } from './growth-levels.js';
 import { addGrowthExperience } from './pet-needs.js';
 import { ownedRestaurantDecorations } from './restaurant-decor.js';
 import { staffTrainingUpgradeCost } from './restaurant-staff-training.js';
 import { KITCHEN_CIRCLE_PALETTES, restaurantCirclePaletteUnlocked } from './restaurant-circle-palettes.js';
 import { PREMIUM_RESTAURANT_THEMES } from './restaurant-premium-decorations.js';
 
-/** Restaurant experience uses the pet's exact curve, but has its own ledger.
+/** Restaurant experience uses half the pet's thresholds and its own ledger.
  * These are purchase permissions; reaching a level never spends or grants a wallet. */
 export const RESTAURANT_UNLOCK_LEVELS=Object.freeze({
   recipe:Object.freeze({rice:1,coffee:1,sandwich:1,donut:1,lemontea:1,pancake:4,pudding:6,matcha:8,burger:11,udon:14,waffle:17,strawberrymilk:19,sushi:22,pizza:25,grape:28,parfait:29,cheesecake:32,cocoa:47,'gold-salmon':20,'gold-sundae':30,'gold-latte':40}),
@@ -30,17 +30,17 @@ export const initialRestaurantProgression=()=>({version:2,experienceOffset:0,leg
 export function validRestaurantProgression(value,earnedExperience=0){
   const legacy=value?.version===1&&exact(value,['version','experienceOffset']);
   const current=value?.version===2&&exact(value,['version','experienceOffset','legacyRecipes'])&&Array.isArray(value.legacyRecipes)&&new Set(value.legacyRecipes).size===value.legacyRecipes.length&&value.legacyRecipes.every(id=>typeof id==='string'&&Object.hasOwn(LEGACY_RECIPE_LEVELS,id));
-  return (legacy||current)&&validTenths(value.experienceOffset)&&value.experienceOffset<=levelStartXp(5)&&addGrowthExperience(earnedExperience,value.experienceOffset)!==null;
+  return (legacy||current)&&validTenths(value.experienceOffset)&&value.experienceOffset<=legacyLevelStartXp(5)&&addGrowthExperience(earnedExperience,value.experienceOffset)!==null;
 }
 
 /** A one-time credit preserves an old restaurant's reached level. It is not a
  * reward: the ordinary experience statistic, pet XP and both wallets stay intact. */
 export function normalizeRestaurantProgression(restaurant){
   if(restaurant.progression?.version===2)return {...restaurant.progression,legacyRecipes:[...restaurant.progression.legacyRecipes]};
-  const threshold=levelStartXp(legacyRestaurantLevel(restaurant.stats?.served));
+  const threshold=legacyLevelStartXp(legacyRestaurantLevel(restaurant.stats?.served));
   const earned=restaurant.stats?.experience??0;
   const experienceOffset=restaurant.progression?.experienceOffset??Math.max(0,Math.round((threshold-earned)*10)/10);
-  const oldLevel=levelInfo(addGrowthExperience(earned,experienceOffset)??MAX).level;
+  const oldLevel=legacyLevelInfo(addGrowthExperience(earned,experienceOffset)??MAX).level;
   const legacyRecipes=Object.entries(LEGACY_RECIPE_LEVELS).filter(([id,required])=>required<=oldLevel||(restaurant.recipeLevels?.[id]??1)>1||restaurant.orders?.some(order=>order.recipeId===id)).map(([id])=>id);
   return {version:2,experienceOffset,legacyRecipes};
 }

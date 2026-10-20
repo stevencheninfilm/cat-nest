@@ -4,7 +4,7 @@ import { RESTAURANT_GROWTH_STAGES, restaurantGrowthStage, restaurantGrowthStageS
 import { applyRestaurantGrowthStage, restaurantStageStars } from '../src/restaurant-growth-stage-ui.js';
 import { initialState } from '../src/state.js';
 import { restaurantInfo } from '../src/restaurant.js';
-import { levelStartXp } from '../src/growth-levels.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { restaurantProgressionPanel, progressionEntryMarkup } from '../src/restaurant-progression-ui.js';
 
 test('the fifty-level roadmap has five contiguous ten-level titles and distinct palettes',()=>{

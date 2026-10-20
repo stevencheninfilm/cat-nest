@@ -3,7 +3,7 @@ import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
-import { levelStartXp } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { RESTAURANT_DINING_MS, RESTAURANT_NEW_RECIPE_IDS, validRestaurant, restaurantInfo } from '../src/restaurant.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 

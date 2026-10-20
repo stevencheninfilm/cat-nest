@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, normalizeState, reduceAction, levelInfo, levelStartXp } from '../src/state.js';
+import { initialState, normalizeState, reduceAction, levelInfo as petLevelInfo } from '../src/state.js';
+import { restaurantLevelStartXp as levelStartXp, restaurantLevelInfo as levelInfo, levelStartXp as legacyLevelStartXp } from '../src/growth-levels.js';
 import { restaurantInfo, validRestaurant, sanitizeRestaurantAction, RESTAURANT_RECIPES, RESTAURANT_STAFF, RESTAURANT_UPGRADES, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
 import { normalizeStaffTraining, STAFF_TRAINING_STATS } from '../src/restaurant-staff-training.js';
@@ -41,11 +42,11 @@ function assertGate(type,fields,requiredLevel,configure=()=>{}) {
   return result;
 }
 
-test('fresh restaurants use the cat growth ladder with independent experience and no level ceiling',()=>{
+test('fresh restaurants use the half-cost restaurant ladder with independent experience and no level ceiling',()=>{
   const initial=initialState(NOW);
   assert.deepEqual(initial.restaurant.progression,{version:2,experienceOffset:0,legacyRecipes:[]});
   assert.equal(restaurantInfo(initial,NOW).level,1);
-  assert.deepEqual([2,3,4,5].map(levelStartXp),[120,270,450,660]);
+  assert.deepEqual([2,3,4,5].map(levelStartXp),[60,135,225,330]);
   for(const level of [2,3,4,5,6,10,11,37,49,50,51,100]) {
     const state=funded(level),before=structuredClone(state);
     assert.equal(restaurantInfo(state,NOW).level,level);
@@ -183,11 +184,11 @@ test('legacy order-count progression receives an idempotent restaurant-only offs
     delete legacy.restaurant.progression;
     legacy.restaurant.stats={served,ordinaryServed:served,earned:300,experience:earnedXp};legacy.restaurant.nextOrderId=served+1;
     const before=structuredClone(legacy),oldLevel=Math.min(5,1+Math.floor(served/6));
-    const restored=normalizeState(legacy,NOW+1000),offset=Math.max(0,levelStartXp(oldLevel)-earnedXp);
+    const restored=normalizeState(legacy,NOW+1000),offset=Math.max(0,legacyLevelStartXp(oldLevel)-earnedXp);
     assert.equal(restored.restaurant.progression.version,2);
     assert.equal(restored.restaurant.progression.experienceOffset,offset);
-    assert.deepEqual([...restored.restaurant.progression.legacyRecipes].sort(),legacyRecipesAt(Math.max(oldLevel,levelInfo(earnedXp).level)));
-    assert.equal(restaurantInfo(restored,NOW+1000).level,Math.max(oldLevel,levelInfo(earnedXp).level));
+    assert.deepEqual([...restored.restaurant.progression.legacyRecipes].sort(),legacyRecipesAt(Math.max(oldLevel,petLevelInfo(earnedXp).level)));
+    assert.equal(restaurantInfo(restored,NOW+1000).level,levelInfo(earnedXp+offset).level);
     assert.equal(restored.coins,417);assert.equal(restored.goldFish,13);assert.equal(restored.xp,177);
     assert.deepEqual(restored.restaurant.stats,legacy.restaurant.stats);
     assert.equal(validRestaurant(restored.restaurant),true);assert.deepEqual(legacy,before);
@@ -200,13 +201,13 @@ test('legacy order-count progression receives an idempotent restaurant-only offs
 
 test('v1 saves retain every ordinary dish already opened before the fifty-level roadmap while fresh v2 saves obey the new gates',()=>{
   for(const oldLevel of [1,2,3,4,5]) {
-    const legacy=funded(oldLevel);legacy.coins=1250;legacy.goldFish=17;legacy.xp=86;
+    const legacy=funded(oldLevel);legacy.restaurant.stats.experience=legacyLevelStartXp(oldLevel);legacy.coins=1250;legacy.goldFish=17;legacy.xp=86;
     legacy.restaurant.progression={version:1,experienceOffset:0};
     const before=structuredClone(legacy),restored=normalizeState(legacy,NOW);
     assert.deepEqual([...restored.restaurant.progression.legacyRecipes].sort(),legacyRecipesAt(oldLevel));
     assert.equal(restored.restaurant.progression.version,2);assert.equal(restored.restaurant.progression.experienceOffset,0);
     assert.equal(restored.coins,1250);assert.equal(restored.goldFish,17);assert.equal(restored.xp,86);
-    assert.equal(restored.restaurant.stats.experience,levelStartXp(oldLevel));assert.deepEqual(legacy,before);
+    assert.equal(restored.restaurant.stats.experience,legacyLevelStartXp(oldLevel));assert.deepEqual(legacy,before);
     for(const recipe of RESTAURANT_RECIPES) {
       const inherited=OLD_RECIPE_LEVELS[recipe.id]<=oldLevel;
       assert.equal(restaurantInfo(restored,NOW).recipes.find(item=>item.id===recipe.id).unlocked,inherited,`${recipe.id} preserves its original Lv.${oldLevel} permission`);

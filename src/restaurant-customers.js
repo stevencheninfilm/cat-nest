@@ -1,6 +1,6 @@
 import { specialRestaurantRecipe } from './restaurant-economy.js';
 import { RESTAURANT_EXTRA_CUSTOMER_ROWS } from './restaurant-customer-expansion.js';
-import { levelInfo } from './growth-levels.js';
+import { restaurantLevelInfo as levelInfo } from './growth-levels.js';
 import { restaurantExperience, restaurantRecipeUnlocked, restaurantResourceLevel } from './restaurant-progression.js';
 import { normalizeRestaurantDecorations } from './restaurant-decor.js';
 import { premiumRestaurantTheme, equippedPremiumDecorations } from './restaurant-premium-decorations.js';
