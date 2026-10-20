@@ -2,6 +2,7 @@ import { RESTAURANT_GUESTS } from './restaurant-customers.js';
 import { restaurantGuestSprite } from './restaurant-customer-art.js';
 import { restaurantSeat } from './restaurant-guests.js';
 import { restaurantQueuePosition } from './restaurant-street.js';
+import { restaurantGuestTier } from './restaurant-order-probabilities.js';
 
 const ordinary=RESTAURANT_GUESTS.filter(guest=>!guest.advanced);
 const names=Object.fromEntries(RESTAURANT_GUESTS.map(guest=>[guest.id,guest.name]));
@@ -82,7 +83,7 @@ export function createRestaurantStreet({container,random=Math.random}){
     const scene=life.update(info,now,{active}),live=new Set(),talking=new Set();
     for(const actor of scene.actors){
       live.add(actor.id);let element=actors.get(actor.id);
-      if(!element){element=document.createElement('span');element.className=`rs-actor rs-${actor.kind}`;element.setAttribute('role','img');element.setAttribute('aria-label',`${names[actor.cat]}，${actor.kind==='queue'?'门外等位':'路过小馆'}`);element.innerHTML=`<span class="rs-facing">${restaurantGuestSprite(actor.cat)}</span>`;actorLayer.append(element);actors.set(actor.id,element);}
+      if(!element){element=document.createElement('span');element.className=`rs-actor rs-${actor.kind}`;element.dataset.rGuestTier=restaurantGuestTier(actor.cat);element.setAttribute('role','img');element.setAttribute('aria-label',`${names[actor.cat]}，${actor.kind==='queue'?'门外等位':'路过小馆'}`);element.innerHTML=`<span class="rs-facing">${restaurantGuestSprite(actor.cat)}</span>`;actorLayer.append(element);actors.set(actor.id,element);}
       element.style.left=`${actor.x}%`;element.style.top=`${actor.y}%`;element.dataset.facing=actor.facing;
     }
     for(const [id,element] of actors)if(!live.has(id)){element.remove();actors.delete(id);}
