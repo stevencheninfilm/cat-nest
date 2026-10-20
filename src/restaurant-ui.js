@@ -113,11 +113,10 @@ export const restaurantTerminalAllowed=({isTest=false,debugEnabled=isTest}={})=>
 export function restaurantMarkup(state, {isTest=false,debugEnabled=isTest}={}) {
   debugEnabled=restaurantTerminalAllowed({isTest,debugEnabled});
   return `<main class="restaurant" aria-label="猫猫餐厅经营游戏" data-theme="${esc(state.restaurant?.theme || 'cream')}" style="--r-cat-image:url('${asset('cat-sprites.webp')}');--r-food-image:url('${asset('food-sprites.webp')}');--r-food-extra-image:url('${asset('food-expansion-v1.webp')}');--r-staff-image:url('${asset('staff-expansion-v1.webp')}');--r-sesame-image:url('${asset('staff-sesame-v1.webp')}');--r-gold-salmon:url('${asset('gold-v1/special-salmon.webp')}');--r-gold-sundae:url('${asset('gold-v1/special-sundae.webp')}');--r-gold-latte:url('${asset('gold-v1/special-latte.webp')}')">
-    <header class="r-header"><button class="r-round r-back" data-r-back aria-label="返回猫猫图鉴">${restaurantIcon('back')}</button><div class="r-brand"><small>FOOD BAR STORY</small><h1>猫猫餐厅<span>✦</span></h1></div><div class="r-header-actions"><button class="r-round ra-entry" data-r-audio-open aria-label="声音设置" title="声音设置">${restaurantAudioIcon}</button><button class="r-round r-info-entry" data-r-tab="info" aria-label="查看小馆营业信息">${restaurantIcon('info')}</button>${debugEnabled?`<button class="r-round rg-terminal-entry" data-r-tab="terminal" aria-label="打开餐厅控制终端" aria-controls="rg-terminal" aria-expanded="false">${restaurantIcon('terminal')}<small>终端</small></button>`:`<button class="r-round" data-r-tab="help" aria-label="餐厅玩法说明">${restaurantIcon('help')}</button>`}</div></header>
     ${debugEnabled?`<aside id="rg-terminal" class="rg-terminal-window" aria-labelledby="rg-terminal-title" hidden><header><h2 id="rg-terminal-title">调试终端</h2><button data-r-terminal-close aria-label="关闭餐厅控制终端" title="关闭">${restaurantIcon('close')}</button></header><div data-r-terminal-panel></div></aside>`:''}
     <div class="r-open-sign" role="status"><i></i>营业中</div>
-    <div class="r-hud"><div class="r-wallet"><span class="r-fish-medallion">${restaurantIcon('fish')}</span><span><small>小鱼干</small><strong data-r-wallet>${number(state.coins)}</strong></span><button class="round-button r-wallet-guide" data-r-guide-open aria-label="餐厅新手引导" title="餐厅新手引导">${restaurantIcon('book')}</button></div>${goldWalletMarkup(state.goldFish)}<button class="r-level" data-r-tab="progression" aria-label="查看小馆等级和资源解锁进度">${restaurantStageStars(1,{compact:true})}<span class="r-level-copy"><strong data-r-stage-title>小馆</strong><span data-r-level>Lv.1</span><span class="r-level-track" role="progressbar" aria-label="营业经验" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i data-r-level-bar></i></span></span></button><aside class="rx-gain" data-r-experience-gain role="status" aria-live="polite" aria-atomic="true" hidden></aside></div>
-    <section class="r-viewport" aria-label="可以上下滑动的餐厅场景"><div class="r-stage">${restaurantResearchShortcut()}${restaurantDailyLoginMarkup()}<img class="r-scene-art" src="${asset('restaurant-scene.webp')}" alt="暖暖的猫猫小馆，花园旁摆着小餐桌，厨房里亮着灯" draggable="false"/><div class="r-sunlight" aria-hidden="true"></div>
+    <div class="r-hud"><div class="r-wallet"><span class="r-fish-medallion">${restaurantIcon('fish')}</span><span><small>小鱼干</small><strong data-r-wallet>${number(state.coins)}</strong></span><button class="round-button r-wallet-guide" data-r-guide-open aria-label="餐厅新手引导" title="餐厅新手引导">${restaurantIcon('book')}</button></div>${goldWalletMarkup(state.goldFish)}<button class="r-level" data-r-tab="progression" aria-label="查看小馆等级和资源解锁进度">${restaurantStageStars(1,{compact:true})}<span class="r-level-copy"><strong data-r-stage-title>小馆</strong><span data-r-level>Lv.1</span><span class="r-level-track" role="progressbar" aria-label="营业经验" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i data-r-level-bar></i></span><span class="r-level-value" data-r-level-value></span></span></button><aside class="rx-gain" data-r-experience-gain role="status" aria-live="polite" aria-atomic="true" hidden></aside></div>
+    <section class="r-viewport" aria-label="完整餐厅全景，顾客与厨房同屏"><div class="r-scene-controls"><button class="r-round r-back" data-r-back aria-label="返回猫猫图鉴">${restaurantIcon('back')}</button>${restaurantResearchShortcut()}</div><aside class="r-header-actions r-tools" aria-label="餐厅工具"><button class="r-round ra-entry" data-r-audio-open aria-label="声音设置" title="声音设置">${restaurantAudioIcon}</button><button class="r-round r-info-entry" data-r-tab="info" aria-label="查看小馆营业信息">${restaurantIcon('info')}</button>${debugEnabled?`<button class="r-round rg-terminal-entry" data-r-tab="terminal" aria-label="打开餐厅控制终端" aria-controls="rg-terminal" aria-expanded="false">${restaurantIcon('terminal')}<small>终端</small></button>`:`<button class="r-round" data-r-tab="help" aria-label="餐厅玩法说明">${restaurantIcon('help')}</button>`}${restaurantDailyLoginMarkup()}</aside><div class="r-stage"><img class="r-scene-art" src="${asset('restaurant-scene.webp')}" alt="暖暖的猫猫小馆，花园旁摆着小餐桌，厨房里亮着灯" draggable="false"/><div class="r-sunlight" aria-hidden="true"></div>
       <div class="r-shop-sign" title="${esc(state.name)}的小食光"><strong>${esc(state.name)}的小食光</strong></div>
       ${restaurantStreetMarkup()}<div class="rg-guest-layer" data-r-guests></div>
       ${decorationSceneMarkup()}${premiumSceneMarkup()}<div class="r-tables" data-r-tables></div>${kitchenSceneMarkup()}${restRoomSceneMarkup()}
@@ -150,12 +149,9 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
   const audio=createRestaurantAudioUI({container,preferences});
   function guideNavigate(view){
     dismiss();dismissTerminal();audio.closeSettings();kitchenScene?.endTutorial();
-    kitchenScene?.focus(view==='kitchen');
     if(view==='themes')themeView='scenes';
     if(!['business','kitchen'].includes(view))openPanel(view);
-    // The kitchen view schedules its scroll in a frame. Settle that first,
-    // then let the guide scroll its own target into the available space.
-    return new Promise(resolve=>requestAnimationFrame(()=>resolve(true)));
+    return true;
   }
   function startGuide(options={}){void guide?.start(options).then(started=>{if(!started)toast('正在读取小馆，准备好后就可以查看指引。');});}
   const sound=id=>void audio.unlock().then(()=>audio.play(id));
@@ -183,10 +179,10 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       if(command.mode==='stamina'){signature='';panelSignature='';terminalSignature='';return;}
       staffPreview=null;trainingWorker='worker-1';pendingKitchenRecipe=null;flowOrderId=null;selectedZone=null;terminalOrderId=null;
       signature='';panelSignature='';terminalSignature='';
-      if(command.mode==='guest'){dismiss();kitchenScene?.select(null);kitchenScene?.focus(false);}
+      if(command.mode==='guest'){dismiss();kitchenScene?.select(null);}
       pendingCourseOrders.clear();
       if(['reset','rest-six'].includes(command.mode)){
-        kitchenScene?.endTutorial();kitchenScene?.select(null);kitchenScene?.focus(false);
+        kitchenScene?.endTutorial();kitchenScene?.select(null);
       }
       if(command.mode==='rehearse'){
         const details=$('.rg-staff-debug');if(details)details.open=false;
@@ -207,7 +203,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       if(onAction(action)===false){if(manual)log('来客请求暂未接受');return false;}
       log(waiting?'门外有猫猫等位':size===2?'手动迎接双人一桌':size===1?'手动迎接单人一桌':manual?'手动迎接随机一桌':'自然来客');
       arrivalRhythm.defer(Date.now(),waiting);
-      if(manual){if(recipeId&&KITCHEN_FLOWS[recipeId]){pendingKitchenRecipe=recipeId;previousKitchenOrders=new Set(info.orders.map(order=>order.id));}if(!keepPanel)dismiss();kitchenScene?.focus(false);toast('新客人正在从门外走进来');}
+      if(manual){if(recipeId&&KITCHEN_FLOWS[recipeId]){pendingKitchenRecipe=recipeId;previousKitchenOrders=new Set(info.orders.map(order=>order.id));}if(!keepPanel)dismiss();toast('新客人正在从门外走进来');}
       return true;
     }finally{pending=false;render();}
   }
@@ -334,13 +330,13 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(!opened)return;
     const state=getState(),info=restaurantInfo(state),availability=getAvailability();
     circlePalette=kitchenCirclePalette(info.restaurant.circlePalette).id;
-    if(!mounted){container.innerHTML=restaurantMarkup(state,{isTest,debugEnabled});mounted=true;dailyLogin=createRestaurantDailyLogin({dialog:$('.rdl-dialog'),entry:$('[data-r-daily-open]'),onAction,onCollect:()=>sound('collect'),onClick:()=>sound('click'),preferences});experienceFeedback=createRestaurantExperience({container:$('[data-r-experience-gain]')});recipeCelebration=createRestaurantRecipeCelebration({dialog:$('.rr-celebration')});researchReveal=createRestaurantResearchReveal({dialog:$('.rr-draw-scene'),onPhaseChange:researchAudio});audio.paint();kitchenScene=createKitchenScene({container:$('.rk-scene'),getRestaurant:()=>getState().restaurant,palette:circlePalette,onFocus:value=>requestAnimationFrame(()=>$('.r-viewport')?.scrollTo({top:value?$('.r-viewport').scrollHeight:0,behavior:'auto'}))});kitchenScene.open();decorationScene=createRestaurantDecorationScene({container:$('.r-stage'),onScenePrepare:variant=>preloadPremiumScene(variant,restaurantInfo(getState()).restaurant),onSceneChange:()=>paintPremiumScene(container,restaurantInfo(getState()).restaurant),onComplete:decorationComplete});decorationScene.open();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});street=createRestaurantStreet({container:$('.r-stage')});}
+    if(!mounted){container.innerHTML=restaurantMarkup(state,{isTest,debugEnabled});mounted=true;dailyLogin=createRestaurantDailyLogin({dialog:$('.rdl-dialog'),entry:$('[data-r-daily-open]'),onAction,onCollect:()=>sound('collect'),onClick:()=>sound('click'),preferences});experienceFeedback=createRestaurantExperience({container:$('[data-r-experience-gain]')});recipeCelebration=createRestaurantRecipeCelebration({dialog:$('.rr-celebration')});researchReveal=createRestaurantResearchReveal({dialog:$('.rr-draw-scene'),onPhaseChange:researchAudio});audio.paint();kitchenScene=createKitchenScene({container:$('.rk-scene'),getRestaurant:()=>getState().restaurant,palette:circlePalette});kitchenScene.open();decorationScene=createRestaurantDecorationScene({container:$('.r-stage'),onScenePrepare:variant=>preloadPremiumScene(variant,restaurantInfo(getState()).restaurant),onSceneChange:()=>paintPremiumScene(container,restaurantInfo(getState()).restaurant),onComplete:decorationComplete});decorationScene.open();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});street=createRestaurantStreet({container:$('.r-stage')});}
     if(!guide)guide=createRestaurantGuide({storage:guidePreferences,assetBase:import.meta.env?.BASE_URL||'./',getContext:()=>{const context=getGuideContext(),availability=getAvailability();return {...context,active:opened&&!container.hidden,ready:(availability.ready??availability.connected)&&context.ready!==false,available:guideReadyForAuto&&context.available!==false};},navigate:guideNavigate,onClose(){arrivalRhythm.reset();}});
     if(availability.savePhase==='error')pendingCourseOrders.clear();
     for(const id of pendingCourseOrders)if(!info.orders.some(order=>order.id===id))pendingCourseOrders.delete(id);
     experienceFeedback.sync(info.progression);
     guests.sync(info);guests.start();street.sync(info,{enabled:!panel&&!terminalOpen&&!guide?.isOpen()&&!info.decorationInfo.construction});street.start();kitchenScene.setPalette(circlePalette);kitchenScene.sync(info.restaurant,{blocked:pending||restaurantInputBlocked(availability)});decorationScene.sync(info);paintRestaurantStaffRest(container,info.restaurant);
-    if(pendingKitchenRecipe){const order=info.orders.find(order=>order.workflow&&order.recipeId===pendingKitchenRecipe&&!previousKitchenOrders.has(order.id));if(order){terminalOrderId=order.id;if(order.status!=='arriving'){pendingKitchenRecipe=null;kitchenScene.select(order.id);kitchenScene.focus(false);}}}
+    if(pendingKitchenRecipe){const order=info.orders.find(order=>order.workflow&&order.recipeId===pendingKitchenRecipe&&!previousKitchenOrders.has(order.id));if(order){terminalOrderId=order.id;if(order.status!=='arriving'){pendingKitchenRecipe=null;kitchenScene.select(order.id);}}}
     if(lastEarnings!==null&&info.restaurant.stats.earned>lastEarnings){
       const layer=$('.r-reward-layer');layer.innerHTML=`<div class="r-reward-pop">${restaurantIcon('fish')}<strong>+${info.restaurant.stats.earned-lastEarnings}</strong>${lastGold!==null&&state.goldFish>lastGold?`<span class="re-reward-gold">金鱼干 +${state.goldFish-lastGold}</span>`:''}${info.research.lastGift?.amount?`<span class="rr-inspiration-award">💡 灵感 +${info.research.lastGift.amount}</span>`:''}</div>`;
       clearTimeout(rewardTimer);rewardTimer=setTimeout(()=>{if(layer.isConnected)layer.innerHTML='';},2200);
@@ -355,6 +351,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     const growthStage=applyRestaurantGrowthStage($('.r-level'),info.level);
     $('[data-r-stage-title]').textContent=growthStage.title;
     $('[data-r-level]').textContent=`Lv.${info.level}`;
+    $('[data-r-level-value]').textContent=`${number(info.progression.levelExperience)} / ${number(info.progression.levelTarget)}`;
     const stars=$('.r-level>.rg-stars');
     stars.setAttribute('aria-label',`${growthStage.stars}星${growthStage.title}`);
     stars.querySelector('b').textContent=String(growthStage.stars);
@@ -384,7 +381,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(nextGuest)welcomeGuests(null,{waiting:nextGuest.type==='restaurant-wait'});
   }
   function dismiss() {closeRecipeDetails(false);closeCustomerDetails(false);panel=null;audio.setTrack($('.rr-draw-scene')?.open?'research':'restaurant');panelSignature='';$('.r-sheet')?.close();for(const button of container.querySelectorAll('.r-nav button')){const selected=button.dataset.rTab==='business';button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}}
-  function openPanel(id) {closeRecipeDetails(false);closeCustomerDetails(false);if(id==='restroom'){const rest=$('[data-r-rest-summary]');if(rest)rest.open=false;kitchenScene?.focus(false);}if(id==='terminal'){if(!debugEnabled)return;dismiss();terminalOpen=!terminalOpen;updateTerminal(restaurantInfo(getState()));return;}dismissTerminal();if(id==='business'){dismiss();return;}const previousPanel=panel;if(id==='research')researchShowcase=createRestaurantResearchShowcase(restaurantInfo(getState()));panel=id;audio.setTrack(id==='research'?'research':'restaurant');updatePanel(restaurantInfo(getState()),getState(),true);const dialog=$('.r-sheet');if(!dialog.open)dialog.showModal();if(previousPanel!==panel)$('[data-r-panel]').scrollTop=0;if(['staff','training'].includes(previousPanel)&&['staff','training'].includes(id))$(`.r-panel-switch [data-r-tab="${id}"]`)?.focus({preventScroll:true});for(const button of container.querySelectorAll('.r-nav button')){const selected=button.dataset.rTab===(id==='training'?'staff':id==='research'?'recipes':id);button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}}
+  function openPanel(id) {closeRecipeDetails(false);closeCustomerDetails(false);if(id==='restroom'){const rest=$('[data-r-rest-summary]');if(rest)rest.open=false;}if(id==='terminal'){if(!debugEnabled)return;dismiss();terminalOpen=!terminalOpen;updateTerminal(restaurantInfo(getState()));return;}dismissTerminal();if(id==='business'){dismiss();return;}const previousPanel=panel;if(id==='research')researchShowcase=createRestaurantResearchShowcase(restaurantInfo(getState()));panel=id;audio.setTrack(id==='research'?'research':'restaurant');updatePanel(restaurantInfo(getState()),getState(),true);const dialog=$('.r-sheet');if(!dialog.open)dialog.showModal();if(previousPanel!==panel)$('[data-r-panel]').scrollTop=0;if(['staff','training'].includes(previousPanel)&&['staff','training'].includes(id))$(`.r-panel-switch [data-r-tab="${id}"]`)?.focus({preventScroll:true});for(const button of container.querySelectorAll('.r-nav button')){const selected=button.dataset.rTab===(id==='training'?'staff':id==='research'?'recipes':id);button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}}
   async function act(button) {
     if(pending)return;
     const fromTerminal=!!button.closest('#rg-terminal,.rk-workflow-board');
@@ -415,12 +412,11 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       if(firstCourse)toast('正在结算第一餐，记下第二份料理');
       log(type==='collect'?'提交订单结账':type==='serve'?'提交送餐':`提交${type}操作`);
       if(type==='start'){dismiss();toast('接单成功，主厨开始制作啦');}
-      if(type==='decoration'){dismiss();dismissTerminal();kitchenScene?.focus(false);$('.r-viewport')?.scrollTo({top:0,behavior:'smooth'});toast('两位施工猫带着工具出发啦，约 12 秒完成布置');}
+      if(type==='decoration'){dismiss();dismissTerminal();toast('两位施工猫带着工具出发啦，约 12 秒完成布置');}
       if(type==='serve')toast('热乎乎的料理送到啦');
       if(type==='kitchen-accept'||type==='kitchen-step'){
         flowOrderId=action.orderId;terminalOrderId=action.orderId;kitchenScene.select(action.orderId);
         if(!fromTerminal){dismiss();dismissTerminal();}
-        kitchenScene.focus(type==='kitchen-accept'||action.stepId!=='delivery');
         if(type==='kitchen-accept')toast('点冰箱上的食材圈，员工才会去取料');
       }
       if(['train','unlock-special','hire','theme','recipe','palette','premium-decoration'].includes(type))toast(result.text);
@@ -462,14 +458,13 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(button.hasAttribute('data-r-flow')){flowOrderId=button.dataset.rFlow||null;selectedZone=null;kitchenScene.select(flowOrderId);openPanel('flow');return;}
     if(button.hasAttribute('data-r-flow-recipe')){flowRecipe=button.dataset.rFlowRecipe;flowOrderId=null;selectedZone=null;openPanel('flow');return;}
     if(button.hasAttribute('data-r-kitchen-zone')){selectedZone=Number(button.dataset.rKitchenZone);openPanel('station');return;}
-    if(button.hasAttribute('data-r-kitchen-select')){flowOrderId=button.dataset.rKitchenSelect;kitchenScene.select(flowOrderId);kitchenScene.focus(true);return;}
+    if(button.hasAttribute('data-r-kitchen-select')){flowOrderId=button.dataset.rKitchenSelect;kitchenScene.select(flowOrderId);return;}
     if(button.hasAttribute('data-r-guide-open')){startGuide({restart:button.hasAttribute('data-r-guide-restart')});return;}
     if(button.hasAttribute('data-r-kitchen-tutorial')){startGuide({section:'kitchen'});return;}
     if(button.hasAttribute('data-r-kitchen-tutorial-close')){kitchenScene.endTutorial();return;}
     if(button.hasAttribute('data-r-kitchen-tutorial-next')){kitchenScene.nextTutorial();return;}
-    if(button.hasAttribute('data-r-kitchen-focus')){kitchenScene.toggleFocus();return;}
     if(button.hasAttribute('data-r-kitchen-zones')){kitchenScene.toggleZones();return;}
-    if(button.hasAttribute('data-r-kitchen-watch')){dismiss();kitchenScene.focus(true);return;}
+    if(button.hasAttribute('data-r-kitchen-watch')){dismiss();return;}
 
     if(button.dataset.rStaffPreview&&RESTAURANT_STAFF.some(employee=>employee.id===button.dataset.rStaffPreview)){
       staffPreview=button.dataset.rStaffPreview;const index=RESTAURANT_STAFF.findIndex(item=>item.id===staffPreview);if(index<getState().restaurant.staff)trainingWorker=`worker-${index+2}`;updatePanel(restaurantInfo(getState()),getState(),true);

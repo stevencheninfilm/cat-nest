@@ -1,0 +1,29 @@
+/* Keep the wallet independent of the scene. The scene's own container scales
+ * its geometry to the space left by the persistent HUD and navigation. */
+.restaurant .r-hud{position:relative;inset:auto;flex-shrink:0;margin:max(8px,env(safe-area-inset-top)) 14px 8px;min-height:50px;align-items:stretch;z-index:25}
+.restaurant .r-level-copy [data-r-stage-title],.restaurant .r-level-copy [data-r-level]{display:inline;line-height:1.4}
+.restaurant .r-level-copy [data-r-level]{margin-left:3px;font-size:8px}
+.restaurant .r-level-value{display:block;margin-top:3px;color:#7d8d55;font-size:8px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.restaurant .r-viewport{position:relative;display:grid;place-items:center;container-type:size;overflow:hidden;touch-action:manipulation;background:radial-gradient(ellipse at center,#e8dfc1,#d3dcb9)}
+.restaurant .r-stage{position:relative;inset:auto;width:min(100cqw,calc(100cqh * 940 / 1672));height:auto;min-height:0;aspect-ratio:940/1672;flex:none}
+.r-scene-controls{position:absolute;top:8px;left:8px;z-index:24;display:flex;flex-direction:column;align-items:center;gap:9px;width:66px;pointer-events:none}
+.restaurant .r-scene-controls .r-back{position:relative;pointer-events:auto;width:42px;height:42px}
+.restaurant .r-scene-controls .rr-research-shortcut{position:relative;inset:auto;transform:none;flex-shrink:0;pointer-events:auto}
+.restaurant .r-tools{position:absolute;right:8px;top:8px;z-index:24;display:flex;flex-direction:column;gap:8px}
+.restaurant .r-tools .r-round{width:40px;height:40px;padding:8px;border-radius:13px}
+.restaurant .r-tools .r-round svg{width:20px;height:20px}
+.restaurant .r-tools .rdl-entry{position:relative;inset:auto;min-width:40px;min-height:46px;padding:4px 3px;border-radius:12px;box-shadow:0 2px 0 #bd975c}.restaurant .r-tools .rdl-entry>span{font-size:18px}.restaurant .r-tools .rdl-entry>strong{font-size:8px}
+.restaurant .r-open-sign{top:auto;bottom:calc(100% - 64px);left:auto;right:18px;display:none}
+.restaurant .rk-focus-tools{left:28%;right:28%}
+@media(max-width:360px){.restaurant .r-hud{inset:auto;margin-left:11px;margin-right:11px;gap:5px}.restaurant .r-level-copy [data-r-stage-title]{font-size:9px}.restaurant .r-level-value{font-size:7px}.r-scene-controls{left:3px}.restaurant .r-tools{right:5px}.restaurant .r-tools .r-round{width:38px;height:38px}}
+@media(max-height:600px){.restaurant .r-nav{padding-top:5px;padding-bottom:max(6px,env(safe-area-inset-bottom))}.restaurant .r-nav button{padding-top:5px;padding-bottom:5px;min-height:46px}.restaurant .r-status{min-height:23px;padding-block:3px}.restaurant .r-hud{margin-top:max(5px,env(safe-area-inset-top));margin-bottom:5px}.restaurant .r-scene-controls{gap:5px}}
+/* A short landscape screen uses side rails so the whole kitchen can keep the
+ * screen's height instead of losing it to a stacked wallet and menu. */
+@media(max-height:520px) and (min-width:650px){
+  .restaurant{width:100%;display:grid;grid-template-columns:170px minmax(0,1fr) 92px;grid-template-rows:minmax(0,1fr) 24px}
+  .restaurant .r-hud{grid-column:1;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr);align-content:start;align-self:start;margin:12px 8px 8px 14px;gap:10px}
+  .restaurant .r-viewport{grid-column:2;grid-row:1/3;min-width:0}
+  .restaurant .r-status{grid-column:1;grid-row:2;min-width:0;padding-inline:8px}.restaurant .r-growth{display:none}
+  .restaurant .r-nav{grid-column:3;grid-row:1/3;flex-direction:column;gap:3px;margin:8px 8px 8px 0;padding:5px;border:1px solid #d1b890;border-radius:16px}
+  .restaurant .r-nav button{flex-direction:row;justify-content:center;gap:5px;padding:3px;min-height:44px}.restaurant .r-nav button>span{width:21px;height:21px}.restaurant .r-nav button strong{font-size:10px}
+}

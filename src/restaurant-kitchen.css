@@ -35,7 +35,6 @@
 .rk-action-circle.is-running{animation:none;cursor:default;box-shadow:0 2px 4px #79562d24,0 0 0 3px #fff7dc66}.rk-action-circle.is-running>.rk-prop{opacity:.95}.rk-action-circle.is-counting .rk-action-fill{opacity:1}
 .rk-focus-tools{position:absolute;top:63.4%;left:24%;right:24%;display:flex;justify-content:center;gap:6px;z-index:20;pointer-events:none}
 .rk-focus-tools>button{min-height:27px;padding:5px 9px;border:1px solid #bfa87c;background:#fff8e7f0;border-radius:8px;color:#967c50;font-size:9px;font-weight:900;pointer-events:auto;white-space:nowrap;box-shadow:0 2px 0 #9d7d4d26}.rk-focus-tools>button[aria-pressed=true]{background:#e9edcc;color:#82925d}
-.restaurant.is-kitchen-focus .r-hud{visibility:hidden;pointer-events:none}
 .rk-tutorial-coach{position:absolute;left:24%;right:24%;top:69%;max-height:17%;overflow:auto;pointer-events:auto;z-index:40;border:1px solid #c8bb8a;border-radius:12px;background:#fff9e7f5;padding:11px;color:#8c7c53;box-shadow:0 3px 12px #76562d22}
 .rk-tutorial-coach>div{display:flex;align-items:center;justify-content:space-between;font-size:11px}.rk-tutorial-coach button{border:0;background:transparent;color:#84915c;font-size:10px;min-height:27px}.rk-tutorial-coach p{font-size:10px;line-height:1.8;margin:5px 0}.rk-tutorial-coach>button{display:block;margin-left:auto;font-weight:900}
 @keyframes rk-prompt{0%,100%{box-shadow:0 3px 0 #aa8f5240,0 0 0 4px #fff7dc66}50%{box-shadow:0 3px 0 #aa8f5240,0 0 0 7px #f8eeb944}}
@@ -70,8 +69,6 @@
 @media(prefers-reduced-motion:reduce){.rk-scene *, .rk-scene *:before{animation:none!important;transition:none!important}}
 
 .restaurant .r-viewport,.restaurant .r-stage{overflow-anchor:none}
-.restaurant.is-kitchen-focus .r-viewport{position:relative;overflow:hidden;flex:1;height:auto;min-height:0}
-.restaurant.is-kitchen-focus .r-stage{position:absolute;inset:auto 0 0;width:100%}
 .rk-guide{margin:24px 0 5px;padding-top:18px;border-top:1px dashed #dac8a6}.rk-guide>h3{font-size:14px;margin:0 0 10px;color:#94774f}.rk-guide>p{font-size:11px;line-height:1.9;color:#a18b68;margin:0 0 12px}
 .rk-guide>details{border:1px solid #dfd1b3;border-radius:10px;margin-top:8px;background:#fbf5e6}.rk-guide>details>summary{min-height:44px;padding:12px 10px;cursor:pointer;font-size:11px;font-weight:800;color:#94774f}
 .rk-guide ol{margin:0;padding:0 13px 12px 31px;font-size:10px;color:#b09b76}.rk-guide li{padding:7px 0;line-height:1.7}.rk-guide li>b,.rk-guide li>span{display:block}.rk-guide li>b{color:#9b8058;font-size:9px}.rk-guide li>span{font-size:11px;color:#a18b68}

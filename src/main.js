@@ -42,6 +42,7 @@ import './restaurant-upgrade.css';
 import './restaurant-staff-rest.css';
 import './restaurant-locked.css';
 import './restaurant-recipe-detail.css';
+import './restaurant-layout.css';
 import { createRestaurant } from './restaurant-ui.js';
 import { restaurantActionResult } from './restaurant.js';
 import './growth-bars.css';

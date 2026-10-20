@@ -64,7 +64,7 @@ export function createRestaurantGuide({storage,getContext,navigate,onClose=()=>{
       if(result===false){close();return false;}
       const target=targetFor(stepNow());
       // Keep fixed HUD/nav in place. Only scroll the scene or current sheet.
-      if(target&&!target.closest('.r-hud,.r-header,.r-nav'))target.scrollIntoView?.({block:dialog.clientHeight<=680&&target.closest('.r-stage')?'start':'center',behavior:'instant'});
+      if(target&&!target.closest('.r-hud,.r-tools,.r-scene-controls,.r-nav,.r-stage'))target.scrollIntoView?.({block:'center',behavior:'instant'});
       render();dialog.showModal();dialog.querySelector('#restaurant-guide-title')?.focus({preventScroll:true});position();track();return true;
     }catch{
       if(!destroyed&&token===serial)close();return false;
