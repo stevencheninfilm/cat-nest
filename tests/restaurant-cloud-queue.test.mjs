@@ -332,3 +332,42 @@ test('a post-idle click immediately previews the refilled ledger and keeps its p
   assert.deepEqual(h.latest().restaurant.orders[0].workflow.runs[0],first);
   assert.ok(validRestaurant(h.latest().restaurant));
 });
+
+test('daily gifts wait for durable currency, retain their ID after an unknown response and suppress repeated taps',async t=>{
+  const base=initialState(NOW);let saved=base,lose=true;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved));
+    if(lose){lose=false;throw new Error('offline');}
+    saved=apply(saved,req.body);return response(receipt(req.body,saved));
+  },{state:base});
+  await h.cloud.start();
+  const action={type:'restaurant-daily-login',day:Math.floor((NOW+8*3600000)/86400000)};
+  assert.equal(h.cloud.dispatch(action),true);assert.equal(h.cloud.dispatch(action),false);await flush();
+  const operationId=h.pending()[0].operationId;
+  assert.equal(h.latest().coins,base.coins,'no optimistic currency for a gift');assert.equal(h.pending().length,1);
+  assert.equal(h.cloud.dispatch({type:'pet'}),true,'the gift only locks its own button');
+  t.mock.timers.tick(8000);await flush();
+  assert.equal(h.posts()[1].body.operationId,operationId);assert.equal(saved.coins,base.coins+300);
+  assert.equal(h.pending().length,0);assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('a partner claiming the daily gift first reconciles from the saved receipt without a false save failure',async t=>{
+  const base=initialState(NOW),action={type:'restaurant-daily-login',day:Math.floor((NOW+8*3600000)/86400000)};
+  let saved=base;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved,1));
+    saved=reduceAction(saved,action,{id:'daily-partner-two',name:'另一位主人'},NOW,'daily-partner-operation');
+    return response({error:'今天已领取',code:'RESTAURANT_ACTION_REJECTED'},409);
+  },{state:base});
+  await h.cloud.start();assert.equal(h.cloud.dispatch(action),true);await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().coins,base.coins+300);
+  assert.equal(h.observed.saves.some(s=>s.phase==='error'),false);assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('a saved gift restored with its queued operation drains once after reload',async t=>{
+  const action={type:'restaurant-daily-login',day:Math.floor((NOW+8*3600000)/86400000)},base=initialState(NOW);
+  const item={operationId:'daily-restored-operation',clientId:ACTOR.id,name:ACTOR.name,action},saved=apply(base,item,NOW);
+  const h=harness(t,req=>response(req.method==='GET'?snapshot(saved):{...receipt(item,saved),duplicate:true}),{state:base,pending:[item]});
+  await h.cloud.start();await flush();assert.equal(h.pending().length,0);assert.equal(h.latest().coins,base.coins+300);
+  assert.equal(h.posts().length,1);assert.equal(h.posts()[0].body.operationId,item.operationId);
+});

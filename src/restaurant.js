@@ -1,4 +1,5 @@
 import { recipeStepEnergyBase } from './restaurant-recipe-energy.js';
+import { restaurantDailyLoginInfo, validRestaurantDailyLogin } from './restaurant-daily-login.js';
 import { RESTAURANT_GUEST_DINING_MS, initialRestaurantGuestService, restaurantGuestHasNextCourse, restaurantGuestCompletionBonus, nextRestaurantGuestService, nextRestaurantGuestRecipe } from './restaurant-guest-service.js';
 import { initialRestaurantResearch, normalizeRestaurantResearch, restaurantInspirationGift, awardRestaurantInspiration, validRestaurantResearch, restaurantResearchInfo, restaurantResearchCost, restaurantDishGrade, drawRestaurantResearch, restaurantResearchPool, restaurantFragmentSurplus, fuseRestaurantResearch, RESEARCH_INSPIRATION_MAX } from './restaurant-research.js';
 import { validRestaurantSeenGuests, normalizeRestaurantSeenGuests, restaurantCustomerInfo } from './restaurant-customers.js';
@@ -95,7 +96,8 @@ export function initialRestaurant(now=Date.now()) {
 }
 
 export function validRestaurant(value) {
-  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['lastInteractionAt','parties','waitingParties','seenGuests','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','lastInteractionAt','parties','waitingParties','seenGuests','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(Object.hasOwn(value,'dailyLogin')&&!validRestaurantDailyLogin(value.dailyLogin))return false;
   if(Object.hasOwn(value,'lastInteractionAt')&&(!validTime(value.lastInteractionAt)||value.lastInteractionAt<value.openedAt))return false;
   if(Object.hasOwn(value,'circlePalette')&&!restaurantCirclePalette(value.circlePalette))return false;
   if(Object.hasOwn(value,'ownedCirclePalettes')&&(!Array.isArray(value.ownedCirclePalettes)||new Set(value.ownedCirclePalettes).size!==value.ownedCirclePalettes.length||value.ownedCirclePalettes.some(id=>!restaurantCirclePalette(id))))return false;
@@ -173,7 +175,7 @@ export function restaurantInfo(state,now=Date.now()) {
   const decoration=restaurantDecorationInfo(restaurant,now),decorationInfo={...decoration,decorations:decoration.decorations.map(suite=>({...suite,unlockLevel:restaurantResourceLevel('decoration',suite.id),unlocked:suite.owned||level>=restaurantResourceLevel('decoration',suite.id)}))};
   const hireUnlockLevel=RESTAURANT_STAFF[restaurant.staff]?restaurantResourceLevel('staff',RESTAURANT_STAFF[restaurant.staff].id):1;
   const customerBook=restaurantCustomerInfo(restaurant,{recipes:[...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES],staff:RESTAURANT_STAFF,upgrades:RESTAURANT_UPGRADES,decorations:RESTAURANT_DECORATIONS,themes:[...RESTAURANT_THEMES,...PREMIUM_RESTAURANT_THEMES]},now);
-  return {restaurant,waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:restaurant.recipeLevels[recipe.id]??1,fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(restaurant.recipeLevels[recipe.id]??1),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
+  return {restaurant,dailyLogin:restaurantDailyLoginInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:restaurant.recipeLevels[recipe.id]??1,fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(restaurant.recipeLevels[recipe.id]??1),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
     const facilityLevel=restaurant.levels[upgrade.id],unlockLevel=restaurantResourceLevel('facility',upgrade.id,Math.min(upgrade.maxLevel,facilityLevel+1));
     return {...upgrade,level:facilityLevel,cost:upgrade.costs[facilityLevel-1]??null,unlockLevel,unlocked:level>=unlockLevel};
   }),hireCost:RESTAURANT_STAFF_COSTS[restaurant.staff]??null,hireCurrency:premiumStaffHireCost(restaurant.staff)?.currency??'coins',hireUnlockLevel,hireUnlocked:level>=hireUnlockLevel};
@@ -181,6 +183,7 @@ export function restaurantInfo(state,now=Date.now()) {
 
 export function sanitizeRestaurantAction(value) {
   if(!plain(value))return null;
+  if(value.type==='restaurant-daily-login'&&exact(value,['type','day'])&&integer(value.day))return {...value};
   if(value.type==='restaurant-wait'&&exact(value,['type']))return {...value};
   if(value.type==='restaurant-arrive'&&Object.keys(value).every(key=>['type','partySize','recipeId'].includes(key))&&(!Object.hasOwn(value,'partySize')||[1,2].includes(value.partySize))&&(!Object.hasOwn(value,'recipeId')||restaurantRecipe(value.recipeId)))return {...value};
   if(['restaurant-start','restaurant-recipe'].includes(value.type)&&exact(value,['type','recipeId'])&&restaurantRecipe(value.recipeId))return {...value};
@@ -217,7 +220,14 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     if(!training)return false;
     restaurant.staffTraining=training;return true;
   };
-  if(action.type==='restaurant-kitchen-accept'||action.type==='restaurant-kitchen-step'){
+  if(action.type==='restaurant-daily-login'){
+    if(action.day!==info.dailyLogin.day)return reject('开店礼已跨天，请领取今天的礼物。');
+    if(!info.dailyLogin.available)return reject('今天的开店礼已经领取啦，明天再来。');
+    if(coins+info.dailyLogin.amount>999999)return reject('小鱼干快装满啦，留出 300 的空间再领取。');
+    coins+=info.dailyLogin.amount;
+    restaurant.dailyLogin={day:info.dailyLogin.day,claimedAt:now};
+    text='领取每日开店礼，获得 300 小鱼干（已同步小窝金币）';
+  }else if(action.type==='restaurant-kitchen-accept'||action.type==='restaurant-kitchen-step'){
     const order=restaurant.orders.find(item=>item.id===action.orderId);
     if(!order||!isInteractiveWorkflow(order.workflow))return reject('这份订单暂时没有逐步制作流程。');
     const result=action.type==='restaurant-kitchen-accept'?acceptInteractiveWorkflow(restaurant,order,now):advanceInteractiveWorkflow(restaurant,order,action.stepId,now);
