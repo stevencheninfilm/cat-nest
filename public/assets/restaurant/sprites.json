@@ -236,6 +236,34 @@
         "x": 0.5,
         "y": 0.9375
       }
+    },
+    "staff-milky": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 0,
+      "atlas": "staff-milky-v1.webp",
+      "path": "/assets/restaurant/characters/staff-milky.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
+    },
+    "staff-milky-back": {
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256,
+      "col": 0,
+      "row": 1,
+      "atlas": "staff-milky-v1.webp",
+      "path": "/assets/restaurant/characters/staff-milky-back.webp",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      }
     }
   },
   "foods": {
@@ -612,6 +640,15 @@
   },
   "staffSesameAtlas": {
     "path": "/assets/restaurant/staff-sesame-v1.webp",
+    "width": 256,
+    "height": 512,
+    "cols": 1,
+    "rows": 2,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "staffMilkyAtlas": {
+    "path": "/assets/restaurant/staff-milky-v1.webp",
     "width": 256,
     "height": 512,
     "cols": 1,

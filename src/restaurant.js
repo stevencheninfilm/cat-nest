@@ -53,7 +53,7 @@ export const RESTAURANT_THEMES = Object.freeze([
 ].map(Object.freeze));
 export const RESTAURANT_STAFF = Object.freeze([
   {id:'shadow',name:'小黑',role:'送餐员',sprite:'waiter',cost:220,greeting:'最喜欢送餐啦！',description:'把每一份热乎乎的心意送到餐桌。'},
-  {id:'milky',name:'奶盖',role:'帮厨',sprite:'chef',cost:650,greeting:'厨房交给我吧！',description:'认真备好食材，让主厨做菜更轻松。'},
+  {id:'milky',name:'奶盖',role:'帮厨',sprite:'staff-milky',cost:650,greeting:'厨房交给我吧！',description:'认真备好食材，让主厨做菜更轻松。'},
   {id:'sesame',name:'芝麻',role:'领班',sprite:'staff-sesame',cost:1400,greeting:'今天也元气满满！',description:'穿着青绿马甲、戴着金色领结，照顾好客人与伙伴。'},
   {id:'pudding',name:'布丁',role:'甜点师',sprite:'staff-pudding',cost:5,costCurrency:'goldFish',greeting:'甜甜的幸福，出炉啦！',description:'戴着粉色贝雷帽，最拿手的是甜点。',isNew:true},
   {id:'mint',name:'薄荷',role:'饮品师',sprite:'staff-mint',cost:8,costCurrency:'goldFish',greeting:'要来一杯清凉的吗？',description:'调一杯清新的饮品，给小馆添点好心情。',isNew:true},
