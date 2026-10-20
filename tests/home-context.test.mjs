@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { HOME_ENTRIES, homeContext, homeTitle, homeStorageKey, initialHomeState, EVIAN_ROOM_ID, validateHomes } from '../src/home-context.js';
 import { createLocalPreviewStore, PREVIEW_HOME } from '../scripts/local-pet-preview.mjs';
 import { namedHomeHtml, namedHomeEntry } from '../scripts/named-home-entry.mjs';
@@ -124,4 +125,16 @@ test('mixed-case save entries preserve their spelling and reject case collisions
   const additional={id:'CrowN',label:'Duplicate',source:'room',roomId:'e'.repeat(32),storagePrefix:'CrowN:'};
   assert.throws(()=>validateHomes([...HOME_ENTRIES,additional]),/存档网址无效或重复/);
   for(const id of ['Assets','API','Model','Index','Monitor'])assert.throws(()=>validateHomes([...HOME_ENTRIES,{...additional,id,storagePrefix:`${id}:` }]),/存档网址无效或重复/);
+});
+
+test('shared local preview recognizes production-style home paths and supplies the common asset base',async()=>{
+  const plugin=namedHomeEntry();plugin.configResolved({command:'serve',root:fileURLToPath(new URL('..',import.meta.url)),build:{outDir:'dist'}});
+  let handle;plugin.configureServer({middlewares:{use(fn){handle=fn;}},transformIndexHtml:async(path,html)=>html});
+  for(const path of ['/test/','/cat-nest/test/index.html','/cat-nest/steven/','/cat-nest/oliver/']){
+    let html,passed=false;await handle({url:path},{setHeader(){},end(value){html=value;}},()=>{passed=true;});
+    assert.equal(passed,false);assert.match(html,/<base href="\/">/);
+  }
+  let location;await handle({url:'/cat-nest/'},{writeHead(status,headers){assert.equal(status,302);location=headers.Location;},end(){}},()=>assert.fail('known public entry'));
+  assert.equal(location,'/cat-nest/test/');
+  let next=false;await handle({url:'/cat-nest/unknown/'},{},()=>{next=true;});assert.equal(next,true);
 });
