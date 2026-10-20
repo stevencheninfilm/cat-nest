@@ -130,6 +130,15 @@ export function validRestaurant(value) {
   return validOrders&&validRestaurantParties(value)&&validRestaurantWaitingParties(value)&&validKitchenReservations(value);
 }
 
+/** A normal game action cannot erase permanent restaurant progress. */
+export function restaurantProgressPreserved(before,after){
+  if(!validRestaurant(before)||!validRestaurant(after))return false;
+  return after.openedAt===before.openedAt&&after.revision>=before.revision&&after.nextOrderId>=before.nextOrderId&&after.staff>=before.staff
+    &&['served','earned','experience'].every(key=>after.stats[key]>=before.stats[key])
+    &&Object.entries(before.levels).every(([key,value])=>after.levels[key]>=value)
+    &&Object.entries(before.recipeLevels).every(([key,value])=>after.recipeLevels[key]>=value);
+}
+
 /** Old homes get an empty restaurant without touching wallet, pet or room IDs. */
 export function normalizeRestaurant(value,now=Date.now()) {
   if(!validRestaurant(value))return initialRestaurant(now);
@@ -424,5 +433,7 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
   // Background arrivals/queue changes must not keep an unattended kitchen awake.
   if(!['restaurant-arrive','restaurant-wait'].includes(action.type))restaurant.lastInteractionAt=Math.max(restaurant.lastInteractionAt,now);
   restaurant.revision++;
+  // Never let normalization turn an invalid operation result into a new save.
+  if(!validRestaurant(restaurant))return reject('餐厅工序数据校验未通过，已保留原进度，请稍后重试。');
   return {ok:true,restaurant,coins,goldFish,xp,text,...(growthReward?{growthReward}:{})};
 }

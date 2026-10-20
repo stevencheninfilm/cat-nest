@@ -9,7 +9,7 @@ import { validCoupleCare } from '../src/couple-care.js';
 import { validMemoryJournal, normalizeMemoryJournal, validMemoryId } from '../src/memory-journal.js';
 import { validNest, sanitizeNestAction, validFurnitureCare } from '../src/nest-decor.js';
 import { validGoldFish } from '../src/restaurant-economy.js';
-import { validRestaurant, normalizeRestaurant, sanitizeRestaurantAction, restaurantActionResult } from '../src/restaurant.js';
+import { validRestaurant, restaurantProgressPreserved, normalizeRestaurant, sanitizeRestaurantAction, restaurantActionResult } from '../src/restaurant.js';
 
 export const ROOM_ID = /^[a-f0-9]{32}$/;
 const CLIENT_ID = /^[a-zA-Z0-9_-]{6,80}$/;
@@ -280,7 +280,9 @@ export function createGitHubStore({
           const claimedGrowth = action.type === 'claim-growth'
             ? [...room.claimedGrowth, copy(room.state.pendingGrowth.find(reward => reward.id === action.rewardId))]
             : room.claimedGrowth;
-          const next = { ...room, revision: room.revision + 1, state: safeState(reduced, actionAt), claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
+          const savedState=safeState(reduced,actionAt);
+          if(!restaurantProgressPreserved(room.state.restaurant,savedState.restaurant))throw new StorageError('RESTAURANT_SAVE_GUARD','餐厅存档保护已拦截异常更新，原进度保持不变，请联系维护者。');
+          const next = { ...room, revision: room.revision + 1, state: savedState, claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
           if (await write(next, sha)) return { ...publicRoom(next), event:publicGameEvent(event), duplicate: false };
           cache.delete(id);
         }
