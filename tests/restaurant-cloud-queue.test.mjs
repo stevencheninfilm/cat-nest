@@ -145,6 +145,36 @@ test('an exhausted operation hands off immediately in the optimistic queue witho
   assert.equal(h.observed.rollbacks.length,0);assert.equal(saved.restaurant.orders[0].workflow.runs[1].commandAt,first.endAt+650);
 });
 
+test('a restored pickup blocked by an unfinished dish cannot hold its delivery behind an indefinite worker reservation',async t=>{
+  let base=requested('coffee',2),at=NOW;
+  for(const order of base.restaurant.orders)base=apply(base,{...ACTOR,clientId:ACTOR.id,operationId:`accept-${order.id}`,action:{type:'restaurant-kitchen-accept',orderId:order.id}},at);
+  for(const step of KITCHEN_FLOWS.coffee){
+    base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:`seed-${step.id}`,action:{type:'restaurant-kitchen-step',orderId:'table-1',stepId:step.id}},at);
+    at=base.restaurant.orders[0].workflow.runs.at(-1).endAt;
+  }
+  const intents=[
+    {type:'restaurant-kitchen-step',orderId:'table-2',stepId:'gather'},
+    {type:'restaurant-kitchen-step',orderId:'table-1',stepId:'delivery'},
+  ];
+  const pending=intents.map((action,index)=>({clientId:ACTOR.id,name:ACTOR.name,operationId:`restored-${index}`,action,restaurantPreviewAt:at}));
+  let saved=base,revision=0;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved,revision));
+    const next=reduceAction(saved,req.body.action,ACTOR,Date.now(),req.body.operationId);
+    if(!next)return response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'员工正忙，请等待空闲员工'}},409);
+    saved=next;return response(receipt(req.body,saved,++revision));
+  },{state:base,pending});
+  t.mock.timers.tick(at-NOW);await h.cloud.start();await flush();
+  assert.deepEqual(h.posts().map(req=>req.body.operationId),['restored-0','restored-1'],'only an explicit refusal releases the blocked pickup, then the original delivery is saved');
+  assert.equal(h.pending().length,0);assert.ok(saved.restaurant.orders[0].workflow.servedAt);
+  assert.equal(saved.restaurant.orders[1].workflow.runs.length,0);assert.equal(h.observed.rollbacks.length,1);
+  assert.equal(h.observed.rollbacks[0].action.orderId,'table-2');assert.ok(validRestaurant(saved.restaurant));
+  const returnAt=saved.restaurant.orders[0].workflow.completedAt;
+  t.mock.timers.tick(returnAt-Date.now());
+  assert.equal(h.cloud.dispatch(intents[0]),true);await flush();
+  assert.equal(h.pending().length,0);assert.equal(saved.restaurant.orders[1].workflow.runs[0].stepId,'gather');
+});
+
 test('a research draw waits for the real card and ignores duplicate queued taps',async t=>{
   const base=initialState(NOW),ack=deferred();let saved=base;
   const h=harness(t,async req=>{
