@@ -34,8 +34,8 @@
 .restaurant[data-r-draw-active=true] .r-stage,.restaurant[data-r-draw-active=true] .r-sheet{visibility:hidden}
 .restaurant[data-r-draw-active=true] .r-stage *,.restaurant[data-r-draw-active=true] .r-sheet *{animation-play-state:paused!important}
 .rr-draw-scene{background:#081427}
-/* A slow receipt is visible progress, never a frozen flourish. Keep only one
-   compositor rotation alive, then let the four-second watchdog leave safely. */
+/* A slow receipt keeps one compositor rotation alive while the player chooses
+   whether to leave or keep waiting. The choice never changes the saved draw. */
 .rr-draw-scene[data-rr-phase=waiting] .rr-lottery-energy{opacity:.8}
 .rr-draw-scene[data-rr-phase=waiting] :is(.rr-lottery-nebula,.rr-lottery-particles,.rr-discovery-halo){display:none}
 .rr-draw-scene[data-rr-phase=waiting] :is(.rr-lottery-core,.rr-discovery-kitchen *){animation:none}
@@ -44,3 +44,10 @@
 /* The exit stays in the viewport even on a short screen or after scrolling. */
 .restaurant .rr-discovery-close{position:fixed;top:max(16px,env(safe-area-inset-top));right:max(16px,calc((100vw - 480px)/2 + 16px))}
 @media(prefers-reduced-motion:reduce){.restaurant .rr-draw-scene[data-rr-phase=waiting] .rr-lottery-streams{animation:none}}
+.rr-wait-prompt{position:fixed;z-index:7;left:50%;bottom:max(20px,env(safe-area-inset-bottom));width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:20px;border:1px solid #719eba;border-radius:18px;background:linear-gradient(145deg,#19334c,#0e2238);box-shadow:0 12px 40px #020916b3;transform:translateX(-50%);text-align:left;animation:rr-wait-prompt-enter .2s ease-out}
+.rr-wait-prompt[hidden],.restaurant .rr-discovery-confirm[hidden]{display:none}
+.rr-wait-prompt h3{margin:0 0 8px;font-size:16px;color:#e1f3ff}.rr-wait-prompt p{margin:0 0 16px;font-size:12px;line-height:1.7;color:#b9cfdf}
+.rr-wait-prompt>div{display:flex;gap:10px}.restaurant .rr-wait-prompt button{flex:1;min-height:44px;border:1px solid #7297af;border-radius:11px;background:#18354c;color:#d7eafa;font-size:13px;font-weight:700}.restaurant .rr-wait-prompt [data-rr-wait-continue]{border-color:#d7bd83;background:linear-gradient(145deg,#fbebc0,#d9be80);color:#6a593d}
+.restaurant .rr-wait-prompt button:focus-visible{outline:2px solid #e1f3ff;outline-offset:3px}
+@keyframes rr-wait-prompt-enter{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
+@media(prefers-reduced-motion:reduce){.rr-wait-prompt{animation:none}}
