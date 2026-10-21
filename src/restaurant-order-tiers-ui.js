@@ -30,7 +30,7 @@ export function restaurantGuestCoursePreview(guest,food){
   return `<div class="rc-course-preview" data-r-guest-tier="${guest.tier}" aria-label="${restaurantTierName(guest.tier)}顾客，随机两轮点餐"><div><span class="rg-tier-food">${food('rice')}</span><span>随机第 1 餐</span></div><i aria-hidden="true">→</i><div><span class="rg-tier-food">${food('coffee')}</span><span>吃完再随机点餐</span></div><p><strong>${restaurantTierName(guest.tier)}猫友 · 2 轮点餐</strong><span>更偏好 ${guest.tier==='gold'?'SSS':'S 左右'} 品质料理</span><span>完成两餐，额外 +${guest.bonusGold} 金鱼干</span></p></div>`;
 }
 export function restaurantGuestTestButtons({enabled=false}={}){
-  return enabled?'<details class="rg-guest-tests"><summary>高级顾客测试<span>银 / 金 · 两轮点餐</span></summary><div><button data-r-debug-guest="guest-baker">银级来客</button><button data-r-debug-guest="guest-dawn-duke">金级来客</button></div><p>准备指定条件并迎接一位顾客，暂停自然来客。仅影响本次测试存档。</p></details>':'';
+  return enabled?'<details class="rg-guest-tests"><summary>高级顾客测试<span>银 / 金 · 两轮点餐</span></summary><div><button data-r-debug-guest="guest-baker">银级来客</button><button data-r-debug-guest="guest-astronomer">金级来客</button></div><p>准备指定条件并迎接一位顾客，暂停自然来客。仅影响本次测试存档。</p></details>':'';
 }
 
 export function restaurantOrderOddsMarkup(info){

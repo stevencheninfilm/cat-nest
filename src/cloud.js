@@ -14,6 +14,8 @@ import { restaurantResearchInfo } from './restaurant-research.js';
 const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect','restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse']);
 const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
 const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
+const guestConditions=data=>data?.restaurantGuestConditionsV2??data?.restaurantGuestConditions;
+const validGuestConditionMetadata=data=>['restaurantGuestConditions','restaurantGuestConditionsV2'].every(key=>data?.[key]===undefined||validRestaurantGuestConditions(data[key]));
 const restaurantWorkerClocks=(state,order)=>Object.fromEntries([...new Set((order?.workflow?.runs??[]).map(run=>run.workerId??order.workflow.workerId))].filter(id=>state.restaurant.staffTraining?.[id]).map(id=>[id,structuredClone(state.restaurant.staffTraining[id])]));
 
 /** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
@@ -130,7 +132,7 @@ export function createCloudRoom(options) {
       const res = await fetchImpl(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
       const data = await res.json();
       if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
-      if(data?.restaurantGuestConditions!==undefined&&!validRestaurantGuestConditions(data.restaurantGuestConditions))throw new Error('来访条件确认结果不完整');
+      if(!validGuestConditionMetadata(data))throw new Error('来访条件确认结果不完整');
       return data;
     } finally { clearTimeout(timeout); }
   }
@@ -186,8 +188,9 @@ export function createCloudRoom(options) {
   }
   function apply(data, acknowledgement) {
     if (destroyed || !data?.state || !Number.isFinite(data.revision) || data.roomId!==undefined&&data.roomId!==room) return;
-    if(data.restaurantGuestConditions!==undefined&&!validRestaurantGuestConditions(data.restaurantGuestConditions))return;
-    const incomingState=data.restaurantGuestConditions!==undefined&&data.state.restaurant ? {...data.state,restaurant:{...data.state.restaurant,completedGuestConditions:data.restaurantGuestConditions}} : data.state;
+    if(!validGuestConditionMetadata(data))return;
+    const conditions=guestConditions(data);
+    const incomingState=conditions!==undefined&&data.state.restaurant ? {...data.state,restaurant:{...data.state.restaurant,completedGuestConditions:conditions}} : data.state;
     const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
     const preview = previews.get(event?.operationId || acknowledgement?.operationId);
     const previousXp = authoritativeState?.xp;
@@ -264,7 +267,7 @@ export function createCloudRoom(options) {
         liveReceipts.delete(item.operationId);
         if (destroyed) break;
         if (optimisticReducer && (data?.roomId!==undefined&&data.roomId!==room||!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
-        if(data?.restaurantGuestConditions!==undefined&&!validRestaurantGuestConditions(data.restaurantGuestConditions))throw new Error('来访条件确认结果不完整');
+        if(!validGuestConditionMetadata(data))throw new Error('来访条件确认结果不完整');
         apply(data, item); queue.shift(); saveQueue();
         onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
       } catch (error) {

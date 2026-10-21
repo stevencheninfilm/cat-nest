@@ -1,5 +1,6 @@
 import { sanitizeRestaurantGrowthClaim, isRestaurantGrowth } from '../src/restaurant-income-growth.js';
 import { validHomeBond } from '../src/home-bond.js';
+import { legacyRestaurantGuestConditions } from '../src/restaurant-guest-conditions-legacy.js';
 import { randomBytes } from 'node:crypto';
 import { FOODS, careActionInfo, initialState, normalizeState, reduceAction, validCareLimits, validPendingGrowth, levelInfo } from '../src/state.js';
 import { validAppearance } from '../src/mage-cat-config.js';
@@ -83,9 +84,11 @@ export function publicRoom(room) {
   if (state.games) state.games = publicGameHub(state.games);
   // Older open pages strictly validate restaurant keys. Send the new ledger as
   // envelope metadata so they keep reading their existing restaurant safely.
-  const restaurantGuestConditions = state.restaurant?.completedGuestConditions;
+  const restaurantGuestConditionsV2 = state.restaurant?.completedGuestConditions;
   if (state.restaurant) delete state.restaurant.completedGuestConditions;
-  return { roomId:room.roomId, state, revision:room.revision, ...(restaurantGuestConditions ? {restaurantGuestConditions} : {}) };
+  // V1 pages reject unknown achievement keys. Keep their bounded vocabulary;
+  // current pages read the complete ledger, including the lowered gold gates.
+  return { roomId:room.roomId, state, revision:room.revision, ...(restaurantGuestConditionsV2 ? {restaurantGuestConditions:legacyRestaurantGuestConditions(restaurantGuestConditionsV2),restaurantGuestConditionsV2} : {}) };
 }
 
 function careRejection(action, info, now) {

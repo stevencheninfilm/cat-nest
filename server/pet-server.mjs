@@ -86,10 +86,11 @@ export function createPetHandler({
     hub.revision = result.revision;
     hub.state = result.state;
     hub.restaurantGuestConditions = result.restaurantGuestConditions;
-    broadcast(hub, event, event === 'action' ? { state: result.state, revision: result.revision, restaurantGuestConditions:result.restaurantGuestConditions, event: result.event } : { state: result.state, revision: result.revision, restaurantGuestConditions:result.restaurantGuestConditions });
+    hub.restaurantGuestConditionsV2 = result.restaurantGuestConditionsV2;
+    broadcast(hub, event, { state:result.state, revision:result.revision, restaurantGuestConditions:result.restaurantGuestConditions, restaurantGuestConditionsV2:result.restaurantGuestConditionsV2, ...(event==='action'?{event:result.event}:{}) });
   }
   function makeHub(id, result) {
-    const hub = { members: new Map(), revision: result.revision, state: result.state, restaurantGuestConditions:result.restaurantGuestConditions, polling: false, heartbeat: null, poll: null };
+    const hub = { members: new Map(), revision: result.revision, state: result.state, restaurantGuestConditions:result.restaurantGuestConditions, restaurantGuestConditionsV2:result.restaurantGuestConditionsV2, polling: false, heartbeat: null, poll: null };
     hub.heartbeat = setInterval(() => {
       for (const member of hub.members.values()) for (const response of member.responses) if (!response.destroyed) response.write(': keepalive\n\n');
     }, heartbeatMs);
@@ -185,7 +186,7 @@ export function createPetHandler({
           member.responses.add(response);
           response.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
           response.write(': connected\n\n');
-          emit(response, 'state', { state: hub.state, revision: hub.revision, restaurantGuestConditions:hub.restaurantGuestConditions });
+          emit(response, 'state', { state: hub.state, revision: hub.revision, restaurantGuestConditions:hub.restaurantGuestConditions, restaurantGuestConditionsV2:hub.restaurantGuestConditionsV2 });
           presence(hub);
           response.on('close', () => {
             member.responses.delete(response);
