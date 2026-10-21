@@ -7,7 +7,7 @@ import { createRestaurantResearchReveal, restaurantResearchRevealResult, restaur
 const NOW=Date.parse('2026-10-18T12:00:00Z');
 const state=()=>initialState(NOW);
 const drawn=()=>reduceAction(state(),{type:'restaurant-research-draw',draw:1},{id:'research-animation',name:'店长'},NOW);
-function harness(t,{motion=false,onPhaseChange=()=>{}}={}){
+function harness(t,{motion=false,onPhaseChange=()=>{},getInfo}={}){
   const oldDocument=globalThis.document,focus={isConnected:true,disabled:false,focus(){this.restored=true;}};
   globalThis.document={activeElement:focus};
   t.after(()=>{if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;});
@@ -17,7 +17,7 @@ function harness(t,{motion=false,onPhaseChange=()=>{}}={}){
     addEventListener(name,callback){listeners.set(name,callback);},removeEventListener(name){listeners.delete(name);},
     showModal(){this.open=true;},close(){this.open=false;listeners.get('close')?.();},
   };
-  const view=createRestaurantResearchReveal({dialog,onPhaseChange,reducedMotion:()=>motion,schedule:(callback,ms)=>{const id=nextId++;timers.set(id,{callback,ms});return id;},unschedule:id=>timers.delete(id)});
+  const view=createRestaurantResearchReveal({dialog,onPhaseChange,getInfo,reducedMotion:()=>motion,schedule:(callback,ms)=>{const id=nextId++;timers.set(id,{callback,ms});return id;},unschedule:id=>timers.delete(id)});
   const tick=()=>{const callbacks=[...timers.values()];timers.clear();for(const {callback} of callbacks)callback();};
   const click=selector=>listeners.get('click')({target:{closest:query=>query===selector?{}:null}});
   return {view,dialog,nodes,timers,tick,click,focus};
@@ -45,7 +45,7 @@ test('the mystery face is based on the accepted draw and the dish current qualit
 test('a card waits for the matching receipt and anticipation, then flips once without another action or debit',t=>{
   const h=harness(t),accepted=drawn(),before=structuredClone(accepted),info=restaurantInfo(accepted,NOW);
   assert.equal(h.view.start(1),true);assert.equal(h.view.start(1),false);assert.equal(h.dialog.dataset.rrPhase,'brewing');
-  h.tick();h.view.sync(restaurantInfo(state(),NOW),{connected:false});assert.equal(h.dialog.dataset.rrPhase,'brewing');
+  h.tick();h.view.sync(restaurantInfo(state(),NOW),{connected:false});assert.equal(h.dialog.dataset.rrPhase,'waiting');
   assert.match(h.nodes.get('[data-rr-message]').textContent,/探索已暂存/);
   h.view.sync(info,{connected:true});assert.equal(h.dialog.dataset.rrPhase,'ready');
   assert.equal(h.nodes.get('[data-rr-result]').attrs['aria-hidden'],undefined);
@@ -98,8 +98,8 @@ test('terminal previews all five materials without altering inspiration, shards 
 
 test('the video-inspired sequence automatically reveals only a matching receipt and clears its auto timer on manual skip',t=>{
   const h=harness(t),info=restaurantInfo(drawn(),NOW),before=structuredClone(info);
-  h.view.start(1);h.tick();assert.equal(h.dialog.dataset.rrPhase,'brewing');assert.equal(h.timers.size,0,'network delay cannot fabricate the card');
-  h.view.sync(info);assert.equal(h.dialog.dataset.rrPhase,'ready');assert.equal([...h.timers.values()][0].ms,650);
+  h.view.start(1);h.tick();assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,0,'network delay cannot fabricate the card');
+  h.view.sync(info);assert.equal(h.dialog.dataset.rrPhase,'ready');assert.equal([...h.timers.values()][0].ms,180);
   h.tick();assert.equal(h.dialog.dataset.rrPhase,'flipping');h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');assert.equal(h.timers.size,0);
   h.view.close();h.view.start(1);h.view.sync(info);h.tick();h.click('[data-rr-discovery-confirm]');assert.equal(h.timers.size,1,'manual reveal cancels the scheduled automatic reveal');
   h.view.close();assert.equal(h.timers.size,0);h.tick();assert.equal(h.dialog.open,false);assert.deepEqual(info,before);
@@ -113,4 +113,25 @@ test('a queued discovery can be dismissed immediately and unrelated save failure
   assert.equal(h.dialog.dataset.rrPhase,'brewing');assert.equal(h.nodes.get('[data-rr-result]')?.innerHTML??'','');
   h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);assert.equal(h.timers.size,0);
   h.view.sync(restaurantInfo(drawn(),NOW));assert.equal(h.dialog.open,false,'a later receipt cannot reopen a dismissed modal');
+});
+
+// A hidden kitchen must not be rebuilt on each pending animation tick.
+test('waiting for a receipt builds no restaurant projection and the real result builds it only once',t=>{
+  let projections=0;
+  const h=harness(t,{getInfo:s=>{projections++;return restaurantInfo(s,NOW);}});
+  h.view.start(1);
+  for(let i=0;i<100;i++)h.view.syncState(state(),{connected:true});
+  assert.equal(projections,0);h.tick();assert.equal(h.dialog.dataset.rrPhase,'waiting');
+  assert.equal(h.nodes.get('[data-rr-discovery-confirm]').disabled,false);
+  h.view.syncState(drawn(),{connected:true});assert.equal(projections,1);assert.equal(h.dialog.dataset.rrPhase,'ready');
+  for(let i=0;i<100;i++)h.view.syncState(drawn(),{connected:true});
+  assert.equal(projections,1);h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
+});
+
+test('a slow receipt leaves a static waiting state that can close immediately without dropping the draw',t=>{
+  const h=harness(t),info=restaurantInfo(drawn(),NOW);
+  h.view.start(1);assert.equal([...h.timers.values()][0].ms,700);h.tick();
+  assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,0);
+  h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);
+  h.view.syncState(drawn(),{connected:true});assert.equal(h.dialog.open,false);assert.equal(info.research.fragments.rice,3);
 });

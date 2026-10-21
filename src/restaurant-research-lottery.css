@@ -1,23 +1,23 @@
 /* Reference rhythm: orbiting light -> charged core -> four-point burst ->
    particles settle into the accepted card. Presentation never rolls a reward. */
-.rr-draw-scene::backdrop{background:#081427e6;backdrop-filter:blur(14px)}
+.rr-draw-scene::backdrop{background:#081427;backdrop-filter:none}
 .rr-discovery:before{background:radial-gradient(ellipse at 50% 38%,#18518a3d,transparent 64%),linear-gradient(#03132644,#091a2d66)}
 .rr-discovery-heading>span{color:#8fb8d3}.rr-discovery-heading h2{color:#e1f3ff;text-shadow:0 0 24px #4eb8ff66;font-size:22px}.rr-discovery-heading p{color:#9fb8ce}.rr-discovery-message{color:#b9dbf1}
 .rr-discovery-center{isolation:isolate}.rr-lottery-energy{position:absolute;left:50%;top:45%;width:340px;height:340px;transform:translate(-50%,-50%);pointer-events:none;transition:opacity .4s;z-index:3}
 .rr-lottery-nebula{position:absolute;inset:24px;border-radius:50%;background:radial-gradient(circle,transparent 28%,#58bfff33 32%,#167dff44 40%,transparent 65%),repeating-conic-gradient(from 10deg,transparent 0deg 25deg,#169eff2e 28deg 36deg,transparent 40deg 72deg);filter:blur(8px);animation:rr-nebula-swirl 2.8s linear infinite}
-.restaurant .rr-lottery-streams{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 6px #2a9dff) drop-shadow(0 0 2px #73dcff);animation:rr-stream-swirl 2.5s cubic-bezier(.3,.05,.6,1) infinite}
-.rr-lottery-streams path{fill:none;stroke:url(#rr-lottery-gradient);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:260 290;animation:rr-stream-flow 1.5s linear infinite}
-.rr-lottery-core{position:absolute;inset:calc(50% - 39px);border-radius:50%;background:#061123;border:4px solid #e6fbff;box-shadow:0 0 7px 3px #e7f6ff,0 0 15px 8px #4289ff,0 0 40px 16px #137aff66,inset 0 0 12px 5px #2a68dc;animation:rr-core-charge 1.8s cubic-bezier(.2,.7,.3,1) both}
+.restaurant .rr-lottery-streams{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 4px #2a9dff);will-change:transform,opacity;animation:rr-stream-swirl 2.5s cubic-bezier(.3,.05,.6,1) infinite}
+.rr-lottery-streams path{fill:none;stroke:url(#rr-lottery-gradient);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:260 290;animation:none}
+.rr-lottery-core{position:absolute;inset:calc(50% - 39px);border-radius:50%;background:#061123;border:4px solid #e6fbff;box-shadow:0 0 7px 3px #e7f6ff,0 0 15px 8px #4289ff,0 0 40px 16px #137aff66,inset 0 0 12px 5px #2a68dc;animation:rr-core-charge .7s cubic-bezier(.2,.7,.3,1) both}
 .rr-lottery-particles{position:absolute;inset:0}.rr-lottery-particles>i{position:absolute;left:50%;top:50%;width:3px;height:3px;border-radius:50%;background:#cff4ff;box-shadow:0 0 6px 1px #63cfff;animation:rr-energy-in 1.65s ease-in var(--energy-delay) infinite}
 .rr-lottery-burst{position:absolute;left:50%;top:45%;width:360px;height:360px;transform:translate(-50%,-50%);z-index:5;pointer-events:none;opacity:0}.restaurant .rr-lottery-burst>svg{width:100%;height:100%;fill:#e4f8ff;filter:drop-shadow(0 0 6px #c3f7ff) drop-shadow(0 0 22px #169fff)}.rr-lottery-burst>i{position:absolute;inset:30%;background:#86cdff99;border-radius:50%;filter:blur(25px)}
 .rr-lottery-result-motes{position:absolute;left:50%;top:45%;width:0;height:0;z-index:4;pointer-events:none;opacity:0}.rr-lottery-result-motes>i{position:absolute;width:4px;height:7px;border-radius:3px;background:#b9edff;box-shadow:0 0 7px #78cdff;transform:rotate(var(--mote-angle)) translateX(var(--mote-distance));opacity:0}
-.rr-draw-scene:is([data-rr-phase=brewing],[data-rr-phase=ready]) .rr-discovery-card{opacity:0;pointer-events:none;animation:none;transform:scale(.6)}
-.rr-draw-scene[data-rr-phase=ready] .rr-lottery-energy{animation:rr-energy-collapse .65s ease-in both}.rr-draw-scene[data-rr-phase=ready] .rr-lottery-burst{animation:rr-lottery-flash .65s cubic-bezier(.2,.7,.3,1) both}
+.rr-draw-scene:is([data-rr-phase=brewing],[data-rr-phase=waiting],[data-rr-phase=ready]) .rr-discovery-card{opacity:0;pointer-events:none;animation:none;transform:scale(.6)}
+.rr-draw-scene[data-rr-phase=ready] .rr-lottery-energy{animation:rr-energy-collapse .18s ease-in both}.rr-draw-scene[data-rr-phase=ready] .rr-lottery-burst{animation:rr-lottery-flash .18s cubic-bezier(.2,.7,.3,1) both}
 .rr-draw-scene:is([data-rr-phase=flipping],[data-rr-phase=revealed],[data-rr-phase=error]) .rr-lottery-energy{opacity:0;visibility:hidden}
-.rr-draw-scene[data-rr-phase=flipping] .rr-discovery-card{animation:rr-card-condense .86s cubic-bezier(.2,.8,.2,1) both}.rr-draw-scene[data-rr-phase=flipping] .rr-card-flipper{transform:rotateY(180deg);transition:none}.rr-draw-scene[data-rr-phase=flipping] .rr-card-front{box-shadow:inset 0 0 0 5px #ffffff24,0 0 12px #c8f5ff,0 0 40px #4aafff99}
+.rr-draw-scene[data-rr-phase=flipping] .rr-discovery-card{animation:rr-card-condense .42s cubic-bezier(.2,.8,.2,1) both}.rr-draw-scene[data-rr-phase=flipping] .rr-card-flipper{transform:rotateY(180deg);transition:none}.rr-draw-scene[data-rr-phase=flipping] .rr-card-front{box-shadow:inset 0 0 0 5px #ffffff24,0 0 12px #c8f5ff,0 0 40px #4aafff99}
 .rr-draw-scene[data-rr-phase=flipping] .rr-lottery-result-motes{opacity:1}.rr-draw-scene[data-rr-phase=flipping] .rr-lottery-result-motes>i{animation:rr-mote-bloom .85s ease-out var(--mote-delay) both}
 .rr-draw-scene[data-rr-phase=revealed] .rr-discovery-card{opacity:1;transform:none;filter:drop-shadow(0 0 15px #5ab8ff26) drop-shadow(0 15px 26px #02091670)}
-.rr-draw-scene .rr-discovery-halo{opacity:.2}.rr-draw-scene[data-rr-phase=revealed] .rr-discovery-halo{opacity:.23}.rr-draw-scene:is([data-rr-phase=brewing],[data-rr-phase=ready]) .rr-discovery-star{opacity:0;animation:none}
+.rr-draw-scene .rr-discovery-halo{opacity:.2}.rr-draw-scene[data-rr-phase=revealed] .rr-discovery-halo{opacity:.23}.rr-draw-scene:is([data-rr-phase=brewing],[data-rr-phase=waiting],[data-rr-phase=ready]) .rr-discovery-star{opacity:0;animation:none}
 .rr-discovery-kitchen{opacity:.85}.rr-discovery-shelf{border-color:#79a3b345}.rr-discovery-kitchen>p{color:#91aebd}.restaurant .rr-discovery-close{color:#c2ddef;border-color:#8caec35c;background:#0d243c44}.rr-discovery-footer>small{color:#8da7ba}
 @keyframes rr-nebula-swirl{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes rr-stream-swirl{0%{transform:scale(.75) rotate(0deg);opacity:.45}40%{opacity:1}100%{transform:scale(1.05) rotate(240deg);opacity:.9}}
 @keyframes rr-stream-flow{to{stroke-dashoffset:-550}}@keyframes rr-core-charge{0%{transform:scale(.2);opacity:0}30%{opacity:1}70%{transform:scale(1.15)}100%{transform:scale(1)}}
@@ -28,3 +28,11 @@
 @keyframes rr-mote-bloom{0%{opacity:0;transform:rotate(var(--mote-angle)) translateX(20px) scale(.3)}30%{opacity:1}100%{opacity:0;transform:rotate(var(--mote-angle)) translateX(var(--mote-distance)) scale(.6)}}
 @media(max-width:360px){.rr-lottery-energy{width:300px;height:300px}.rr-lottery-burst{width:320px;height:320px}.rr-discovery-heading h2{font-size:20px}}
 @media(prefers-reduced-motion:reduce){.rr-lottery-energy,.rr-lottery-burst,.rr-lottery-result-motes{display:none!important}.rr-draw-scene .rr-discovery-card{animation:none!important;filter:none}.rr-draw-scene:is([data-rr-phase=flipping],[data-rr-phase=revealed]) .rr-discovery-card{opacity:1;transform:none}.rr-card-flipper{transition:none}}
+
+/* The theatre covers the scene completely; covered actors keep their saved
+   clocks without rendering behind a full-screen animation. */
+.restaurant[data-r-draw-active=true] .r-stage,.restaurant[data-r-draw-active=true] .r-sheet{visibility:hidden}
+.restaurant[data-r-draw-active=true] .r-stage *,.restaurant[data-r-draw-active=true] .r-sheet *{animation-play-state:paused!important}
+.rr-draw-scene{background:#081427}
+.rr-draw-scene[data-rr-phase=waiting] *{animation-play-state:paused!important}
+.rr-draw-scene[data-rr-phase=waiting] .rr-lottery-energy{opacity:.65}

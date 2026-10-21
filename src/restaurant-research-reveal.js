@@ -1,12 +1,13 @@
 import { restaurantDishGrade, restaurantResearchCost, restaurantFragmentSurplus, RESTAURANT_DISH_GRADES } from './restaurant-research.js';
 import { restaurantQualityAttributes, restaurantQualityFood } from './restaurant-order-tiers-ui.js';
+import { restaurantInfo } from './restaurant.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const food=id=>`<span class="r-food r-food-${esc(id)}" aria-hidden="true"></span>`;
 const paw='<svg viewBox="0 0 72 72" fill="currentColor" aria-hidden="true"><ellipse cx="20" cy="26" rx="7" ry="10" transform="rotate(-25 20 26)"/><ellipse cx="34" cy="18" rx="7" ry="10"/><ellipse cx="49" cy="23" rx="7" ry="10" transform="rotate(23 49 23)"/><ellipse cx="58" cy="37" rx="6" ry="8" transform="rotate(35 58 37)"/><path d="M20 49c2-12 12-20 20-17 7 2 17 13 17 22 0 12-13 6-20 6-8 1-20 1-17-11Z"/></svg>';
 
 export function restaurantLotteryEffects(){
-  return `<div class="rr-lottery-energy" aria-hidden="true"><div class="rr-lottery-nebula"></div><svg class="rr-lottery-streams" viewBox="0 0 400 400"><defs><linearGradient id="rr-lottery-gradient"><stop stop-color="#56d6ff" stop-opacity="0"/><stop offset=".6" stop-color="#35a2ff"/><stop offset="1" stop-color="#e3f7ff"/></linearGradient></defs>${Array.from({length:5},(_,index)=>`<path d="M -35 130 C 85 -30 347 54 228 168 Q 200 192 200 200" transform="rotate(${index*72} 200 200)"/>`).join('')}</svg><div class="rr-lottery-core"></div><div class="rr-lottery-particles">${Array.from({length:32},(_,index)=>`<i style="--energy-angle:${index*137}deg;--energy-distance:${120+index%7*19}px;--energy-delay:${-index%9*.16}s"></i>`).join('')}</div></div><div class="rr-lottery-burst" aria-hidden="true"><svg viewBox="0 0 400 400"><path d="M200 0C211 178 222 187 400 200C222 211 211 222 200 400C189 222 178 211 0 200C178 189 189 178 200 0Z"/></svg><i></i></div><div class="rr-lottery-result-motes" aria-hidden="true">${Array.from({length:18},(_,index)=>`<i style="--mote-angle:${index*20}deg;--mote-distance:${110+index%4*15}px;--mote-delay:${index%5*.06}s"></i>`).join('')}</div>`;
+  return `<div class="rr-lottery-energy" aria-hidden="true"><div class="rr-lottery-nebula"></div><svg class="rr-lottery-streams" viewBox="0 0 400 400"><defs><linearGradient id="rr-lottery-gradient"><stop stop-color="#56d6ff" stop-opacity="0"/><stop offset=".6" stop-color="#35a2ff"/><stop offset="1" stop-color="#e3f7ff"/></linearGradient></defs>${Array.from({length:5},(_,index)=>`<path d="M -35 130 C 85 -30 347 54 228 168 Q 200 192 200 200" transform="rotate(${index*72} 200 200)"/>`).join('')}</svg><div class="rr-lottery-core"></div><div class="rr-lottery-particles">${Array.from({length:12},(_,index)=>`<i style="--energy-angle:${index*137}deg;--energy-distance:${120+index%7*19}px;--energy-delay:${-index%9*.16}s"></i>`).join('')}</div></div><div class="rr-lottery-burst" aria-hidden="true"><svg viewBox="0 0 400 400"><path d="M200 0C211 178 222 187 400 200C222 211 211 222 200 400C189 222 178 211 0 200C178 189 189 178 200 0Z"/></svg><i></i></div><div class="rr-lottery-result-motes" aria-hidden="true">${Array.from({length:8},(_,index)=>`<i style="--mote-angle:${index*20}deg;--mote-distance:${110+index%4*15}px;--mote-delay:${index%5*.06}s"></i>`).join('')}</div>`;
 }
 
 export function restaurantResearchRevealMarkup(draw){
@@ -27,7 +28,7 @@ export function restaurantResearchRevealFace({card,recipe,grade}){
   return `<small class="rr-discovery-quality">${grade} 级菜谱 · ${recipe.level===5?'满阶余片可融合':ready?'灵感集齐':'美味积累中'}</small><span class="rr-discovery-dish">${restaurantQualityFood(recipe.id,grade,food)}</span><strong class="rr-discovery-name">${esc(recipe.name)}</strong><span class="rr-discovery-fragments"><i aria-hidden="true">✦</i> 菜谱碎片 <b>×${card.amount}</b></span><span class="rr-discovery-progress">${recipe.upgradeCost===null?`多余 ${surplus.surplus} 枚 · 可融合 ${surplus.surplus*surplus.fusionValue} 灵感`:`已收集 ${recipe.fragments} / ${recipe.upgradeCost} 枚`}</span><em class="rr-discovery-caption">${surplus.surplus?'多余碎片，可以在手账里再次发光':ready?recipe.researchUnlocked?'新的品质，就差最后一步':'带着灵感，等待小馆再长大一点':'每一片灵感，都离美味更近一点'}</em>`;
 }
 
-export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{}}){
+export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{},getInfo=restaurantInfo}){
   let active=null,restoreFocus=null;
   const timers=new Set();
   const $=selector=>dialog.querySelector(selector);
@@ -40,7 +41,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
     stage('ready');$('[data-rr-flip]').disabled=false;$('[data-rr-flip]').setAttribute('aria-label','翻开这张灵感卡');
     $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='立即揭晓';
     $('[data-rr-message]').textContent='流光凝聚，新的美味灵感即将揭晓…';
-    active.autoReveal=later(flip,reducedMotion()?0:650);
+    active.autoReveal=later(flip,reducedMotion()?0:180);
   }
   function finish(){
     if(!active)return;
@@ -56,7 +57,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
     if(active.autoReveal!==undefined){unschedule(active.autoReveal);timers.delete(active.autoReveal);delete active.autoReveal;}
     active.revealing=true;stage('flipping');$('[data-rr-discovery-confirm]').disabled=true;
     $('[data-rr-flip]').disabled=true;$('[data-rr-message]').textContent='小爪爪的研究成果，揭晓！';
-    later(finish,reducedMotion()?0:860);
+    later(finish,reducedMotion()?0:420);
   }
   function closed(){
     if(dialog.open)return;
@@ -69,7 +70,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
   function click(event){
     if(event.target.closest('[data-rr-discovery-close]')){close();return;}
     if(event.target.closest('[data-rr-flip]'))flip();
-    if(event.target.closest('[data-rr-discovery-confirm]')){if(['brewing','revealed','error'].includes(dialog.dataset.rrPhase))close();else flip();}
+    if(event.target.closest('[data-rr-discovery-confirm]')){if(['brewing','waiting','revealed','error'].includes(dialog.dataset.rrPhase))close();else flip();}
   }
   function cancel(event){event.preventDefault();event.stopPropagation();close();}
   dialog.addEventListener('click',click);dialog.addEventListener('cancel',cancel);dialog.addEventListener('close',closed);
@@ -81,11 +82,19 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
       $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='先去经营，稍后看结果';
       $('[data-rr-discovery-note]').textContent='探索已记下 · 可随时返回经营，结果会收进手账';
       $('[data-rr-discovery-close]').focus({preventScroll:true});
-      later(()=>{if(active){active.brewed=true;ready();}},reducedMotion()?0:1800);
+      later(()=>{if(active){active.brewed=true;if(active.result)ready();else{stage('waiting');$('[data-rr-message]').textContent=active.connected===false?'探索已暂存，连接恢复后自动继续；可以先去经营':'灵感探索已记下，正在确认结果；可以先去经营';}}},reducedMotion()?0:700);
       return true;
+    },
+    // Pending ticks need only the receipt number, not a complete restaurant
+    // projection or a redraw of the covered kitchen and recipe panels.
+    syncState(state,availability={}){
+      if(!active||active.result||dialog.dataset.rrPhase==='error')return;
+      const lastDraw=state.restaurant?.research?.lastDraw;
+      this.sync(lastDraw?.draw===active.draw?getInfo(state):{research:{lastDraw},recipes:[]},availability);
     },
     sync(info,availability={}){
       if(!active||active.result||dialog.dataset.rrPhase==='error')return;
+      active.connected=availability.connected;
       const result=restaurantResearchRevealResult(info,active.draw);
       if(result){
         active.result=result;const front=$('[data-rr-result]');front.dataset.rQuality=result.grade;front.innerHTML=restaurantResearchRevealFace(result);ready();return;
