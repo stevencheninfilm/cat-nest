@@ -425,11 +425,12 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(type==='train'){action.workerId=button.dataset.rWorker;action.statId=button.dataset.rStat;}
     const before=getState(),info=restaurantInfo(before),availability=getAvailability();
     if(restaurantInputBlocked(availability)){toast('小馆正在读取，稍后就能开始营业');return;}
+    if(type==='collect'&&availability.pendingRestaurantCollections?.includes(action.orderId)){render();return;}
     const result=restaurantActionResult(before,action);
     if(!result.ok){toast(result.reason);return;}
     if(type==='research-draw'&&!researchReveal.start(action.draw))return;
     const firstCourse=type==='collect'&&info.orders.find(order=>order.id===action.orderId)?.hasNextCourse;
-    if(firstCourse)pendingCourseOrders.add(action.orderId);
+    if(type==='collect')pendingCourseOrders.add(action.orderId);
     const collectOrder=type==='collect'?info.orders.find(order=>order.id===action.orderId):null;
     if(collectOrder)goldDrops.prepare(collectOrder);
     pending=true;render();
