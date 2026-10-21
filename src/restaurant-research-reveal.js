@@ -28,23 +28,47 @@ export function restaurantResearchRevealFace({card,recipe,grade}){
   return `<small class="rr-discovery-quality">${grade} 级菜谱 · ${recipe.level===5?'满阶余片可融合':ready?'灵感集齐':'美味积累中'}</small><span class="rr-discovery-dish">${restaurantQualityFood(recipe.id,grade,food)}</span><strong class="rr-discovery-name">${esc(recipe.name)}</strong><span class="rr-discovery-fragments"><i aria-hidden="true">✦</i> 菜谱碎片 <b>×${card.amount}</b></span><span class="rr-discovery-progress">${recipe.upgradeCost===null?`多余 ${surplus.surplus} 枚 · 可融合 ${surplus.surplus*surplus.fusionValue} 灵感`:`已收集 ${recipe.fragments} / ${recipe.upgradeCost} 枚`}</span><em class="rr-discovery-caption">${surplus.surplus?'多余碎片，可以在手账里再次发光':ready?recipe.researchUnlocked?'新的品质，就差最后一步':'带着灵感，等待小馆再长大一点':'每一片灵感，都离美味更近一点'}</em>`;
 }
 
-export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{},getInfo=restaurantInfo}){
+const BREW_MS=700,READY_MS=180,FLIP_MS=420,MAX_WAIT_MS=4000;
+
+export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,now=Date.now,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{},onDeferred=()=>{},getInfo=restaurantInfo}){
   let active=null,restoreFocus=null;
   const timers=new Set();
   const $=selector=>dialog.querySelector(selector);
-  function later(callback,ms){const id=schedule(()=>{timers.delete(id);callback();},ms);timers.add(id);return id;}
+  function later(callback,ms){const session=active,id=schedule(()=>{timers.delete(id);if(active===session&&dialog.open)callback();},ms);timers.add(id);return id;}
   function clearTimers(){for(const id of timers)unschedule(id);timers.clear();}
-  function stage(value){if(dialog.dataset.rrPhase===value)return;dialog.dataset.rrPhase=value;onPhaseChange(value);}
+  function stage(value){if(dialog.dataset.rrPhase===value)return;dialog.dataset.rrPhase=value;if(active)active.phaseAt=now();onPhaseChange(value);}
+  function clearWait(){if(active?.waitTimer!==undefined){unschedule(active.waitTimer);timers.delete(active.waitTimer);delete active.waitTimer;}}
+  function wait(){
+    if(!active||active.result)return;
+    stage('waiting');
+    const remaining=Math.max(0,MAX_WAIT_MS-(now()-active.startedAt));
+    if(!remaining){const draw=active.draw;close();onDeferred(draw);return;}
+    $('[data-rr-message]').textContent=active.connected===false?'探索已暂存，连接恢复后自动继续':'正在确认这次探索的结果…';
+    $('[data-rr-discovery-note]').textContent=`${Math.ceil(remaining/1000)} 秒后自动返回经营 · 结果会收进手账`;
+    if(active.waitTimer===undefined)active.waitTimer=later(()=>{delete active.waitTimer;advance();},remaining);
+  }
+  // Timers drive the short performance; normal state ticks also reconcile the
+  // clock after a suspended tab or a missed callback. Neither path rolls a card.
+  function advance(){
+    if(!active||!dialog.open||dialog.dataset.rrPhase==='error')return;
+    if(!active.brewed&&now()-active.startedAt>=(reducedMotion()?0:BREW_MS))active.brewed=true;
+    if(!active.brewed)return;
+    if(!active.result){wait();return;}
+    ready();
+    if(dialog.dataset.rrPhase==='ready'&&now()-active.phaseAt>=(reducedMotion()?0:READY_MS))flip();
+    if(dialog.dataset.rrPhase==='flipping'&&now()-active.phaseAt>=(reducedMotion()?0:FLIP_MS))finish();
+  }
   function ready(){
     if(!active?.result||!active.brewed||active.revealing)return;
     if(dialog.dataset.rrPhase==='ready')return;
     stage('ready');$('[data-rr-flip]').disabled=false;$('[data-rr-flip]').setAttribute('aria-label','翻开这张灵感卡');
     $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='立即揭晓';
     $('[data-rr-message]').textContent='流光凝聚，新的美味灵感即将揭晓…';
-    active.autoReveal=later(flip,reducedMotion()?0:180);
+    clearWait();active.autoReveal=later(flip,reducedMotion()?0:READY_MS);
   }
   function finish(){
-    if(!active)return;
+    if(!active?.result||dialog.dataset.rrPhase!=='flipping')return;
+    clearTimers();
     stage('revealed');const {card,recipe,grade}=active.result;
     dialog.dataset.rQuality=grade;$('[data-rr-result]').setAttribute('aria-hidden','false');
     $('[data-rr-flip]').setAttribute('aria-label',`${recipe.name}，${grade} 级菜谱碎片 ${card.amount} 枚`);
@@ -57,7 +81,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
     if(active.autoReveal!==undefined){unschedule(active.autoReveal);timers.delete(active.autoReveal);delete active.autoReveal;}
     active.revealing=true;stage('flipping');$('[data-rr-discovery-confirm]').disabled=true;
     $('[data-rr-flip]').disabled=true;$('[data-rr-message]').textContent='小爪爪的研究成果，揭晓！';
-    later(finish,reducedMotion()?0:420);
+    later(finish,reducedMotion()?0:FLIP_MS);
   }
   function closed(){
     if(dialog.open)return;
@@ -77,31 +101,33 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
   return {
     start(draw){
       if(dialog.open)return false;
-      clearTimers();restoreFocus=document.activeElement;active={draw,brewed:false,result:null,revealing:false};
+      clearTimers();restoreFocus=document.activeElement;active={draw,startedAt:now(),brewed:false,result:null,revealing:false};
       delete dialog.dataset.rQuality;stage('brewing');dialog.innerHTML=restaurantResearchRevealMarkup(draw);dialog.showModal();
       $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='先去经营，稍后看结果';
       $('[data-rr-discovery-note]').textContent='探索已记下 · 可随时返回经营，结果会收进手账';
       $('[data-rr-discovery-close]').focus({preventScroll:true});
-      later(()=>{if(active){active.brewed=true;if(active.result)ready();else{stage('waiting');$('[data-rr-message]').textContent=active.connected===false?'探索已暂存，连接恢复后自动继续；可以先去经营':'灵感探索已记下，正在确认结果；可以先去经营';}}},reducedMotion()?0:700);
+      later(advance,reducedMotion()?0:BREW_MS);
       return true;
     },
     // Pending ticks need only the receipt number, not a complete restaurant
     // projection or a redraw of the covered kitchen and recipe panels.
     syncState(state,availability={}){
-      if(!active||active.result||dialog.dataset.rrPhase==='error')return;
+      if(!active||dialog.dataset.rrPhase==='error')return;
+      if(active.result){advance();return;}
       const lastDraw=state.restaurant?.research?.lastDraw;
       this.sync(lastDraw?.draw===active.draw?getInfo(state):{research:{lastDraw},recipes:[]},availability);
     },
     sync(info,availability={}){
-      if(!active||active.result||dialog.dataset.rrPhase==='error')return;
+      if(!active||dialog.dataset.rrPhase==='error')return;
+      if(active.result){advance();return;}
       active.connected=availability.connected;
       const result=restaurantResearchRevealResult(info,active.draw);
       if(result){
-        active.result=result;const front=$('[data-rr-result]');front.dataset.rQuality=result.grade;front.innerHTML=restaurantResearchRevealFace(result);ready();return;
+        active.result=result;clearWait();const front=$('[data-rr-result]');front.dataset.rQuality=result.grade;front.innerHTML=restaurantResearchRevealFace(result);advance();return;
       }
       if(info.research.lastDraw?.draw>active.draw)this.fail('手账已收到更新的灵感，请返回查看最新记录。');
       else if(availability.refusedResearchDraw===active.draw)this.fail('这次探索未能完成，请按手账中的最新灵感继续。');
-      else if(!availability.connected)$('[data-rr-message]').textContent='探索已暂存，连接恢复后自动继续；可以先去经营';
+      else advance();
     },
     preview(grade,info){
       const level=RESTAURANT_DISH_GRADES.indexOf(grade)+1,recipe=info.recipes.find(recipe=>recipe.id==='rice');

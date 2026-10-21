@@ -7,20 +7,21 @@ import { createRestaurantResearchReveal, restaurantResearchRevealResult, restaur
 const NOW=Date.parse('2026-10-18T12:00:00Z');
 const state=()=>initialState(NOW);
 const drawn=()=>reduceAction(state(),{type:'restaurant-research-draw',draw:1},{id:'research-animation',name:'店长'},NOW);
-function harness(t,{motion=false,onPhaseChange=()=>{},getInfo}={}){
+function harness(t,{motion=false,onPhaseChange=()=>{},onDeferred=()=>{},getInfo}={}){
   const oldDocument=globalThis.document,focus={isConnected:true,disabled:false,focus(){this.restored=true;}};
   globalThis.document={activeElement:focus};
   t.after(()=>{if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;});
-  const listeners=new Map(),nodes=new Map(),timers=new Map();let nextId=1;
+  const listeners=new Map(),nodes=new Map(),timers=new Map();let nextId=1,time=0;
   const dialog={open:false,dataset:{},innerHTML:'',
     querySelector(selector){if(!nodes.has(selector))nodes.set(selector,{disabled:true,textContent:'',innerHTML:'',dataset:{},attrs:{},setAttribute(name,value){this.attrs[name]=value;},focus(){}});return nodes.get(selector);},
     addEventListener(name,callback){listeners.set(name,callback);},removeEventListener(name){listeners.delete(name);},
     showModal(){this.open=true;},close(){this.open=false;listeners.get('close')?.();},
   };
-  const view=createRestaurantResearchReveal({dialog,onPhaseChange,getInfo,reducedMotion:()=>motion,schedule:(callback,ms)=>{const id=nextId++;timers.set(id,{callback,ms});return id;},unschedule:id=>timers.delete(id)});
-  const tick=()=>{const callbacks=[...timers.values()];timers.clear();for(const {callback} of callbacks)callback();};
+  const view=createRestaurantResearchReveal({dialog,onPhaseChange,onDeferred,getInfo,now:()=>time,reducedMotion:()=>motion,schedule:(callback,ms)=>{const id=nextId++;timers.set(id,{callback,ms,at:time+ms});return id;},unschedule:id=>timers.delete(id)});
+  const tick=()=>{if(!timers.size)return;time=Math.max(time,Math.min(...[...timers.values()].map(timer=>timer.at)));for(const [id,timer] of [...timers])if(timer.at<=time&&timers.has(id)){timers.delete(id);timer.callback();}};
+  const elapse=ms=>{time+=ms;};
   const click=selector=>listeners.get('click')({target:{closest:query=>query===selector?{}:null}});
-  return {view,dialog,nodes,timers,tick,click,focus};
+  return {view,dialog,nodes,timers,tick,elapse,click,focus};
 }
 
 test('audio phase cues fire once per real transition and close only once',t=>{
@@ -72,8 +73,8 @@ test('submission errors never reveal invented rewards, and reduced motion bypass
   h.view.sync(restaurantInfo(state(),NOW),{savePhase:'error',refusedResearchDraw:1});assert.equal(h.dialog.dataset.rrPhase,'error');assert.equal(h.timers.size,0);
   h.view.sync(restaurantInfo(drawn(),NOW));assert.equal(h.dialog.dataset.rrPhase,'error');
   assert.equal(h.dialog.querySelector('[data-rr-result]').innerHTML,'');h.click('[data-rr-discovery-confirm]');
-  h.view.start(1);h.view.sync(restaurantInfo(drawn(),NOW));h.tick();h.click('[data-rr-discovery-confirm]');
-  assert.equal([...h.timers.values()][0].ms,0);h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
+  h.view.start(1);h.view.sync(restaurantInfo(drawn(),NOW));
+  assert.equal(h.dialog.dataset.rrPhase,'revealed');assert.equal(h.timers.size,0);
   h.view.destroy();assert.equal(h.dialog.open,false);assert.equal(h.timers.size,0);
 });
 
@@ -98,7 +99,7 @@ test('terminal previews all five materials without altering inspiration, shards 
 
 test('the video-inspired sequence automatically reveals only a matching receipt and clears its auto timer on manual skip',t=>{
   const h=harness(t),info=restaurantInfo(drawn(),NOW),before=structuredClone(info);
-  h.view.start(1);h.tick();assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,0,'network delay cannot fabricate the card');
+  h.view.start(1);h.tick();assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,1,'network delay schedules a safe exit, never a fabricated card');
   h.view.sync(info);assert.equal(h.dialog.dataset.rrPhase,'ready');assert.equal([...h.timers.values()][0].ms,180);
   h.tick();assert.equal(h.dialog.dataset.rrPhase,'flipping');h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');assert.equal(h.timers.size,0);
   h.view.close();h.view.start(1);h.view.sync(info);h.tick();h.click('[data-rr-discovery-confirm]');assert.equal(h.timers.size,1,'manual reveal cancels the scheduled automatic reveal');
@@ -128,10 +129,45 @@ test('waiting for a receipt builds no restaurant projection and the real result 
   assert.equal(projections,1);h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
 });
 
-test('a slow receipt leaves a static waiting state that can close immediately without dropping the draw',t=>{
+test('a slow receipt shows a bounded countdown and can close immediately without dropping the draw',t=>{
   const h=harness(t),info=restaurantInfo(drawn(),NOW);
   h.view.start(1);assert.equal([...h.timers.values()][0].ms,700);h.tick();
-  assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,0);
+  assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,1);
+  assert.match(h.nodes.get('[data-rr-discovery-note]').textContent,/4 秒后自动返回经营/);
   h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);
   h.view.syncState(drawn(),{connected:true});assert.equal(h.dialog.open,false);assert.equal(info.research.fragments.rice,3);
+});
+
+test('no receipt automatically releases the theatre at four seconds and a late receipt stays in the ledger',t=>{
+  const deferred=[],h=harness(t,{onDeferred:draw=>deferred.push(draw)}),accepted=drawn(),before=structuredClone(accepted);
+  h.view.start(1);h.tick();h.elapse(2300);h.view.syncState(state(),{connected:false});
+  assert.equal(h.dialog.open,true);assert.match(h.nodes.get('[data-rr-message]').textContent,/探索已暂存/);
+  assert.match(h.nodes.get('[data-rr-discovery-note]').textContent,/1 秒后自动返回经营/);
+  h.tick();assert.equal(h.dialog.open,false);assert.deepEqual(deferred,[1]);assert.equal(h.timers.size,0);
+  h.view.syncState(accepted,{connected:true});h.tick();assert.equal(h.dialog.open,false);
+  assert.deepEqual(deferred,[1]);assert.deepEqual(accepted,before);assert.equal(accepted.restaurant.research.fragments.rice,3);
+});
+
+test('normal state ticks recover missed preparation, reveal and finish callbacks after a suspended tab',t=>{
+  const h=harness(t);h.view.start(1);h.elapse(1200);
+  h.view.syncState(drawn(),{connected:true});assert.equal(h.dialog.dataset.rrPhase,'ready');
+  h.elapse(1000);h.view.syncState(drawn());assert.equal(h.dialog.dataset.rrPhase,'flipping');
+  h.elapse(1000);h.view.syncState(drawn());assert.equal(h.dialog.dataset.rrPhase,'revealed');
+  assert.equal(h.timers.size,0);h.view.close();assert.equal(h.dialog.open,false);
+  const deferred=[],slow=harness(t,{onDeferred:draw=>deferred.push(draw)});
+  slow.view.start(1);slow.elapse(60000);slow.view.syncState(state());
+  assert.equal(slow.dialog.open,false);assert.deepEqual(deferred,[1]);
+});
+
+test('a receipt just before the deadline completes its reveal instead of returning early',t=>{
+  const deferred=[],h=harness(t,{onDeferred:draw=>deferred.push(draw)});
+  h.view.start(1);h.tick();h.elapse(3200);h.view.syncState(drawn(),{connected:true});
+  assert.equal(h.dialog.dataset.rrPhase,'ready');h.tick();h.tick();
+  assert.equal(h.dialog.dataset.rrPhase,'revealed');assert.deepEqual(deferred,[]);assert.equal(h.timers.size,0);
+});
+
+test('a cancelled callback cannot advance a subsequent draw session',t=>{
+  const h=harness(t);h.view.start(1);const stale=[...h.timers.values()][0].callback;
+  h.view.close();h.elapse(1000);h.view.start(2);stale();
+  assert.equal(h.dialog.dataset.rrPhase,'brewing');assert.equal(h.timers.size,1);
 });
