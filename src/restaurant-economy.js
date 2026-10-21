@@ -5,13 +5,14 @@ export { PREMIUM_RESTAURANT_THEMES } from './restaurant-premium-decorations.js';
  * after the authoritative restaurant reducer verifies a collectible order. */
 export const GOLD_FISH_MAX=999999;
 export const PROMOTED_SIGNATURE_RECIPE_IDS=Object.freeze(['sushi','pizza']);
+// Gold-only signatures begin at S (research level 3).
 export const SPECIAL_RESTAURANT_RECIPES=Object.freeze([
   {id:'gold-salmon',name:'金箔三文鱼饭',category:'主食',price:76,xp:13,seconds:20,unlockGold:30,goldReward:0,icon:'gold-salmon',special:true},
   {id:'sushi',name:'樱花寿司',category:'主食',price:82,xp:15,seconds:22,unlockGold:40,goldReward:0,icon:'sushi',special:true},
   {id:'pizza',name:'田园披萨',category:'主食',price:84,xp:15,seconds:23,unlockGold:50,goldReward:0,icon:'pizza',special:true},
   {id:'gold-sundae',name:'星光金鱼圣代',category:'甜点',price:98,xp:17,seconds:25,unlockGold:50,goldReward:0,icon:'gold-sundae',special:true},
   {id:'gold-latte',name:'鎏金猫爪拿铁',category:'饮品',price:124,xp:20,seconds:29,unlockGold:70,goldReward:0,icon:'gold-latte',special:true},
-].map(recipe=>Object.freeze({...recipe,unlockLevel:restaurantResourceLevel('recipe',recipe.id)})));
+].map(recipe=>Object.freeze({...recipe,baseLevel:3,unlockLevel:restaurantResourceLevel('recipe',recipe.id)})));
 const integer=(value,min=0,max=Number.MAX_SAFE_INTEGER)=>Number.isSafeInteger(value)&&value>=min&&value<=max;
 export const validGoldFish=value=>integer(value,0,GOLD_FISH_MAX);
 /** Missing premium currency in a legacy home means zero, never a free grant. */

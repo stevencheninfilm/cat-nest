@@ -227,6 +227,6 @@ for(const [recipeId,level,cost] of [['gold-sundae',30,50],['gold-latte',40,70]])
   const servedAt=order(state,id).workflow.servedAt;assert.equal(state.goldFish,0);
   state=act(state,{type:'restaurant-collect',orderId:id},servedAt+RESTAURANT_DINING_MS);
   assert.equal(state.goldFish,0);assert.equal(state.restaurant.stats.ordinaryServed,0);
-  assert.equal(state.pendingGrowth.at(-1).amount,restaurantRecipe(recipeId).xp);
+  assert.equal(state.pendingGrowth.at(-1).amount,restaurantRecipe(recipeId).xp+2*((restaurantRecipe(recipeId).baseLevel??1)-1));
   assert.equal(restaurantActionResult(state,{type:'restaurant-collect',orderId:id},ACTOR,servedAt+RESTAURANT_DINING_MS+1).ok,false);
 });

@@ -472,7 +472,7 @@ test('all twenty-one complete dishes can be clicked offline and replay in order 
       t.mock.timers.tick(Math.max(26,nextAt-Date.now()+26));await flush();
     }
     assert.equal(h.pending().length,0);assert.deepEqual(committed.map(item=>item.operationId),expected.map(item=>item.operationId));
-    assert.equal(saved.coins,localWallet);assert.equal(saved.xp,localXp);assert.equal(saved.xp,base.xp);assert.equal(saved.pendingGrowth.length,1);assert.equal(saved.pendingGrowth[0].amount,restaurantRecipe(recipeId).xp);assert.equal(saved.restaurant.stats.served,1);assert.equal(validRestaurant(saved.restaurant),true);assert.equal(saved.restaurant.orders.length,0);
+    assert.equal(saved.coins,localWallet);assert.equal(saved.xp,localXp);assert.equal(saved.xp,base.xp);assert.equal(saved.pendingGrowth.length,1);assert.equal(saved.pendingGrowth[0].amount,restaurantRecipe(recipeId).xp+2*((restaurantRecipe(recipeId).baseLevel??1)-1));assert.equal(saved.restaurant.stats.served,1);assert.equal(validRestaurant(saved.restaurant),true);assert.equal(saved.restaurant.orders.length,0);
     assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'saved');
     assert.ok(saved.updatedAt>=reconnectAt);assert.ok(committed.every(item=>!Object.hasOwn(item,'restaurantPreviewAt')));
   });

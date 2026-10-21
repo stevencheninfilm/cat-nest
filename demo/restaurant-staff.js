@@ -33,7 +33,7 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
   if(recipes){
     restaurant.progression.legacyRecipes=[...new Set([...restaurant.progression.legacyRecipes,...RESTAURANT_RECIPES.map(recipe=>recipe.id)])];
     restaurant.ownedSpecialRecipes=[...new Set([...restaurant.ownedSpecialRecipes,...SPECIAL_RESTAURANT_RECIPES.map(recipe=>recipe.id)])];
-    for(const recipe of SPECIAL_RESTAURANT_RECIPES)restaurant.recipeLevels[recipe.id]??=1;
+    for(const recipe of SPECIAL_RESTAURANT_RECIPES)restaurant.recipeLevels[recipe.id]=Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel);
     restaurant.revision++;next.updatedAt=now;
     if(!validRestaurant(restaurant))return reject('菜谱解锁状态未通过检查，请刷新后再试。');
     return {ok:true,state:next,workers:restaurant.staff+1,message:`已解锁全部 ${RESTAURANT_RECIPES.length+SPECIAL_RESTAURANT_RECIPES.length} 道菜谱，保留研发等级与已接订单；仅影响本次测试存档。`};

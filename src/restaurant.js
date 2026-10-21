@@ -155,7 +155,8 @@ export function normalizeRestaurant(value,now=Date.now()) {
   restaurant.stats.ordinaryServed??=restaurant.stats.served;
   restaurant.lastInteractionAt??=restaurantStaffLastInteractionAt(restaurant);
   restaurant.staffTraining=normalizeRestaurantStaffTraining(restaurant,now);
-  restaurant.recipeLevels=Object.fromEntries([...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES.filter(recipe=>restaurant.ownedSpecialRecipes.includes(recipe.id)||PROMOTED_SIGNATURE_RECIPE_IDS.includes(recipe.id))].map(recipe=>[recipe.id,value.recipeLevels[recipe.id]??1]));
+  // Raise owned legacy signatures to their base rank; accepted orders keep their snapshots.
+  restaurant.recipeLevels=Object.fromEntries([...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES.filter(recipe=>restaurant.ownedSpecialRecipes.includes(recipe.id)||PROMOTED_SIGNATURE_RECIPE_IDS.includes(recipe.id))].map(recipe=>[recipe.id,Math.max(value.recipeLevels[recipe.id]??1,restaurant.ownedSpecialRecipes.includes(recipe.id)?recipe.baseLevel:1)]));
   const completedConditions=completedRestaurantGuestConditions(restaurant,safeNow(now));
   if(completedConditions.length)restaurant.completedGuestConditions=completedConditions;
   normalizeRestaurantDecorations(restaurant,safeNow(now));
@@ -188,7 +189,7 @@ export function restaurantInfo(state,now=Date.now()) {
   const decoration=restaurantDecorationInfo(restaurant,now),decorationInfo={...decoration,decorations:decoration.decorations.map(suite=>({...suite,unlockLevel:restaurantResourceLevel('decoration',suite.id),unlocked:suite.owned||level>=restaurantResourceLevel('decoration',suite.id)}))};
   const hireUnlockLevel=RESTAURANT_STAFF[restaurant.staff]?restaurantResourceLevel('staff',RESTAURANT_STAFF[restaurant.staff].id):1;
   const customerBook=restaurantCustomerInfo(restaurant,{recipes:[...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES],staff:RESTAURANT_STAFF,upgrades:RESTAURANT_UPGRADES,decorations:RESTAURANT_DECORATIONS,themes:[...RESTAURANT_THEMES,...PREMIUM_RESTAURANT_THEMES]},now);
-  return {restaurant,dailyLogin:restaurantDailyLoginInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:restaurant.recipeLevels[recipe.id]??1,fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(restaurant.recipeLevels[recipe.id]??1),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
+  return {restaurant,dailyLogin:restaurantDailyLoginInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel),fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel)),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
     const facilityLevel=restaurant.levels[upgrade.id],unlockLevel=restaurantResourceLevel('facility',upgrade.id,Math.min(upgrade.maxLevel,facilityLevel+1));
     return {...upgrade,level:facilityLevel,cost:upgrade.costs[facilityLevel-1]??null,unlockLevel,unlocked:level>=unlockLevel};
   }),hireCost:RESTAURANT_STAFF_COSTS[restaurant.staff]??null,hireCurrency:premiumStaffHireCost(restaurant.staff)?.currency??'coins',hireUnlockLevel,hireUnlocked:level>=hireUnlockLevel};
@@ -394,7 +395,7 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     if(restaurant.ownedSpecialRecipes.includes(recipe.id))return reject('这份招牌料理已经解锁啦。');
     if(recipe.unlockLevel>info.level)return reject(`小馆达到 ${recipe.unlockLevel} 级就能解锁这份招牌料理。`);
     if(!spendGold(recipe.unlockGold))return reject(`解锁料理还差 ${recipe.unlockGold-goldFish} 金鱼干。`);
-    restaurant.ownedSpecialRecipes.push(recipe.id);restaurant.recipeLevels[recipe.id]??=1;
+    restaurant.ownedSpecialRecipes.push(recipe.id);restaurant.recipeLevels[recipe.id]=Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel);
     text=`用 ${recipe.unlockGold} 金鱼干解锁${recipe.name}`;
   }else if(action.type==='restaurant-train') {
     const currentLevel=restaurant.staffTraining[action.workerId]?.levels?.[action.statId],unlockLevel=restaurantResourceLevel('training',action.statId,(currentLevel??0)+1);
