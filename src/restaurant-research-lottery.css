@@ -34,5 +34,13 @@
 .restaurant[data-r-draw-active=true] .r-stage,.restaurant[data-r-draw-active=true] .r-sheet{visibility:hidden}
 .restaurant[data-r-draw-active=true] .r-stage *,.restaurant[data-r-draw-active=true] .r-sheet *{animation-play-state:paused!important}
 .rr-draw-scene{background:#081427}
-.rr-draw-scene[data-rr-phase=waiting] *{animation-play-state:paused!important}
-.rr-draw-scene[data-rr-phase=waiting] .rr-lottery-energy{opacity:.65}
+/* A slow receipt is visible progress, never a frozen flourish. Keep only one
+   compositor rotation alive, then let the four-second watchdog leave safely. */
+.rr-draw-scene[data-rr-phase=waiting] .rr-lottery-energy{opacity:.8}
+.rr-draw-scene[data-rr-phase=waiting] :is(.rr-lottery-nebula,.rr-lottery-particles,.rr-discovery-halo){display:none}
+.rr-draw-scene[data-rr-phase=waiting] :is(.rr-lottery-core,.rr-discovery-kitchen *){animation:none}
+.restaurant .rr-draw-scene[data-rr-phase=waiting] .rr-lottery-streams{filter:none;animation:rr-wait-orbit 2s linear infinite}
+@keyframes rr-wait-orbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+/* The exit stays in the viewport even on a short screen or after scrolling. */
+.restaurant .rr-discovery-close{position:fixed;top:max(16px,env(safe-area-inset-top));right:max(16px,calc((100vw - 480px)/2 + 16px))}
+@media(prefers-reduced-motion:reduce){.restaurant .rr-draw-scene[data-rr-phase=waiting] .rr-lottery-streams{animation:none}}

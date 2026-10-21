@@ -145,7 +145,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
   let guests=null,street=null,autoGuests=true,kitchenScene=null,flowOrderId=null,flowRecipe='rice',selectedZone=null,pendingKitchenRecipe=null,previousKitchenOrders=new Set();
   const arrivalRhythm=createRestaurantArrivalRhythm();
   const logs=[],pendingCourseOrders=new Set();
-  let terminalOpen=false,terminalSignature='',terminalOrderId=null,decorationScene=null,experienceFeedback=null,recipeCelebration=null,researchReveal=null,dailyLogin=null,goldDrops=null,circlePalette='cream';
+  let terminalOpen=false,terminalSignature='',terminalOrderId=null,decorationScene=null,experienceFeedback=null,recipeCelebration=null,researchReveal=null,deferredResearchDraw=null,dailyLogin=null,goldDrops=null,circlePalette='cream';
   let guide=null,guideReadyForAuto=false;
   try{autoGuests=preferences?.getItem('catnest.restaurant.autoGuests')!=='0';}catch{}
   const $ = selector => container.querySelector(selector);
@@ -172,6 +172,10 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(phase==='brewing')sound('draw');
     if(phase==='flipping')sound('flip');
     if(phase==='revealed')sound('reveal');
+  }
+  function researchDeferred(draw){
+    deferredResearchDraw=draw;dismiss();
+    toast('探索继续在后台确认，结果会收进手账，无需重复点击。');
   }
   function log(text){logs.push({time:new Date().toLocaleTimeString('zh-CN',{hour12:false}),text});if(logs.length>30)logs.shift();panelSignature='';}
   const staffDebugger=createRestaurantStaffDebugger({
@@ -337,13 +341,17 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
   function render() {
     if(!opened)return;
     const state=getState(),availability=getAvailability();
+    if(deferredResearchDraw!==null){
+      if(state.restaurant?.research?.lastDraw?.draw>=deferredResearchDraw){deferredResearchDraw=null;toast('灵感探索完成，碎片已收进研发手账。');}
+      else if(availability.refusedResearchDraw===deferredResearchDraw){deferredResearchDraw=null;toast('这次探索未完成，请到研发室查看最新灵感。');}
+    }
     if(mounted&&$('.rr-draw-scene').open){
       researchReveal.syncState(state,availability);
       return;
     }
     const info=restaurantInfo(state);
     circlePalette=kitchenCirclePalette(info.restaurant.circlePalette).id;
-    if(!mounted){container.innerHTML=restaurantMarkup(state,{isTest,debugEnabled});mounted=true;goldDrops=createRestaurantGoldDrops({stage:$('.r-stage'),layer:$('[data-r-gold-drops]')});dailyLogin=createRestaurantDailyLogin({dialog:$('.rdl-dialog'),entry:$('[data-r-daily-open]'),onAction,onCollect:()=>sound('collect'),onClick:()=>sound('click'),preferences});experienceFeedback=createRestaurantExperience({container:$('[data-r-experience-gain]')});recipeCelebration=createRestaurantRecipeCelebration({dialog:$('.rr-celebration')});researchReveal=createRestaurantResearchReveal({dialog:$('.rr-draw-scene'),onPhaseChange:researchAudio});audio.paint();kitchenScene=createKitchenScene({container:$('.rk-scene'),getRestaurant:()=>getState().restaurant,palette:circlePalette});kitchenScene.open();decorationScene=createRestaurantDecorationScene({container:$('.r-stage'),onScenePrepare:variant=>preloadPremiumScene(variant,restaurantInfo(getState()).restaurant),onSceneChange:()=>paintPremiumScene(container,restaurantInfo(getState()).restaurant),onComplete:decorationComplete});decorationScene.open();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});street=createRestaurantStreet({container:$('.r-stage')});}
+    if(!mounted){container.innerHTML=restaurantMarkup(state,{isTest,debugEnabled});mounted=true;goldDrops=createRestaurantGoldDrops({stage:$('.r-stage'),layer:$('[data-r-gold-drops]')});dailyLogin=createRestaurantDailyLogin({dialog:$('.rdl-dialog'),entry:$('[data-r-daily-open]'),onAction,onCollect:()=>sound('collect'),onClick:()=>sound('click'),preferences});experienceFeedback=createRestaurantExperience({container:$('[data-r-experience-gain]')});recipeCelebration=createRestaurantRecipeCelebration({dialog:$('.rr-celebration')});researchReveal=createRestaurantResearchReveal({dialog:$('.rr-draw-scene'),onPhaseChange:researchAudio,onDeferred:researchDeferred});audio.paint();kitchenScene=createKitchenScene({container:$('.rk-scene'),getRestaurant:()=>getState().restaurant,palette:circlePalette});kitchenScene.open();decorationScene=createRestaurantDecorationScene({container:$('.r-stage'),onScenePrepare:variant=>preloadPremiumScene(variant,restaurantInfo(getState()).restaurant),onSceneChange:()=>paintPremiumScene(container,restaurantInfo(getState()).restaurant),onComplete:decorationComplete});decorationScene.open();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});street=createRestaurantStreet({container:$('.r-stage')});}
     if(!guide)guide=createRestaurantGuide({storage:guidePreferences,assetBase:import.meta.env?.BASE_URL||'./',getContext:()=>{const context=getGuideContext(),availability=getAvailability();return {...context,active:opened&&!container.hidden,ready:(availability.ready??availability.connected)&&context.ready!==false,available:guideReadyForAuto&&context.available!==false};},navigate:guideNavigate,onClose(){arrivalRhythm.reset();}});
     if(availability.savePhase==='error')pendingCourseOrders.clear();
     for(const id of pendingCourseOrders)if(!info.orders.some(order=>order.id===id))pendingCourseOrders.delete(id);
