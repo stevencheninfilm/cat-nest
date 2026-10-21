@@ -5,6 +5,7 @@ import { getCoupleProfile } from './couple-profile.js';
 import { duoPreviewable, previewDuoGameAction, redundantDuoTransition } from './minigames-duo-preview.js';
 import { validRestaurant, restaurantUpgradeCurrentLevel } from './restaurant.js';
 import { isInteractiveWorkflow, interactiveWorkerReservations } from './restaurant-kitchen-interactive.js';
+import { restaurantResearchInfo } from './restaurant-research.js';
 
 // Random cards and arrival IDs still come from the server. Deterministic
 // upgrades immediately project the exact target clicked and reserve its cost.
@@ -28,7 +29,7 @@ export function createCloudRoom(options) {
   let room = /^[a-f0-9]{32}$/.test(roomId || '') ? roomId : null;
   let queue = [...pending];
   let revision = -1;
-  let source, poll, retry, retryAt = 0, destroyed = false, draining = false, ready = false;
+  let source, poll, retry, retryAt = 0, destroyed = false, draining = false, ready = false, waitingForRestaurantTime=false;
   const seen = new Set();
   const previews = new Map();
   // Confirmed local commands keep their visual clock while the authoritative
@@ -222,10 +223,21 @@ export function createCloudRoom(options) {
     // handoff must not prevent another order's delivery from freeing a worker.
     queue.unshift(queue.splice(index,1)[0]);saveQueue();publishState();return true;
   }
+  function promoteReadyResearchDraw(){
+    if(!optimisticReducer||queue[0]?.action?.type!=='restaurant-kitchen-step')return false;
+    const info=restaurantResearchInfo(authoritativeState.restaurant);
+    const index=queue.findIndex((item,index)=>index>0&&item.action?.type==='restaurant-research-draw'
+      &&item.action.draw===info.nextDraw&&info.availableDraws>0
+      &&queue.slice(0,index).every(previous=>['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(previous.action?.type)));
+    if(index<1)return false;
+    // A draw funded by saved inspiration is independent of a cooking timer.
+    // Never cross a collection, fusion or upgrade that changes its prerequisites.
+    queue.unshift(queue.splice(index,1)[0]);saveQueue();return true;
+  }
   async function drain() {
     if (draining || !ready || destroyed) return;
     if (Date.now() < retryAt) return;
-    clearTimeout(retry);retry=null;
+    clearTimeout(retry);retry=null;waitingForRestaurantTime=false;
     draining = true;
     while (queue.length && !destroyed && ready) {
       const item=queue[0];
@@ -237,7 +249,8 @@ export function createCloudRoom(options) {
       if(restaurantPreview(item.action)){
         const at=restaurantActionAt(authoritativeState,item.action,Date.now());
         if(at>Date.now()){
-          if(promoteReadyKitchenStep(Date.now()))continue;
+          if(promoteReadyResearchDraw()||promoteReadyKitchenStep(Date.now()))continue;
+          waitingForRestaurantTime=true;
           queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(Math.min(1000,at-Date.now()+25));break;
         }
       }
@@ -280,7 +293,8 @@ export function createCloudRoom(options) {
           }
           const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
           if(at>Date.now()){
-            if(promoteReadyKitchenStep(Date.now()))continue;
+            if(promoteReadyResearchDraw()||promoteReadyKitchenStep(Date.now()))continue;
+            waitingForRestaurantTime=true;
             queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(Math.min(1000,at-Date.now()+25));break;
           }
         }
@@ -410,6 +424,7 @@ export function createCloudRoom(options) {
         const preview = previews.get(item.operationId);
         if (preview?.active) { preview.animated=true; onAction(action, me, { operationId:item.operationId, optimistic:true, previewed:false }); }
       }
+      if(action.type==='restaurant-research-draw'&&waitingForRestaurantTime){retryAt=0;clearTimeout(retry);retry=null;}
       void drain();
       return true;
     },

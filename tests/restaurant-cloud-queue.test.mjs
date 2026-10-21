@@ -257,6 +257,33 @@ test('delayed receipts, concurrent dishes and exhausted handoffs finish without 
   for(const order of saved.restaurant.orders)assert.deepEqual(order.workflow.runs.map(run=>run.stepId),[...KITCHEN_FLOWS.coffee.map(step=>step.id),'delivery']);
 });
 
+test('a funded research draw bypasses a kitchen recovery timer, waits for the real card and preserves the cooking intent',async t=>{
+  let base=requested();Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
+  for(const action of [{type:'restaurant-kitchen-accept',orderId:'table-1'},{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}])base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:action.type,action},NOW);
+  const run=base.restaurant.orders[0].workflow.runs[0],pending=[{operationId:'original-rest-handoff',clientId:ACTOR.id,name:ACTOR.name,action:{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'},restaurantPreviewAt:run.endAt}];
+  let saved=base;const ack=deferred();
+  const h=harness(t,async req=>{if(req.method==='GET')return response(snapshot(saved));await ack.promise;saved=apply(saved,req.body);return response(receipt(req.body,saved,1));},{state:base,pending});
+  t.mock.timers.tick(run.endAt-NOW);await h.cloud.start();await flush();assert.equal(h.posts().length,0);
+  assert.equal(h.cloud.dispatch({type:'restaurant-research-draw',draw:1}),true);
+  assert.equal(h.posts().length,1,'the draw starts immediately rather than waiting for rest or the dependency timer');
+  assert.equal(h.posts()[0].body.action.type,'restaurant-research-draw');assert.equal(h.latest().restaurant.research.draws,0);
+  ack.resolve();await flush();assert.equal(h.latest().restaurant.research.draws,1);assert.equal(h.latest().restaurant.research.fragments.rice,3);
+  assert.deepEqual(h.pending().map(item=>item.operationId),['original-rest-handoff']);assert.equal(h.pending()[0].action.stepId,'espresso');
+  assert.ok(Date.now()<run.rest.fullAt);assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('research never overtakes a queued recipe upgrade that changes the requested card quality',async t=>{
+  let base=requested();base.restaurant.stats.experience=levelStartXp(10);base.coins=50000;
+  base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:'first-card',action:{type:'restaurant-research-draw',draw:1}},NOW);
+  Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
+  for(const action of [{type:'restaurant-kitchen-accept',orderId:'table-1'},{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}])base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:action.type,action},NOW);
+  const run=base.restaurant.orders[0].workflow.runs[0],pending=[{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'},{type:'restaurant-recipe',recipeId:'rice',expectedLevel:2}].map((action,index)=>({operationId:`keep-order-${index}`,clientId:ACTOR.id,name:ACTOR.name,action,restaurantPreviewAt:run.endAt}));
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):assert.fail('the recipe prerequisite must keep its place'),{state:base,pending});
+  t.mock.timers.tick(run.endAt-NOW);await h.cloud.start();await flush();
+  assert.equal(h.cloud.dispatch({type:'restaurant-research-draw',draw:2}),true);await flush();
+  assert.equal(h.posts().length,0);assert.deepEqual(h.pending().map(item=>item.action.type),['restaurant-kitchen-step','restaurant-recipe','restaurant-research-draw']);
+});
+
 test('a research draw waits for the real card and ignores duplicate queued taps',async t=>{
   const base=initialState(NOW),ack=deferred();let saved=base;
   const h=harness(t,async req=>{
