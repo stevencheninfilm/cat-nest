@@ -324,3 +324,22 @@ test('malformed guest achievement metadata cannot confirm or discard a queued in
   ack.resolve(response({...receipt(item,reduceAction(base,item.action,male,Date.now(),item.operationId)),restaurantGuestConditions:['forged-condition']}));await flush();
   assert.equal(h.observed.pending.at(-1).length,1);assert.equal(h.observed.pending.at(-1)[0].operationId,item.operationId);assert.equal(h.observed.rollbacks.length,0);assert.equal(h.observed.saves.at(-1).phase,'error');
 });
+
+test('new gold condition metadata survives initial load, live update and an optimistic confirmation',async t=>{
+  const base=initialState(),ack=deferred(),legacy=['recipe:coffee'],all=[...legacy,'level:30','theme:moonclock'];
+  const envelope=(state,revision=0,event)=>({...snapshot(state,revision,event),restaurantGuestConditions:legacy,restaurantGuestConditionsV2:all});
+  const h=harness(t,req=>req.method==='GET'?response(envelope(base)):ack.promise);await h.room.start();
+  assert.deepEqual(h.latest().restaurant.completedGuestConditions,all);
+  h.sources[0].emit('state',envelope(base,1));assert.deepEqual(h.latest().restaurant.completedGuestConditions,all);
+  h.room.dispatch({type:'pet'});const item=h.requests.at(-1).body;
+  const saved=reduceAction(h.observed.states.at(-1).confirmedState,item.action,male,Date.now(),item.operationId);delete saved.restaurant.completedGuestConditions;
+  ack.resolve(response(envelope(saved,2,{operationId:item.operationId,action:item.action,actor:male})));await flush();
+  assert.deepEqual(h.latest().restaurant.completedGuestConditions,all);assert.deepEqual(h.observed.pending.at(-1),[]);
+});
+
+test('malformed V2 gold metadata cannot acknowledge a queued interaction even with a valid legacy ledger',async t=>{
+  const base=initialState(),ack=deferred(),h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise);await h.room.start();
+  h.room.dispatch({type:'pet'});const item=h.requests.at(-1).body;
+  ack.resolve(response({...receipt(item,reduceAction(base,item.action,male,Date.now(),item.operationId)),restaurantGuestConditions:[],restaurantGuestConditionsV2:['level:999']}));await flush();
+  assert.equal(h.observed.pending.at(-1)[0].operationId,item.operationId);assert.equal(h.observed.saves.at(-1).phase,'error');
+});

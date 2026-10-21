@@ -118,10 +118,10 @@ test('legacy single-theme saves retain their piece until explicitly removed, wit
   original.restaurant.theme='starlight';original.restaurant.ownedThemes.push('starlight');delete original.restaurant.equippedPremiumDecorations;
   assert.equal(validRestaurant(original.restaurant),true);const loaded=normalizeState(JSON.parse(JSON.stringify(original)),NOW);
   assert.deepEqual(equippedPremiumDecorations(loaded.restaurant),['starlight']);assert.deepEqual(loaded.restaurant.orders,original.restaurant.orders);
-  assert.equal(restaurantInfo(loaded,NOW).customerBook.customers.find(guest=>guest.id==='guest-astronomer').requirements.find(item=>item.kind==='theme').met,true);
+  assert.equal(restaurantInfo(loaded,NOW).customerBook.customers.find(guest=>guest.id==='guest-moon-opera').requirements.find(item=>item.kind==='theme').met,true);
   const removed=reduceAction(loaded,place('starlight',false),actor,NOW);assert.deepEqual(equippedPremiumDecorations(removed.restaurant),[]);assert.equal(removed.restaurant.theme,'starlight');assert.equal(removed.goldFish,original.goldFish);
   assert.deepEqual(equippedPremiumDecorations(normalizeState(JSON.parse(JSON.stringify(removed)),NOW).restaurant),[],'a legacy theme name cannot silently re-enable a removed piece');
-  assert.equal(restaurantInfo(removed,NOW).customerBook.customers.find(guest=>guest.id==='guest-astronomer').requirements.find(item=>item.kind==='theme').met,true,'a previously achieved decoration condition stays met after the piece is put away');
+  assert.equal(restaurantInfo(removed,NOW).customerBook.customers.find(guest=>guest.id==='guest-moon-opera').requirements.find(item=>item.kind==='theme').met,true,'a previously achieved decoration condition stays met after the piece is put away');
   const restored=reduceAction(removed,place('starlight',true),actor,NOW);assert.deepEqual(equippedPremiumDecorations(restored.restaurant),['starlight']);assert.equal(restored.goldFish,original.goldFish);
 });
 

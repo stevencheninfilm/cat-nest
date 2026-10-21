@@ -64,7 +64,7 @@ test('owned decor and unfinished construction do not attract a visitor until ins
   assert.ok(eligibleRestaurantGuestCats(r,NOW+7000).includes(guest.id));
   assert.ok(!Object.hasOwn(r,'decorationId'),'eligibility reads must not mutate saved state');
   const premium=prepared(advanced.at(-1)).restaurant;
-  premium.theme='cream';assert.ok(!eligibleRestaurantGuestCats(premium,NOW).includes(advanced.at(-1).id),'owning royal is not equipping royal');
+  premium.theme='cream';delete premium.decorationId;assert.ok(!eligibleRestaurantGuestCats(premium,NOW).includes(advanced.at(-1).id),'owning a scene is not installing it');
 });
 
 test('server arrival uses only eligible appearances; no client supplied guest can bypass the rules',()=>{

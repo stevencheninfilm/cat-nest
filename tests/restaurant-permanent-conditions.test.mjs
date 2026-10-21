@@ -31,12 +31,12 @@ test('a scene condition is recorded independently before the rest of its guest r
 });
 
 test('premium decoration achievements persist after putting the piece away, while mere ownership is insufficient',()=>{
-  const base=seed();base.restaurant.ownedThemes.push('royal');base.restaurant.equippedPremiumDecorations=[];
-  assert.equal(met(base,'guest-royal-critic','theme'),false);
-  const equipped=act(base,{type:'restaurant-premium-decoration',themeId:'royal',equipped:true});
-  const stored=act(equipped,{type:'restaurant-premium-decoration',themeId:'royal',equipped:false},NOW+1);
-  assert.deepEqual(stored.restaurant.equippedPremiumDecorations,[]);assert.equal(met(stored,'guest-royal-critic','theme',NOW+2),true);
-  assert.ok(stored.restaurant.completedGuestConditions.includes('theme:royal'));
+  const base=seed();base.restaurant.ownedThemes.push('moonclock');base.restaurant.equippedPremiumDecorations=[];
+  assert.equal(met(base,'guest-astronomer','theme'),false);
+  const equipped=act(base,{type:'restaurant-premium-decoration',themeId:'moonclock',equipped:true});
+  const stored=act(equipped,{type:'restaurant-premium-decoration',themeId:'moonclock',equipped:false},NOW+1);
+  assert.deepEqual(stored.restaurant.equippedPremiumDecorations,[]);assert.equal(met(stored,'guest-astronomer','theme',NOW+2),true);
+  assert.ok(stored.restaurant.completedGuestConditions.includes('theme:moonclock'));
 });
 
 test('an authoritative historical visit restores all five requirements in an old save without changing its wallet, research or upgrades',()=>{

@@ -1,5 +1,6 @@
 import { specialRestaurantRecipe } from './restaurant-economy.js';
 import { RESTAURANT_EXTRA_CUSTOMER_ROWS } from './restaurant-customer-expansion.js';
+import { LEGACY_RESTAURANT_GUEST_CONDITION_KEYS, LEGACY_GOLD_GUEST_REQUIREMENTS } from './restaurant-guest-conditions-legacy.js';
 import { restaurantLevelInfo as levelInfo } from './growth-levels.js';
 import { restaurantExperience, restaurantRecipeUnlocked, restaurantResourceLevel } from './restaurant-progression.js';
 import { normalizeRestaurantDecorations } from './restaurant-decor.js';
@@ -22,10 +23,10 @@ const advanced=[
   ['violinist','暮樱琴师','演出结束后，喜欢坐在花灯下喝葡萄啵啵。',37,'grape','pudding',4,'tips',3,'sakura-evening'],
   ['painter','云朵画家','把华夫饼和窗边的暖光，一起画进速写本。',36,'waffle','pudding',4,'tables',3,'cream-library'],
   ['explorer','远行探险家','走过很多森林，还是想念花房的草莓牛奶。',42,'strawberrymilk','mint',5,'fridge',3,'mint-greenhouse'],
-  ['astronomer','星光学者','抱着热可可，等今晚的第一颗星星。',47,'cocoa','mint',5,'kitchen',4,'starlight'],
-  ['baron','金鱼男爵','对三文鱼饭和皇家小馆，都有自己的讲究。',50,'gold-salmon','chestnut',6,'tables',4,'royal'],
-  ['pearl','珍珠海客','在琉璃窗边，慢慢享用一份星光圣代。',49,'gold-sundae','chestnut',6,'fridge',4,'glass'],
-  ['royal-critic','皇家食评家','听说这里的鎏金拿铁很好喝，特地前来拜访。',50,'gold-latte','chestnut',6,'tips',4,'royal'],
+  ['astronomer','星光学者','抱着热拿铁，在月芽座钟旁等今晚的第一颗星星。',30,'coffee','sesame',3,'kitchen',3,'moonclock'],
+  ['baron','金鱼男爵','对三文鱼饭和海盐小馆，都有自己的讲究。',30,'gold-salmon','sesame',3,'tables',3,'mint-seaside'],
+  ['pearl','珍珠海客','在珊瑚水景旁，慢慢享用一份星光圣代。',32,'gold-sundae','sesame',3,'fridge',3,'aquarium'],
+  ['royal-critic','皇家食评家','听说这里的樱花寿司很好吃，特地前来茶屋拜访。',33,'sushi','sesame',3,'tips',3,'sakura-teahouse'],
 ...RESTAURANT_EXTRA_CUSTOMER_ROWS,
 ].map(([suffix,name,description,level,recipe,staff,staffCount,facility,facilityLevel,decoration],index)=>({
   id:`guest-${suffix}`,name,description,advanced:true,tier:index<8?'silver':'gold',courses:2,bonusGold:index<8?1:2,atlasSet:index<12?'guests-v2':'guests-v3',atlasIndex:index<12?index:index-12,atlasRows:index<12?6:2,
@@ -44,7 +45,7 @@ export function normalizeRestaurantSeenGuests(restaurant){
 }
 
 export const restaurantGuestConditionKey = condition => [condition.kind, condition.id, condition.minimum].filter(value => value !== undefined).join(':');
-const CONDITION_KEYS = Object.freeze([...new Set(RESTAURANT_GUESTS.flatMap(guest => guest.requirements.map(restaurantGuestConditionKey)))]);
+const CONDITION_KEYS = Object.freeze([...new Set([...LEGACY_RESTAURANT_GUEST_CONDITION_KEYS,...RESTAURANT_GUESTS.flatMap(guest => guest.requirements.map(restaurantGuestConditionKey))])]);
 const CONDITION_KEY_SET = new Set(CONDITION_KEYS);
 export function validRestaurantGuestConditions(value) {
   return Array.isArray(value) && value.length <= CONDITION_KEYS.length && new Set(value).size === value.length && value.every(key => CONDITION_KEY_SET.has(key));
@@ -54,8 +55,13 @@ export function validRestaurantGuestConditions(value) {
 export function completedRestaurantGuestConditions(restaurant, now = Date.now()) {
   const effective = normalizeRestaurantDecorations({...restaurant}, now), level = levelInfo(restaurantExperience(effective)).level;
   const completed = new Set(restaurant.completedGuestConditions ?? []), seen = new Set(normalizeRestaurantSeenGuests(restaurant));
+  const previouslyEligible = new Set();
+  for (const guest of LEGACY_GOLD_GUEST_REQUIREMENTS) {
+    for (const condition of guest.requirements) if (seen.has(guest.id) || requirementMet(effective, condition, level)) completed.add(restaurantGuestConditionKey(condition));
+    if (guest.requirements.every(condition => completed.has(restaurantGuestConditionKey(condition)))) previouslyEligible.add(guest.id);
+  }
   for (const guest of RESTAURANT_GUESTS) for (const condition of guest.requirements) {
-    if (seen.has(guest.id) || requirementMet(effective, condition, level)) completed.add(restaurantGuestConditionKey(condition));
+    if (seen.has(guest.id) || previouslyEligible.has(guest.id) || requirementMet(effective, condition, level)) completed.add(restaurantGuestConditionKey(condition));
   }
   // The saved construction origin proves the previously installed suite even
   // when the old save is first opened after the new installation has finished.

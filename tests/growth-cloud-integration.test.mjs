@@ -5,6 +5,7 @@ import { createPetServer } from '../server/pet-server.mjs';
 import { createGitHubStore } from '../server/github-store.mjs';
 import { createCloudRoom } from '../src/cloud.js';
 import { initialState, reduceAction } from '../src/state.js';
+import { restaurantLevelStartXp } from '../src/growth-levels.js';
 
 const HOME = 'd'.repeat(32);
 const START = Date.UTC(2026, 9, 14, 0);
@@ -289,12 +290,13 @@ test('a stale client immediately reloads cloud state after a claim conflict when
 
 test('guest achievement metadata reaches both real HTTP and SSE clients without adding unknown restaurant keys for older pages',async t=>{
   const state=initialState(START);state.restaurant.seenGuests=['guest-baker'];state.restaurant.ownedThemes.push('mint');
+  state.restaurant.stats.experience=restaurantLevelStartXp(30);
   const h=await fixture(t,state),male=h.client('male'),female=h.client('female');await connect(male,female);
-  for(const client of [male,female])assert.ok(client.state.restaurant.completedGuestConditions.includes('decoration:cream-bakery'));
+  for(const client of [male,female]){assert.ok(client.state.restaurant.completedGuestConditions.includes('decoration:cream-bakery'));assert.ok(client.state.restaurant.completedGuestConditions.includes('level:30'));}
   assert.equal(male.cloud.dispatch({type:'restaurant-theme',themeId:'mint'}),true);
   await until(()=>male.state.restaurant.theme==='mint'&&female.state.restaurant.theme==='mint','both clients to receive the scene change');
   for(const client of [male,female])assert.ok(client.state.restaurant.completedGuestConditions.includes('decoration:cream-bakery'));
   const packets=[...h.sources].flatMap(source=>source.events).filter(packet=>['state','action'].includes(packet.event));
-  assert.ok(packets.length>=3);for(const packet of packets){assert.equal(Object.hasOwn(packet.data.state.restaurant,'completedGuestConditions'),false);assert.ok(packet.data.restaurantGuestConditions.includes('decoration:cream-bakery'));}
+  assert.ok(packets.length>=3);for(const packet of packets){assert.equal(Object.hasOwn(packet.data.state.restaurant,'completedGuestConditions'),false);assert.ok(packet.data.restaurantGuestConditions.includes('decoration:cream-bakery'));assert.ok(packet.data.restaurantGuestConditionsV2.includes('level:30'));assert.ok(!packet.data.restaurantGuestConditions.includes('level:30'));}
   assert.ok(h.saved.state.restaurant.completedGuestConditions.includes('decoration:cream-bakery'));
 });
