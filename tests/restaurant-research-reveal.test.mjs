@@ -13,7 +13,7 @@ function harness(t,{motion=false,onPhaseChange=()=>{},onDeferred=()=>{},getInfo}
   t.after(()=>{if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;});
   const listeners=new Map(),nodes=new Map(),timers=new Map();let nextId=1,time=0;
   const dialog={open:false,dataset:{},innerHTML:'',
-    querySelector(selector){if(!nodes.has(selector))nodes.set(selector,{disabled:true,textContent:'',innerHTML:'',dataset:{},attrs:{},setAttribute(name,value){this.attrs[name]=value;},focus(){}});return nodes.get(selector);},
+    querySelector(selector){if(!nodes.has(selector))nodes.set(selector,{disabled:true,hidden:selector==='[data-rr-wait-prompt]',textContent:'',innerHTML:'',dataset:{},attrs:{},setAttribute(name,value){this.attrs[name]=value;},focus(){}});return nodes.get(selector);},
     addEventListener(name,callback){listeners.set(name,callback);},removeEventListener(name){listeners.delete(name);},
     showModal(){this.open=true;},close(){this.open=false;listeners.get('close')?.();},
   };
@@ -47,7 +47,7 @@ test('a card waits for the matching receipt and anticipation, then flips once wi
   const h=harness(t),accepted=drawn(),before=structuredClone(accepted),info=restaurantInfo(accepted,NOW);
   assert.equal(h.view.start(1),true);assert.equal(h.view.start(1),false);assert.equal(h.dialog.dataset.rrPhase,'brewing');
   h.tick();h.view.sync(restaurantInfo(state(),NOW),{connected:false});assert.equal(h.dialog.dataset.rrPhase,'waiting');
-  assert.match(h.nodes.get('[data-rr-message]').textContent,/探索已暂存/);
+  assert.match(h.nodes.get('[data-rr-message]').textContent,/连接恢复/);
   h.view.sync(info,{connected:true});assert.equal(h.dialog.dataset.rrPhase,'ready');
   assert.equal(h.nodes.get('[data-rr-result]').attrs['aria-hidden'],undefined);
   h.click('[data-rr-flip]');h.click('[data-rr-flip]');assert.equal(h.dialog.dataset.rrPhase,'flipping');assert.equal(h.timers.size,1);
@@ -129,23 +129,54 @@ test('waiting for a receipt builds no restaurant projection and the real result 
   assert.equal(projections,1);h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
 });
 
-test('a slow receipt shows a bounded countdown and can close immediately without dropping the draw',t=>{
+test('a slow receipt keeps the research status visible and can leave immediately without dropping the draw',t=>{
   const h=harness(t),info=restaurantInfo(drawn(),NOW);
   h.view.start(1);assert.equal([...h.timers.values()][0].ms,700);h.tick();
   assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.timers.size,1);
-  assert.match(h.nodes.get('[data-rr-discovery-note]').textContent,/4 秒后自动返回经营/);
+  assert.match(h.nodes.get('[data-rr-message]').textContent,/菜品仍在研发中/);
+  assert.doesNotMatch(h.nodes.get('[data-rr-discovery-note]').textContent,/自动返回/);
   h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);
   h.view.syncState(drawn(),{connected:true});assert.equal(h.dialog.open,false);assert.equal(info.research.fragments.rice,3);
 });
 
-test('no receipt automatically releases the theatre at four seconds and a late receipt stays in the ledger',t=>{
+test('four seconds without a receipt offers a choice and never automatically leaves the theatre',t=>{
   const deferred=[],h=harness(t,{onDeferred:draw=>deferred.push(draw)}),accepted=drawn(),before=structuredClone(accepted);
   h.view.start(1);h.tick();h.elapse(2300);h.view.syncState(state(),{connected:false});
-  assert.equal(h.dialog.open,true);assert.match(h.nodes.get('[data-rr-message]').textContent,/探索已暂存/);
-  assert.match(h.nodes.get('[data-rr-discovery-note]').textContent,/1 秒后自动返回经营/);
-  h.tick();assert.equal(h.dialog.open,false);assert.deepEqual(deferred,[1]);assert.equal(h.timers.size,0);
-  h.view.syncState(accepted,{connected:true});h.tick();assert.equal(h.dialog.open,false);
-  assert.deepEqual(deferred,[1]);assert.deepEqual(accepted,before);assert.equal(accepted.restaurant.research.fragments.rice,3);
+  assert.equal(h.dialog.open,true);assert.match(h.nodes.get('[data-rr-message]').textContent,/连接恢复/);
+  assert.equal(h.dialog.querySelector('[data-rr-wait-prompt]').hidden,true);
+  h.tick();assert.equal(h.dialog.open,true);assert.deepEqual(deferred,[]);assert.equal(h.timers.size,0);
+  assert.equal(h.nodes.get('[data-rr-wait-prompt]').hidden,false);assert.equal(h.nodes.get('[data-rr-discovery-confirm]').hidden,true);
+  h.elapse(60000);h.view.syncState(state(),{connected:true});assert.equal(h.dialog.open,true);
+  assert.match(h.nodes.get('[data-rr-message]').textContent,/菜品仍在研发中，敬请等待/);
+  h.view.syncState(accepted,{connected:true});h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
+  assert.equal(h.nodes.get('[data-rr-wait-prompt]').hidden,true);assert.equal(h.nodes.get('[data-rr-discovery-confirm]').hidden,false);
+  assert.deepEqual(deferred,[]);assert.deepEqual(accepted,before);assert.equal(accepted.restaurant.research.fragments.rice,3);
+});
+
+test('continue waiting dismisses the prompt once, keeps progress visible and reveals a late result',t=>{
+  const deferred=[],h=harness(t,{onDeferred:draw=>deferred.push(draw)});
+  h.view.start(1);h.tick();h.tick();h.click('[data-rr-wait-continue]');
+  assert.equal(h.dialog.open,true);assert.equal(h.nodes.get('[data-rr-wait-prompt]').hidden,true);
+  assert.equal(h.nodes.get('[data-rr-discovery-confirm]').hidden,false);
+  h.elapse(60000);for(let i=0;i<10;i++)h.view.syncState(state(),{connected:true});
+  assert.equal(h.nodes.get('[data-rr-wait-prompt]').hidden,true);assert.equal(h.dialog.dataset.rrPhase,'waiting');
+  assert.match(h.nodes.get('[data-rr-message]').textContent,/敬请等待/);assert.deepEqual(deferred,[]);
+  h.view.syncState(drawn(),{connected:true});h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
+});
+
+test('choosing to leave preserves the pending draw and never reopens the theatre on a late receipt',t=>{
+  const deferred=[],h=harness(t,{onDeferred:draw=>deferred.push(draw)}),accepted=drawn(),before=structuredClone(accepted);
+  h.view.start(1);h.tick();h.tick();h.click('[data-rr-wait-leave]');
+  assert.equal(h.dialog.open,false);assert.deepEqual(deferred,[1]);assert.equal(h.timers.size,0);
+  h.view.syncState(accepted,{connected:true});h.tick();assert.equal(h.dialog.open,false);assert.deepEqual(accepted,before);
+});
+
+test('an explicit refusal clears the waiting prompt and returns to the research error controls',t=>{
+  const h=harness(t);h.view.start(1);h.tick();h.tick();
+  assert.equal(h.nodes.get('[data-rr-wait-prompt]').hidden,false);
+  h.view.syncState(state(),{connected:true,refusedResearchDraw:1});
+  assert.equal(h.dialog.dataset.rrPhase,'error');assert.equal(h.nodes.get('[data-rr-wait-prompt]').hidden,true);
+  assert.equal(h.nodes.get('[data-rr-discovery-confirm]').hidden,false);assert.equal(h.nodes.get('[data-rr-discovery-confirm]').disabled,false);
 });
 
 test('normal state ticks recover missed preparation, reveal and finish callbacks after a suspended tab',t=>{
@@ -156,10 +187,10 @@ test('normal state ticks recover missed preparation, reveal and finish callbacks
   assert.equal(h.timers.size,0);h.view.close();assert.equal(h.dialog.open,false);
   const deferred=[],slow=harness(t,{onDeferred:draw=>deferred.push(draw)});
   slow.view.start(1);slow.elapse(60000);slow.view.syncState(state());
-  assert.equal(slow.dialog.open,false);assert.deepEqual(deferred,[1]);
+  assert.equal(slow.dialog.open,true);assert.equal(slow.nodes.get('[data-rr-wait-prompt]').hidden,false);assert.deepEqual(deferred,[]);
 });
 
-test('a receipt just before the deadline completes its reveal instead of returning early',t=>{
+test('a receipt just before the waiting notice completes its reveal without showing the prompt',t=>{
   const deferred=[],h=harness(t,{onDeferred:draw=>deferred.push(draw)});
   h.view.start(1);h.tick();h.elapse(3200);h.view.syncState(drawn(),{connected:true});
   assert.equal(h.dialog.dataset.rrPhase,'ready');h.tick();h.tick();

@@ -11,7 +11,7 @@ export function restaurantLotteryEffects(){
 }
 
 export function restaurantResearchRevealMarkup(draw){
-  return `<section class="rr-discovery"><header class="rr-discovery-heading"><span>RECIPE ATELIER · ${draw}</span><h2 id="rr-discovery-title">星光里的美味灵感</h2><p>让每一片灵感，成为新的拿手料理</p></header><button class="rr-discovery-close" data-rr-discovery-close aria-label="关闭灵感翻卡">×</button><div class="rr-discovery-center">${restaurantLotteryEffects()}<div class="rr-discovery-halo" aria-hidden="true"></div><span class="rr-discovery-star rr-discovery-star-one" aria-hidden="true">✧</span><span class="rr-discovery-star rr-discovery-star-two" aria-hidden="true">✦</span><button class="rr-discovery-card" data-rr-flip aria-label="灵感正在研发中" disabled><span class="rr-card-flipper"><span class="rr-card-face rr-card-back" aria-hidden="true"><small>小爪爪的灵感手札</small><span class="rr-card-orbit"><span class="rr-card-seal">${paw}</span></span><strong>美味的秘密</strong><em>等待一双小爪爪揭晓</em><i>✦ &nbsp; RECIPE NOTES &nbsp; ✦</i></span><span class="rr-card-face rr-card-front rr-quality-card" data-rr-result aria-hidden="true"></span></span></button><p class="rr-discovery-message" role="status" aria-live="polite" data-rr-message>小爪爪的美味灵感，正在向中心汇聚…</p></div><div class="rr-discovery-kitchen" aria-hidden="true"><div class="rr-discovery-shelf"><span>✦</span><i></i><i></i><i></i><span>✦</span></div><div class="rr-lab-worker rr-lab-worker-chef"><span class="r-cat r-cat-chef"></span><span class="rr-lab-spoon"></span></div><div class="rr-lab-stove"><span class="rr-lab-steam"><i></i><i></i><i></i></span><span class="rr-lab-pot"></span><span class="rr-lab-flame"></span></div><div class="rr-lab-worker rr-lab-worker-writer"><span class="r-cat r-cat-waiter"></span><span class="rr-lab-pencil"></span></div><span class="rr-lab-notebook"><i></i></span><div class="rr-lab-counter"></div><p>小爪爪研发中 <span>· · ·</span></p></div><footer class="rr-discovery-footer"><button class="rr-discovery-confirm" data-rr-discovery-confirm disabled>灵感汇聚中<span class="rr-brewing-dots"> · · ·</span></button><small data-rr-discovery-note>30 灵感 · 一次新的美味发现</small></footer></section>`;
+  return `<section class="rr-discovery"><header class="rr-discovery-heading"><span>RECIPE ATELIER · ${draw}</span><h2 id="rr-discovery-title">星光里的美味灵感</h2><p>让每一片灵感，成为新的拿手料理</p></header><button class="rr-discovery-close" data-rr-discovery-close aria-label="关闭灵感翻卡">×</button><div class="rr-discovery-center">${restaurantLotteryEffects()}<div class="rr-discovery-halo" aria-hidden="true"></div><span class="rr-discovery-star rr-discovery-star-one" aria-hidden="true">✧</span><span class="rr-discovery-star rr-discovery-star-two" aria-hidden="true">✦</span><button class="rr-discovery-card" data-rr-flip aria-label="灵感正在研发中" disabled><span class="rr-card-flipper"><span class="rr-card-face rr-card-back" aria-hidden="true"><small>小爪爪的灵感手札</small><span class="rr-card-orbit"><span class="rr-card-seal">${paw}</span></span><strong>美味的秘密</strong><em>等待一双小爪爪揭晓</em><i>✦ &nbsp; RECIPE NOTES &nbsp; ✦</i></span><span class="rr-card-face rr-card-front rr-quality-card" data-rr-result aria-hidden="true"></span></span></button><p class="rr-discovery-message" role="status" aria-live="polite" data-rr-message>小爪爪的美味灵感，正在向中心汇聚…</p></div><div class="rr-discovery-kitchen" aria-hidden="true"><div class="rr-discovery-shelf"><span>✦</span><i></i><i></i><i></i><span>✦</span></div><div class="rr-lab-worker rr-lab-worker-chef"><span class="r-cat r-cat-chef"></span><span class="rr-lab-spoon"></span></div><div class="rr-lab-stove"><span class="rr-lab-steam"><i></i><i></i><i></i></span><span class="rr-lab-pot"></span><span class="rr-lab-flame"></span></div><div class="rr-lab-worker rr-lab-worker-writer"><span class="r-cat r-cat-waiter"></span><span class="rr-lab-pencil"></span></div><span class="rr-lab-notebook"><i></i></span><div class="rr-lab-counter"></div><p>小爪爪研发中 <span>· · ·</span></p></div><footer class="rr-discovery-footer"><section class="rr-wait-prompt" data-rr-wait-prompt role="group" aria-label="研发等待提示" hidden><h3>菜品仍在研发中</h3><p>结果还在确认，请稍候。你可以先去经营，也可以留在这里等待。</p><div><button data-rr-wait-leave>先去经营</button><button data-rr-wait-continue>继续等待</button></div></section><button class="rr-discovery-confirm" data-rr-discovery-confirm disabled>灵感汇聚中<span class="rr-brewing-dots"> · · ·</span></button><small data-rr-discovery-note>30 灵感 · 一次新的美味发现</small></footer></section>`;
 }
 
 /** Only a matching, accepted draw supplies the face. Flipping and dismissing
@@ -28,7 +28,7 @@ export function restaurantResearchRevealFace({card,recipe,grade}){
   return `<small class="rr-discovery-quality">${grade} 级菜谱 · ${recipe.level===5?'满阶余片可融合':ready?'灵感集齐':'美味积累中'}</small><span class="rr-discovery-dish">${restaurantQualityFood(recipe.id,grade,food)}</span><strong class="rr-discovery-name">${esc(recipe.name)}</strong><span class="rr-discovery-fragments"><i aria-hidden="true">✦</i> 菜谱碎片 <b>×${card.amount}</b></span><span class="rr-discovery-progress">${recipe.upgradeCost===null?`多余 ${surplus.surplus} 枚 · 可融合 ${surplus.surplus*surplus.fusionValue} 灵感`:`已收集 ${recipe.fragments} / ${recipe.upgradeCost} 枚`}</span><em class="rr-discovery-caption">${surplus.surplus?'多余碎片，可以在手账里再次发光':ready?recipe.researchUnlocked?'新的品质，就差最后一步':'带着灵感，等待小馆再长大一点':'每一片灵感，都离美味更近一点'}</em>`;
 }
 
-const BREW_MS=700,READY_MS=180,FLIP_MS=420,MAX_WAIT_MS=4000;
+const BREW_MS=700,READY_MS=180,FLIP_MS=420,WAIT_NOTICE_MS=4000;
 
 export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,now=Date.now,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{},onDeferred=()=>{},getInfo=restaurantInfo}){
   let active=null,restoreFocus=null;
@@ -38,14 +38,22 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
   function clearTimers(){for(const id of timers)unschedule(id);timers.clear();}
   function stage(value){if(dialog.dataset.rrPhase===value)return;dialog.dataset.rrPhase=value;if(active)active.phaseAt=now();onPhaseChange(value);}
   function clearWait(){if(active?.waitTimer!==undefined){unschedule(active.waitTimer);timers.delete(active.waitTimer);delete active.waitTimer;}}
+  function hideWaitPrompt(){
+    const prompt=$('[data-rr-wait-prompt]');
+    const focused=prompt.contains?.(document.activeElement);
+    prompt.hidden=true;$('[data-rr-discovery-confirm]').hidden=false;
+    if(focused)$('[data-rr-discovery-confirm]').focus({preventScroll:true});
+  }
   function wait(){
     if(!active||active.result)return;
     stage('waiting');
-    const remaining=Math.max(0,MAX_WAIT_MS-(now()-active.startedAt));
-    if(!remaining){const draw=active.draw;close();onDeferred(draw);return;}
-    $('[data-rr-message]').textContent=active.connected===false?'探索已暂存，连接恢复后自动继续':'正在确认这次探索的结果…';
-    $('[data-rr-discovery-note]').textContent=`${Math.ceil(remaining/1000)} 秒后自动返回经营 · 结果会收进手账`;
-    if(active.waitTimer===undefined)active.waitTimer=later(()=>{delete active.waitTimer;advance();},remaining);
+    $('[data-rr-message]').textContent=active.connected===false?'菜品仍在研发中，连接恢复后会继续确认，请稍候…':'菜品仍在研发中，敬请等待…';
+    $('[data-rr-discovery-note]').textContent='结果确认后会自动揭晓 · 可随时先去经营';
+    const remaining=Math.max(0,WAIT_NOTICE_MS-(now()-active.startedAt));
+    if(!active.waitNoticed){
+      if(!remaining){active.waitNoticed=true;clearWait();$('[data-rr-wait-prompt]').hidden=false;$('[data-rr-discovery-confirm]').hidden=true;}
+      else if(active.waitTimer===undefined)active.waitTimer=later(()=>{delete active.waitTimer;advance();},remaining);
+    }
   }
   // Timers drive the short performance; normal state ticks also reconcile the
   // clock after a suspended tab or a missed callback. Neither path rolls a card.
@@ -64,7 +72,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
     stage('ready');$('[data-rr-flip]').disabled=false;$('[data-rr-flip]').setAttribute('aria-label','翻开这张灵感卡');
     $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='立即揭晓';
     $('[data-rr-message]').textContent='流光凝聚，新的美味灵感即将揭晓…';
-    clearWait();active.autoReveal=later(flip,reducedMotion()?0:READY_MS);
+    clearWait();hideWaitPrompt();active.autoReveal=later(flip,reducedMotion()?0:READY_MS);
   }
   function finish(){
     if(!active?.result||dialog.dataset.rrPhase!=='flipping')return;
@@ -91,10 +99,13 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
     if(restoreFocus?.isConnected&&!restoreFocus.disabled)restoreFocus.focus({preventScroll:true});restoreFocus=null;
   }
   function close(){if(dialog.open)dialog.close();closed();}
+  function leave(){const draw=active&&!active.result?active.draw:null;close();if(draw!==null)onDeferred(draw);}
   function click(event){
     if(event.target.closest('[data-rr-discovery-close]')){close();return;}
+    if(event.target.closest('[data-rr-wait-leave]')){if(active&&!active.result&&active.waitNoticed)leave();return;}
+    if(event.target.closest('[data-rr-wait-continue]')){if(active&&!active.result&&active.waitNoticed)hideWaitPrompt();return;}
     if(event.target.closest('[data-rr-flip]'))flip();
-    if(event.target.closest('[data-rr-discovery-confirm]')){if(['brewing','waiting','revealed','error'].includes(dialog.dataset.rrPhase))close();else flip();}
+    if(event.target.closest('[data-rr-discovery-confirm]')){if(['brewing','waiting'].includes(dialog.dataset.rrPhase))leave();else if(['revealed','error'].includes(dialog.dataset.rrPhase))close();else flip();}
   }
   function cancel(event){event.preventDefault();event.stopPropagation();close();}
   dialog.addEventListener('click',click);dialog.addEventListener('cancel',cancel);dialog.addEventListener('close',closed);
@@ -139,7 +150,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
       return true;
     },
     fail(message='这次探索没有开始，灵感还在手账里。'){
-      if(!active)return;clearTimers();stage('error');$('[data-rr-message]').textContent=message;
+      if(!active)return;clearTimers();hideWaitPrompt();stage('error');$('[data-rr-message]').textContent=message;
       $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='返回研发室';
       $('[data-rr-discovery-note]').textContent='可以稍后查看手账中的最新记录';
     },
