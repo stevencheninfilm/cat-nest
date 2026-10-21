@@ -196,10 +196,10 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     message(text){log(text);toast(text);render();},
   });
   function tableMarkup(info,availability){return restaurantGuestTables(info,{icon:restaurantIcon,food,blocked:pending||restaurantInputBlocked(availability),replaying:guests?.replaying()||[],pendingCourses:[...pendingCourseOrders,...(availability.pendingRestaurantCollections??[])]});}
-  function welcomeGuests(size=null,{manual=false,recipeId=null,keepPanel=false,waiting=false}={}){
+  function welcomeGuests(size=null,{manual=false,recipeId=null,keepPanel=false,waiting=false,waitingPartyId=null}={}){
     const availability=getAvailability(),info=restaurantInfo(getState());
     if(pending||restaurantInputBlocked(availability)){if(manual)toast('小馆正在读取，稍后再迎客');return false;}
-    const action=waiting?{type:'restaurant-wait'}:{type:'restaurant-arrive',...(size===null?{}:{partySize:size}),...(recipeId?{recipeId}:{})};
+    const action=waiting?{type:'restaurant-wait'}:{type:'restaurant-arrive',...(waitingPartyId?{waitingPartyId}:{}),...(size===null?{}:{partySize:size}),...(recipeId?{recipeId}:{})};
     const result=restaurantActionResult(getState(),action);
     if(!result.ok){if(manual){toast(result.reason);log(result.reason);}return false;}
     pending=true;
@@ -266,7 +266,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(panel==='flow'||panel==='station')return kitchenFlowPanel(info,{orderId:flowOrderId,recipeId:flowRecipe,zoneId:panel==='station'?selectedZone:null});
     if(panel==='customers')return restaurantCustomersPanel(info,{filter:customerFilter,selectedId:customerSelected});
     if(panel==='recipes')return restaurantRecipesPanel(info,{category:recipeCategory});
-    if(panel==='research')return restaurantResearchPanel(info,{showcase:researchShowcase});
+    if(panel==='research')return restaurantResearchPanel(info,{showcase:researchShowcase,pendingDraw:getAvailability().pendingResearchDraw});
     if(panel==='progression')return restaurantProgressionPanel(info,{category:progressionCategory});
     if(panel==='gold')return restaurantGoldPanel(info,state);
     if(panel==='training')return restaurantStaffPanel(info,{workerId:trainingWorker,view:'training'});
@@ -384,8 +384,9 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     unlockAnnounced=info.level;updatePanel(info,state);updateCustomerDetails(info);updateRecipeDetails(info);updateTerminal(info);recipeCelebration.sync(info);researchReveal.sync(info,availability);
     guideReadyForAuto=!document.hidden&&!panel&&!terminalOpen&&!pending&&!info.decorationInfo.construction;guide.sync();
     dailyLogin.sync(info.dailyLogin,availability,{autoShow:!guide.isOpen()&&!document.hidden&&!panel&&!terminalOpen&&!container.querySelector('dialog[open]:not(.rdl-dialog)')});
-    const nextGuest=arrivalRhythm.poll(info,Date.now(),{enabled:autoGuests&&!guide.isOpen()&&!$('.rdl-dialog').open&&!$('.rr-celebration').open&&!$('.rr-draw-scene').open&&!info.decorationInfo.construction&&!panel&&!terminalOpen&&!document.hidden,blocked:availability.saving||pending||!availability.connected||restaurantInputBlocked(availability)});
-    if(nextGuest)welcomeGuests(null,{waiting:nextGuest.type==='restaurant-wait'});
+    const queuedGuest=info.availableTables>0&&info.waitingParties.length>0;
+    const nextGuest=arrivalRhythm.poll(info,Date.now(),{enabled:autoGuests&&!guide.isOpen()&&!info.decorationInfo.construction&&!document.hidden&&(queuedGuest||!panel&&!terminalOpen&&!$('.rdl-dialog').open&&!$('.rr-celebration').open&&!$('.rr-draw-scene').open),blocked:pending||availability.pendingRestaurantArrival||restaurantInputBlocked(availability)||!queuedGuest&&(availability.saving||!availability.connected)});
+    if(nextGuest)welcomeGuests(null,{waiting:nextGuest.type==='restaurant-wait',waitingPartyId:nextGuest.waitingPartyId});
     autoCook.tick({active:opened&&!document.hidden&&!pending&&!guide.isOpen()&&!$('.rdl-dialog').open&&!$('.rr-celebration').open&&!$('.rr-draw-scene').open});
   }
   function dismiss() {closeRecipeDetails(false);closeCustomerDetails(false);panel=null;audio.setTrack($('.rr-draw-scene')?.open?'research':'restaurant');panelSignature='';$('.r-sheet')?.close();for(const button of container.querySelectorAll('.r-nav button')){const selected=button.dataset.rTab==='business';button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}}

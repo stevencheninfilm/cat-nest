@@ -25,7 +25,7 @@ export function createRestaurantWaitingParty(restaurant,cats,now){
 export function restaurantQueuePosition(group,seat=0){return {x:65+group*18+seat*7,y:14.6+seat*.45};}
 
 /** Polling, redraws and save acknowledgements must not reroll the clock.
- * A newly freed table starts a fresh pause; queued visitors get priority. */
+ * Fresh walk-ins pause; visitors already waiting enter as soon as a table frees. */
 export function createRestaurantArrivalRhythm({random=Math.random}={}){
   const between=(min,max)=>Math.round(min+(max-min)*Math.max(0,Math.min(1,random())));
   let nextAt=null,previousTables=null,active=false;
@@ -36,6 +36,10 @@ export function createRestaurantArrivalRhythm({random=Math.random}={}){
     poll(info,now,{enabled=true,blocked=false}={}){
       const available=info.availableTables,waiting=info.waitingParties?.length??0;
       if(!enabled){active=false;previousTables=available;return null;}
+      if(available>0&&waiting>0){
+        active=true;previousTables=available;
+        return blocked?null:{type:'restaurant-arrive',waitingPartyId:info.waitingParties[0].id};
+      }
       if(!active){active=true;defer(now,waiting>0);previousTables=available;return null;}
       if(previousTables!==null&&available>previousTables)defer(now,waiting>0);
       previousTables=available;

@@ -73,29 +73,41 @@ export function kitchenActionPresentation(restaurant,view,now=Date.now()){
 
 /** Every accepted order owns its station bubble, independently of selection. */
 export function kitchenActionPresentations(restaurant,now=Date.now(),model=kitchenInfo(restaurant,now)){
-  return model.orders.map(order=>kitchenActionPresentation(restaurant,orderViewModel(model,order),now)).filter(Boolean).sort((a,b)=>a.order.seat-b.order.seat||a.order.id.localeCompare(b.order.id));
+  return model.orders.map(order=>kitchenActionPresentation(restaurant,orderViewModel(model,order),now)).filter(Boolean).sort((a,b)=>(a.order.acceptedAt??0)-(b.order.acceptedAt??0)||a.order.seat-b.order.seat||a.order.id.localeCompare(b.order.id));
 }
 
-/** Use the existing 44px touch targets. Nearby orders spread around their
- * station without covering each other or the kitchen view/tutorial controls. */
+/** Keep station queues in acceptance order: add to the left, then wrap upward.
+ * A whole row clears controls together instead of splitting a short queue into
+ * several rows while there is still horizontal space. Touch targets stay 44px. */
 export function layoutKitchenActions(actions,{width=480,height=960,obstacles=[]}={}){
   width=Math.max(60,width);height=Math.max(80,height);
-  const placed=[],intersects=(a,b)=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
-  return actions.map(action=>{
-    const zone=KITCHEN_ZONES.find(zone=>zone.id===action.step.zoneId),table=KITCHEN_TABLE_POSITIONS[action.order.seat];
+  const placed=[],points=new Map(),groups=new Map();
+  const intersects=(a,b)=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
+  const box=(x,y)=>({left:x-28,right:x+28,top:y-30,bottom:y+40});
+  for(const action of actions){
+    const key=action.step.zoneId??`table:${action.order.seat}`;
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(action);
+  }
+  for(const group of groups.values()){
+    const first=group[0],zone=KITCHEN_ZONES.find(zone=>zone.id===first.step.zoneId),table=KITCHEN_TABLE_POSITIONS[first.order.seat];
     const anchor=zone?{x:zone.prop.x,y:zone.id===10?60.3:zone.prop.y-6}:{x:table.x,y:table.y-4.4};
-    const x=anchor.x*width/100,y=anchor.y*height/100,inward=x<width/2?1:-1,offsets=[[0,0]];
-    for(let row=0;row<8;row++)for(const dy of row?[-row*72,row*72]:[0])for(const dx of [0,inward*58,-inward*58,inward*116,-inward*116,inward*174,-inward*174])if(dx||dy)offsets.push([dx,dy]);
-    let point,rect;
-    for(const [dx,dy] of offsets){
-      const next={x:Math.max(29,Math.min(width-29,x+dx)),y:Math.max(30,Math.min(height-40,y+dy))},box={left:next.x-28,right:next.x+28,top:next.y-30,bottom:next.y+40};
-      if(placed.some(other=>intersects(box,other))||obstacles.some(other=>intersects(box,other)))continue;
-      point=next;rect=box;break;
+    let right=Math.max(29,Math.min(width-29,anchor.x*width/100)),y=Math.max(30,Math.min(height-40,anchor.y*height/100)),index=0;
+    while(index<group.length){
+      const columns=Math.min(group.length-index,Math.floor((right-29)/58)+1),xs=Array.from({length:columns},(_,i)=>right-i*58);
+      // Move the row above any intersecting UI or already occupied station.
+      for(let pass=0;pass<placed.length+obstacles.length+1;pass++){
+        const collisions=[...placed,...obstacles].filter(other=>xs.some(x=>intersects(box(x,y),other)));
+        if(!collisions.length)break;
+        const next=Math.max(30,Math.min(...collisions.map(other=>other.top-42)));
+        if(next>=y)break;
+        y=next;
+      }
+      for(const x of xs){const action=group[index++];placed.push(box(x,y));points.set(action.order.id,{orderId:action.order.id,x:x/width*100,y:y/height*100});}
+      right=width-29;y=Math.max(30,y-72);
     }
-    point??={x:Math.max(29,Math.min(width-29,x)),y:Math.max(30,Math.min(height-40,y))};
-    placed.push(rect??{left:point.x-28,right:point.x+28,top:point.y-30,bottom:point.y+40});
-    return {orderId:action.order.id,x:point.x/width*100,y:point.y/height*100};
-  });
+  }
+  return actions.map(action=>points.get(action.order.id));
 }
 const guidePages=[
   '① 先回到餐桌，点击顾客头上的点餐需求。这里只记下订单，员工还不会自行开工。',
