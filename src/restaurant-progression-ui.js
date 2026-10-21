@@ -101,7 +101,7 @@ export function restaurantProgressionPanel(info,{category='all'}={}){
   const milestoneMarkup=itemLevel=>{
     const items=filtered.filter(item=>level(item.level)===itemLevel);if(!items.length)return '';
     const milestone=milestones.find(item=>level(item.level)===itemLevel),isCurrent=milestone?.current??itemLevel===current,isNext=itemLevel===next,available=milestone?.available??itemLevel<=current;
-    return `<details class="rp-milestone ${isCurrent?'is-current':isNext?'is-next':''} ${available?'is-reached':'is-future'}" data-r-progression-level="${itemLevel}" open><summary><h3>Lv.${itemLevel}${isCurrent||isNext?`<small>${isCurrent?'当前':'下一站'}</small>`:''}</h3><span class="rp-milestone-count">${items.length} 项</span><span class="rp-expand" aria-hidden="true">${icon('arrow')}</span></summary><div class="rp-level-resources">${items.map(resourceMarkup).join('')}</div></details>`;
+    return `<details class="rp-milestone ${isCurrent?'is-current':isNext?'is-next':''} ${available?'is-reached':'is-future'}" data-r-progression-level="${itemLevel}"${itemLevel>=current?' open':''}><summary><h3>Lv.${itemLevel}${isCurrent||isNext?`<small>${isCurrent?'当前':'下一站'}</small>`:''}</h3><span class="rp-milestone-count">${items.length} 项</span><span class="rp-expand" aria-hidden="true">${icon('arrow')}</span></summary><div class="rp-level-resources">${items.map(resourceMarkup).join('')}</div></details>`;
   };
   const visibleLevels=levels.filter(itemLevel=>filtered.some(item=>level(item.level)===itemLevel));
   const lastMilestoneLevel=Math.max(0,...levels);
@@ -110,7 +110,7 @@ export function restaurantProgressionPanel(info,{category='all'}={}){
     const items=filtered.filter(item=>level(item.level)>=start&&level(item.level)<=end);
     const milestonesInRange=visibleLevels.filter(itemLevel=>itemLevel>=start&&itemLevel<=end);
     const chapterStage=restaurantGrowthStage(start);
-    return `<details class="rp-chapter ${isCurrent?'is-current':isNext?'is-next':''}" data-r-progression-range="${start}-${end}" data-r-growth-stage="${chapterStage.id}" style="${restaurantGrowthStageStyle(start)}" open><summary><div class="rp-chapter-title"><h3>Lv.${start}–${end}</h3><div><strong>${chapterStage.title}</strong>${restaurantStageStars(start)}</div></div>${isCurrent?'<small class="rp-chapter-current">当前阶段</small>':''}<span class="rp-chapter-count">${items.length} 项</span><span class="rp-expand" aria-hidden="true">${icon('arrow')}</span></summary><div class="rp-chapter-body">${milestonesInRange.map(milestoneMarkup).join('')}</div></details>`;
+    return `<details class="rp-chapter ${isCurrent?'is-current':isNext?'is-next':''}" data-r-progression-range="${start}-${end}" data-r-growth-stage="${chapterStage.id}" style="${restaurantGrowthStageStyle(start)}"${end>=current?' open':''}><summary><div class="rp-chapter-title"><h3>Lv.${start}–${end}</h3><div><strong>${chapterStage.title}</strong>${restaurantStageStars(start)}</div></div>${isCurrent?'<small class="rp-chapter-current">当前阶段</small>':''}<span class="rp-chapter-count">${items.length} 项</span><span class="rp-expand" aria-hidden="true">${icon('arrow')}</span></summary><div class="rp-chapter-body">${milestonesInRange.map(milestoneMarkup).join('')}</div></details>`;
   };
   const ranges=[...new Set(visibleLevels.map(itemLevel=>Math.floor((itemLevel-1)/10)*10+1))];
   const roadmap=(lastMilestoneLevel>12?ranges.map(rangeMarkup):visibleLevels.map(milestoneMarkup)).join('')||'<p class="rp-filter-empty" role="status">这个分类暂时没有资源。</p>';
