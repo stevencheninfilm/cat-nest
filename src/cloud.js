@@ -98,7 +98,12 @@ export function createCloudRoom(options) {
     let display=state;
     for(const [id,local] of restaurantTimelines){
       const actual=display.restaurant?.orders?.find(order=>order.id===id),a=actual?.workflow,b=local.order.workflow;
-      const compatible=a?.runs&&a.recipeId===b.recipeId&&a.workerId===b.workerId&&JSON.stringify(a.workerLevels)===JSON.stringify(b.workerLevels)&&a.runs.length===b.runs.length&&a.runs.every((run,index)=>run.stepId===b.runs[index].stepId&&(run.workerId??a.workerId)===(b.runs[index].workerId??b.workerId));
+      // Keep an earlier visual start, but never replay a speculative future
+      // start or a different fatigue/rest outcome after the real receipt.
+      const compatible=a?.runs&&a.recipeId===b.recipeId&&a.workerId===b.workerId&&JSON.stringify(a.workerLevels)===JSON.stringify(b.workerLevels)&&a.runs.length===b.runs.length&&a.runs.every((run,index)=>{
+        const localRun=b.runs[index];
+        return run.stepId===localRun.stepId&&(run.workerId??a.workerId)===(localRun.workerId??b.workerId)&&localRun.commandAt<=run.commandAt&&run.durationMultiplier===localRun.durationMultiplier&&Boolean(run.rest)===Boolean(localRun.rest);
+      });
       if(!compatible){restaurantTimelines.delete(id);continue;}
       const next={...display.restaurant,orders:display.restaurant.orders.map(order=>order.id===id?structuredClone(local.order):order)};
       // Preserve current training levels. Only the local command's exertion
@@ -206,6 +211,17 @@ export function createCloudRoom(options) {
     }
   }
   function saveQueue() { onPending(queue.map(item => ({ ...item }))); }
+  function promoteReadyKitchenStep(now){
+    if(!optimisticReducer||queue[0]?.action?.type!=='restaurant-kitchen-step')return false;
+    const index=queue.findIndex((item,index)=>index>0&&item.action?.type==='restaurant-kitchen-step'
+      &&!queue.slice(0,index).some(previous=>previous.action?.orderId===item.action.orderId)
+      &&restaurantActionAt(authoritativeState,item.action,now)<=now
+      &&optimisticReducer(authoritativeState,item.action,{id:item.clientId,name:item.name},now,item.operationId));
+    if(index<1)return false;
+    // Preserve each order's intent sequence and all operation IDs. A waiting
+    // handoff must not prevent another order's delivery from freeing a worker.
+    queue.unshift(queue.splice(index,1)[0]);saveQueue();publishState();return true;
+  }
   async function drain() {
     if (draining || !ready || destroyed) return;
     if (Date.now() < retryAt) return;
@@ -220,7 +236,10 @@ export function createCloudRoom(options) {
       }
       if(restaurantPreview(item.action)){
         const at=restaurantActionAt(authoritativeState,item.action,Date.now());
-        if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
+        if(at>Date.now()){
+          if(promoteReadyKitchenStep(Date.now()))continue;
+          queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(Math.min(1000,at-Date.now()+25));break;
+        }
       }
       onSaveStatus({ phase:'saving', message:'正在保存到云端…' });
       try {
@@ -260,7 +279,10 @@ export function createCloudRoom(options) {
             continue;
           }
           const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
-          if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
+          if(at>Date.now()){
+            if(promoteReadyKitchenStep(Date.now()))continue;
+            queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(Math.min(1000,at-Date.now()+25));break;
+          }
         }
         if (refusedRestaurant||!restaurant&&error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!(item.action.type==='claim-restaurant-growth'&&error.status===425)) {
           if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {

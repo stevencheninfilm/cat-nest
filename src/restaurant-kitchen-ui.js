@@ -60,15 +60,15 @@ const actionMarkup=(order,step)=>`<button class="rk-action-circle" data-r-action
 /** One station bubble survives the click, the walk and the complete work run. */
 export function kitchenActionPresentation(restaurant,view,now=Date.now()){
   const {active,phase,next,stationBusy}=view;
-  const running=['walk','work','delivery'].includes(phase);
+  const queued=phase==='queued',running=queued||['walk','work','delivery'].includes(phase);
   const step=running?active?.currentStep:next;
   if(!active||!step||!running&&!view.waiting)return null;
   const saved=restaurant.orders.find(order=>order.id===active.id)?.workflow;
   const work=saved?.segments?.find(segment=>segment.phase==='work'&&segment.stepId===step.id);
-  const counting=phase==='work',moving=running&&!counting;
+  const counting=phase==='work',moving=running&&!counting&&!queued;
   const startAt=work?.startAt??step.startAt,endAt=work?.endAt??step.endAt;
   const progress=counting&&endAt>startAt?Math.max(0,Math.min(1,(now-startAt)/(endAt-startAt))):0;
-  return {order:active,step,phase,running,counting,moving,stationBusy:!running&&stationBusy,progress,seconds:counting?Math.max(0,Math.ceil((endAt-now)/1000)):null};
+  return {order:active,step,phase,running,counting,moving,queued,stationBusy:!running&&stationBusy,progress,seconds:counting?Math.max(0,Math.ceil((endAt-now)/1000)):null};
 }
 
 /** Every accepted order owns its station bubble, independently of selection. */
@@ -188,10 +188,10 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
       button.style.setProperty('--rk-progress',action.progress);
       countdown.hidden=!action.counting;countdown.textContent=action.counting?`${action.seconds}s`:'';
       button.querySelector('.rk-action-order').hidden=actions.length<2;
-      button.querySelector('.rk-action-caption').textContent=action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
+      button.querySelector('.rk-action-caption').textContent=action.queued?'排队中':action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
       const orderLabel=actions.length>1?`${action.order.seat+1}号桌，`:'';
-      button.setAttribute('aria-label',orderLabel+(action.counting?`${action.step.label}，还剩 ${action.seconds} 秒`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${blocked||action.stationBusy?'，暂时不可操作':''}`));
-      prompt.setAttribute('aria-label',action.counting?'当前工序进度':action.moving?'员工正在前往工位':action.stationBusy?'工位正在使用，等空闲后继续':'点击开始下一步');
+      button.setAttribute('aria-label',orderLabel+(action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.counting?`${action.step.label}，还剩 ${action.seconds} 秒`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${blocked||action.stationBusy?'，暂时不可操作':''}`));
+      prompt.setAttribute('aria-label',action.queued?'已排队，等待开始':action.counting?'当前工序进度':action.moving?'员工正在前往工位':action.stationBusy?'工位正在使用，等空闲后继续':'点击开始下一步');
     }
     const width=container.clientWidth||480,height=container.clientHeight||960,layoutKey=JSON.stringify([width,height,actions.map(action=>[action.order.id,action.step.id,action.step.zoneId])]);
     if(lastLayout!==layoutKey){

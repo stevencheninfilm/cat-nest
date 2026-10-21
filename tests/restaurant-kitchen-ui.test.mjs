@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { initialState, reduceAction } from '../src/state.js';
 import { restaurantInfo } from '../src/restaurant.js';
 import { KITCHEN_FLOWS, KITCHEN_ZONES } from '../src/restaurant-kitchen.js';
-import { kitchenSceneMarkup, kitchenFlowPanel, kitchenViewModel, kitchenAnimationId } from '../src/restaurant-kitchen-ui.js';
+import { kitchenSceneMarkup, kitchenFlowPanel, kitchenViewModel, kitchenActionPresentations, kitchenAnimationId } from '../src/restaurant-kitchen-ui.js';
 import { KITCHEN_FOOD_PROPS, KITCHEN_V3_PROPS, KITCHEN_V4_PROPS, KITCHEN_V5_PROPS, KITCHEN_V6_PROPS, KITCHEN_V7_PROPS, KITCHEN_V8_PROPS } from '../src/restaurant-kitchen-assets.js';
 import { INTERACTIVE_KITCHEN_ZONES } from '../src/restaurant-kitchen-layout.js';
 import { kitchenTerminalMarkup, kitchenGuideMarkup } from '../src/restaurant-kitchen-terminal.js';
@@ -54,6 +54,19 @@ test('scene prompts wait for acceptance and expose exactly the next unclicked st
   view=kitchenViewModel(state.restaurant,id,run.endAt+3600000);
   assert.equal(view.phase,'awaiting');assert.equal(view.next.id,'wash');assert.equal(view.worker.phase,'awaiting');
   assert.equal(view.model.zones.filter(zone=>zone.occupant).length,0);
+});
+
+test('a future queued run shows its own waiting circle instead of offering the following step early',()=>{
+  let state=reduceAction(initialState(NOW),{type:'restaurant-arrive',partySize:1,recipeId:'rice'},actor,NOW);
+  const id=state.restaurant.orders[0].id;
+  state=reduceAction(state,{type:'restaurant-kitchen-accept',orderId:id},actor,NOW+6000);
+  state=reduceAction(state,{type:'restaurant-kitchen-step',orderId:id,stepId:'gather'},actor,NOW+10000);
+  const view=kitchenViewModel(state.restaurant,id,NOW+8000),actions=kitchenActionPresentations(state.restaurant,NOW+8000);
+  assert.equal(view.phase,'queued');assert.equal(view.next,null);assert.equal(view.active.currentStep.id,'gather');
+  assert.equal(actions.length,1);assert.equal(actions[0].step.id,'gather');assert.equal(actions[0].queued,true);assert.equal(actions[0].running,true);assert.equal(actions[0].moving,false);
+  assert.equal(kitchenViewModel(state.restaurant,id,NOW+10000).phase,'walk');
+  const end=state.restaurant.orders[0].workflow.runs[0].endAt;
+  assert.equal(kitchenViewModel(state.restaurant,id,end).next.id,'wash');
 });
 
 test('the stove divider follows the reference seam and operation anchors stay on countertop surfaces',()=>{
