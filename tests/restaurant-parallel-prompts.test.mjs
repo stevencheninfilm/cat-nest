@@ -83,6 +83,28 @@ test('a busy group of eight orders keeps every clickable target separate',()=>{
   }
 });
 
+test('a station fills from right to left before wrapping to a higher row',()=>{
+  const action=actions(fixture(),NOW+6000)[0],many=Array.from({length:8},(_,i)=>({...action,order:{...action.order,id:`table-${i+1}`,seat:i}}));
+  for(const width of [320,390,480,620]){
+    const height=width*1672/940,obstacle={left:width*.43,right:width*.57,top:height*.634,bottom:height*.634+27};
+    const points=layoutKitchenActions(many,{width,height,obstacles:[obstacle]}),columns=Math.min(many.length,Math.floor((width*.84-29)/58)+1);
+    for(let i=1;i<columns;i++){assert.equal(points[i].y,points[0].y);assert.ok(points[i].x<points[i-1].x);}
+    if(columns<points.length){assert.ok(points[columns].y<points[0].y);assert.ok(points[columns].x>points[columns-1].x);}
+    const four=layoutKitchenActions(many.slice(0,4),{width,height,obstacles:[obstacle]});
+    assert.deepEqual(four.map(p=>p.y),Array(4).fill(four[0].y),'four orders do not form a premature second row');
+  }
+});
+
+test('accepting a lower numbered table later appends its operation to the left',()=>{
+  let state=fixture(),at=NOW+6000;
+  for(const order of state.restaurant.orders)order.workflow.acceptedAt=null;
+  state=act(state,{type:'restaurant-kitchen-accept',orderId:'table-2'},at);
+  state=act(state,{type:'restaurant-kitchen-accept',orderId:'table-1'},at+100);
+  const all=actions(state,at+100),points=layoutKitchenActions(all);
+  assert.deepEqual(all.map(a=>a.order.id),['table-2','table-1']);
+  assert.equal(points[0].y,points[1].y);assert.ok(points[1].x<points[0].x);
+});
+
 test('delivered orders remove only their own circle and an unaccepted order adds none',()=>{
   let state=fixture();let at=NOW+6000;
   for(const stepId of ['gather','espresso','steam-milk','package','delivery']){state=click(state,'table-1',stepId,at);at=run(state,'table-1').endAt;}

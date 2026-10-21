@@ -37,3 +37,11 @@ test('the atelier ships its generated raster background and supports reduced mot
   const css=await readFile(new URL('../src/restaurant-research-hero.css',import.meta.url),'utf8');assert.match(css,/prefers-reduced-motion/);assert.match(css,/preserve-3d/);
   const effects=await readFile(new URL('../src/restaurant-research-lottery.css',import.meta.url),'utf8');assert.match(effects,/prefers-reduced-motion/);assert.match(effects,/rr-energy-collapse/);assert.match(effects,/rr-lottery-flash/);
 });
+
+test('a queued discovery disables only another draw and lets the player leave the research room',()=>{
+  const info=restaurantInfo(initialState(NOW),NOW),before=structuredClone(info);
+  const html=restaurantResearchPanel(info,{pendingDraw:info.research.nextDraw});
+  assert.match(html,/data-r-action="research-draw" data-r-draw="1" disabled/);
+  assert.match(html,/探索已排队/);assert.match(html,/可先去经营/);
+  assert.match(html,/data-r-tab="recipes"/);assert.deepEqual(info,before);
+});

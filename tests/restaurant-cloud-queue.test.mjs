@@ -40,6 +40,66 @@ function harness(t,handler,{state=requested(),pending=[],roomId=ROOM}={}){
   return {cloud,requests,sources,observed,state,latest:()=>observed.states.at(-1)?.state,pending:()=>observed.pending.at(-1)??pending,posts:()=>requests.filter(req=>req.method==='POST')};
 }
 function apply(state,item,at=Date.now()){const next=reduceAction(state,item.action,{id:item.clientId,name:item.name},at,item.operationId);assert.ok(next,`server rejected ${item.action.type}:${item.action.stepId??''} at ${at}`);return next;}
+function upgradeFixture(){
+  let state=initialState(NOW);state.coins=50000;state.goldFish=100;state.restaurant.stats.experience=levelStartXp(50);
+  state=reduceAction(state,{type:'restaurant-research-draw',draw:1},ACTOR,NOW,'fixture-draw');
+  assert.ok(validRestaurant(state.restaurant));return state;
+}
+
+test('facility, employee, skill and recipe upgrades update immediately while earlier uploads are still pending',async t=>{
+  const base=upgradeFixture(),acks=Array.from({length:6},deferred);let saved=base,posts=0;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved)):acks[posts++].promise,{state:base});await h.cloud.start();
+  for(const action of [
+    {type:'restaurant-upgrade',upgradeId:'kitchen'},
+    {type:'restaurant-upgrade',upgradeId:'kitchen'},
+    {type:'restaurant-train',workerId:'worker-1',statId:'stamina'},
+    {type:'restaurant-hire'},
+    {type:'restaurant-recipe',recipeId:'rice'},
+    {type:'pet'},
+  ])assert.equal(h.cloud.dispatch(action),true);
+  assert.equal(h.posts().length,1);assert.equal(h.pending().length,6);
+  const local=h.latest();assert.equal(local.restaurant.levels.kitchen,3);assert.equal(local.restaurant.staffTraining['worker-1'].levels.stamina,2);assert.equal(local.restaurant.staff,1);assert.equal(local.restaurant.recipeLevels.rice,2);assert.equal(local.restaurant.research.fragments.rice,0);assert.equal(local.pendingGrowth.length,1);
+  assert.ok(local.coins<base.coins);assert.ok(validRestaurant(local.restaurant));
+  assert.deepEqual(h.pending().slice(0,5).map(item=>item.action.expectedLevel),[2,3,2,1,2]);
+  for(let i=0;i<6;i++){const item=h.posts()[i].body;saved=apply(saved,item);acks[i].resolve(response(receipt(item,saved,i+1)));await flush();}
+  assert.equal(h.pending().length,0);assert.deepEqual(h.latest(),saved);assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('offline upgrades survive reload and automatically replay the original targets and IDs without another debit',async t=>{
+  const base=upgradeFixture();let saved=base,offline=true,revision=0;const ids=[];
+  const handler=req=>{if(req.method==='GET')return response(snapshot(saved,revision));if(offline)throw new TypeError('offline');ids.push(req.body.operationId);saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));};
+  const first=harness(t,handler,{state:base});await first.cloud.start();
+  for(const action of [{type:'restaurant-upgrade',upgradeId:'fridge'},{type:'restaurant-train',workerId:'worker-1',statId:'endurance'},{type:'restaurant-recipe',recipeId:'rice'}])assert.equal(first.cloud.dispatch(action),true);
+  await flush();const pending=clone(first.pending()),local=first.latest();first.cloud.destroy();t.mock.timers.reset();
+  assert.equal(first.observed.rollbacks.length,0);assert.equal(first.observed.saves.at(-1).phase,'queued');
+  const second=harness(t,handler,{state:base,pending});await second.cloud.start();await flush();
+  assert.equal(second.latest().coins,local.coins);assert.equal(second.latest().restaurant.levels.fridge,2);assert.equal(second.latest().restaurant.staffTraining['worker-1'].levels.endurance,2);assert.equal(second.latest().restaurant.recipeLevels.rice,2);
+  offline=false;t.mock.timers.tick(8000);await flush();
+  assert.deepEqual(ids,pending.map(item=>item.operationId));assert.equal(second.pending().length,0);assert.equal(saved.coins,local.coins);assert.equal(saved.restaurant.levels.fridge,2);assert.equal(second.observed.rollbacks.length,0);assert.equal(second.observed.actions.filter(item=>item.optimistic).length,0,'reload does not repeat upgrade effects');
+});
+
+test('a state-only receipt cannot apply a queued upgrade twice or buy the following level after a partner conflict',async t=>{
+  const base=upgradeFixture(),ack=deferred();let saved=base,revision=0;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved,revision)):ack.promise,{state:base});await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-upgrade',upgradeId:'kitchen'}),true);
+  const item=h.posts()[0].body,localWallet=h.latest().coins;
+  saved=apply(saved,item);revision=1;h.sources[0].emit('state',snapshot(saved,revision));
+  assert.equal(h.latest().restaurant.levels.kitchen,2);assert.equal(h.latest().coins,localWallet);assert.equal(h.pending().length,1);
+  assert.equal(reduceAction(saved,item.action,ACTOR,NOW+1000,'different-owner-operation'),null,'same desired target cannot purchase level 3');
+  ack.resolve(response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'伙伴已经升级了这项设施，本次未扣费'}},409));await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.levels.kitchen,2);assert.equal(h.latest().coins,saved.coins);assert.equal(h.observed.rollbacks.length,1);assert.equal(h.observed.saves.at(-1).rejected,true);
+});
+
+test('a competing wallet snapshot and an authentication outage retain the optimistic purchase until explicit refusal',async t=>{
+  const base=upgradeFixture();let saved=base,refuse=false;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved,1)):response({error:refuse?{code:'RESTAURANT_ACTION_REJECTED',message:'余额不足，本次未扣费'}:{code:'AUTH_UNAVAILABLE',message:'temporary authorization outage'}},refuse?409:403),{state:base});await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-upgrade',upgradeId:'kitchen'}),true);const local=clone(h.latest());await flush();
+  assert.equal(h.pending().length,1);assert.equal(h.observed.rollbacks.length,0);
+  saved={...clone(base),coins:0};h.sources[0].emit('state',snapshot(saved,2));
+  assert.equal(h.latest().restaurant.levels.kitchen,2);assert.equal(h.latest().coins,local.coins,'only an explicit refusal corrects the local purchase');
+  refuse=true;t.mock.timers.tick(8000);await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().restaurant.levels.kitchen,1);assert.equal(h.latest().coins,0);assert.equal(h.observed.rollbacks.length,1);
+});
 
 test('restaurant steps and home care keep each other when taps append to the same pending save queue',async t=>{
   const base=requested(),acks=Array.from({length:4},deferred);let saved=base,posts=0;
@@ -100,12 +160,12 @@ test('a research draw waits for the real card and ignores duplicate queued taps'
   assert.equal(h.latest().restaurant.research.fragments.rice,3);assert.equal(h.pending().length,0);
 });
 
-test('fragment fusion waits for the saved balance and ignores repeated queued conversions',async t=>{
+test('fragment fusion reserves its shards and inspiration immediately and ignores repeated queued conversions',async t=>{
   const base=restaurantResearchDebugResult(initialState(NOW),{mode:'research-fusion'},NOW).state,ack=deferred();let saved=base;
   const h=harness(t,async req=>{if(req.method==='GET')return response(snapshot(saved));await ack.promise;saved=apply(saved,req.body);return response(receipt(req.body,saved));},{state:base});
   await h.cloud.start();const action={type:'restaurant-research-fuse',recipeId:'cocoa',amount:5,expectedFragments:5,expectedFusion:0};
   assert.equal(h.cloud.dispatch(action),true);assert.equal(h.cloud.dispatch(action),false);
-  assert.equal(h.latest().restaurant.research.fragments.cocoa,5);assert.equal(h.latest().restaurant.research.inspirationEarned,base.restaurant.research.inspirationEarned);
+  assert.equal(h.latest().restaurant.research.fragments.cocoa,0);assert.equal(h.latest().restaurant.research.inspirationEarned,base.restaurant.research.inspirationEarned+25);
   ack.resolve();await flush();assert.equal(h.posts().length,1);assert.equal(h.latest().restaurant.research.fragments.cocoa,0);
   assert.equal(h.latest().restaurant.research.inspirationEarned,base.restaurant.research.inspirationEarned+25);assert.equal(h.pending().length,0);
 });

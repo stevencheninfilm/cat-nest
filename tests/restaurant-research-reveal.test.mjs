@@ -46,7 +46,7 @@ test('a card waits for the matching receipt and anticipation, then flips once wi
   const h=harness(t),accepted=drawn(),before=structuredClone(accepted),info=restaurantInfo(accepted,NOW);
   assert.equal(h.view.start(1),true);assert.equal(h.view.start(1),false);assert.equal(h.dialog.dataset.rrPhase,'brewing');
   h.tick();h.view.sync(restaurantInfo(state(),NOW),{connected:false});assert.equal(h.dialog.dataset.rrPhase,'brewing');
-  assert.match(h.nodes.get('[data-rr-message]').textContent,/等待灵感送达/);
+  assert.match(h.nodes.get('[data-rr-message]').textContent,/探索已暂存/);
   h.view.sync(info,{connected:true});assert.equal(h.dialog.dataset.rrPhase,'ready');
   assert.equal(h.nodes.get('[data-rr-result]').attrs['aria-hidden'],undefined);
   h.click('[data-rr-flip]');h.click('[data-rr-flip]');assert.equal(h.dialog.dataset.rrPhase,'flipping');assert.equal(h.timers.size,1);
@@ -69,7 +69,7 @@ test('a fast receipt does not skip the card back, and closing early cancels anim
 
 test('submission errors never reveal invented rewards, and reduced motion bypasses timed flourishes',t=>{
   const h=harness(t,{motion:true});h.view.start(1);assert.equal([...h.timers.values()][0].ms,0);
-  h.view.sync(restaurantInfo(state(),NOW),{savePhase:'error'});assert.equal(h.dialog.dataset.rrPhase,'error');assert.equal(h.timers.size,0);
+  h.view.sync(restaurantInfo(state(),NOW),{savePhase:'error',refusedResearchDraw:1});assert.equal(h.dialog.dataset.rrPhase,'error');assert.equal(h.timers.size,0);
   h.view.sync(restaurantInfo(drawn(),NOW));assert.equal(h.dialog.dataset.rrPhase,'error');
   assert.equal(h.dialog.querySelector('[data-rr-result]').innerHTML,'');h.click('[data-rr-discovery-confirm]');
   h.view.start(1);h.view.sync(restaurantInfo(drawn(),NOW));h.tick();h.click('[data-rr-discovery-confirm]');
@@ -103,4 +103,14 @@ test('the video-inspired sequence automatically reveals only a matching receipt 
   h.tick();assert.equal(h.dialog.dataset.rrPhase,'flipping');h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');assert.equal(h.timers.size,0);
   h.view.close();h.view.start(1);h.view.sync(info);h.tick();h.click('[data-rr-discovery-confirm]');assert.equal(h.timers.size,1,'manual reveal cancels the scheduled automatic reveal');
   h.view.close();assert.equal(h.timers.size,0);h.tick();assert.equal(h.dialog.open,false);assert.deepEqual(info,before);
+});
+
+test('a queued discovery can be dismissed immediately and unrelated save failures never cancel it',t=>{
+  const h=harness(t);h.view.start(1);
+  assert.equal(h.nodes.get('[data-rr-discovery-confirm]').disabled,false);
+  assert.match(h.nodes.get('[data-rr-discovery-confirm]').textContent,/先去经营/);
+  h.view.sync(restaurantInfo(state(),NOW),{savePhase:'error',refusedResearchDraw:2});
+  assert.equal(h.dialog.dataset.rrPhase,'brewing');assert.equal(h.nodes.get('[data-rr-result]')?.innerHTML??'','');
+  h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);assert.equal(h.timers.size,0);
+  h.view.sync(restaurantInfo(drawn(),NOW));assert.equal(h.dialog.open,false,'a later receipt cannot reopen a dismissed modal');
 });

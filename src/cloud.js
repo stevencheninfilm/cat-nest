@@ -3,14 +3,14 @@ import { growthClaimIds } from './restaurant-income-growth.js';
 import { restaurantGuestHasNextCourse } from './restaurant-guest-service.js';
 import { getCoupleProfile } from './couple-profile.js';
 import { duoPreviewable, previewDuoGameAction, redundantDuoTransition } from './minigames-duo-preview.js';
-import { validRestaurant } from './restaurant.js';
+import { validRestaurant, restaurantUpgradeCurrentLevel } from './restaurant.js';
 import { isInteractiveWorkflow, interactiveWorkerReservations } from './restaurant-kitchen-interactive.js';
 
-// Arrival IDs and purchase outcomes still come from the server. Only actions
-// against an existing order are safe to preview before their durable receipt.
+// Random cards and arrival IDs still come from the server. Deterministic
+// upgrades immediately project the exact target clicked and reserve its cost.
 // A first-course collection allocates the next order ID, so it waits for that
 // canonical receipt while unrelated kitchen commands continue to preview.
-const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect']);
+const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect','restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse']);
 const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
 const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
 const restaurantWorkerClocks=(state,order)=>Object.fromEntries([...new Set((order?.workflow?.runs??[]).map(run=>run.workerId??order.workflow.workerId))].filter(id=>state.restaurant.staffTraining?.[id]).map(id=>[id,structuredClone(state.restaurant.staffTraining[id])]));
@@ -39,13 +39,16 @@ export function createCloudRoom(options) {
   const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'claim-restaurant-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
   let authoritativeState = null, displayedState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
-  if(optimisticReducer)for(const item of queue)if(restaurantPreview(item.action)||item.action?.type==='claim-restaurant-growth')previews.set(item.operationId,{at:Number.isSafeInteger(item.restaurantPreviewAt)?item.restaurantPreviewAt:Date.now(),active:true,animated:item.action?.type==='claim-restaurant-growth'});
+  if(optimisticReducer)for(const item of queue)if(restaurantPreview(item.action)&&(restaurantUpgradeCurrentLevel(null,item.action)===null||item.action.expectedLevel!==undefined)||item.action?.type==='claim-restaurant-growth')previews.set(item.operationId,{at:Number.isSafeInteger(item.restaurantPreviewAt)?item.restaurantPreviewAt:Date.now(),active:true,animated:item.action?.type==='claim-restaurant-growth'});
   const outgoing=item=>restaurantAction(item.action)?{operationId:item.operationId,clientId:item.clientId,name:item.name,action:item.action}:item;
   const restaurantOrder=(state,action)=>state?.restaurant?.orders?.find(order=>order.id===action?.orderId);
   function restaurantAllocatesCourse(state,action){
     return action?.type==='restaurant-collect'&&(state?.restaurant?.parties??[]).some(party=>party.members.some(member=>member.orderId===action.orderId&&restaurantGuestHasNextCourse(member)));
   }
   function restaurantEffectPresent(state,action){
+    if(action?.expectedLevel!==undefined)return restaurantUpgradeCurrentLevel(state?.restaurant,action)>=action.expectedLevel;
+    if(action?.type==='restaurant-unlock-special')return state?.restaurant?.ownedSpecialRecipes?.includes(action.recipeId)??false;
+    if(action?.type==='restaurant-research-fuse')return (state?.restaurant?.research?.fusion?.revision??0)>action.expectedFusion;
     const order=restaurantOrder(state,action),flow=order?.workflow;
     if(action?.type==='restaurant-kitchen-accept')return flow?.acceptedAt!=null;
     if(action?.type==='restaurant-kitchen-step')return flow?.runs?.some(run=>run.stepId===action.stepId)||false;
@@ -134,7 +137,7 @@ export function createCloudRoom(options) {
       onState(displayedState,{confirmedState:authoritativeState,optimistic:true,pendingGames});
       return;
     }
-    let display = projectRestaurantTimelines(authoritativeState), optimistic = display!==authoritativeState;
+    let display = projectRestaurantTimelines(authoritativeState), optimistic = display!==authoritativeState,heldPurchase=false;
     const pendingGames = [];
     const withdrawn = [];
     for (const item of queue) {
@@ -151,11 +154,15 @@ export function createCloudRoom(options) {
       if (next) {
         display = next; optimistic = true;if(game)pendingGames.push(item.action);
         if(restaurant){const order=restaurantOrder(next,item.action);preview.order=order?structuredClone(order):null;preview.training=order?.workflow?.workerId?structuredClone(next.restaurant.staffTraining?.[order.workflow.workerId]):null;preview.workers=restaurantWorkerClocks(next,order);}
-      }else if(!restaurant&&item.action.type!=='claim-restaurant-growth'){preview.active = false; withdrawn.push(item);}
+      }else if(restaurant&&restaurantUpgradeCurrentLevel(display.restaurant,item.action)!==null){heldPurchase=true;}
+      else if(!restaurant&&item.action.type!=='claim-restaurant-growth'){preview.active = false; withdrawn.push(item);}
       // A later authoritative timestamp can temporarily make a restaurant
       // dependency unplayable. Keep its intent and preview active until its
       // own durable receipt or an explicit business refusal resolves it.
     }
+    // A competing snapshot is not a refusal of this operation. Keep the local
+    // purchase visible until its own receipt or explicit business rejection.
+    if(heldPurchase&&displayedState){display=displayedState;optimistic=true;}
     displayedState = display;
     onState(display, { confirmedState: authoritativeState, optimistic, pendingGames });
     for (const item of withdrawn) onRollback(item.action, me, { operationId:item.operationId, reason:'conflict' });
@@ -235,7 +242,7 @@ export function createCloudRoom(options) {
           continue;
         }
         const restaurant=restaurantAction(item.action);
-        const transientRestaurant=restaurant&&([408,425,429].includes(error.status)||error.status===409&&!['RESTAURANT_ACTION_REJECTED','DEMO_ACTION_REJECTED','DEMO_REJECTED','ACTION_REJECTED','INVALID_ACTION','OPERATION_CONFLICT'].includes(error.code));
+        const refusedRestaurant=restaurant&&error.status>=400&&error.status<500&&['RESTAURANT_ACTION_REJECTED','DEMO_ACTION_REJECTED','DEMO_REJECTED','ACTION_REJECTED','INVALID_ACTION','OPERATION_CONFLICT'].includes(error.code);
         if(restaurant&&error.status===409){
           // A conflict can be an uncertain write or a delayed live receipt.
           // Read before judging it; never manufacture another operation ID.
@@ -252,7 +259,7 @@ export function createCloudRoom(options) {
           const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
           if(at>Date.now()){queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(at-Date.now()+25);break;}
         }
-        if (error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!(item.action.type==='claim-restaurant-growth'&&error.status===425)&&!transientRestaurant) {
+        if (refusedRestaurant||!restaurant&&error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!(item.action.type==='claim-restaurant-growth'&&error.status===425)) {
           if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* Fall back to the latest live snapshot. */ }
             if(destroyed)break;
@@ -280,12 +287,13 @@ export function createCloudRoom(options) {
             try { apply(await request(`/api/rooms/${room}`)); } catch { /* The next live snapshot or poll can still reconcile it. */ }
             if (destroyed) break;
           }
-          onSaveStatus({ phase:'error', message:error.message });
+          onSaveStatus({ phase:'error', message:error.message, rejected:true, action:item.action, operationId:item.operationId });
           if (queue.length) continue;
         } else {
           // An unknown upload result is not a rejection. Keep the local result
           // and original operation ID until a durable receipt or refusal arrives.
-          if(restaurant)queuedStatus();
+          if(restaurant&&[401,403,404].includes(error.status))onSaveStatus({phase:'error',message:'保存暂未完成，操作已保留在本机，连接恢复后会自动重试',retrying:true});
+          else if(restaurant)queuedStatus();
           else if(item.action.type==='claim-restaurant-growth'&&(!error.status||[408,425,429].includes(error.status)))queuedStatus('餐厅经营经验已暂存，连接恢复后自动保存');
           else onSaveStatus({ phase:'error', message:'保存暂未确认，操作已暂存在本机，将自动重试；请勿清除浏览器数据' });
           scheduleDrain();
@@ -340,6 +348,9 @@ export function createCloudRoom(options) {
     start,
     dispatch(action) {
       if (!ready || destroyed || queue.length >= (restaurantAction(action)?200:20)) return false;
+      const target=restaurantUpgradeCurrentLevel((displayedState||authoritativeState)?.restaurant,action);
+      if(target!==null&&action.expectedLevel===undefined)action={...action,expectedLevel:target+1};
+      if(['restaurant-arrive','restaurant-wait'].includes(action?.type)&&queue.some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type)))return false;
       const claimIds = new Set(growthClaimIds(action));
       if (claimIds.size && queue.some(item => growthClaimIds(item.action).some(id => claimIds.has(id)))) return false;
       if(action?.type==='restaurant-kitchen-accept'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId))return false;

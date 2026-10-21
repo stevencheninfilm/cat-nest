@@ -194,10 +194,26 @@ export function restaurantInfo(state,now=Date.now()) {
   }),hireCost:RESTAURANT_STAFF_COSTS[restaurant.staff]??null,hireCurrency:premiumStaffHireCost(restaurant.staff)?.currency??'coins',hireUnlockLevel,hireUnlocked:level>=hireUnlockLevel};
 }
 
+/** A queued purchase names the level clicked, so retrying never buys a later
+ * level after another owner changes the same facility, recipe or employee. */
+export function restaurantUpgradeCurrentLevel(restaurant,action){
+  if(action?.type==='restaurant-upgrade')return restaurant?.levels?.[action.upgradeId]??1;
+  if(action?.type==='restaurant-recipe')return restaurant?.recipeLevels?.[action.recipeId]??1;
+  if(action?.type==='restaurant-train')return restaurant?.staffTraining?.[action.workerId]?.levels?.[action.statId]??1;
+  if(action?.type==='restaurant-hire')return restaurant?.staff??0;
+  return null;
+}
+
 export function sanitizeRestaurantAction(value) {
   if(!plain(value))return null;
+  if(Object.hasOwn(value,'expectedLevel')){
+    if(restaurantUpgradeCurrentLevel(null,value)===null||!integer(value.expectedLevel,1,10))return null;
+    const {expectedLevel,...action}=value,clean=sanitizeRestaurantAction(action);
+    return clean?{...clean,expectedLevel}:null;
+  }
   if(value.type==='restaurant-daily-login'&&exact(value,['type','day'])&&integer(value.day))return {...value};
   if(value.type==='restaurant-wait'&&exact(value,['type']))return {...value};
+  if(value.type==='restaurant-arrive'&&exact(value,['type','waitingPartyId'])&&typeof value.waitingPartyId==='string'&&/^wait-[0-9]{1,16}-[1-9][0-9]{0,15}$/.test(value.waitingPartyId))return {...value};
   if(value.type==='restaurant-arrive'&&Object.keys(value).every(key=>['type','partySize','recipeId'].includes(key))&&(!Object.hasOwn(value,'partySize')||[1,2].includes(value.partySize))&&(!Object.hasOwn(value,'recipeId')||restaurantRecipe(value.recipeId)))return {...value};
   if(['restaurant-start','restaurant-recipe'].includes(value.type)&&exact(value,['type','recipeId'])&&restaurantRecipe(value.recipeId))return {...value};
   if(['restaurant-serve','restaurant-collect'].includes(value.type)&&exact(value,['type','orderId'])&&typeof value.orderId==='string'&&ORDER_ID.test(value.orderId))return {...value};
@@ -221,6 +237,7 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
   if(!sanitizeRestaurantAction(action))return reject('这项餐厅操作无效。');
   now=safeNow(now);
   const info=restaurantInfo(state,now),restaurant=info.restaurant;
+  if(action.expectedLevel!==undefined&&restaurantUpgradeCurrentLevel(restaurant,action)+1!==action.expectedLevel)return reject('这项升级的进度已更新，本次操作未扣费，请按最新等级继续。');
   const decorationSnapshot=restaurantDecorationSnapshot(restaurant),cookSpeed=decorationSnapshot?.cookSpeed??0;
   let coins=state.coins,goldFish=normalizeGoldFish(state.goldFish),xp=state.xp,text,growthReward;
   if(!integer(coins,0,999999)||Object.hasOwn(state,'goldFish')&&!validGoldFish(state.goldFish)||!Number.isFinite(xp)||xp<0||xp>MAX_SAFE||restaurant.revision>=MAX_SAFE)return reject('这份餐厅存档暂时无法更新。');
@@ -264,6 +281,7 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     const recipes=info.recipes.filter(recipe=>recipe.unlocked);
     if(action.recipeId&&!recipes.some(recipe=>recipe.id===action.recipeId))return reject('这份料理还没有解锁，先让小馆慢慢长大吧。');
     const queue=restaurantWaitingParties(restaurant,now),waiting=action.partySize||action.recipeId?null:queue[0];
+    if(action.waitingPartyId&&waiting?.id!==action.waitingPartyId)return reject('这组等位顾客已入座或离开，请按门外的最新队伍继续迎客。');
     const plan=restaurantArrivalPlan(restaurant,recipes,action,actor,now,waiting),party={...plan,members:[]};
     for(const member of plan.members){
       const order=createRestaurantGuestOrder(restaurant,member.recipe,plan.seatedAt,plan.table,actor,decorationSnapshot);

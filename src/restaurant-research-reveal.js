@@ -69,7 +69,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
   function click(event){
     if(event.target.closest('[data-rr-discovery-close]')){close();return;}
     if(event.target.closest('[data-rr-flip]'))flip();
-    if(event.target.closest('[data-rr-discovery-confirm]')){if(dialog.dataset.rrPhase==='revealed'||dialog.dataset.rrPhase==='error')close();else flip();}
+    if(event.target.closest('[data-rr-discovery-confirm]')){if(['brewing','revealed','error'].includes(dialog.dataset.rrPhase))close();else flip();}
   }
   function cancel(event){event.preventDefault();event.stopPropagation();close();}
   dialog.addEventListener('click',click);dialog.addEventListener('cancel',cancel);dialog.addEventListener('close',closed);
@@ -78,6 +78,8 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
       if(dialog.open)return false;
       clearTimers();restoreFocus=document.activeElement;active={draw,brewed:false,result:null,revealing:false};
       delete dialog.dataset.rQuality;stage('brewing');dialog.innerHTML=restaurantResearchRevealMarkup(draw);dialog.showModal();
+      $('[data-rr-discovery-confirm]').disabled=false;$('[data-rr-discovery-confirm]').textContent='先去经营，稍后看结果';
+      $('[data-rr-discovery-note]').textContent='探索已记下 · 可随时返回经营，结果会收进手账';
       $('[data-rr-discovery-close]').focus({preventScroll:true});
       later(()=>{if(active){active.brewed=true;ready();}},reducedMotion()?0:1800);
       return true;
@@ -89,8 +91,8 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
         active.result=result;const front=$('[data-rr-result]');front.dataset.rQuality=result.grade;front.innerHTML=restaurantResearchRevealFace(result);ready();return;
       }
       if(info.research.lastDraw?.draw>active.draw)this.fail('手账已收到更新的灵感，请返回查看最新记录。');
-      else if(availability.savePhase==='error')this.fail('研发暂时没有完成，请稍后查看灵感手账。');
-      else if(!availability.connected)$('[data-rr-message]').textContent='猫猫守着小锅，正在等待灵感送达…';
+      else if(availability.refusedResearchDraw===active.draw)this.fail('这次探索未能完成，请按手账中的最新灵感继续。');
+      else if(!availability.connected)$('[data-rr-message]').textContent='探索已暂存，连接恢复后自动继续；可以先去经营';
     },
     preview(grade,info){
       const level=RESTAURANT_DISH_GRADES.indexOf(grade)+1,recipe=info.recipes.find(recipe=>recipe.id==='rice');

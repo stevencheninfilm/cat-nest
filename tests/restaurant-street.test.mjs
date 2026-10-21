@@ -40,9 +40,12 @@ test('a full restaurant keeps a bounded FIFO without starting orders, recording 
 test('after payment the oldest waiting cats enter together, keeping identity and an authoritative fresh order',()=>{
   let state=act(fullRestaurant(),{type:'restaurant-wait'},NOW+10000);state=act(state,{type:'restaurant-wait'},NOW+11000);
   const queued=structuredClone(state.restaurant.waitingParties),paid=payFirstTable(state);
-  const entered=act(paid.state,{type:'restaurant-arrive'},paid.at+7000);assert.ok(entered);
+  const rhythm=createRestaurantArrivalRhythm(),action=rhythm.poll(restaurantInfo(paid.state,paid.at),paid.at);
+  assert.deepEqual(action,{type:'restaurant-arrive',waitingPartyId:queued[0].id});
+  const entered=act(paid.state,action,paid.at);assert.ok(entered);
   const party=entered.restaurant.parties.at(-1);assert.deepEqual(party.members.map(member=>member.cat),queued[0].cats);assert.equal(party.fromQueue,true);
-  assert.deepEqual(entered.restaurant.waitingParties,[queued[1]]);assert.equal(party.seatedAt,paid.at+7000+RESTAURANT_ARRIVAL_MS);
+  assert.deepEqual(entered.restaurant.waitingParties,[queued[1]]);assert.equal(party.seatedAt,paid.at+RESTAURANT_ARRIVAL_MS);
+  assert.equal(act(entered,action,paid.at+1),null,'a duplicate admission cannot consume the next waiting group');
   for(let seat=0;seat<party.members.length;seat++){
     const motion=restaurantGuestMotion(party,seat,party.arrivedAt);assert.equal(motion.x,restaurantQueuePosition(0,seat).x);assert.equal(motion.y,restaurantQueuePosition(0,seat).y);
   }
@@ -78,12 +81,13 @@ test('natural arrivals wait through startup and freshly freed seats; polling and
   rhythm.poll(empty,NOW+30000,{enabled:false});assert.equal(rhythm.poll(empty,NOW+90000),null);
 });
 
-test('a waiting queue receives delayed priority and connection/save blocks cannot submit an arrival',()=>{
+test('waiting visitors bypass startup and walk-in pauses as soon as a table frees, while a pending admission blocks duplicates',()=>{
   const rhythm=createRestaurantArrivalRhythm({random:()=>0}),full={availableTables:0,waitingParties:[]};
   rhythm.poll(full,NOW);assert.deepEqual(rhythm.poll(full,NOW+8000),{type:'restaurant-wait'});
-  const free={availableTables:1,waitingParties:[{}]};assert.equal(rhythm.poll(free,NOW+9000),null);
-  assert.equal(rhythm.poll(free,NOW+15500,{blocked:true}),null);
-  assert.deepEqual(rhythm.poll(free,NOW+16000),{type:'restaurant-arrive'});
+  const free={availableTables:1,waitingParties:[{id:'wait-1-1'}]};
+  assert.equal(rhythm.poll(free,NOW+9000,{blocked:true}),null);
+  assert.deepEqual(rhythm.poll(free,NOW+9001),{type:'restaurant-arrive',waitingPartyId:'wait-1-1'});
+  rhythm.reset();assert.deepEqual(rhythm.poll(free,NOW+9002),{type:'restaurant-arrive',waitingPartyId:'wait-1-1'});
 });
 
 test('street life includes distinct paired passers, local interactions and no saved-state writes',()=>{
