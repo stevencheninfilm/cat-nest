@@ -322,7 +322,8 @@ test('a first-course collection waits for its canonical next ID while other exis
     saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));
   },{state:base});await h.cloud.start();
   const collect={type:'restaurant-collect',orderId:'table-1'};
-  assert.equal(h.cloud.dispatch(collect),true);assert.equal(h.cloud.dispatch(collect),false,'same collection cannot queue twice');
+  assert.equal(h.cloud.dispatch(collect),true);assert.equal(h.cloud.dispatch(collect),true,'a repeat tap joins the original collection without reporting a save failure');
+  assert.equal(h.pending().filter(item=>item.action.type==='restaurant-collect').length,1);
   assert.equal(h.latest().restaurant.nextOrderId,3);assert.equal(h.latest().coins,base.coins);assert.equal(h.latest().goldFish,base.goldFish);
   assert.equal(h.latest().restaurant.parties[0].members[0].service.round,1,'no guessed next-course ID enters the display');
   assert.match(tableView(h),/正在看菜单…/);assert.match(tableView(h),/role="progressbar"/);
@@ -576,4 +577,63 @@ test('a saved gift restored with its queued operation drains once after reload',
   const h=harness(t,req=>response(req.method==='GET'?snapshot(saved):{...receipt(item,saved),duplicate:true}),{state:base,pending:[item]});
   await h.cloud.start();await flush();assert.equal(h.pending().length,0);assert.equal(h.latest().coins,base.coins+300);
   assert.equal(h.posts().length,1);assert.equal(h.posts()[0].body.operationId,item.operationId);
+});
+
+function finalCollectionFixture(kind='ordinary'){
+  let base=initialState(NOW-3600000);base.coins=2000;
+  if(kind==='ordinary'){
+    base=reduceAction(base,{type:'restaurant-arrive',partySize:2,recipeId:'coffee'},ACTOR,NOW-3600000);
+    assert.equal(base.restaurant.parties[0].members.length,2);
+    const firstId=base.restaurant.parties[0].members[0].orderId,secondId=base.restaurant.parties[0].members[1].orderId;
+    const first=prepareRestaurantMealForCollection(base,firstId,ACTOR);base=first.state;
+    base.updatedAt=first.at+60000; // Let the sole chef finish the return walk before the companion meal.
+    const second=prepareRestaurantMealForCollection(base,secondId,ACTOR);
+    base=reduceAction(second.state,{type:'restaurant-collect',orderId:firstId},ACTOR,second.at,'paid-companion-original');
+    assert.equal(base.restaurant.parties.length,1);assert.equal(base.restaurant.orders.length,1);
+  }else{
+    base=restaurantGuestDebugResult(base,{mode:'guest',guestId:kind==='silver'?'guest-baker':'guest-dawn-duke'},NOW-3600000).state;
+    const first=prepareRestaurantMealForCollection(base,'table-1',ACTOR);
+    base=reduceAction(first.state,{type:'restaurant-collect',orderId:first.order.id},ACTOR,first.at,'first-course-original');
+    base=prepareRestaurantMealForCollection(base,base.restaurant.orders[0].id,ACTOR).state;
+  }
+  assert.ok(base.updatedAt<NOW);assert.ok(validRestaurant(base.restaurant));
+  const order=restaurantInfo(base,NOW).orders[0];assert.equal(order.status,'collectible');assert.equal(order.hasNextCourse,false);
+  return {base,order};
+}
+
+for(const kind of ['ordinary','silver','gold'])test(`${kind} final collection joins repeated taps and survives a lost response without duplicate currency or departure`,async t=>{
+  const {base,order}=finalCollectionFixture(kind),ack=deferred();let saved=base,posts=0;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved));
+    if(posts++===0)return ack.promise;
+    saved=apply(saved,req.body);return response(receipt(req.body,saved));
+  },{state:base});await h.cloud.start();
+  const action={type:'restaurant-collect',orderId:order.id};
+  assert.equal(h.cloud.dispatch(action),true);const original=clone(h.pending()[0]);
+  for(let i=0;i<20;i++)assert.equal(h.cloud.dispatch(action),true);
+  assert.equal(h.pending().length,1);assert.equal(h.posts().length,1);
+  assert.equal(h.latest().coins,base.coins+order.rewardCoins);assert.equal(h.latest().goldFish,base.goldFish+order.rewardGold);
+  assert.equal(h.latest().restaurant.orders.length,0);assert.equal(h.latest().restaurant.parties.length,0);
+  ack.reject(new TypeError('connection lost'));await flush();
+  assert.equal(h.cloud.dispatch(action),true);assert.equal(h.pending()[0].operationId,original.operationId);
+  assert.equal(h.observed.saves.at(-1).phase,'queued');assert.equal(h.observed.rollbacks.length,0);
+  t.mock.timers.tick(8000);await flush();
+  assert.equal(h.pending().length,0);assert.equal(saved.coins,base.coins+order.rewardCoins);assert.equal(saved.goldFish,base.goldFish+order.rewardGold);
+  assert.equal(saved.restaurant.stats.served,base.restaurant.stats.served+1);
+  assert.equal(saved.pendingGrowth.filter(reward=>reward.id===original.operationId).length,1);
+  assert.ok(h.posts().every(req=>req.body.operationId===original.operationId));
+});
+
+test('a pending final bill stays busy after a competing snapshot and re-enables only after explicit refusal',async t=>{
+  const {base,order}=finalCollectionFixture(),ack=deferred();let saved=base;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved,2)):ack.promise,{state:base});await h.cloud.start();
+  const action={type:'restaurant-collect',orderId:order.id};assert.equal(h.cloud.dispatch(action),true);
+  saved=clone(base);saved.coins=999990;
+  h.sources[0].emit('state',snapshot(saved,2));
+  const html=tableView(h);assert.match(html,/正在收款…/);assert.match(html,/这笔小鱼干已记下/);assert.match(html,/aria-busy="true"/);
+  assert.doesNotMatch(html,new RegExp(`data-r-action="collect" data-r-order-id="${order.id}"`));
+  assert.equal(h.cloud.dispatch(action),true);assert.equal(h.pending().length,1);assert.equal(h.posts().length,1);
+  ack.resolve(response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'小鱼干口袋快满啦'}},409));await flush();
+  assert.equal(h.pending().length,0);assert.doesNotMatch(tableView(h),/正在收款/);assert.match(tableView(h),/data-r-action="collect"/);
+  assert.equal(h.latest().coins,saved.coins);assert.equal(h.observed.rollbacks.length,1);
 });

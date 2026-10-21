@@ -389,7 +389,12 @@ export function createCloudRoom(options) {
   return {
     start,
     dispatch(action) {
-      if (!ready || destroyed || queue.length >= (restaurantAction(action)?200:20)) return false;
+      if (!ready || destroyed) return false;
+      // A repeated receipt tap joins the original durable intent. It is not a
+      // failed save and must not allocate another ID, reward or POST, even when
+      // other queued commands have filled the admission limit meanwhile.
+      if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return true;
+      if(queue.length >= (restaurantAction(action)?200:20))return false;
       const target=restaurantUpgradeCurrentLevel((displayedState||authoritativeState)?.restaurant,action);
       if(target!==null&&action.expectedLevel===undefined)action={...action,expectedLevel:target+1};
       if(['restaurant-arrive','restaurant-wait'].includes(action?.type)&&queue.some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type)))return false;
@@ -397,7 +402,6 @@ export function createCloudRoom(options) {
       if (claimIds.size && queue.some(item => growthClaimIds(item.action).some(id => claimIds.has(id)))) return false;
       if(action?.type==='restaurant-kitchen-accept'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId))return false;
       if(action?.type==='restaurant-kitchen-step'&&queue.some(item=>item.action?.type===action.type&&item.action.orderId===action.orderId&&item.action.stepId===action.stepId))return false;
-      if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return false;
       if(action?.type==='restaurant-daily-login'&&queue.some(item=>item.action?.type==='restaurant-daily-login'&&item.action.day===action.day))return false;
       if(action?.type==='restaurant-research-draw'&&queue.some(item=>item.action?.type==='restaurant-research-draw'&&item.action.draw===action.draw))return false;
       if(action?.type==='restaurant-research-fuse'&&queue.some(item=>item.action?.type==='restaurant-research-fuse'&&item.action.expectedFusion===action.expectedFusion))return false;
