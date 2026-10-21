@@ -30,9 +30,9 @@ for(const [id,level,cost,price,seconds] of recipes){
     const young=structuredClone(state);young.restaurant.stats.experience=levelStartXp(level)-1;
     assert.equal(act(young,{type:'restaurant-unlock-special',recipeId:id}),null);
     const purchased=act(state,{type:'restaurant-unlock-special',recipeId:id});assert.ok(purchased);
-    assert.equal(purchased.goldFish,state.goldFish-cost);assert.equal(purchased.coins,state.coins);assert.equal(purchased.xp,state.xp);assert.equal(purchased.restaurant.recipeLevels[id],1);
+    assert.equal(purchased.goldFish,state.goldFish-cost);assert.equal(purchased.coins,state.coins);assert.equal(purchased.xp,state.xp);assert.equal(purchased.restaurant.recipeLevels[id],3);
     assert.equal(act(purchased,{type:'restaurant-unlock-special',recipeId:id}),null,'a second request cannot charge again');
-    const unlocked=restaurantInfo(purchased,NOW);assert.equal(unlocked.recipes.filter(item=>item.id===id).length,1);assert.equal(unlocked.specialRecipes.find(item=>item.id===id).grade,'B');
+    const unlocked=restaurantInfo(purchased,NOW);assert.equal(unlocked.recipes.filter(item=>item.id===id).length,1);assert.equal(unlocked.specialRecipes.find(item=>item.id===id).grade,'S');
     assert.equal(restaurantResearchPool(unlocked.recipes).some(item=>item.recipe.id===id),true);
   });
 

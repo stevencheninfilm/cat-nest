@@ -21,7 +21,7 @@ export function restaurantGuestDebugResult(state,command,now=Date.now()){
     if(requirement.kind==='facility')r.levels[requirement.id]=Math.max(r.levels[requirement.id],requirement.minimum);
     if(requirement.kind==='recipe'&&specialRestaurantRecipe(requirement.id)){
       if(!r.ownedSpecialRecipes.includes(requirement.id))r.ownedSpecialRecipes.push(requirement.id);
-      r.recipeLevels[requirement.id]??=1;
+      r.recipeLevels[requirement.id]=Math.max(r.recipeLevels[requirement.id]??1,specialRestaurantRecipe(requirement.id).baseLevel);
     }
     if(requirement.kind==='decoration'){
       const suite=restaurantDecoration(requirement.id);
