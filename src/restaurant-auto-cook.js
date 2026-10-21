@@ -32,7 +32,7 @@ export function createRestaurantAutoCook({getState,getAvailability=()=>({ready:t
     },
     tick({active=true}={}){
       const availability=getAvailability();
-      if(pumping||!active||!enabled||!(availability.ready??availability.connected)||availability.savePhase==='error'||!unlocked())return false;
+      if(pumping||!active||!enabled||!(availability.ready??availability.connected)||(availability.savePhase==='error'&&!availability.saveRejected)||!unlocked())return false;
       const action=nextRestaurantAutoCookAction(getState(),now(),availability.pendingKitchenSteps??[]);
       if(!action)return false;
       pumping=true;

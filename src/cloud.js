@@ -72,7 +72,10 @@ export function createCloudRoom(options) {
           const reservations=state.restaurant.orders.filter(next=>next.id!==order.id&&next.workflow).flatMap(next=>isInteractiveWorkflow(next.workflow)?interactiveWorkerReservations(next.workflow).filter(window=>window.workerId===id).map(window=>window.endAt):next.workflow.workerId===id?[next.workflow.completedAt]:[]);
           return Math.max(readyAt,record?.rest?.fullAt??0,...reservations);
         });
-        const earliest=Math.min(...free);if(Number.isFinite(earliest))readyAt=earliest;
+        // MAX_SAFE_INTEGER means ownership until another command releases
+        // the worker, not a clock to wait for. Let the server settle this
+        // intent instead of blocking the delivery queued behind it forever.
+        const earliest=Math.min(...free);if(Number.isFinite(earliest)&&earliest<Number.MAX_SAFE_INTEGER)readyAt=earliest;
       }
       return readyAt;
     }

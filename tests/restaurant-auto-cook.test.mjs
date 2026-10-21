@@ -105,6 +105,13 @@ test('turning off stops after the current step; background, unresolved saves and
   h.controller.toggle();assert.equal(h.controller.tick(),true);assert.equal(h.actions.length,2);
 });
 
+test('an explicitly refused prior command does not permanently stop valid automatic cooking',()=>{
+  const h=harness(),id=h.request();h.apply({type:'restaurant-kitchen-accept',orderId:id});h.controller.toggle();
+  h.availability={ready:true,savePhase:'error',saveRejected:false};assert.equal(h.controller.tick(),false);
+  h.availability={ready:true,savePhase:'error',saveRejected:true};assert.equal(h.controller.tick(),true);
+  assert.equal(h.actions[0].stepId,'gather');h.complete();assert.ok(h.state.restaurant.orders[0].workflow.servedAt);
+});
+
 test('the right rail exposes a labeled toggle with locked, off and blue active states',()=>{
   assert.match(restaurantMarkup(fixture()),/data-r-auto-cook[^>]*aria-pressed="false"/);
   const attrs={},small={};const button={dataset:{},setAttribute:(k,v)=>attrs[k]=v,querySelector:()=>small};
