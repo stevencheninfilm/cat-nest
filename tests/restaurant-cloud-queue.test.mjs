@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCloudRoom } from '../src/cloud.js';
-import { initialState,reduceAction} from '../src/state.js';
+import { initialState,reduceAction,normalizeState} from '../src/state.js';
 import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { validRestaurant,restaurantInfo,restaurantRecipe } from '../src/restaurant.js';
+import { createRestaurantAutoCook } from '../src/restaurant-auto-cook.js';
 import { restaurantStaffIdleAt } from '../src/restaurant-staff-training.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { restaurantGuestDebugResult } from '../demo/restaurant-guests.js';
@@ -173,6 +174,87 @@ test('a restored pickup blocked by an unfinished dish cannot hold its delivery b
   t.mock.timers.tick(returnAt-Date.now());
   assert.equal(h.cloud.dispatch(intents[0]),true);await flush();
   assert.equal(h.pending().length,0);assert.equal(saved.restaurant.orders[1].workflow.runs[0].stepId,'gather');
+});
+
+test('a pickup waiting for rest lets another queued dish deliver and release an employee before the recovery deadline',async t=>{
+  let base=requested('coffee',2),at=NOW;
+  base.restaurant.staff=1;
+  base.restaurant.staffTraining['worker-2']={...clone(base.restaurant.staffTraining['worker-1']),energy:200};
+  Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
+  const seed=(orderId,stepId)=>{base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:`seed-${orderId}-${stepId}`,action:{type:'restaurant-kitchen-step',orderId,stepId}},at);at=base.restaurant.orders.find(o=>o.id===orderId).workflow.runs.at(-1).endAt;};
+  for(const o of base.restaurant.orders)base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:`accept-${o.id}`,action:{type:'restaurant-kitchen-accept',orderId:o.id}},at);
+  seed('table-1','gather');
+  for(const step of KITCHEN_FLOWS.coffee)seed('table-2',step.id);
+  const fullAt=base.restaurant.staffTraining['worker-1'].rest.fullAt;
+  assert.ok(at<fullAt);
+  const pending=[
+    {operationId:'waiting-handoff',action:{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'}},
+    {operationId:'release-other-employee',action:{type:'restaurant-kitchen-step',orderId:'table-2',stepId:'delivery'}},
+  ].map(item=>({...item,clientId:ACTOR.id,name:ACTOR.name,restaurantPreviewAt:at}));
+  let saved=base,revision=0;
+  const h=harness(t,req=>{if(req.method==='GET')return response(snapshot(saved,revision));saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));},{state:base,pending});
+  t.mock.timers.tick(at-NOW);await h.cloud.start();await flush();
+  assert.equal(h.posts()[0]?.body.operationId,'release-other-employee');
+  for(let i=0;i<30&&h.pending().length;i++){t.mock.timers.tick(1000);await flush();}
+  assert.equal(h.pending().length,0);assert.ok(Date.now()<fullAt);
+  assert.deepEqual(h.posts().map(req=>req.body.operationId),['release-other-employee','waiting-handoff']);
+  assert.equal(saved.restaurant.orders[0].workflow.workerId,'worker-2');assert.equal(h.observed.rollbacks.length,0);
+  assert.equal(saved.restaurant.staffTraining['worker-1'].rest.fullAt,fullAt);assert.ok(validRestaurant(saved.restaurant));
+});
+
+test('an acknowledgement with an earlier real clock does not retain a future local exhaustion and replay its rest trip',async t=>{
+  let base=requested();Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
+  base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:'accept',action:{type:'restaurant-kitchen-accept',orderId:'table-1'}},NOW);
+  const ack=deferred();let saved=base;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(saved)):ack.promise,{state:base});await h.cloud.start();t.mock.timers.tick(5000);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}),true);
+  const item=h.posts()[0].body;saved=apply(saved,item,NOW+4000);ack.resolve(response(receipt(item,saved,1)));await flush();
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs[0].commandAt,NOW+4000);
+  assert.deepEqual(h.latest().restaurant.staffTraining['worker-1'].rest,saved.restaurant.staffTraining['worker-1'].rest);
+  const fullAt=saved.restaurant.staffTraining['worker-1'].rest.fullAt;t.mock.timers.tick(fullAt-Date.now());
+  assert.equal(restaurantInfo(h.latest(),Date.now()).kitchen.workers[0].phase,'rest-ready');
+});
+
+test('a real recovered energy ledger replaces a speculative exhausted trip instead of sending the worker to rest again',async t=>{
+  let base=requested();Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
+  base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:'accept',action:{type:'restaurant-kitchen-accept',orderId:'table-1'}},NOW);
+  const ack=deferred();let saved=clone(base);saved.restaurant.staffTraining['worker-1'].energy=100;
+  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise,{state:base});await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}),true);
+  assert.ok(h.latest().restaurant.staffTraining['worker-1'].rest);
+  t.mock.timers.tick(650);const item=h.posts()[0].body;saved=apply(saved,item);ack.resolve(response(receipt(item,saved,1)));await flush();
+  assert.equal(h.latest().restaurant.staffTraining['worker-1'].rest,null);
+  assert.equal(h.latest().restaurant.orders[0].workflow.runs[0].durationMultiplier,1);
+});
+
+test('delayed receipts, concurrent dishes and exhausted handoffs finish without early next-step buttons or replaying a completed rest trip',async t=>{
+  let base=requested('coffee',2);base.restaurant.stats.experience=levelStartXp(10);base.restaurant.staff=2;
+  for(const id of ['worker-1','worker-2','worker-3'])base.restaurant.staffTraining[id]={...clone(base.restaurant.staffTraining['worker-1']),energy:id==='worker-2'?25:1,energyMode:'rest-room',rest:null};
+  for(const order of base.restaurant.orders)base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:`accept-${order.id}`,action:{type:'restaurant-kitchen-accept',orderId:order.id}},NOW);
+  let saved=base,revision=0;
+  const h=harness(t,async req=>{
+    if(req.method==='GET')return response(snapshot(saved,revision));
+    await new Promise(resolve=>setTimeout(resolve,650));
+    const next=reduceAction(saved,req.body.action,ACTOR,Date.now(),req.body.operationId);
+    if(!next)return response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'当前工序尚未就绪'}},409);
+    saved=next;return response(receipt(req.body,saved,++revision));
+  },{state:base});await h.cloud.start();
+  const controller=createRestaurantAutoCook({getState:()=>normalizeState(h.latest(),Date.now()),getAvailability:()=>({ready:true,savePhase:h.observed.saves.at(-1)?.phase,saveRejected:h.observed.saves.at(-1)?.rejected,pendingKitchenSteps:h.pending().filter(i=>i.action.type==='restaurant-kitchen-step').map(i=>`${i.action.orderId}:${i.action.stepId}`)}),onAction:action=>h.cloud.dispatch(action),preferences:{getItem:()=> '1'}});
+  const completedRest=new Map();
+  for(let i=0;i<6000;i++){
+    controller.tick();t.mock.timers.tick(250);await flush();
+    const info=restaurantInfo(h.latest(),Date.now());
+    for(const order of info.kitchen.orders)if(order.nextStep){const actual=info.restaurant.orders.find(o=>o.id===order.id);assert.ok((actual.workflow.runs.at(-1)?.endAt??0)<=Date.now(),'no next button before the already queued run finishes');}
+    for(const worker of info.kitchen.workers){
+      const rest=info.restaurant.staffTraining[worker.id].rest;
+      if(!rest)continue;
+      if(worker.phase==='rest-ready')completedRest.set(worker.id,rest.departAt);
+      assert.ok(!(worker.phase==='rest-walk'&&completedRest.get(worker.id)===rest.departAt),'a completed rest journey must not replay');
+    }
+    if(!h.pending().length&&saved.restaurant.orders.every(o=>o.workflow.completedAt!==null&&o.workflow.completedAt<=Date.now()))break;
+  }
+  assert.equal(h.pending().length,0);assert.ok(saved.restaurant.orders.every(o=>o.workflow.servedAt!==null));assert.ok(validRestaurant(saved.restaurant));
+  for(const order of saved.restaurant.orders)assert.deepEqual(order.workflow.runs.map(run=>run.stepId),[...KITCHEN_FLOWS.coffee.map(step=>step.id),'delivery']);
 });
 
 test('a research draw waits for the real card and ignores duplicate queued taps',async t=>{

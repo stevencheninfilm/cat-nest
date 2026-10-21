@@ -199,10 +199,12 @@ export function interactiveOrderProjection(workflow,now=Date.now()){
     return {...step,startAt:segment?.startAt??null,endAt:segment?.endAt??null,status:segment&&now>=segment.endAt?'complete':segment&&now>=segment.startAt?'working':'pending',progress:segment?clamp((now-segment.startAt)/(segment.endAt-segment.startAt)):0};
   });
   const next=nextId(workflow),nextStep=next==='delivery'?deliveryStep(workflow.recipeId):flow.find(step=>step.id===next)??null;
+  const queued=workflow.runs.find(run=>now<run.startAt);
   let phase,currentStep,clickable=null;
   if(now<workflow.createdAt){phase='arriving';currentStep={id:'arriving',zoneId:null,label:'等待客人入座',prop:null};}
   else if(workflow.acceptedAt===null){phase='requested';currentStep={id:'request',zoneId:null,label:'点击顾客的菜品需求接单',prop:workflow.recipeId};}
   else if(current){phase=current.phase;currentStep=flow.find(step=>step.id===current.stepId)??{id:current.stepId,zoneId:null,label:current.phase==='rest-walk'?'前往休息室':current.phase==='return'?'回到厨房':'端到客人的餐桌',prop:current.phase==='rest-walk'?null:workflow.recipeId};}
+  else if(queued){phase='queued';currentStep=queued.stepId==='delivery'?deliveryStep(workflow.recipeId):flow.find(step=>step.id===queued.stepId);}
   else if(workflow.completedAt!==null&&now>=workflow.completedAt){phase='complete';currentStep={id:'complete',zoneId:null,label:'料理已经送达，员工回到厨房',prop:null};}
   else {phase=next==='delivery'?'awaiting-delivery':'awaiting';clickable=nextStep;currentStep=nextStep??{id:'complete',zoneId:null,label:'料理已经送达',prop:null};}
   const progress=current?clamp((now-current.startAt)/(current.endAt-current.startAt)):0;
