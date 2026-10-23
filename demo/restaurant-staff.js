@@ -11,7 +11,7 @@ const reject=message=>({ok:false,message});
 /** Isolated test fixtures. This is deliberately outside the shared action
  * reducer: no debug intent or free recruitment is accepted by the real server. */
 export function restaurantStaffDebugResult(state,command,now=Date.now()) {
-  if(command?.mode==='research-fusion')return restaurantResearchDebugResult(state,command,now);
+  if(['research-fusion','research-batch'].includes(command?.mode))return restaurantResearchDebugResult(state,command,now);
   if(command?.mode==='guest')return restaurantGuestDebugResult(state,command,now);
   const unlock=exact(command,['mode','staffId'])&&command.mode==='unlock'&&RESTAURANT_STAFF.some(employee=>employee.id===command.staffId);
   const preset=exact(command,['mode','staff'])&&command.mode==='preset'&&[0,3,6].includes(command.staff);

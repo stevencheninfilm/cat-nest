@@ -40,7 +40,7 @@ export function restaurantInspirationRange(tier,recipeLevel=1){
 }
 
 export function validRestaurantResearch(value,restaurant,isRecipe){
-  const legacy=value?.version===1,keys=['version','startedServed','draws','fragments','lastDraw',...(!legacy?['inspirationEarned','lastGift']:[]),...(Object.hasOwn(value??{},'fusion')?['fusion']:[])];
+  const legacy=value?.version===1,keys=['version','startedServed','draws','fragments','lastDraw',...(!legacy?['inspirationEarned','lastGift']:[]),...(Object.hasOwn(value??{},'fusion')?['fusion']:[]),...(Object.hasOwn(value??{},'lastBatch')?['lastBatch']:[])];
   if(!exact(value,keys)||![1,2].includes(value.version)||!integer(value.startedServed,0,restaurant.stats?.served??0)||!integer(earnedInspiration(value,restaurant.stats.served),RESEARCH_WELCOME_XP,RESEARCH_INSPIRATION_MAX)||!integer(value.draws,0,Math.floor(earnedInspiration(value,restaurant.stats.served)/RESEARCH_DRAW_XP))||!plain(value.fragments))return false;
   const entries=Object.entries(value.fragments);
   if(entries.some(([id,amount])=>!isRecipe(id)||!Object.hasOwn(restaurant.recipeLevels,id)||!integer(amount,0,value.draws*5))||entries.reduce((total,[,amount])=>total+amount,0)>value.draws*5)return false;
@@ -53,6 +53,12 @@ export function validRestaurantResearch(value,restaurant,isRecipe){
   else{
     const card=value.lastDraw;
     if(!exact(card,['draw','recipeId','amount'])||card.draw!==value.draws||!isRecipe(card.recipeId)||!Object.hasOwn(restaurant.recipeLevels,card.recipeId)||![1,2,3,5].includes(card.amount))return false;
+  }
+  if(Object.hasOwn(value,'lastBatch')){
+    const batch=value.lastBatch;
+    if(legacy||!exact(batch,['startDraw','cards'])||!integer(batch.startDraw,1)||!Array.isArray(batch.cards)||batch.cards.length!==10||batch.startDraw+9!==value.draws)return false;
+    if(batch.cards.some((card,index)=>!exact(card,['draw','recipeId','amount'])||card.draw!==batch.startDraw+index||!isRecipe(card.recipeId)||!Object.hasOwn(restaurant.recipeLevels,card.recipeId)||![1,2,3,5].includes(card.amount)))return false;
+    if(['draw','recipeId','amount'].some(key=>batch.cards.at(-1)[key]!==value.lastDraw?.[key]))return false;
   }
   if(!legacy&&value.lastGift!==null){
     const gift=value.lastGift;
@@ -118,6 +124,23 @@ export function drawRestaurantResearch(restaurant,recipes,draw,now){
   for(const item of pool){if(choice<item.weight){picked=item;break;}choice-=item.weight;}
   const recipe=(draw===1?(pool.find(item=>item.recipe.id==='rice')??pool[0]):picked).recipe;
   const research=normalizeRestaurantResearch(restaurant.research,restaurant.stats.served);
+  delete research.lastBatch;
   research.draws=draw;research.fragments[recipe.id]=(research.fragments[recipe.id]??0)+amount;research.lastDraw={draw,recipeId:recipe.id,amount};
   return {ok:true,research,card:research.lastDraw};
+}
+
+/** One atomic intent: no partial debit, and the same numbered ten cards form
+ * the durable receipt used by retries, reloads, and the reveal animation. */
+export function drawRestaurantResearchBatch(restaurant,recipes,draw,now){
+  const info=restaurantResearchInfo(restaurant);
+  if(draw!==info.nextDraw)return {ok:false,reason:'抽卡记录已更新，请按最新结果继续。'};
+  if(info.availableDraws<10)return {ok:false,reason:'十连探索需要 300 灵感，招待顾客后再来吧。'};
+  let research=restaurant.research;const cards=[];
+  for(let index=0;index<10;index++){
+    const result=drawRestaurantResearch({...restaurant,research,revision:restaurant.revision+index},recipes,draw+index,now);
+    if(!result.ok)return result;
+    research=result.research;cards.push({...result.card});
+  }
+  research.lastBatch={startDraw:draw,cards};
+  return {ok:true,research,cards,card:cards.at(-1)};
 }

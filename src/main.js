@@ -30,6 +30,7 @@ import './restaurant-research-hero.css';
 import './restaurant-recipe-celebration.css';
 import './restaurant-research-reveal.css';
 import './restaurant-research-lottery.css';
+import './restaurant-research-batch.css';
 import './restaurant-kitchen.css';
 import './restaurant-economy.css';
 import './restaurant-progression.css';
@@ -536,7 +537,7 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   if (action.type?.startsWith('game-')) { refreshGames(); return; }
   if (action.type?.startsWith('restaurant-')) {
     restaurant?.render();
-    if(!optimistic&&mine&&action.type==='restaurant-research-draw'&&!$('.rr-draw-scene')?.open)toast('研发完成，菜谱碎片已收进灵感手账');
+    if(!optimistic&&mine&&action.type==='restaurant-research-draw'&&!$('.rr-draw-scene')?.open)toast(action.count===10?'十连探索完成，10 份灵感已收进手账':'研发完成，菜谱碎片已收进灵感手账');
     if(!optimistic&&action.type==='restaurant-collect'){
       if(mine)toast('金币已同步小窝，回小窝领取「餐厅经营经验」');
       chime();
@@ -1234,7 +1235,7 @@ function showRestaurant({fromHome=false}={}) {
   restaurantReturnHome=fromHome;
   if(fromHome){homeScroll=window.scrollY;$('.nest').hidden=true;interactionFeedback.clear();}
   if(!restaurant)restaurant=createRestaurant({container:restaurantContainer,getState:()=>state,
-    getAvailability:()=>({connected:!cloudConfigured||status.phase==='online',ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,saving:careSaving(),savePhase:saveStatus.phase,saveRejected:saveStatus.rejected===true,retrying:saveStatus.retrying===true,pendingKitchenSteps:cloud?.getPendingActions().filter(item=>item.action?.type==='restaurant-kitchen-step').map(item=>`${item.action.orderId}:${item.action.stepId}`)??[],pendingRestaurantCollections:cloud?.getPendingActions().filter(item=>item.action?.type==='restaurant-collect').map(item=>item.action.orderId)??[],pendingRestaurantArrival:cloud?.getPendingActions().some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type))??false,pendingResearchDraw:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-research-draw')?.action.draw??null,refusedResearchDraw:saveStatus.rejected&&saveStatus.action?.type==='restaurant-research-draw'?saveStatus.action.draw:null,pendingDailyLoginDay:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-daily-login')?.action.day??null}),onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,guidePreferences:runtime.guidePreferences||runtime.localStorage,getGuideContext:()=>({role:coupleRole,entered:roleEntered,available:!gameGuide?.isOpen()&&!onboarding?.isOpen()}),testActions:runtime.testActions,
+    getAvailability:()=>({connected:!cloudConfigured||status.phase==='online',ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,saving:careSaving(),savePhase:saveStatus.phase,saveRejected:saveStatus.rejected===true,retrying:saveStatus.retrying===true,pendingKitchenSteps:cloud?.getPendingActions().filter(item=>item.action?.type==='restaurant-kitchen-step').map(item=>`${item.action.orderId}:${item.action.stepId}`)??[],pendingRestaurantCollections:cloud?.getPendingActions().filter(item=>item.action?.type==='restaurant-collect').map(item=>item.action.orderId)??[],pendingRestaurantArrival:cloud?.getPendingActions().some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type))??false,pendingResearchDraw:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-research-draw')?.action.draw??null,pendingResearchCount:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-research-draw')?.action.count??1,refusedResearchDraw:saveStatus.rejected&&saveStatus.action?.type==='restaurant-research-draw'?saveStatus.action.draw:null,pendingDailyLoginDay:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-daily-login')?.action.day??null}),onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,guidePreferences:runtime.guidePreferences||runtime.localStorage,getGuideContext:()=>({role:coupleRole,entered:roleEntered,available:!gameGuide?.isOpen()&&!onboarding?.isOpen()}),testActions:runtime.testActions,
     onBack(){const url=new URL(location.href);url.hash='';history.replaceState(null,'',url);if(restaurantReturnHome){$('.nest').hidden=false;document.body.classList.remove('catbook-mode');updateModelPause();scheduleUpgrade();window.scrollTo(0,homeScroll);$('[data-open="restaurant"]')?.focus({preventScroll:true});}else{document.body.classList.add('catbook-mode');catbook.open();updateModelPause();}},
   });
   catbook.close();document.body.classList.remove('catbook-mode');

@@ -637,3 +637,43 @@ test('a pending final bill stays busy after a competing snapshot and re-enables 
   assert.equal(h.pending().length,0);assert.doesNotMatch(tableView(h),/正在收款/);assert.match(tableView(h),/data-r-action="collect"/);
   assert.equal(h.latest().coins,saved.coins);assert.equal(h.observed.rollbacks.length,1);
 });
+
+test('premium decoration purchases equip and reserve gold immediately while offline, then restore after reload',async t=>{
+  const base=upgradeFixture();let offline=true,saved=base;
+  const handler=req=>{if(req.method==='GET')return response(snapshot(saved));if(offline)throw new TypeError('offline');saved=apply(saved,req.body);return response(receipt(req.body,saved));};
+  const first=harness(t,handler,{state:base});await first.cloud.start();
+  const action={type:'restaurant-premium-decoration',themeId:'aquarium',equipped:true};
+  assert.equal(first.cloud.dispatch(action),true);
+  assert.equal(first.latest().goldFish,base.goldFish-4);assert.ok(first.latest().restaurant.equippedPremiumDecorations.includes('aquarium'));
+  assert.equal(first.cloud.dispatch(action),false,'the visible target already equips this decoration');
+  await flush();assert.equal(first.observed.rollbacks.length,0);
+  const queue=clone(first.pending()),id=queue[0].operationId;first.cloud.destroy();t.mock.timers.reset();
+  const second=harness(t,handler,{state:base,pending:queue});await second.cloud.start();
+  assert.equal(second.latest().goldFish,base.goldFish-4);assert.ok(second.latest().restaurant.equippedPremiumDecorations.includes('aquarium'));
+  await flush();offline=false;t.mock.timers.tick(10000);await flush();
+  assert.equal(second.pending().length,0);assert.equal(saved.goldFish,base.goldFish-4);assert.equal(second.posts().at(-1).body.operationId,id);
+});
+
+test('a ten-draw intent survives a lost acknowledgement without another inspiration debit',async t=>{
+  const base=upgradeFixture();base.restaurant.research.inspirationEarned=600;
+  let saved=base,attempt=0,operationId;
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response(snapshot(saved));
+    if(!operationId){operationId=req.body.operationId;saved=apply(saved,req.body);attempt++;throw new TypeError('receipt lost');}
+    assert.equal(req.body.operationId,operationId);attempt++;return response(receipt(req.body,saved));
+  },{state:base});await h.cloud.start();
+  const draw=restaurantInfo(base,NOW).research.nextDraw,action={type:'restaurant-research-draw',draw,count:10};
+  assert.equal(h.cloud.dispatch(action),true);assert.equal(h.cloud.dispatch(action),false);
+  assert.deepEqual(h.latest().restaurant.research,base.restaurant.research,'random results stay server-confirmed');
+  await flush();assert.equal(h.pending().length,1);t.mock.timers.tick(10000);await flush();
+  assert.equal(attempt,2);assert.equal(h.pending().length,0);assert.equal(restaurantInfo(saved,NOW).research.inspiration,restaurantInfo(base,NOW).research.inspiration-300);
+  assert.equal(saved.restaurant.research.lastBatch.cards.length,10);assert.deepEqual(h.latest(),saved);
+});
+
+test('an explicit premium-decoration refusal restores gold and equipment without retrying the purchase',async t=>{
+  const base=upgradeFixture(),ack=deferred();const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):ack.promise,{state:base});await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-premium-decoration',themeId:'aquarium',equipped:true}),true);assert.equal(h.latest().goldFish,base.goldFish-4);
+  ack.resolve(response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'这件珍藏未能解锁'}},409));await flush();
+  assert.equal(h.pending().length,0);assert.equal(h.latest().goldFish,base.goldFish);assert.deepEqual(h.latest().restaurant.equippedPremiumDecorations,base.restaurant.equippedPremiumDecorations);
+  assert.equal(h.observed.rollbacks.length,1);t.mock.timers.tick(10000);await flush();assert.equal(h.posts().length,1);
+});
