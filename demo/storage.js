@@ -42,11 +42,9 @@ export function namespacedStorage(storage, prefix = DEMO_PREFIX) {
 }
 function browserStorage(name) { try { return globalThis[name]; } catch { return null; } }
 const local = browserStorage('localStorage'), session = browserStorage('sessionStorage');
-// Keep only the already-read guide preference, separately from all play data.
-export const demoPreferences = namespacedStorage(local, DEMO_PREFERENCES_PREFIX);
-try {
-  if (local?.getItem(`${DEMO_PREFIX}onboarding.welcome.v1`)==='done') demoPreferences.setItem('welcome','done');
-} catch {}
+// Start both tours on every demo visit, even if an earlier visit was completed.
+// Keep dismissals for this document so the guide does not reopen during play.
+export const demoPreferences = createMemoryStorage();
 clearLegacyDemoProgress(local);
 clearLegacyDemoProgress(session);
 export const demoLocalStorage = createDemoLocalStorage();

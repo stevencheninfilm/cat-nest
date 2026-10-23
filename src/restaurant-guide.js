@@ -98,5 +98,5 @@ export function createRestaurantGuide({storage,getContext,navigate,onClose=()=>{
   dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
   dialog.addEventListener('close',()=>{if(!changing&&!dialog.open&&open)close();});
   view.addEventListener('resize',position);view.visualViewport?.addEventListener('resize',position);
-  return {start,sync,close,isOpen:()=>open||busy,destroy(){close();destroyed=true;++serial;cancelAnimationFrame(frame);view.removeEventListener('resize',position);view.visualViewport?.removeEventListener('resize',position);dialog.remove();}};
+  return {start,sync,close,isOpen:()=>open||busy||queued,destroy(){close();destroyed=true;++serial;cancelAnimationFrame(frame);view.removeEventListener('resize',position);view.visualViewport?.removeEventListener('resize',position);dialog.remove();}};
 }

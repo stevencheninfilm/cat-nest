@@ -65,6 +65,20 @@ test('pausing and reopening resumes the same target, completing stops auto popup
   await h.guide.start();assert.match(h.dialog.innerHTML,/欢迎来到/);await h.click('next');await h.click('close');await h.guide.start();assert.match(h.dialog.innerHTML,/小鱼干和金鱼干/);
 });
 
+test('a queued welcome tour takes priority over the automatic daily reward dialog',async t=>{
+  const h=harness(t);
+  h.guide.sync();
+  assert.equal(h.guide.isOpen(),true,'reserve the dialog before the queued microtask runs');
+  if(!h.guide.isOpen())h.blocker.open=true;
+  await tick();
+  assert.equal(h.dialog.open,true);
+  assert.equal(h.blocker.open,false);
+  assert.match(h.dialog.innerHTML,/欢迎来到猫猫的小食光/);
+  await h.click('close');
+  assert.equal(h.guide.isOpen(),false,'other dialogs can open after the player pauses the tour');
+  h.guide.sync();await tick();assert.equal(h.guide.isOpen(),false);
+});
+
 test('the full tour and directory navigate only live views, preserve saved gameplay and keep the target aligned',async t=>{
   const h=harness(t);h.storage.setItem('catnest.pet','original home');h.storage.setItem('catnest.pending','queued original operations');
   await h.guide.start();h.frame();assert.equal(h.style.get('--tour-top'),'296px');assert.equal(h.style.get('--tour-left'),'36px');
