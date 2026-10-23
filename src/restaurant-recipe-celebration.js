@@ -22,7 +22,7 @@ export function restaurantRecipeCelebrationMarkup({recipe,from,to},{preview=fals
 }
 
 export function restaurantResearchTestControls(enabled){
-  return enabled?`<details class="rr-terminal-preview"><summary>研发动画预览<span>只看效果</span></summary><small>菜品升阶</small><div>${RESTAURANT_DISH_GRADES.map(grade=>`<button data-r-preview-grade="${grade}" ${restaurantQualityAttributes(grade)} aria-label="预览 ${grade} 级菜品庆典">${grade}</button>`).join('')}</div><small>灵感翻牌</small><div>${RESTAURANT_DISH_GRADES.map(grade=>`<button data-r-preview-reveal="${grade}" ${restaurantQualityAttributes(grade)} aria-label="预览 ${grade} 级灵感翻牌">${grade}</button>`).join('')}</div><button class="rr-terminal-fusion-test" data-r-debug-research-fusion>准备碎片融合测试 →</button></details>`:'';
+  return enabled?`<details class="rr-terminal-preview"><summary>研发动画预览<span>只看效果</span></summary><small>菜品升阶</small><div>${RESTAURANT_DISH_GRADES.map(grade=>`<button data-r-preview-grade="${grade}" ${restaurantQualityAttributes(grade)} aria-label="预览 ${grade} 级菜品庆典">${grade}</button>`).join('')}</div><small>灵感翻牌</small><div>${RESTAURANT_DISH_GRADES.map(grade=>`<button data-r-preview-reveal="${grade}" ${restaurantQualityAttributes(grade)} aria-label="预览 ${grade} 级灵感翻牌">${grade}</button>`).join('')}</div><button class="rr-terminal-fusion-test" data-r-debug-research-batch>准备十连探索测试 →</button><button class="rr-terminal-fusion-test" data-r-debug-research-fusion>准备碎片融合测试 →</button></details>`:'';
 }
 
 export function createRestaurantRecipeCelebration({dialog}){

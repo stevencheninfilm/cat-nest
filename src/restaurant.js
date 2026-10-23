@@ -1,7 +1,7 @@
 import { recipeStepEnergyBase } from './restaurant-recipe-energy.js';
 import { restaurantDailyLoginInfo, validRestaurantDailyLogin } from './restaurant-daily-login.js';
 import { RESTAURANT_GUEST_DINING_MS, initialRestaurantGuestService, restaurantGuestHasNextCourse, restaurantGuestCompletionBonus, nextRestaurantGuestService, nextRestaurantGuestRecipe } from './restaurant-guest-service.js';
-import { initialRestaurantResearch, normalizeRestaurantResearch, restaurantInspirationGift, awardRestaurantInspiration, validRestaurantResearch, restaurantResearchInfo, restaurantResearchCost, restaurantDishGrade, drawRestaurantResearch, restaurantResearchPool, restaurantFragmentSurplus, fuseRestaurantResearch, RESEARCH_INSPIRATION_MAX } from './restaurant-research.js';
+import { initialRestaurantResearch, normalizeRestaurantResearch, restaurantInspirationGift, awardRestaurantInspiration, validRestaurantResearch, restaurantResearchInfo, restaurantResearchCost, restaurantDishGrade, drawRestaurantResearch, drawRestaurantResearchBatch, restaurantResearchPool, restaurantFragmentSurplus, fuseRestaurantResearch, RESEARCH_INSPIRATION_MAX } from './restaurant-research.js';
 import { validRestaurantSeenGuests, normalizeRestaurantSeenGuests, restaurantCustomerInfo, validRestaurantGuestConditions, completedRestaurantGuestConditions } from './restaurant-customers.js';
 import { addGrowthExperience } from './pet-needs.js';
 import { normalizeRestaurantParties, validRestaurantParties, restaurantArrivalPlan, RESTAURANT_GUEST_CATS } from './restaurant-guests.js';
@@ -223,6 +223,7 @@ export function sanitizeRestaurantAction(value) {
   if(value.type==='restaurant-upgrade'&&exact(value,['type','upgradeId'])&&RESTAURANT_UPGRADES.some(upgrade=>upgrade.id===value.upgradeId))return {...value};
   if(value.type==='restaurant-hire'&&exact(value,['type']))return {...value};
   if(value.type==='restaurant-research-draw'&&exact(value,['type','draw'])&&integer(value.draw,1,33333333))return {...value};
+  if(value.type==='restaurant-research-draw'&&exact(value,['type','draw','count'])&&value.count===10&&integer(value.draw,1,33333324))return {...value};
   if(value.type==='restaurant-research-fuse'&&exact(value,['type','recipeId','amount','expectedFragments','expectedFusion'])&&restaurantRecipe(value.recipeId)&&integer(value.amount,1,166666665)&&integer(value.expectedFragments,1,166666665)&&integer(value.expectedFusion,0,166666665))return {...value};
   if(value.type==='restaurant-theme'&&exact(value,['type','themeId'])&&restaurantTheme(value.themeId))return {...value};
   if(value.type==='restaurant-premium-decoration'&&exact(value,['type','themeId','equipped'])&&premiumRestaurantTheme(value.themeId)&&typeof value.equipped==='boolean')return {...value};
@@ -374,10 +375,10 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     restaurant.research.fragments[recipe.id]-=recipe.upgradeCost;
     restaurant.recipeLevels[recipe.id]++;text=`集齐碎片，把${recipe.name}研发至 ${restaurantDishGrade(restaurant.recipeLevels[recipe.id])} 级`;
   }else if(action.type==='restaurant-research-draw'){
-    const result=drawRestaurantResearch(restaurant,info.recipes,action.draw,now);
+    const result=(action.count===10?drawRestaurantResearchBatch:drawRestaurantResearch)(restaurant,info.recipes,action.draw,now);
     if(!result.ok)return reject(result.reason);
     restaurant.research=result.research;
-    text=`研发灵感揭晓：${restaurantRecipe(result.card.recipeId).name}碎片 ×${result.card.amount}`;
+    text=action.count===10?`十连探索完成，10 份灵感共获得 ${result.cards.reduce((sum,card)=>sum+card.amount,0)} 枚菜谱碎片`:`研发灵感揭晓：${restaurantRecipe(result.card.recipeId).name}碎片 ×${result.card.amount}`;
   }else if(action.type==='restaurant-research-fuse'){
     const result=fuseRestaurantResearch(restaurant,info.recipes,action);
     if(!result.ok)return reject(result.reason);

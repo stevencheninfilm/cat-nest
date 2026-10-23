@@ -274,7 +274,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(panel==='flow'||panel==='station')return kitchenFlowPanel(info,{orderId:flowOrderId,recipeId:flowRecipe,zoneId:panel==='station'?selectedZone:null});
     if(panel==='customers')return restaurantCustomersPanel(info,{filter:customerFilter,selectedId:customerSelected});
     if(panel==='recipes')return restaurantRecipesPanel(info,{category:recipeCategory});
-    if(panel==='research')return restaurantResearchPanel(info,{showcase:researchShowcase,pendingDraw:getAvailability().pendingResearchDraw});
+    if(panel==='research')return restaurantResearchPanel(info,{showcase:researchShowcase,pendingDraw:getAvailability().pendingResearchDraw,pendingCount:getAvailability().pendingResearchCount});
     if(panel==='progression')return restaurantProgressionPanel(info,{category:progressionCategory});
     if(panel==='gold')return restaurantGoldPanel(info,state);
     if(panel==='training')return restaurantStaffPanel(info,{workerId:trainingWorker,view:'training'});
@@ -415,7 +415,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(['start','recipe','unlock-special'].includes(type))action.recipeId=button.dataset.rRecipe;
     if(['serve','collect','kitchen-accept','kitchen-step'].includes(type))action.orderId=button.dataset.rOrderId;
     if(type==='kitchen-step')action.stepId=button.dataset.rStep;
-    if(type==='research-draw')action.draw=Number(button.dataset.rDraw);
+    if(type==='research-draw'){action.draw=Number(button.dataset.rDraw);if(button.dataset.rCount==='10')action.count=10;}
     if(type==='research-fuse'){action.recipeId=button.dataset.rRecipe;action.amount=Number(button.dataset.rFuseAmount);action.expectedFragments=Number(button.dataset.rFuseFragments);action.expectedFusion=Number(button.dataset.rFuseRevision);}
     if(type==='upgrade')action.upgradeId=button.dataset.rUpgrade;
     if(type==='theme'||type==='premium-decoration')action.themeId=button.dataset.rTheme;
@@ -428,7 +428,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(type==='collect'&&availability.pendingRestaurantCollections?.includes(action.orderId)){render();return;}
     const result=restaurantActionResult(before,action);
     if(!result.ok){toast(result.reason);return;}
-    if(type==='research-draw'&&!researchReveal.start(action.draw))return;
+    if(type==='research-draw'&&!researchReveal.start(action.draw,action.count??1))return;
     const firstCourse=type==='collect'&&info.orders.find(order=>order.id===action.orderId)?.hasNextCourse;
     if(type==='collect')pendingCourseOrders.add(action.orderId);
     const collectOrder=type==='collect'?info.orders.find(order=>order.id===action.orderId):null;
@@ -466,10 +466,10 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(button.dataset.rRecipeDetail){openRecipeDetails(button.dataset.rRecipeDetail);return;}
     if(button.dataset.rPreviewGrade&&debugEnabled){recipeCelebration.preview(button.dataset.rPreviewGrade,restaurantInfo(getState()));return;}
     if(button.dataset.rPreviewReveal&&debugEnabled){researchReveal.preview(button.dataset.rPreviewReveal,restaurantInfo(getState()));return;}
-    if(button.hasAttribute('data-r-debug-research-fusion')){
+    if(button.hasAttribute('data-r-debug-research-fusion')||button.hasAttribute('data-r-debug-research-batch')){
       if(!isTest||typeof testActions?.restaurantStaff!=='function')return;
       if(pending||getAvailability().saving){toast('等待上一项操作保存后再准备测试');return;}
-      recipeCelebration.reset();researchReveal.reset();const result=testActions.restaurantStaff({mode:'research-fusion'});log(result.message);toast(result.message);if(result.ok)openPanel('research');render();return;
+      recipeCelebration.reset();researchReveal.reset();const result=testActions.restaurantStaff({mode:button.hasAttribute('data-r-debug-research-batch')?'research-batch':'research-fusion'});log(result.message);toast(result.message);if(result.ok)openPanel('research');render();return;
     }
     if(button.hasAttribute('data-r-customer-close')){closeCustomerDetails();return;}
     if(button.hasAttribute('data-r-auto-cook')){

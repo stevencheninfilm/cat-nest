@@ -11,7 +11,7 @@ import { restaurantResearchInfo } from './restaurant-research.js';
 // upgrades immediately project the exact target clicked and reserve its cost.
 // A first-course collection allocates the next order ID, so it waits for that
 // canonical receipt while unrelated kitchen commands continue to preview.
-const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect','restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse']);
+const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect','restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration']);
 const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
 const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
 const guestConditions=data=>data?.restaurantGuestConditionsV2??data?.restaurantGuestConditions;
@@ -230,7 +230,7 @@ export function createCloudRoom(options) {
     if(!optimisticReducer||queue[0]?.action?.type!=='restaurant-kitchen-step')return false;
     const info=restaurantResearchInfo(authoritativeState.restaurant);
     const index=queue.findIndex((item,index)=>index>0&&item.action?.type==='restaurant-research-draw'
-      &&item.action.draw===info.nextDraw&&info.availableDraws>0
+      &&item.action.draw===info.nextDraw&&info.availableDraws>=(item.action.count??1)
       &&queue.slice(0,index).every(previous=>['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(previous.action?.type)));
     if(index<1)return false;
     // A draw funded by saved inspiration is independent of a cooking timer.

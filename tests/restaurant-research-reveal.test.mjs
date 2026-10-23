@@ -202,3 +202,22 @@ test('a cancelled callback cannot advance a subsequent draw session',t=>{
   h.view.close();h.elapse(1000);h.view.start(2);stale();
   assert.equal(h.dialog.dataset.rrPhase,'brewing');assert.equal(h.timers.size,1);
 });
+
+test('ten-draw reveal waits for one matching receipt, then animates all ten cards and can always close',t=>{
+  const h=harness(t),base=state();base.restaurant.research.inspirationEarned=600;
+  const accepted=reduceAction(base,{type:'restaurant-research-draw',draw:1,count:10},{id:'research-animation',name:'店长'},NOW);
+  assert.ok(accepted);assert.equal(h.view.start(1,10),true);assert.equal(h.dialog.dataset.rrBatch,'true');
+  h.tick();assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.dialog.querySelector('[data-rr-batch-results]').innerHTML,'');
+  h.view.syncState(accepted);h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
+  const result=h.nodes.get('[data-rr-batch-results]');assert.equal(result.hidden,false);assert.match(result.innerHTML,/is-animated/);assert.equal((result.innerHTML.match(/data-rr-batch-draw=/g)||[]).length,10);
+  assert.equal(h.nodes.get('[data-rr-discovery-confirm]').disabled,false);h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);assert.equal(h.timers.size,0);
+  assert.equal(h.dialog.dataset.rrBatch,undefined);assert.equal(accepted.restaurant.research.lastBatch.cards.length,10);
+});
+
+test('ten-draw waiting keeps the four-second leave choice and reduced motion reveals every result without timers',t=>{
+  const waiting=harness(t);waiting.view.start(1,10);waiting.elapse(4000);waiting.view.sync(restaurantInfo(state(),NOW));
+  assert.equal(waiting.nodes.get('[data-rr-wait-prompt]').hidden,false);waiting.click('[data-rr-wait-continue]');assert.equal(waiting.dialog.open,true);waiting.view.close();
+  const h=harness(t,{motion:true}),base=state();base.restaurant.research.inspirationEarned=300;
+  const accepted=reduceAction(base,{type:'restaurant-research-draw',draw:1,count:10},{id:'research-animation',name:'店长'},NOW);
+  h.view.start(1,10);h.view.syncState(accepted);assert.equal(h.dialog.dataset.rrPhase,'revealed');assert.equal(h.timers.size,0);assert.doesNotMatch(h.nodes.get('[data-rr-batch-results]').innerHTML,/is-animated/);
+});
