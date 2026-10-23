@@ -24,6 +24,9 @@ export function createCloudRoom(options) {
   const storageLabel = options.storageLabel || 'GitHub 云端';
   const fetchImpl=options.fetchImpl || ((...args)=>globalThis.fetch(...args));
   const eventSourceFactory=options.eventSourceFactory || (url=>new globalThis.EventSource(url));
+  const visibilityTarget=options.visibilityTarget ?? globalThis.document;
+  const connectivityTarget=options.connectivityTarget ?? globalThis.window;
+  const snapshotTags=new Map();
   const base = apiBase.replace(/\/$/, '');
   const coupleMode = Object.hasOwn(options, 'coupleRole');
   const profile = getCoupleProfile(coupleRole);
@@ -32,6 +35,7 @@ export function createCloudRoom(options) {
   let queue = [...pending];
   let revision = -1;
   let source, poll, retry, retryAt = 0, destroyed = false, draining = false, ready = false, waitingForRestaurantTime=false;
+  let liveConnected=false, liveAt=0, refreshing=null;
   const seen = new Set();
   const previews = new Map();
   // Confirmed local commands keep their visual clock while the authoritative
@@ -129,12 +133,30 @@ export function createCloudRoom(options) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), optimisticReducer && options.method === 'POST' && path.endsWith('/actions') ? 15000 : 95000);
     try {
-      const res = await fetchImpl(`${base}${path}`, { ...options, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...options.headers } });
+      const snapshot=(!options.method||options.method==='GET') && (path==='/api/couple/home'||/^\/api\/rooms\/[a-f0-9]{32}$/.test(path));
+      const tag=snapshotTags.get(path);
+      const res = await fetchImpl(`${base}${path}`, { ...options, signal: controller.signal, headers: { ...(options.body?{'Content-Type':'application/json'}:{}), ...(snapshot&&tag?{'If-None-Match':tag}:{}), ...options.headers } });
+      if(snapshot&&tag&&res.status===304)return null;
       const data = await res.json();
       if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
       if(!validGuestConditionMetadata(data))throw new Error('来访条件确认结果不完整');
+      if(snapshot&&data?.state&&Number.isSafeInteger(data.revision)){
+        const nextTag=res.headers?.get?.('etag');
+        if(nextTag)snapshotTags.set(path,nextTag);else snapshotTags.delete(path);
+      }
       return data;
     } finally { clearTimeout(timeout); }
+  }
+  function refreshSnapshot() {
+    if(destroyed||!ready||!room||visibilityTarget?.hidden)return Promise.resolve();
+    if(refreshing)return refreshing;
+    refreshing=(async()=>{try{apply(await request(`/api/rooms/${room}`));}catch{/* Live reconnect and queued writes remain independent. */}finally{refreshing=null;}})();
+    return refreshing;
+  }
+  function resumeConnection() {
+    if(destroyed||!ready||visibilityTarget?.hidden)return;
+    void refreshSnapshot();
+    if(queue.length){clearTimeout(retry);retry=null;retryAt=0;void drain();}
   }
   function publishState(append) {
     if (!authoritativeState) return;
@@ -348,14 +370,20 @@ export function createCloudRoom(options) {
   function subscribe() {
     if (destroyed) return;
     source?.close();
+    liveConnected=false;
     source = eventSourceFactory(`${base}/api/rooms/${room}/events?clientId=${encodeURIComponent(me.id)}&name=${encodeURIComponent(me.name)}`);
-    source.addEventListener('state', event => { try { apply(JSON.parse(event.data)); } catch {} });
-    source.addEventListener('action', event => { try { apply(JSON.parse(event.data)); } catch {} });
-    source.addEventListener('presence', event => { try { onPresence(JSON.parse(event.data)); } catch {} });
+    const current=source;
+    const live=()=>{if(destroyed||source!==current)return false;liveConnected=true;liveAt=Date.now();return true;};
+    source.addEventListener('state', event => { if(live())try { apply(JSON.parse(event.data)); } catch {} });
+    source.addEventListener('action', event => { if(live())try { apply(JSON.parse(event.data)); } catch {} });
+    source.addEventListener('presence', event => { if(live())try { onPresence(JSON.parse(event.data)); } catch {} });
+    source.addEventListener('heartbeat', event => { if(live())try{if(JSON.parse(event.data).revision>revision)void refreshSnapshot();}catch{} });
     source.addEventListener('full', () => { ready=false; source.close(); onStatus({phase:'full',role:null,message:'这个猫窝已有两位猫友在线，请稍后再来'}); });
-    source.onopen=() => { if (destroyed) return; ready=true; retryAt=0; onStatus({phase:'online',role:'cloud',message:`已连接共同小窝，互动会自动保存到 ${storageLabel}`}); drain(); };
-    source.onerror=() => { if (!destroyed) onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复，已保存的云端存档仍然保留'}); };
-    clearInterval(poll); poll=setInterval(async () => { if (destroyed) return; try { apply(await request(`/api/rooms/${room}`)); } catch {} }, 20000);
+    source.onopen=() => { if (!live()) return; ready=true; retryAt=0; onStatus({phase:'online',role:'cloud',message:`已连接共同小窝，互动会自动保存到 ${storageLabel}`}); drain(); };
+    source.onerror=() => { if (!destroyed&&source===current){liveConnected=false;onStatus({phase:'offline',role:'cloud',message:'实时连接正在恢复，已保存的云端存档仍然保留'});} };
+    // Heartbeats prove that the live stream is still delivering. Only a broken
+    // or silent stream needs fallback reads; hidden tabs keep live/save traffic.
+    clearInterval(poll); poll=setInterval(() => { if(!liveConnected||Date.now()-liveAt>=45000)void refreshSnapshot(); }, 20000);
   }
   async function start() {
     if (coupleMode && !profile) {
@@ -369,6 +397,8 @@ export function createCloudRoom(options) {
       onSaveStatus({phase:'error',message:'原存档没有被修改'});
       return;
     }
+    // Starting or explicitly recovering always needs a full validated snapshot.
+    snapshotTags.clear();
     onStatus({phase:'connecting',role:'cloud',message:'正在唤醒云端小窝，首次连接可能需要约一分钟…'});
     onSaveStatus({phase:'loading',message:`正在读取 ${storageLabel}存档…`});
     try {
@@ -386,6 +416,8 @@ export function createCloudRoom(options) {
       onSaveStatus({phase:'error',message:'未能连接云端，存档没有被清除'});
     }
   }
+  visibilityTarget?.addEventListener?.('visibilitychange',resumeConnection);
+  connectivityTarget?.addEventListener?.('online',resumeConnection);
   return {
     start,
     dispatch(action) {
@@ -440,6 +472,6 @@ export function createCloudRoom(options) {
     getPendingActions:()=>structuredClone(queue),
     retryPending(){if(!ready||destroyed)return false;clearTimeout(retry);retry=null;retryAt=0;void drain();return true;},
     updateName(next) { if (coupleMode) return; me.name=next; if(room&&ready) subscribe(); },
-    destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); },
+    destroy() { destroyed=true; source?.close(); clearInterval(poll); clearTimeout(retry); visibilityTarget?.removeEventListener?.('visibilitychange',resumeConnection); connectivityTarget?.removeEventListener?.('online',resumeConnection); },
   };
 }

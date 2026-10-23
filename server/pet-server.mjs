@@ -6,6 +6,7 @@ import { createGitHubStore, ROOM_ID, sanitizeActor, StorageError } from './githu
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { createModelAssetHandler } from './model-assets.mjs';
 import { createGuideHandler } from './guide-api.mjs';
+import { sendPetJson, sendPetSnapshot, startPetEventStream, writePetEvent, endPetEventStream } from './pet-transport.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -32,13 +33,8 @@ export function createPetHandler({
   const rates = new Map();
   let closed = false;
 
-  function json(response, status, body, extra = {}) {
-    if (response.headersSent || response.destroyed) return;
-    response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', ...extra });
-    response.end(JSON.stringify(body));
-  }
-  function fail(response, error) {
-    json(response, error instanceof StorageError ? error.status : 500, { error: { code: error instanceof StorageError ? error.code : 'INTERNAL_ERROR', message: error instanceof StorageError ? error.message : '服务暂时不可用，请稍后重试。' } });
+  function fail(request, response, error) {
+    sendPetJson(request, response, error instanceof StorageError ? error.status : 500, { error: { code: error instanceof StorageError ? error.code : 'INTERNAL_ERROR', message: error instanceof StorageError ? error.message : '服务暂时不可用，请稍后重试。' } });
   }
   function rate(key, count, duration) {
     const now = Date.now();
@@ -75,7 +71,7 @@ export function createPetHandler({
     } catch { throw new StorageError('INVALID_JSON', '请求内容不是有效的 JSON 对象。', 400); }
   }
   function emit(response, event, data) {
-    if (!response.destroyed && !response.writableEnded) response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    writePetEvent(response, `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   }
   function broadcast(hub, event, data) {
     for (const member of hub.members.values()) for (const response of member.responses) emit(response, event, data);
@@ -92,7 +88,7 @@ export function createPetHandler({
   function makeHub(id, result) {
     const hub = { members: new Map(), revision: result.revision, state: result.state, restaurantGuestConditions:result.restaurantGuestConditions, restaurantGuestConditionsV2:result.restaurantGuestConditionsV2, polling: false, heartbeat: null, poll: null };
     hub.heartbeat = setInterval(() => {
-      for (const member of hub.members.values()) for (const response of member.responses) if (!response.destroyed) response.write(': keepalive\n\n');
+      for (const member of hub.members.values()) for (const response of member.responses) if (!response.destroyed) emit(response, 'heartbeat', { revision:hub.revision });
     }, heartbeatMs);
     hub.poll = setInterval(async () => {
       if (hub.polling || closed) return;
@@ -110,6 +106,7 @@ export function createPetHandler({
   }
 
   async function handle(request, response) {
+    const json = (...args) => sendPetJson(request, ...args);
     let url;
     try { url = new URL(request.url, 'http://localhost'); } catch { return false; }
     const apiRoute = url.pathname.startsWith('/api/guides/') || url.pathname.startsWith('/api/pet-model/') || url.pathname === '/api/health' || url.pathname === '/api/couple/home' || url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/');
@@ -128,7 +125,7 @@ export function createPetHandler({
           response.setHeader('Vary', 'Origin');
         }
         if (request.method === 'OPTIONS') {
-          response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' });
+          response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, If-None-Match', 'Access-Control-Max-Age': '600' });
           response.end(); return true;
         }
         if (await modelAssets(request, response, url)) return true;
@@ -142,7 +139,7 @@ export function createPetHandler({
           }
           if (typeof coupleRoomId !== 'string' || !ROOM_ID.test(coupleRoomId)) throw new StorageError('INVALID_COUPLE_HOME', '共同小窝配置无效，请联系网站维护者。', 503);
           // Read only: a missing or inaccessible save must never create a new home.
-          json(response, 200, { ...await store.getRoom(coupleRoomId), roles: COUPLE_ROLES }); return true;
+          sendPetSnapshot(request, response, { ...await store.getRoom(coupleRoomId), roles: COUPLE_ROLES }); return true;
         }
         if (url.pathname === '/api/rooms' && request.method === 'POST') {
           rate(`create:${request.socket.remoteAddress}`, 10, 3_600_000);
@@ -154,7 +151,7 @@ export function createPetHandler({
         const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9]{32})(?:\/(actions|events))?$/);
         if (!match || !ROOM_ID.test(match[1])) { json(response, 404, { error: { code: 'NOT_FOUND', message: '没有找到这个接口。' } }); return true; }
         const [, id, route] = match;
-        if (!route && request.method === 'GET') { json(response, 200, await store.getRoom(id)); return true; }
+        if (!route && request.method === 'GET') { sendPetSnapshot(request, response, await store.getRoom(id)); return true; }
         if (route === 'actions' && request.method === 'POST') {
           const input = await body(request);
           const actor = roomActor(id, input.clientId, input.name);
@@ -175,17 +172,17 @@ export function createPetHandler({
           if (hub.members.size >= 2 && !hub.members.has(actor.id)) {
             // EventSource cannot read an HTTP error body. An explicit event lets
             // the client stop reconnecting and show the actual room-full state.
-            response.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' });
+            startPetEventStream(request, response);
             emit(response, 'full', { message: '这个小窝已经有两位铲屎官啦。' });
-            response.end(); return true;
+            endPetEventStream(response); return true;
           }
           updateHub(hub, result);
           let member = hub.members.get(actor.id);
           if (!member) { member = { ...actor, responses: new Set() }; hub.members.set(actor.id, member); }
           member.name = actor.name;
           member.responses.add(response);
-          response.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
-          response.write(': connected\n\n');
+          startPetEventStream(request, response);
+          writePetEvent(response, ': connected\n\n');
           emit(response, 'state', { state: hub.state, revision: hub.revision, restaurantGuestConditions:hub.restaurantGuestConditions, restaurantGuestConditionsV2:hub.restaurantGuestConditionsV2 });
           presence(hub);
           response.on('close', () => {
@@ -211,12 +208,12 @@ export function createPetHandler({
         response.writeHead(200, { 'Content-Type': MIME[extname(target)] || 'application/octet-stream', 'Content-Length': content.length, 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': extname(target) === '.html' ? 'no-cache' : 'public, max-age=3600' });
         response.end(request.method === 'HEAD' ? undefined : content); return true;
       } catch { return false; }
-    } catch (error) { fail(response, error); return true; }
+    } catch (error) { fail(request, response, error); return true; }
   }
   handle.close = () => {
     closed = true;
     for (const [id, hub] of rooms) {
-      for (const member of hub.members.values()) for (const response of member.responses) response.end();
+      for (const member of hub.members.values()) for (const response of member.responses) endPetEventStream(response);
       clearHub(id, hub);
     }
     rates.clear();
