@@ -12,6 +12,7 @@ import { restaurantResearchInfo } from './restaurant-research.js';
 // A first-course collection allocates the next order ID, so it waits for that
 // canonical receipt while unrelated kitchen commands continue to preview.
 const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect','restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration']);
+const RESTAURANT_MANAGEMENT=new Set(['restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration']);
 const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
 const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
 const guestConditions=data=>data?.restaurantGuestConditionsV2??data?.restaurantGuestConditions;
@@ -248,16 +249,19 @@ export function createCloudRoom(options) {
     // handoff must not prevent another order's delivery from freeing a worker.
     queue.unshift(queue.splice(index,1)[0]);saveQueue();publishState();return true;
   }
-  function promoteReadyResearchDraw(){
-    if(!optimisticReducer||queue[0]?.action?.type!=='restaurant-kitchen-step')return false;
+  function promoteReadyManagement(researchOnly=false){
+    if(!optimisticReducer||!['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(queue[0]?.action?.type))return false;
     const info=restaurantResearchInfo(authoritativeState.restaurant);
-    const index=queue.findIndex((item,index)=>index>0&&item.action?.type==='restaurant-research-draw'
-      &&item.action.draw===info.nextDraw&&info.availableDraws>=(item.action.count??1)
-      &&queue.slice(0,index).every(previous=>['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(previous.action?.type)));
+    const index=queue.findIndex((item,index)=>index>0
+      &&queue.slice(0,index).every(previous=>['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(previous.action?.type))
+      &&(item.action?.type==='restaurant-research-draw'
+        ? item.action.draw===info.nextDraw&&info.availableDraws>=(item.action.count??1)
+        : !researchOnly&&RESTAURANT_MANAGEMENT.has(item.action?.type)&&optimisticReducer(authoritativeState,item.action,{id:item.clientId,name:item.name},Date.now(),item.operationId)));
     if(index<1)return false;
-    // A draw funded by saved inspiration is independent of a cooking timer.
-    // Never cross a collection, fusion or upgrade that changes its prerequisites.
-    queue.unshift(queue.splice(index,1)[0]);saveQueue();return true;
+    // Saved funds/fragments can pay for management while a cook's timer runs.
+    // Preserve purchase order and never cross income, research or other commands
+    // that could change a cost, balance, target level or card quality.
+    queue.unshift(queue.splice(index,1)[0]);saveQueue();publishState();return true;
   }
   async function drain() {
     if (draining || !ready || destroyed) return;
@@ -265,6 +269,9 @@ export function createCloudRoom(options) {
     clearTimeout(retry);retry=null;waitingForRestaurantTime=false;
     draining = true;
     while (queue.length && !destroyed && ready) {
+      // A funded draw need not wait for the rest of a busy kitchen's uploads.
+      // The in-flight write is still settled before choosing the next command.
+      promoteReadyManagement(true);
       const item=queue[0];
       if (seen.has(item.operationId) || redundantDuoTransition(authoritativeState,item.action,me)) {
         previews.delete(item.operationId); queue.shift(); saveQueue(); publishState();
@@ -274,7 +281,7 @@ export function createCloudRoom(options) {
       if(restaurantPreview(item.action)){
         const at=restaurantActionAt(authoritativeState,item.action,Date.now());
         if(at>Date.now()){
-          if(promoteReadyResearchDraw()||promoteReadyKitchenStep(Date.now()))continue;
+          if(promoteReadyManagement()||promoteReadyKitchenStep(Date.now()))continue;
           waitingForRestaurantTime=true;
           queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(Math.min(1000,at-Date.now()+25));break;
         }
@@ -318,7 +325,7 @@ export function createCloudRoom(options) {
           }
           const at=restaurantPreview(item.action)?restaurantActionAt(authoritativeState,item.action,Date.now()):Date.now();
           if(at>Date.now()){
-            if(promoteReadyResearchDraw()||promoteReadyKitchenStep(Date.now()))continue;
+            if(promoteReadyManagement()||promoteReadyKitchenStep(Date.now()))continue;
             waitingForRestaurantTime=true;
             queuedStatus('餐厅操作已排队，上一道工序完成后自动同步',false);scheduleDrain(Math.min(1000,at-Date.now()+25));break;
           }
@@ -463,7 +470,7 @@ export function createCloudRoom(options) {
         const preview = previews.get(item.operationId);
         if (preview?.active) { preview.animated=true; onAction(action, me, { operationId:item.operationId, optimistic:true, previewed:false }); }
       }
-      if(action.type==='restaurant-research-draw'&&waitingForRestaurantTime){retryAt=0;clearTimeout(retry);retry=null;}
+      if((action.type==='restaurant-research-draw'||RESTAURANT_MANAGEMENT.has(action.type))&&waitingForRestaurantTime){retryAt=0;clearTimeout(retry);retry=null;}
       void drain();
       return true;
     },

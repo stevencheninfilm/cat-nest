@@ -278,10 +278,45 @@ test('research never overtakes a queued recipe upgrade that changes the requeste
   Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
   for(const action of [{type:'restaurant-kitchen-accept',orderId:'table-1'},{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}])base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:action.type,action},NOW);
   const run=base.restaurant.orders[0].workflow.runs[0],pending=[{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'},{type:'restaurant-recipe',recipeId:'rice',expectedLevel:2}].map((action,index)=>({operationId:`keep-order-${index}`,clientId:ACTOR.id,name:ACTOR.name,action,restaurantPreviewAt:run.endAt}));
-  const h=harness(t,req=>req.method==='GET'?response(snapshot(base)):assert.fail('the recipe prerequisite must keep its place'),{state:base,pending});
+  const ack=deferred();let saved=base,revision=0;
+  const h=harness(t,async req=>{if(req.method==='GET')return response(snapshot(saved,revision));if(req.body.action.type==='restaurant-recipe')await ack.promise;saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));},{state:base,pending});
   t.mock.timers.tick(run.endAt-NOW);await h.cloud.start();await flush();
   assert.equal(h.cloud.dispatch({type:'restaurant-research-draw',draw:2}),true);await flush();
-  assert.equal(h.posts().length,0);assert.deepEqual(h.pending().map(item=>item.action.type),['restaurant-kitchen-step','restaurant-recipe','restaurant-research-draw']);
+  assert.equal(h.posts().length,1);assert.equal(h.posts()[0].body.action.type,'restaurant-recipe','the earlier purchase is submitted first');
+  ack.resolve();await flush();
+  assert.deepEqual(h.posts().map(req=>req.body.action.type),['restaurant-recipe','restaurant-research-draw']);
+  assert.equal(saved.restaurant.recipeLevels.rice,2);assert.equal(saved.restaurant.research.draws,2);
+  assert.deepEqual(h.pending().map(item=>item.operationId),['keep-order-0']);
+});
+
+for(const count of [1,10])test(`funded ${count}-draw research is next after an in-flight upload rather than behind every kitchen command`,async t=>{
+  const base=requested('coffee',2),ack=deferred();let saved=base,revision=0;
+  base.restaurant.research.inspirationEarned=390;
+  const h=harness(t,async req=>{if(req.method==='GET')return response(snapshot(saved,revision));if(!revision)await ack.promise;saved=apply(saved,req.body);return response(receipt(req.body,saved,++revision));},{state:base});
+  await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-2'}),true);
+  assert.equal(h.cloud.dispatch({type:'restaurant-research-draw',draw:1,...(count===10?{count}: {})}),true);
+  const ids=h.pending().map(item=>item.operationId);
+  assert.equal(h.posts().length,1);assert.equal(h.latest().restaurant.research.draws,0);
+  ack.resolve();await flush();
+  assert.deepEqual(h.posts().map(req=>req.body.operationId),[ids[0],ids[2],ids[1]]);
+  assert.equal(saved.restaurant.research.draws,count);assert.equal(h.pending().length,0);
+  assert.equal(h.observed.rollbacks.length,0);
+});
+
+for(const action of [{type:'restaurant-upgrade',upgradeId:'kitchen'},{type:'restaurant-premium-decoration',themeId:'aquarium',equipped:true}])test(`${action.type} can save during a kitchen recovery timer`,async t=>{
+  let base=requested();base.coins=50000;base.goldFish=20;base.restaurant.stats.experience=levelStartXp(50);
+  Object.assign(base.restaurant.staffTraining['worker-1'],{energy:1,energyMode:'rest-room',rest:null});
+  for(const action of [{type:'restaurant-kitchen-accept',orderId:'table-1'},{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'gather'}])base=apply(base,{clientId:ACTOR.id,name:ACTOR.name,operationId:action.type,action},NOW);
+  const run=base.restaurant.orders[0].workflow.runs[0],pending=[{operationId:'keep-resting-kitchen',clientId:ACTOR.id,name:ACTOR.name,action:{type:'restaurant-kitchen-step',orderId:'table-1',stepId:'espresso'},restaurantPreviewAt:run.endAt}];
+  let saved=base;
+  const h=harness(t,req=>{if(req.method==='GET')return response(snapshot(saved));saved=apply(saved,req.body);return response(receipt(req.body,saved,1));},{state:base,pending});
+  t.mock.timers.tick(run.endAt-NOW);await h.cloud.start();await flush();assert.equal(h.posts().length,0);
+  assert.equal(h.cloud.dispatch(action),true);await flush();
+  assert.deepEqual(h.posts().map(req=>req.body.action.type),[action.type]);
+  assert.deepEqual(h.pending().map(item=>item.operationId),['keep-resting-kitchen']);
+  assert.equal(h.observed.rollbacks.length,0);
 });
 
 test('a research draw waits for the real card and ignores duplicate queued taps',async t=>{

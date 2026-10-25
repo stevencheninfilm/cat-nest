@@ -9,7 +9,7 @@ function mockGitHub() {
   const blobs = new Map();
   const calls = [];
   let nextSha = 0;
-  const controls = { failWrite: false, loseAcknowledgment: false, forbidden: false, largeFile: false, failBlobRead: false };
+  const controls = { failWrite: false, loseAcknowledgment: false, forbidden: false, largeFile: false, failBlobRead: false, writeSha:false, beforeWrite:null };
   async function fetchImpl(url, options) {
     const id = new URL(url).pathname.split('/').at(-1).replace('.json', '');
     calls.push({ url, ...options });
@@ -27,13 +27,15 @@ function mockGitHub() {
       return Response.json({ sha: existing.sha, encoding: 'base64', content: Buffer.from(JSON.stringify(existing.room)).toString('base64') }, { headers: { etag: existing.sha } });
     }
     if (controls.failWrite) return new Response('{}', { status: 500 });
+    if (controls.beforeWrite) await controls.beforeWrite();
     const body = JSON.parse(options.body);
     if (existing && existing.sha !== body.sha) return new Response('{}', { status: 409 });
     if (!existing && body.sha) return new Response('{}', { status: 409 });
-    files.set(id, { sha: `sha-${++nextSha}`, room: JSON.parse(Buffer.from(body.content, 'base64').toString('utf8')) });
+    const sha = controls.writeSha ? (++nextSha).toString(16).padStart(40,'0') : `sha-${++nextSha}`;
+    files.set(id, { sha, room: JSON.parse(Buffer.from(body.content, 'base64').toString('utf8')) });
     blobs.set(files.get(id).sha, structuredClone(files.get(id).room));
     if (controls.loseAcknowledgment) { controls.loseAcknowledgment = false; throw new Error('network dropped after commit'); }
-    return new Response('{}', { status: existing ? 200 : 201 });
+    return Response.json(controls.writeSha?{content:{sha}}:{}, { status: existing ? 200 : 201 });
   }
   return { files, calls, controls, fetchImpl };
 }
@@ -46,6 +48,57 @@ const pendingXp = state => state.pendingGrowth.reduce((total, reward) => total +
 const claim = (rewardId, operationId = 'claim-operation-one', clientId = 'client-one') => ({ operationId, clientId, name: '猫友', action: { type: 'claim-growth', rewardId } });
 
 const invite = (catId, operationId='collection-invite-operation', clientId='client-one') => ({ operationId, clientId, name:'猫友', action:{type:'invite-cat',catId} });
+
+test('successive commands reuse the durable blob SHA while reads still check external writes',async()=>{
+  const mock=mockGitHub();mock.controls.writeSha=true;
+  const store=makeStore(mock,{now:()=>CARE_START}),room=await store.createRoom();
+  for(let index=0;index<10;index++)await store.applyAction(room.roomId,{...operation(`rapid-rename-${index}`),action:{type:'rename',name:`小猫${index}`}});
+  assert.equal(mock.calls.filter(call=>call.method==='GET').length,0,'ten consecutive saves need no read-before-write download');
+  assert.equal(mock.files.get(room.roomId).room.revision,10);
+  await store.getRoom(room.roomId);
+  await store.applyAction(room.roomId,{...operation('after-poll-rename'),action:{type:'rename',name:'糯米'}});
+  assert.equal(mock.calls.filter(call=>call.method==='GET').length,1,'polling remains canonical without discarding a matching saved SHA');
+});
+
+test('a reused version still waits for the GitHub commit before confirming',async()=>{
+  const mock=mockGitHub();mock.controls.writeSha=true;
+  const store=makeStore(mock),room=await store.createRoom();let release,confirmed=false;
+  mock.controls.beforeWrite=()=>new Promise(resolve=>{release=resolve;});
+  const saving=store.applyAction(room.roomId,operation('delayed-durable-save')).then(result=>{confirmed=true;return result;});
+  for(let index=0;index<10;index++)await Promise.resolve();
+  assert.equal(confirmed,false);assert.equal(mock.files.get(room.roomId).room.revision,0);
+  release();assert.equal((await saving).revision,1);assert.equal(confirmed,true);
+});
+
+test('a cached SHA conflict reloads a partner write without dropping either operation',async()=>{
+  const mock=mockGitHub();mock.controls.writeSha=true;
+  const first=makeStore(mock),second=makeStore(mock),room=await first.createRoom();
+  await second.applyAction(room.roomId,operation('partner-pet-operation'));
+  const result=await first.applyAction(room.roomId,{...operation('cached-rename-operation'),action:{type:'rename',name:'布丁'}});
+  assert.equal(result.revision,2);assert.equal(result.state.name,'布丁');
+  assert.equal(result.state.love,room.state.love+3);assert.equal(result.state.pendingGrowth.length,1);
+  assert.equal(mock.files.get(room.roomId).room.operations.length,2);
+});
+
+test('a refusal against a reused version is rechecked against the latest saved balance',async()=>{
+  const mock=mockGitHub();mock.controls.writeSha=true;
+  const store=makeStore(mock,{now:()=>CARE_START,maxRetries:1}),room=await store.createRoom({initialState:{version:1,coins:0}});
+  const file=mock.files.get(room.roomId);file.room.state.coins=100;file.room.revision++;file.sha='f'.repeat(40);
+  const result=await store.applyAction(room.roomId,{...operation('fresh-balance-feed'),action:{type:'feed',food:'water'}});
+  assert.equal(result.revision,2);assert.equal(result.state.coins,95);
+  assert.equal(mock.calls.filter(call=>call.method==='GET').length,1);
+});
+
+test('an uncertain cached write must read its original receipt before retrying',async()=>{
+  const mock=mockGitHub();mock.controls.writeSha=true;
+  const store=makeStore(mock,{now:()=>CARE_START}),room=await store.createRoom();
+  mock.controls.loseAcknowledgment=true;
+  await assert.rejects(store.applyAction(room.roomId,operation('lost-cached-save')),error=>error.code==='STORAGE_UNAVAILABLE');
+  const result=await store.applyAction(room.roomId,operation('lost-cached-save'));
+  assert.equal(result.duplicate,true);assert.equal(result.revision,1);assert.equal(result.state.pendingGrowth.length,1);
+  assert.equal(mock.calls.filter(call=>call.method==='GET').length,1);
+  assert.equal(mock.calls.filter(call=>call.method==='PUT').length,2,'only room creation and the original action wrote');
+});
 test('the server requires starter care and both increased food-achievement conditions before writing', async()=>{
   const mock=mockGitHub(), store=makeStore(mock,{now:()=>CARE_START}), room=await store.createRoom();
   const file=mock.files.get(room.roomId), writes=mock.calls.filter(call=>call.method==='PUT').length;
