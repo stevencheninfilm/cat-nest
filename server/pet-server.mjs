@@ -27,6 +27,7 @@ export function createPetHandler({
   modelAssets = createModelAssetHandler(),
   guideHandler = createGuideHandler(),
   coupleRoomId = process.env.COUPLE_ROOM_ID || '0aed6937627c924a7497025ebd18fe5d',
+  healthDetails = () => ({}),
 } = {}) {
   const origins = new Set((Array.isArray(corsOrigin) ? corsOrigin : corsOrigin.split(',')).map(value => value.trim()).filter(Boolean));
   const rooms = new Map();
@@ -131,7 +132,7 @@ export function createPetHandler({
         if (await modelAssets(request, response, url)) return true;
         if (await guideHandler(request,response,url,{json,body})) return true;
         if (url.pathname === '/api/health' && request.method === 'GET') {
-          json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: store.storage || 'github' }); return true;
+          json(response, store.configured ? 200 : 503, { ok: !!store.configured, configured: !!store.configured, storage: store.storage || 'github', ...healthDetails() }); return true;
         }
         if (url.pathname === '/api/couple/home') {
           if (request.method !== 'GET') {

@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { createCourtStore } from './court-store.mjs';
+import { createCourtStore, CourtDatabaseUnavailableError } from './court-store.mjs';
 import { VERDICT_FORMAT, STRUCTURED_VERDICT_INSTRUCTIONS, parseVerdictOutput } from './court-verdict.mjs';
 
 export const COURT_LIMITS = Object.freeze({ statementChars: 12000, images: 4, imageBytes: 4 * 1024 * 1024, totalImageBytes: 8 * 1024 * 1024, roomImageBytes: 24 * 1024 * 1024, rounds: 20 });
@@ -177,13 +177,22 @@ export async function createCourtServer(options = {}) {
   for (const origin of origins) {
     if (origin === '*' || new URL(origin).origin !== origin) throw new Error('COURT_ALLOWED_ORIGINS必须是精确的URL origin，不能使用通配符或路径。');
   }
-  const store = options.store || await createCourtStore({
-    dataFile,
-    databaseUrl: options.databaseUrl ?? (process.env.COURT_DATABASE_URL || process.env.DATABASE_URL),
-    beforePersist: options.beforePersist,
-    onError: options.onError,
-  });
-  if ((options.requireDurableStorage ?? process.env.COURT_REQUIRE_DURABLE_STORAGE === 'true') && !store.durable) {
+  const databaseUrl = options.databaseUrl ?? (process.env.COURT_DATABASE_URL || process.env.DATABASE_URL);
+  let store;
+  let storageUnavailable = false;
+  const isolateConnectionFailure = (error) => options.allowUnavailableStorage === true
+    && Boolean(databaseUrl || options.pool || store?.kind === 'postgres')
+    && error instanceof CourtDatabaseUnavailableError;
+  try {
+    store = options.store || await createCourtStore({
+      dataFile, databaseUrl, pool: options.pool,
+      beforePersist: options.beforePersist, onError: options.onError,
+    });
+  } catch (error) {
+    if (!isolateConnectionFailure(error)) throw error;
+    storageUnavailable = true;
+  }
+  if (store && (options.requireDurableStorage ?? process.env.COURT_REQUIRE_DURABLE_STORAGE === 'true') && !store.durable) {
     await store.close();
     throw new Error('案件持久化尚未配置：请设置服务端 COURT_DATABASE_URL。');
   }
@@ -221,9 +230,14 @@ export async function createCourtServer(options = {}) {
     if (recovered && !saved) await commit(room);
     return result;
   }));
-  try {
+  if (store) try {
     for (const roomId of await store.listRecoverableRooms()) await withRoom(roomId, () => {}, { restarting: true, missing: true });
-  } catch (error) { await store.close(); throw error; }
+  } catch (error) {
+    await store.close();
+    if (!isolateConnectionFailure(error)) throw error;
+    store = undefined;
+    storageUnavailable = true;
+  }
 
   function rateLimit(req, bucket = 'api', max = 400, period = 60000) {
     const now = Date.now();
@@ -320,6 +334,10 @@ export async function createCourtServer(options = {}) {
       if (origin) { res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
       if (req.method === 'OPTIONS') {
         res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '600' }); return res.end();
+      }
+      if (storageUnavailable && (url.pathname === '/api/court' || url.pathname.startsWith('/api/court/'))) {
+        res.setHeader('Retry-After', '60');
+        return reply(res, 503, { error: { code: 'COURT_STORAGE_UNAVAILABLE', message: '猫猫判官的案件存储暂时不可用，请稍后再试；猫猫小窝与餐厅仍可使用。' } });
       }
       rateLimit(req);
       if (url.pathname === '/api/court/config' && req.method === 'GET') return reply(res, 200, { configured: Boolean(apiKey), model, reasoning: 'high', limits: COURT_LIMITS, storage: { kind: store.kind, durable: store.durable } });
@@ -442,6 +460,9 @@ export async function createCourtServer(options = {}) {
   server.headersTimeout = 15000;
   server.requestTimeout = 30000;
   server.keepAliveTimeout = 5000;
+  server.courtStorageStatus = () => storageUnavailable
+    ? { available: false, reason: 'storage_unavailable', storage: 'postgres' }
+    : { available: true, storage: store.kind };
   let closing;
   server.closeCourtStore = () => closing ||= (async () => {
     shuttingDown = true;
@@ -457,7 +478,7 @@ export async function createCourtServer(options = {}) {
     }, { recover: false, missing: true })));
     for (const result of interrupted) if (result.status === 'rejected') options.onError?.(result.reason);
     await queue;
-    await store.close();
+    await store?.close();
   })();
   server.on('close', () => { void server.closeCourtStore().catch((error) => options.onError?.(error)); });
   return server;
