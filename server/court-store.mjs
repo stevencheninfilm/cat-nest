@@ -27,6 +27,26 @@ export class StorageError extends Error {
   }
 }
 
+/** Only connection failures may isolate the court API in the shared service.
+ * Keep configuration, SQL, archive and programming errors fail-closed. */
+export class CourtDatabaseUnavailableError extends StorageError {
+  constructor() {
+    super('STORAGE_UNAVAILABLE', '案件存储暂时不可用，请稍后重试。');
+    this.name = 'CourtDatabaseUnavailableError';
+  }
+}
+
+function databaseConnectionFailure(error) {
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (/^08[0-9A-Z]{3}$/.test(code) || ['57P01', '57P02', '57P03', '53300',
+    'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH',
+    'ENETDOWN', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN'].includes(code)) return true;
+  // pg emits these fixed messages without a code on connection loss/timeouts.
+  return !code && ['Connection terminated unexpectedly', 'Connection terminated',
+    'Connection terminated due to connection timeout', 'timeout exceeded when trying to connect',
+    'Client has encountered a connection error and is not queryable'].includes(error?.message);
+}
+
 const invalid = () => { throw new StorageError('INVALID_COURT_ARCHIVE', '案件存储格式不正确，请管理员检查归档。'); };
 const object = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const date = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
@@ -108,7 +128,7 @@ function report(options) {
 function storageFailure(error, options) {
   if (error instanceof StorageError) return error;
   report(options);
-  return unavailable();
+  return databaseConnectionFailure(error) ? new CourtDatabaseUnavailableError() : unavailable();
 }
 
 /** The migration command and service share the same pool/TLS policy. */

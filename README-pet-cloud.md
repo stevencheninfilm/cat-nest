@@ -74,6 +74,18 @@ node server/pet-server.mjs
 
 Render 的 `NODE_ENV=production` 会让 npm 默认省略构建工具。共享网站服务的构建命令必须使用 `npm ci --include=dev && npm run build`。
 
+### 判官数据库停用时的隔离
+
+整合入口启动时，如果判官 PostgreSQL 发生已识别的连接失败，小窝和餐厅的 GitHub 存档 API、实时同步与静态页面仍会启动。此时所有 `/api/court` 接口返回 `503 COURT_STORAGE_UNAVAILABLE`；不会新建文件存档、清空数据库配置或把案件改存内存。数据库 URL、TLS、SQL、权限和归档格式等配置或数据错误仍会使启动失败，避免掩盖错误。
+
+`/api/health` 保留原来的 GitHub 配置检查，并增加 `court` 与 `degraded` 字段。`court.available` 反映本次启动是否完成判官存储初始化，不是每次请求都执行的数据库探测；`ok: true` 也不代表 GitHub token 仍有实际存档权限。数据库恢复后，正常重新部署可重新连接原判官存档。
+
+### GitHub 存档令牌过期
+
+当存档接口返回 `503 STORAGE_PERMISSION` 时，检查 `cat-nest-render-save` fine-grained token 是否过期，以及 `cat-nest-data` 的 Contents 读写权限与 GitHub 配额。由账号所有者续期原令牌，将新值直接替换 Render 的 `GITHUB_TOKEN`，保留其他环境变量，然后部署使新值生效。不要把令牌写入仓库或聊天，也不要通过删除数据库配置来处理存档权限错误。
+
+恢复验收应读取原房间快照、检查实时连接及保存确认；只有健康检查返回 200 还不够。验收不得新建、复制或重置个人房间，也不得清空浏览器待保存队列。
+
 ## 成长气泡的共享云存档
 
 喂食、摸摸、玩耍和入睡生成的气泡保存在共同小窝的 `state.pendingGrowth`，随互动写入同一份 GitHub 私有存档。气泡没有到期时间；等待页面显示「已保存」后，刷新、服务重启或在新设备选择男方／女方，都会从共同小窝恢复同一批未领取气泡。
