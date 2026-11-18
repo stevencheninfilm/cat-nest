@@ -186,7 +186,7 @@
 .restaurant[data-r-ui="refresh"] .r-status .r-growth{font-size:10px;color:var(--rfx-ink-2)}
 
 /* ---------- 底部导航：选中态更明确，按下有回弹 ---------- */
-.restaurant[data-r-ui="refresh"] .r-nav{gap:4px;padding:6px 8px max(10px,env(safe-area-inset-bottom));background:var(--rfx-cream);border-top:1.5px solid var(--rfx-line)}
+.restaurant[data-r-ui="refresh"] .r-nav{gap:4px;padding:6px 8px max(10px,var(--r-nav-safe-bottom,env(safe-area-inset-bottom)));background:var(--rfx-cream);border-top:1.5px solid var(--rfx-line)}
 .restaurant[data-r-ui="refresh"] .r-nav button{border-radius:16px;color:var(--rfx-ink-3);min-height:54px;gap:3px;transition:color .18s ease}
 .restaurant[data-r-ui="refresh"] .r-nav button>span{width:36px;height:28px;border-radius:99px;transition:background-color .2s ease,transform .32s var(--rfx-spring)}
 .restaurant[data-r-ui="refresh"] .r-nav button svg{width:22px;height:22px;stroke-width:2.1}

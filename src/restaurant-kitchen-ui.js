@@ -71,6 +71,15 @@ export function kitchenActionPresentation(restaurant,view,now=Date.now()){
   return {order:active,step,phase,running,counting,moving,queued,stationBusy:!running&&stationBusy,progress,seconds:counting?Math.max(0,Math.ceil((endAt-now)/1000)):null};
 }
 
+/** During connected automation only confirmed runs own an employee or a station.
+ * The order controls still acknowledge a queued command immediately. */
+export function kitchenSceneSource(state,confirmed,info,availability,automatic){
+  if(automatic && availability.connected && !availability.retrying && confirmed?.restaurant && confirmed!==state){
+    return {restaurant:confirmed.restaurant,pendingSteps:availability.pendingKitchenSteps};
+  }
+  return {restaurant:info.restaurant,model:info.kitchen};
+}
+
 /** Every accepted order owns its station bubble, independently of selection. */
 export function kitchenActionPresentations(restaurant,now=Date.now(),model=kitchenInfo(restaurant,now)){
   return model.orders.map(order=>kitchenActionPresentation(restaurant,orderViewModel(model,order),now)).filter(Boolean).sort((a,b)=>(a.order.acceptedAt??0)-(b.order.acceptedAt??0)||a.order.seat-b.order.seat||a.order.id.localeCompare(b.order.id));
@@ -79,7 +88,7 @@ export function kitchenActionPresentations(restaurant,now=Date.now(),model=kitch
 /** Keep station queues in acceptance order: add to the left, then wrap upward.
  * A whole row clears controls together instead of splitting a short queue into
  * several rows while there is still horizontal space. Touch targets stay 44px. */
-export function layoutKitchenActions(actions,{width=480,height=960,obstacles=[]}={}){
+export function layoutKitchenActions(actions,{width=480,height=960,obstacles=[],previous=new Map()}={}){
   width=Math.max(60,width);height=Math.max(80,height);
   const placed=[],points=new Map(),groups=new Map();
   const intersects=(a,b)=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
@@ -88,38 +97,82 @@ export function layoutKitchenActions(actions,{width=480,height=960,obstacles=[]}
     const key=action.step.zoneId??`table:${action.order.seat}`;
     if(!groups.has(key))groups.set(key,[]);
     groups.get(key).push(action);
+    const saved=previous.get(action.order.id);
+    if(!saved)continue;
+    const x=saved.x*width/100,y=saved.y*height/100,bounds=box(x,y);
+    if(x<28||x>width-28||y<29||y>height-39||[...placed,...obstacles].some(other=>intersects(bounds,other)))continue;
+    placed.push(bounds);
+    points.set(action.order.id,{orderId:action.order.id,x:saved.x,y:saved.y});
   }
+  const pinned=points.size;
   for(const group of groups.values()){
     const first=group[0],zone=KITCHEN_ZONES.find(zone=>zone.id===first.step.zoneId),table=KITCHEN_TABLE_POSITIONS[first.order.seat];
     const anchor=zone?{x:zone.prop.x,y:zone.id===10?60.3:zone.prop.y-6}:{x:table.x,y:table.y-4.4};
     let right=Math.max(29,Math.min(width-29,anchor.x*width/100)),y=Math.max(30,Math.min(height-40,anchor.y*height/100)),index=0;
     while(index<group.length){
       const columns=Math.min(group.length-index,Math.floor((right-29)/58)+1),xs=Array.from({length:columns},(_,i)=>right-i*58);
-      // Move the row above any intersecting UI or already occupied station.
-      for(let pass=0;pass<placed.length+obstacles.length+1;pass++){
-        const collisions=[...placed,...obstacles].filter(other=>xs.some(x=>intersects(box(x,y),other)));
-        if(!collisions.length)break;
-        const next=Math.max(30,Math.min(...collisions.map(other=>other.top-42)));
-        if(next>=y)break;
-        y=next;
+      // Existing targets stay under the same finger as other dishes change.
+      const fresh=xs.filter((_,offset)=>!points.has(group[index+offset].order.id));
+      const blockers=[...placed,...obstacles].filter(rect=>fresh.some(x=>x+28>rect.left&&x-28<rect.right));
+      const clear=row=>blockers.every(rect=>row+40<=rect.top||row-30>=rect.bottom);
+      if(!clear(y)){
+        const above=blockers.map(rect=>rect.top-42).filter(row=>row>=30&&row<y&&clear(row));
+        const below=blockers.map(rect=>rect.bottom+32).filter(row=>row<=height-40&&row>y&&clear(row));
+        // A kitchen station blocked by a table should open towards the kitchen.
+        const atTable=zone&&blockers.some(rect=>rect.ticket&&y+40>rect.top&&y-30<rect.bottom);
+        if(below.length&&(atTable||!above.length))y=Math.min(...below);
+        else if(above.length)y=Math.max(...above);
+        else {
+          // On short screens an entire column can be occupied. Seat and
+          // station edges are the only places where a free interval begins.
+          const occupied=[...placed,...obstacles],anchor=xs[0];
+          const xsToTry=[29,width-29,...occupied.flatMap(r=>[r.left-30,r.right+30])];
+          const ysToTry=[y,30,height-40,...occupied.flatMap(r=>[r.top-42,r.bottom+32])];
+          let closest=null,distance=Infinity;
+          for(const row of ysToTry)for(const col of xsToTry){
+            const dx=col-anchor,cost=dx*dx+(row-y)**2;
+            if(row<30||row>height-40||cost>=distance||xs.some(x=>x+dx<28||x+dx>width-28))continue;
+            if(fresh.some(x=>occupied.some(r=>intersects(box(x+dx,row),r))))continue;
+            closest={dx,row};distance=cost;
+          }
+          if(closest){
+            for(let i=0;i<xs.length;i++)xs[i]+=closest.dx;
+            y=closest.row;
+          }else if(pinned)return layoutKitchenActions(actions,{width,height,obstacles});
+        }
       }
-      for(const x of xs){const action=group[index++];placed.push(box(x,y));points.set(action.order.id,{orderId:action.order.id,x:x/width*100,y:y/height*100});}
+      for(const x of xs){
+        const id=group[index++].order.id;
+        if(points.has(id))continue;
+        placed.push(box(x,y));points.set(id,{orderId:id,x:x/width*100,y:y/height*100});
+      }
       right=width-29;y=Math.max(30,y-72);
     }
   }
   return actions.map(action=>points.get(action.order.id));
 }
+function stationKey(action, compact) {
+  const zone=action.step.zoneId;
+  if(!compact)return zone?'station:'+zone:'table:'+action.order.seat;
+  // A very short phone cannot fit a separate pager for each of ten counters
+  // alongside the full dining room. Nearby counters share a paged control.
+  if(!zone)return 'area:送餐';
+  if(zone<=2)return 'area:饮品';
+  if(zone<=5)return 'area:热厨';
+  return 'area:备菜';
+}
+
 /** Busy stations have a single paged control. Small queues keep the individual circles. */
-export function kitchenPromptGroups(actions,choices=new Map()){
+export function kitchenPromptGroups(actions,choices=new Map(),compact=false){
   const atStation=new Map();
   for(const action of actions){
-    const key=action.step.zoneId?`station:${action.step.zoneId}`:`table:${action.order.seat}`;
+    const key=stationKey(action,compact);
     if(!atStation.has(key))atStation.set(key,[]);
     atStation.get(key).push(action);
   }
   const groups=[];
   for(const [key,items] of atStation){
-    if(actions.length<5||items.length===1){
+    if(actions.length<5 && items.length>1){
       for(const selected of items)groups.push({key:`order:${selected.order.id}`,items:[selected],selected});
     }else{
       const selected=items.find(item=>item.order.id===choices.get(key))??items.find(item=>item.counting)??items[0];
@@ -162,7 +215,7 @@ const guidePages=[
 /** A frame only paints saved runs. It never submits a cooking action. */
 export function createKitchenScene({container,getRestaurant,palette='cream'}){
   let snapshot=null,selectedId=null,running=false,lastSignature='',lastLayout='',tutorial=false,guideIndex=0,blocked=false;
-  let timer=0,nextBoundary=Infinity,clocks=[],groups=[],currentPalette=null;
+  let timer=0,nextBoundary=Infinity,clocks=[],groups=[],currentPalette=null,pendingSteps=[];
   const actors=new Map(),props=new Map(),prompts=new Map(),choices=new Map(),root=container.closest('.restaurant');
   const workerLayer=container.querySelector('[data-rk-workers]'),actionLayer=container.querySelector('[data-rk-next-actions]');
   const stations=new Map(KITCHEN_ZONES.map(zone=>[zone.id,{
@@ -210,19 +263,46 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
       });
     }
   }
+  let layoutWidth=0,layoutHeight=0;
   function fitPrompts(){
     if(!running||!groups.length)return;
     const bounds=container.getBoundingClientRect();
     if(!bounds.width||!bounds.height)return;
-    const guide=guideButton.getBoundingClientRect();
-    const obstacle={left:guide.left-bounds.left,right:guide.right-bounds.left,top:guide.top-bounds.top,bottom:guide.bottom-bounds.top};
+    const localRect=element=>{
+      const r=element.getBoundingClientRect();
+      return {left:r.left-bounds.left,right:r.right-bounds.left,top:r.top-bounds.top,bottom:r.bottom-bounds.top};
+    };
+    const obstacles=[localRect(guideButton)];
+    for(const seat of container.closest('.r-stage')?.querySelectorAll('.rg-order-seat')??[]){
+      const target=localRect(seat);
+      // The queue switch extends above the circle; keep it clear as well.
+      obstacles.push({...target,top:target.top-5,bottom:target.bottom+10,ticket:true});
+    }
     const actions=groups.map(({selected})=>selected);
-    for(const [index,point] of layoutKitchenActions(actions,{width:bounds.width,height:bounds.height,obstacles:[obstacle]}).entries()){
-      const prompt=prompts.get(groups[index].key).element;
-      prompt.style.left=`${point.x}%`;prompt.style.top=`${point.y}%`;
+    const previous=new Map();
+    if(layoutWidth===bounds.width&&layoutHeight===bounds.height){
+      for(const {key,selected} of groups){
+        const record=prompts.get(key),station=selected.step.zoneId??`table:${selected.order.seat}`;
+        if(record.station===station)previous.set(selected.order.id,record.point);
+      }
+    }
+    layoutWidth=bounds.width;layoutHeight=bounds.height;
+    for(const [index,point] of layoutKitchenActions(actions,{width:bounds.width,height:bounds.height,obstacles,previous}).entries()){
+      const {key,selected}=groups[index],record=prompts.get(key);
+      record.point=point;record.station=selected.step.zoneId??`table:${selected.order.seat}`;
+      record.element.style.left=`${point.x}%`;record.element.style.top=`${point.y}%`;
     }
   }
-  const resize=new ResizeObserver(fitPrompts);
+  let compactStations=false;
+  const resize=new ResizeObserver(entries=>{
+    const scene=entries.find(entry=>entry.target===container);
+    const compact=scene ? scene.contentRect.width>0 && scene.contentRect.width<265 : compactStations;
+    if(compact!==compactStations){
+      compactStations=compact;
+      if(running)update(Date.now());
+    }
+    fitPrompts();
+  });
   function schedule(now){
     clearTimeout(timer);
     if(!running||document.hidden)return;
@@ -313,15 +393,24 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
         if(task.dataset.asset!==String(taskId)){task.innerHTML=taskId?(reduced?propImage(process.prop):`<img class="rk-prop rk-loop" src="${animationAsset(taskId)}" alt="" draggable="false"/>`):'';task.dataset.asset=String(taskId);}
       }
     }
-    groups=kitchenPromptGroups(actions,choices);
-    for(const key of choices.keys())if(!groups.some(group=>group.key===key&&group.items.length>1))choices.delete(key);
-    for(const [key,record] of prompts)if(!groups.some(group=>group.key===key)){record.element.remove();prompts.delete(key);}
+    groups=kitchenPromptGroups(actions,choices,compactStations);
+    for(const [key,id] of choices)if(!actions.some(action=>stationKey(action,compactStations)===key&&action.order.id===id))choices.delete(key);
+    // A queue can expand into individual controls at four outstanding steps.
+    // Carry the displayed order's slot across that change of DOM identity.
+    const retired=new Map();
+    for(const [key,record] of prompts)if(!groups.some(group=>group.key===key)){
+      retired.set(record.element.dataset.rkNextAction,record);
+      record.element.remove();
+      prompts.delete(key);
+    }
     for(const {key,items,selected:action} of groups){
       let record=prompts.get(key);
       if(!record){
         const element=document.createElement('div'),switcher=document.createElement('button');
         element.className='rk-next-action';switcher.className='rk-queue-next';switcher.type='button';switcher.dataset.rkQueue=key;
-        element.append(switcher);actionLayer.append(element);record={element,switcher};prompts.set(key,record);
+        const prior=retired.get(action.order.id);
+        element.append(switcher);actionLayer.append(element);
+        record={element,switcher,station:prior?.station,point:prior?.point};prompts.set(key,record);
       }
       const {element,switcher}=record,grouped=items.length>1;
       if(element.dataset.rkNextAction!==action.order.id||element.dataset.step!==action.step.id){
@@ -330,25 +419,26 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
         record.button=element.firstElementChild;record.counter=record.button.querySelector('.rk-action-countdown');
         element.dataset.rkNextAction=action.order.id;element.dataset.step=action.step.id;
       }
-      const index=items.indexOf(action),button=record.button,caption=action.queued?'排队中':action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
-      const disabled=action.running||blocked||action.stationBusy;
+      const dispatched=!action.running&&pendingSteps.includes(`${action.order.id}:${action.step.id}`);
+      const index=items.indexOf(action),button=record.button,caption=dispatched?'已派工':action.queued?'排队中':action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
+      const disabled=action.running||dispatched||blocked||action.stationBusy;
       const party=grouped?restaurant.parties?.find(party=>party.table===action.order.seat):null;
       const seat=party?.members.length>1?['左座','右座'][party.members.findIndex(member=>member.orderId===action.order.id)]??'':'';
       const tableLabel=`${action.order.seat+1}桌${seat}`;
       const orderLabel=actions.length>1?`${action.order.seat+1}号桌${seat}，`:'';
-      const state=[action.phase,action.step.id,disabled,actions.length>1,action.stationBusy,grouped,index,items.length,seat].join('|');
+      const state=[action.phase,action.step.id,disabled,dispatched,actions.length>1,action.stationBusy,grouped,index,items.length,seat].join('|');
       if(record.state!==state){
         record.state=state;button.disabled=disabled;
         button.classList.toggle('is-running',action.running);button.classList.toggle('is-counting',action.counting);
         record.counter.hidden=!action.counting;
         button.querySelector('.rk-action-order').hidden=actions.length<2||grouped;
         button.querySelector('.rk-action-caption').textContent=grouped?`${tableLabel} · ${caption}`:caption;
-        button.setAttribute('aria-label',orderLabel+(action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${disabled?'，暂时不可操作':''}`));
+        button.setAttribute('aria-label',orderLabel+(dispatched?`${action.step.label}，已派工，等待确认`:action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${disabled?'，暂时不可操作':''}`));
         element.setAttribute('aria-label',action.queued?'已排队，等待开始':action.counting?'当前工序进度':action.moving?'员工正在前往工位':action.stationBusy?'工位正在使用，等空闲后继续':'点击开始下一步');
         switcher.hidden=!grouped;
         if(grouped){
           switcher.textContent=`${index+1}/${items.length} ›`;
-          switcher.setAttribute('aria-label',`${zoneName(action.step.zoneId)}第 ${index+1} 份，共 ${items.length} 份，查看下一份工序`);
+          switcher.setAttribute('aria-label',`${key.startsWith('area:')?key.slice(5):zoneName(action.step.zoneId)}第 ${index+1} 份，共 ${items.length} 份，查看下一份工序`);
         }
       }
       if(action.counting){
@@ -381,8 +471,9 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
   actionLayer.addEventListener('click',cycle);
   document.addEventListener('visibilitychange',visibility);
   return {
-    sync(restaurant,options={}){snapshot=restaurant;blocked=options.blocked===true;return update(options.now??Date.now(),options.model);},
-    select(orderId){selectedId=orderId;const group=groups.find(item=>item.items.some(action=>action.order.id===orderId));if(group)choices.set(group.key,orderId);update(Date.now());},
+    sync(restaurant,options={}){snapshot=restaurant;blocked=options.blocked===true;pendingSteps=options.pendingSteps??[];return update(options.now??Date.now(),options.model);},
+    select(orderId){selectedId=orderId;const group=groups.find(item=>item.items.some(action=>action.order.id===orderId));if(group)choices.set(stationKey(group.selected),orderId);update(Date.now());},
+    fitPrompts,
     get selectedId(){return selectedId;},get palette(){return currentPalette;},setPalette,
     toggleTutorial(){setGuide(!tutorial);},endTutorial(){setGuide(false);},
     nextTutorial(){if(guideIndex===guidePages.length-1)setGuide(false);else{guideIndex++;paintGuide();}},

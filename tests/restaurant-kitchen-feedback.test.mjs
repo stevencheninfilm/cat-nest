@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
-import { kitchenViewModel, kitchenActionPresentation } from '../src/restaurant-kitchen-ui.js';
+import { kitchenViewModel, kitchenActionPresentation, kitchenSceneSource } from '../src/restaurant-kitchen-ui.js';
 import { restaurantArrivalBlocked, restaurantInputBlocked, restaurantSaveLabel } from '../src/restaurant-ui.js';
 
 const NOW=Date.parse('2026-10-18T19:00:00Z'),actor={id:'manual-kitchen-feedback',name:'店长'};
@@ -12,6 +12,24 @@ function acceptedOrder(){
   return {state,id};
 }
 const actionAt=(state,id,at)=>kitchenActionPresentation(state.restaurant,kitchenViewModel(state.restaurant,id,at),at);
+
+test('online automatic work waits for its assigned route, while manual and offline work keep the local walk',()=>{
+  const {state:confirmed,id,at}=acceptedOrder();
+  const action={type:'restaurant-kitchen-step',orderId:id,stepId:'gather'};
+  const local=reduceAction(confirmed,action,actor,at);
+  assert.ok(local);
+  const info={restaurant:local.restaurant,kitchen:kitchenViewModel(local.restaurant,null,at).model};
+  const online={connected:true,pendingKitchenSteps:[id+':gather']};
+  const queued=kitchenSceneSource(local,confirmed,info,online,true);
+  assert.equal(queued.restaurant,confirmed.restaurant);
+  assert.equal(queued.restaurant.orders[0].workflow.runs.length,0);
+  assert.deepEqual(queued.pendingSteps,online.pendingKitchenSteps);
+  for(const [availability,automatic,receipt] of [[online,false,confirmed],[{connected:false},true,confirmed],[{...online,retrying:true},true,confirmed],[online,true,local]]){
+    const scene=kitchenSceneSource(local,receipt,info,availability,automatic);
+    assert.equal(scene.model,info.kitchen);
+    assert.equal(scene.restaurant.orders[0].workflow.runs[0].stepId,'gather');
+  }
+});
 
 test('the same ingredient bubble remains at its station through a click, walk and work, then exposes only the next step',()=>{
   let {state,id}=acceptedOrder();

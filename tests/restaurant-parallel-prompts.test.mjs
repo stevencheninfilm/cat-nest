@@ -74,6 +74,41 @@ test('parallel circles fit narrow and wide scenes without overlapping or coverin
   }
 });
 
+test('a still-active station stays in place when a neighbouring dish finishes or joins',()=>{
+  const order=(id,zoneId)=>({order:{id,seat:0},step:{zoneId}});
+  const stew=order('first',4),pan=order('second',5),wash=order('third',7);
+  for(const width of [320,390,480]){
+    const bounds={width,height:width*1672/940};
+    const [first,second]=layoutKitchenActions([stew,pan],bounds);
+    assert.notEqual(first.y,second.y,'nearby workstation targets occupy separate rows');
+    const previous=new Map([[pan.order.id,second]]);
+    const [kept,added]=layoutKitchenActions([pan,wash],{...bounds,previous});
+    assert.deepEqual(kept,second);
+    assert.ok(Math.abs(added.x-kept.x)*width/100>=56||Math.abs(added.y-kept.y)*bounds.height/100>=70);
+  }
+});
+
+test('the fridge queue opens towards the kitchen when the front seats fill its usual spot',()=>{
+  const action=actions(fixture(),NOW+6000)[0];
+  for(const width of [235,320,390,480]){
+    const height=width*1672/940;
+    const ticket={left:.79*width,right:.95*width,top:.56*height,bottom:.56*height+48,ticket:true};
+    const [point]=layoutKitchenActions([action],{width,height,obstacles:[ticket]});
+    assert.ok(point.y*height/100-30>=ticket.bottom,'the seat and the switch above the cooking circle remain accessible');
+    assert.ok(point.y*height/100+40<=height);
+  }
+});
+
+test('on the shortest phone, all ten counters remain reachable with the kitchen pagers',()=>{
+  const orders=Array.from({length:10},(_,i)=>({order:{id:'dish-'+i,seat:i%8},step:{zoneId:i+1}}));
+  const choices=new Map([['area:备菜','dish-8']]);
+  const groups=kitchenPromptGroups(orders,choices,true);
+  assert.equal(groups.length,3);
+  assert.equal(groups.find(group=>group.key==='area:备菜').selected.order.id,'dish-8');
+  assert.deepEqual(groups.flatMap(group=>group.items),orders);
+  assert.equal(kitchenPromptGroups(orders,choices).length,10);
+});
+
 test('a busy group of eight orders keeps every clickable target separate',()=>{
   const action=actions(fixture(),NOW+6000)[0],many=Array.from({length:8},(_,i)=>({...action,order:{...action.order,id:`table-${i+1}`,seat:i}}));
   for(const width of [320,480]){
@@ -111,6 +146,17 @@ test('delivered orders remove only their own circle and an unaccepted order adds
   assert.deepEqual(actions(state,at).map(a=>a.order.id),['table-2']);
   const unaccepted=structuredClone(state);order(unaccepted,'table-2').workflow.acceptedAt=null;
   assert.equal(actions(unaccepted,at).length,0);
+});
+
+test('single stations keep their control when the kitchen crosses the four-order threshold',()=>{
+  const [sample]=actions(fixture(),NOW+6000);
+  const five=[1,2,3,4,4].map((zoneId,i)=>({...sample,order:{...sample.order,id:'order-'+i},step:{...sample.step,zoneId}}));
+  const choice=new Map([['station:4','order-4']]);
+  const dense=kitchenPromptGroups(five,choice),sparse=kitchenPromptGroups(five.slice(1),choice);
+  assert.equal(dense.find(g=>g.key==='station:4').selected.order.id,'order-4');
+  for(const id of ['order-1','order-2'])assert.equal(dense.find(g=>g.selected.order.id===id).key,sparse.find(g=>g.selected.order.id===id).key);
+  assert.deepEqual(sparse.filter(g=>g.selected.step.zoneId===4).map(g=>g.selected.order.id),['order-3','order-4']);
+  assert.equal(kitchenPromptGroups(five,choice).find(g=>g.key==='station:4').selected.order.id,'order-4');
 });
 
 test('a crowded kitchen keeps all sixteen orders reachable without stacking fridge controls over diners',()=>{

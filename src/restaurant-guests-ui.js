@@ -50,6 +50,9 @@ export function restaurantGuestTables(info, options) {
     restaurantGuestTable(info, table, options)).join('');
 }
 
+// Six seats share one row when the two centre tables are unlocked.
+const fullRoomTicketCenters = [19, 80, 19, 80, 19, 80, 49.5, 49.5];
+
 const ticketStatus = {
   requested:'想吃这份', awaiting:'等待厨师继续制作', preparing:'厨师制作中', cooking:'制作中',
   'dish-ready':'送餐啦', ready:'送餐啦', delivering:'正在送餐', dining:'用餐中', paid:'已结账',
@@ -69,9 +72,7 @@ export function restaurantGuestTable(info, table, {icon,food,blocked=false,repla
   if(party.status==='arriving'||replaying.includes(party.id))return `${extra}<span class="rg-arrival-label" ${base} data-r-party="${party.id}"><i></i>${party.members.length} 位客人正在入座</span>`;
 
   const signature=info.supperClub?.active?.signature;
-  // In the eight-table room the outside pairs sit slightly outboard of their
-  // tabletop centres, leaving the centre table its own two touch targets.
-  const lane=info.capacity>6 && table<6 ? (table%2===0?20:80) : position.x;
+  const lane=info.capacity>6 ? fullRoomTicketCenters[table] : position.x;
   const tickets=party.members.map(member=>{
     const order=member.order;
     const pendingDelivery=order?.status==='collectible' && pendingDeliveries.includes(order.id) && !pendingCourses.includes(order.id);
