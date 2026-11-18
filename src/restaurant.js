@@ -1,6 +1,7 @@
 import { RESTAURANT_RECIPES, restaurantRecipe } from './restaurant-recipe-catalog.js';
 import { recipeStepEnergyBase } from './restaurant-recipe-energy.js';
 import { restaurantDailyLoginInfo, validRestaurantDailyLogin } from './restaurant-daily-login.js';
+import { restaurantDailyCommissionInfo, restaurantCommissionPayout, restaurantCommissionPreserved, settleRestaurantCommission, validRestaurantCommission } from './restaurant-daily-commission.js';
 import { RESTAURANT_GUEST_DINING_MS, initialRestaurantGuestService, restaurantGuestHasNextCourse, restaurantGuestCompletionBonus, nextRestaurantGuestService, nextRestaurantGuestRecipe } from './restaurant-guest-service.js';
 import { initialRestaurantResearch, normalizeRestaurantResearch, restaurantInspirationGift, awardRestaurantInspiration, validRestaurantResearch, restaurantResearchInfo, restaurantResearchCost, restaurantDishGrade, drawRestaurantResearch, drawRestaurantResearchBatch, restaurantResearchPool, restaurantFragmentSurplus, fuseRestaurantResearch, RESEARCH_INSPIRATION_MAX } from './restaurant-research.js';
 import { validRestaurantSeenGuests, normalizeRestaurantSeenGuests, restaurantCustomerInfo, validRestaurantGuestConditions, completedRestaurantGuestConditions } from './restaurant-customers.js';
@@ -80,8 +81,9 @@ export function initialRestaurant(now=Date.now()) {
 }
 
 export function validRestaurant(value) {
-  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','lastInteractionAt','parties','waitingParties','seenGuests','completedGuestConditions','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations','supperClub'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','dailyCommission','lastInteractionAt','parties','waitingParties','seenGuests','completedGuestConditions','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations','supperClub'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
   if(Object.hasOwn(value,'dailyLogin')&&!validRestaurantDailyLogin(value.dailyLogin))return false;
+  if(Object.hasOwn(value,'dailyCommission')&&(!validRestaurantCommission(value.dailyCommission)||value.dailyCommission.progress>value.stats?.served))return false;
   if(Object.hasOwn(value,'lastInteractionAt')&&(!validTime(value.lastInteractionAt)||value.lastInteractionAt<value.openedAt))return false;
   if(Object.hasOwn(value,'circlePalette')&&!restaurantCirclePalette(value.circlePalette))return false;
   if(Object.hasOwn(value,'ownedCirclePalettes')&&(!Array.isArray(value.ownedCirclePalettes)||new Set(value.ownedCirclePalettes).size!==value.ownedCirclePalettes.length||value.ownedCirclePalettes.some(id=>!restaurantCirclePalette(id))))return false;
@@ -120,6 +122,7 @@ export function validRestaurant(value) {
 export function restaurantProgressPreserved(before,after){
   if(!validRestaurant(before)||!validRestaurant(after))return false;
   return after.openedAt===before.openedAt&&after.revision>=before.revision&&after.nextOrderId>=before.nextOrderId&&after.staff>=before.staff
+    &&restaurantCommissionPreserved(before.dailyCommission,after.dailyCommission)
     &&['served','earned','experience'].every(key=>after.stats[key]>=before.stats[key])
     &&supperProgressPreserved(before.supperClub,after.supperClub)
     &&Object.entries(before.levels).every(([key,value])=>after.levels[key]>=value)
@@ -175,7 +178,7 @@ export function restaurantInfo(state,now=Date.now()) {
   const decoration=restaurantDecorationInfo(restaurant,now),decorationInfo={...decoration,decorations:decoration.decorations.map(suite=>({...suite,unlockLevel:restaurantResourceLevel('decoration',suite.id),unlocked:suite.owned||level>=restaurantResourceLevel('decoration',suite.id)}))};
   const hireUnlockLevel=RESTAURANT_STAFF[restaurant.staff]?restaurantResourceLevel('staff',RESTAURANT_STAFF[restaurant.staff].id):1;
   const customerBook=restaurantCustomerInfo(restaurant,{recipes:[...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES],staff:RESTAURANT_STAFF,upgrades:RESTAURANT_UPGRADES,decorations:RESTAURANT_DECORATIONS,themes:[...RESTAURANT_THEMES,...PREMIUM_RESTAURANT_THEMES]},now);
-  return {restaurant,supperClub:supperClubInfo(restaurant,level,RESTAURANT_STAFF,recipes),dailyLogin:restaurantDailyLoginInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel),fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel)),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
+  return {restaurant,supperClub:supperClubInfo(restaurant,level,RESTAURANT_STAFF,recipes),dailyLogin:restaurantDailyLoginInfo(restaurant,now),dailyCommission:restaurantDailyCommissionInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel),fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel)),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
     const facilityLevel=restaurant.levels[upgrade.id],unlockLevel=restaurantResourceLevel('facility',upgrade.id,Math.min(upgrade.maxLevel,facilityLevel+1));
     return {...upgrade,level:facilityLevel,cost:upgrade.costs[facilityLevel-1]??null,unlockLevel,unlocked:level>=unlockLevel};
   }),hireCost:RESTAURANT_STAFF_COSTS[restaurant.staff]??null,hireCurrency:premiumStaffHireCost(restaurant.staff)?.currency??'coins',hireUnlockLevel,hireUnlocked:level>=hireUnlockLevel};
@@ -327,19 +330,22 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
       const hasNextCourse=restaurantGuestHasNextCourse(member),bonusGold=restaurantGuestCompletionBonus(member);
       if(hasNextCourse&&restaurant.nextOrderId>=MAX_SAFE)return reject('今天先让小馆休息一下吧。');
       const reward=decorationReward(rewardFor(order),order.decorationSnapshot,restaurant.decorationCarry);
+      const commission = settleRestaurantCommission(info.dailyCommission, order.recipe.category, now);
+      const bonusCoins = restaurantCommissionPayout(restaurant.dailyCommission, commission);
       // Reserve room for every unclaimed bubble before accepting another meal.
       // Home XP is credited only by claim-growth; restaurant XP grows now.
       const reservedXp=(state.pendingGrowth??[]).reduce((total,pending)=>total===null?null:addGrowthExperience(total,pending.amount),xp);
       const nextXp=reservedXp===null?null:addGrowthExperience(reservedXp,reward.xp),totalExperience=addGrowthExperience(restaurant.stats.experience,reward.xp);
       const gold=restaurantGoldReward({ordinaryServed:restaurant.stats.ordinaryServed,recipeId:order.recipeId});
       if(!gold||goldFish+gold.amount+bonusGold>GOLD_FISH_MAX)return reject('金鱼干口袋快满啦，先解锁一些新内容吧。');
-      if(coins+reward.coins>999999||nextXp===null||restaurant.stats.earned+reward.coins>MAX_SAFE||totalExperience===null||addGrowthExperience(totalExperience,restaurant.progression.experienceOffset)===null)return reject('小鱼干口袋或成长记录快满啦，先收好现有进度吧。');
+      if(coins+reward.coins+bonusCoins>999999||nextXp===null||restaurant.stats.earned+reward.coins>MAX_SAFE||totalExperience===null||addGrowthExperience(totalExperience,restaurant.progression.experienceOffset)===null)return reject('小鱼干口袋或成长记录快满啦，先收好现有进度吧。');
       restaurant.orders=restaurant.orders.filter(saved=>saved.id!==order.id);
       restaurant.stats.served++;restaurant.stats.ordinaryServed=gold.ordinaryServed;restaurant.stats.earned+=reward.coins;restaurant.stats.experience=totalExperience;
       if(order.decorationSnapshot||restaurant.decorationCarry)restaurant.decorationCarry=reward.carry;
       const inspiration=awardRestaurantInspiration(restaurant,order,member);restaurant.research=inspiration.research;
       goldFish+=gold.amount+bonusGold;
-      coins+=reward.coins;
+      if (commission) restaurant.dailyCommission = commission;
+      coins += reward.coins + bonusCoins;
       growthReward={orderId:order.id,recipeId:order.recipeId,amount:reward.xp};
       let nextRecipe=null;
       if(hasNextCourse){
@@ -351,7 +357,7 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
         member.orderId=nextOrder.id;member.service=service;
       }
       restaurant.parties=restaurant.parties.filter(party=>party.members.some(member=>restaurant.orders.some(saved=>saved.id===member.orderId)));
-      text=`完成${order.recipe.name}订单，收到 ${reward.coins} 小鱼干，生成 ${reward.xp} 点餐厅经营经验气泡${nextRecipe?`；猫猫吃完第一餐，又点了${nextRecipe.name}`:''}${bonusGold?`；完成两餐，额外获得 ${bonusGold} 金鱼干`:''}${inspiration.gift.amount?`；猫猫赠送 ${inspiration.gift.amount} 灵感`:''}`;
+      text=`完成${order.recipe.name}订单，收到 ${reward.coins} 小鱼干${bonusCoins ? `，达成今日委托，另得 ${bonusCoins} 小鱼干` : ''}，生成 ${reward.xp} 点餐厅经营经验气泡${nextRecipe?`；猫猫吃完第一餐，又点了${nextRecipe.name}`:''}${bonusGold?`；完成两餐，额外获得 ${bonusGold} 金鱼干`:''}${inspiration.gift.amount?`；猫猫赠送 ${inspiration.gift.amount} 灵感`:''}`;
       const supperText=settleSupperMeal(restaurant,order.recipe);
       if(supperText)text+=' · '+supperText;
     }

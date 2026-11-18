@@ -40,6 +40,8 @@ test('ordinary meals never drop gold fish while coins and pending growth still a
   let expectedCoins=state.coins,expectedXp=state.xp;
   for(const [index,recipeId] of ordinary.entries()){
     const before=structuredClone(state),completed=finish(state,recipeId,clock);
+    const commission=restaurantInfo(before,completed.collectAt).dailyCommission;
+    if(commission.progress===commission.target-1&&completed.order.recipe.category===commission.category)expectedCoins+=commission.rewardCoins;
     expectedCoins+=completed.order.rewardCoins;expectedXp+=completed.order.rewardXp;
     assert.deepEqual(state,before,'the previous shared state is immutable');
     state=completed.state;clock=completed.at;

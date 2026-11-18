@@ -3,6 +3,7 @@ const number = new Intl.NumberFormat('zh-CN');
 const center = box => ({x: box.left + box.width / 2, y: box.top + box.height / 2});
 const amount = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const label = (name, value) => `${name} +${number.format(value)}`;
+const emptyTotals = () => ({coins: 0, goldFish: 0, inspiration: 0, commissionCoins: 0});
 
 function flightFrames(from, to, index) {
   const control = {x: from.x + (to.x - from.x) * .35 + (index - 2) * 17, y: Math.min(from.y, to.y) - 28};
@@ -17,7 +18,7 @@ function flightFrames(from, to, index) {
 /** Visual feedback for receipts from a local tap. The wallet renders saved values independently. */
 export function createRestaurantCheckoutFeedback({layer, status, fishTarget, goldTarget}) {
   const origins = new Map(), animations = new Set(), timers = new Set();
-  let totals = {coins: 0, goldFish: 0, inspiration: 0}, dismiss;
+  let totals = emptyTotals(), dismiss;
   const view = layer.ownerDocument.defaultView;
 
   function remember(orderId, element) {
@@ -30,7 +31,7 @@ export function createRestaurantCheckoutFeedback({layer, status, fishTarget, gol
   function land(reward) {
     for (const key of Object.keys(totals)) totals[key] += reward[key];
     status.textContent = [
-      label('小鱼干', totals.coins),
+      label('小鱼干', totals.coins) + (totals.commissionCoins ? `（含委托奖励 ${number.format(totals.commissionCoins)}）` : ''),
       totals.goldFish && label('金鱼干', totals.goldFish),
       totals.inspiration && label('灵感', totals.inspiration),
     ].filter(Boolean).join(' · ');
@@ -38,7 +39,7 @@ export function createRestaurantCheckoutFeedback({layer, status, fishTarget, gol
     view.clearTimeout(dismiss);
     dismiss = view.setTimeout(() => {
       status.textContent = '';
-      totals = {coins: 0, goldFish: 0, inspiration: 0};
+      totals = emptyTotals();
     }, 2000);
   }
 
@@ -74,7 +75,7 @@ export function createRestaurantCheckoutFeedback({layer, status, fishTarget, gol
     const from = origins.get(orderId);
     origins.delete(orderId);
     if (!from || !amount(receipt?.coins)) return false;
-    const reward = {coins: receipt.coins, goldFish: amount(receipt.goldFish), inspiration: amount(receipt.inspiration)};
+    const reward = {coins: receipt.coins, goldFish: amount(receipt.goldFish), inspiration: amount(receipt.inspiration), commissionCoins: amount(receipt.commissionCoins)};
     let duration = 0;
     if (!view.matchMedia('(prefers-reduced-motion: reduce)').matches && typeof layer.animate === 'function') {
       duration = flight(from, fishTarget, 6, false);
@@ -96,7 +97,7 @@ export function createRestaurantCheckoutFeedback({layer, status, fishTarget, gol
     animations.clear();
     layer.replaceChildren();
     view.clearTimeout(dismiss);
-    totals = {coins: 0, goldFish: 0, inspiration: 0};
+    totals = emptyTotals();
     status.textContent = '';
   }
   return {remember, confirm, cancel: id => origins.delete(id), reset};

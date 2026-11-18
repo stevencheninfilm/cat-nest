@@ -1,3 +1,4 @@
+import { validRestaurantCommission } from './restaurant-daily-commission.js';
 import { validRestaurantGuestConditions } from './restaurant-customers.js';
 import { growthClaimIds } from './restaurant-income-growth.js';
 import { restaurantGuestHasNextCourse } from './restaurant-guest-service.js';
@@ -22,6 +23,8 @@ const guestConditions=data=>data?.restaurantGuestConditionsV2??data?.restaurantG
 function validRestaurantMetadata(data) {
   if (!['restaurantGuestConditions','restaurantGuestConditionsV2'].every(key=>data?.[key]===undefined||validRestaurantGuestConditions(data[key]))) return false;
   const restaurant = data?.state?.restaurant;
+  const commission = data?.restaurantDailyCommission;
+  if (commission !== undefined && !(validRestaurantCommission(commission) && commission.progress <= restaurant?.stats?.served)) return false;
   return ['restaurantSupperClub','restaurantSupperClubV2'].every(key => data?.[key] === undefined
     || Boolean(restaurant && validSupperClub(data[key], restaurant.staff, restaurant.stats?.served)));
 }
@@ -233,6 +236,7 @@ export function createCloudRoom(options) {
     const conditions=guestConditions(data);
     const additions = {};
     if (conditions !== undefined) additions.completedGuestConditions = conditions;
+    if (data.restaurantDailyCommission !== undefined) additions.dailyCommission = data.restaurantDailyCommission;
     const supperClub = data.restaurantSupperClubV2 ?? data.restaurantSupperClub;
     if (supperClub !== undefined) additions.supperClub = supperClub;
     const incomingState = data.state.restaurant && Object.keys(additions).length

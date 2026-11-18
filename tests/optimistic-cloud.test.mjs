@@ -357,3 +357,25 @@ test('malformed V2 gold metadata cannot acknowledge a queued interaction even wi
   ack.resolve(response({...receipt(item,reduceAction(base,item.action,male,Date.now(),item.operationId)),restaurantGuestConditions:[],restaurantGuestConditionsV2:['level:999']}));await flush();
   assert.equal(h.observed.pending.at(-1)[0].operationId,item.operationId);assert.equal(h.observed.saves.at(-1).phase,'error');
 });
+
+test('daily commission envelope progress survives optimistic actions and invalid acknowledgements cannot discard the queue', async t => {
+  const base = initialState();
+  base.restaurant.stats.served = 1;
+  base.restaurant.nextOrderId = 2;
+  const commission = {day: Math.floor((Date.now() + 8 * 3600000) / 86400000), progress: 1};
+  const ack = deferred();
+  const h = harness(t, req => req.method === 'GET'
+    ? response({...snapshot(base), restaurantDailyCommission: commission})
+    : ack.promise);
+  await h.room.start();
+  assert.deepEqual(h.latest().restaurant.dailyCommission, commission);
+  h.room.dispatch({type: 'pet'});
+  const item = h.requests.at(-1).body;
+  assert.deepEqual(h.latest().restaurant.dailyCommission, commission);
+  const saved = reduceAction(base, item.action, male, Date.now(), item.operationId);
+  ack.resolve(response({...receipt(item, saved), restaurantDailyCommission: {...commission, progress: 2}}));
+  await flush();
+  assert.equal(h.observed.pending.at(-1).length, 1);
+  assert.equal(h.observed.saves.at(-1).phase, 'error');
+  assert.equal(Object.hasOwn(base.restaurant, 'dailyCommission'), false);
+});

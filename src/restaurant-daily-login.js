@@ -4,6 +4,7 @@ export const RESTAURANT_DAILY_LOGIN_COINS=300;
 export const RESTAURANT_DAILY_LOGIN_TIME_ZONE='Asia/Shanghai';
 const DAY_MS=86400000,OFFSET_MS=8*3600000;
 export const restaurantLoginDay=now=>Math.floor(now/DAY_MS+OFFSET_MS/DAY_MS);
+export const restaurantDayResetAt=day=>(day+1)*DAY_MS-OFFSET_MS;
 export function validRestaurantDailyLogin(value){
   return value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===2&&
     Number.isSafeInteger(value.day)&&value.day>=0&&Number.isSafeInteger(value.claimedAt)&&value.claimedAt>=0&&
@@ -11,5 +12,5 @@ export function validRestaurantDailyLogin(value){
 }
 export function restaurantDailyLoginInfo(restaurant,now=Date.now()){
   const day=restaurantLoginDay(now),claimed=(restaurant?.dailyLogin?.day??-1)>=day;
-  return {day,amount:RESTAURANT_DAILY_LOGIN_COINS,claimed,available:!claimed,nextResetAt:(day+1)*DAY_MS-OFFSET_MS};
+  return {day,amount:RESTAURANT_DAILY_LOGIN_COINS,claimed,available:!claimed,nextResetAt:restaurantDayResetAt(day)};
 }
