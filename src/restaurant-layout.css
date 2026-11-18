@@ -157,6 +157,11 @@
   .restaurant .rg-order-seat.is-collectible .r-collect-fish { display: none; }
   .restaurant .rg-ticket-face .rg-dish-grade { left: -1px; }
 }
+/* The lower end of the right wall leaves the staff tab and every head
+ * ticket separately tappable even with the full staff resting. */
+.restaurant .rr-rest-summary { top: calc(120% + 4px); bottom: auto; }
+.restaurant .rr-rest-popover { top: auto; bottom: 0; }
+
 /* The kitchen sign and its tutorial share the divider on shallow stages. */
 @container (max-width: 320px) {
   .restaurant .r-kitchen-label,.restaurant .rk-focus-tools { top: max(63.4%, calc(56.1% + 44px)); }
