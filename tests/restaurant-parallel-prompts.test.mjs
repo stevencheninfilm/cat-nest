@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
-import { restaurantActionResult, validRestaurant } from '../src/restaurant.js';
+import { restaurantActionResult, restaurantInfo, validRestaurant } from '../src/restaurant.js';
 import { kitchenActionPresentations, kitchenActionPresentation, kitchenViewModel, kitchenPromptGroups, nextKitchenBoundary, layoutKitchenActions } from '../src/restaurant-kitchen-ui.js';
+import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
+import { restaurantGuestTable } from '../src/restaurant-guests-ui.js';
 import { normalizeStaffTraining } from '../src/restaurant-staff-training.js';
 
 const NOW=Date.parse('2026-10-19T23:00:00Z'),ACTOR={id:'parallel-prompts',name:'店长'};
@@ -146,6 +148,35 @@ test('delivered orders remove only their own circle and an unaccepted order adds
   assert.deepEqual(actions(state,at).map(a=>a.order.id),['table-2']);
   const unaccepted=structuredClone(state);order(unaccepted,'table-2').workflow.acceptedAt=null;
   assert.equal(actions(unaccepted,at).length,0);
+});
+
+test('an individual seat dispatches its dish once, and the worker puts it down on arrival',()=>{
+  let state=act(initialState(NOW),{type:'restaurant-arrive',partySize:2,recipeId:'coffee'},NOW);
+  const [neighbour,guest]=state.restaurant.orders;
+  let at=guest.createdAt;
+  state=act(state,{type:'restaurant-kitchen-accept',orderId:guest.id},at);
+  for(const step of KITCHEN_FLOWS[guest.recipeId]){
+    state=click(state,guest.id,step.id,at);
+    at=run(state,guest.id).endAt;
+  }
+  const table=time=>restaurantGuestTable(restaurantInfo(state,time),0,{icon:()=>'',food:id=>`<i>${id}</i>`});
+  const dispatch=`data-r-action="kitchen-step" data-r-order-id="${guest.id}" data-r-step="delivery"`;
+  assert.ok(table(at).includes(dispatch));
+  assert.ok(table(at).includes(`data-r-action="kitchen-accept" data-r-order-id="${neighbour.id}"`));
+  assert.deepEqual(actions(state,at),[], 'the head button is the only dispatch control');
+
+  state=click(state,guest.id,'delivery',at);
+  const flow=order(state,guest.id).workflow;
+  const worker=time=>kitchenViewModel(state.restaurant,guest.id,time).worker;
+  for(const segment of flow.segments.filter(s=>s.stepId==='delivery')){
+    assert.deepEqual(actions(state,segment.startAt),[], 'delivery never projects a station prompt over the table');
+    assert.doesNotMatch(table(segment.startAt),/class="rg-dining-food"/);
+    assert.equal(worker(segment.startAt).carrying,segment.carrying);
+  }
+  assert.match(table(flow.servedAt),/class="rg-dining-food"[^>]*data-r-table="0" data-r-seat="1"/);
+  assert.match(table(flow.servedAt),/data-r-action="kitchen-accept"/);
+  assert.equal(worker(flow.servedAt).phase,'return');
+  assert.equal(worker(flow.servedAt).carrying,null, 'the dish stays on the table during the first return leg');
 });
 
 test('single stations keep their control when the kitchen crosses the four-order threshold',()=>{

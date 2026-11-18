@@ -39,27 +39,26 @@
   .restaurant .r-nav button{flex-direction:row;justify-content:center;gap:5px;padding:3px;min-height:44px}.restaurant .r-nav button>span{width:21px;height:21px}.restaurant .r-nav button strong{font-size:10px}
 }
 
-/* The two seat targets meet at the front edge of the table. Their maximum
- * combined width fits in one of three lanes, including the eight-table room. */
+/* A seated sprite is 14% of the room width, with its top 120% of that
+ * above its foot position. Keep the hit area above the ears in every state. */
 .restaurant .rg-order-seat {
-  top: calc(var(--ty) + 1%);
+  top: calc(var(--ty) - 16.8cqw + 2px);
   width: min(calc(15.25cqw - 2px), 72px);
-  height: clamp(40px, 15cqw, 48px);
-  transform: translateX(calc(-100% - 1px));
+  height: min(14.5cqw, 48px);
+  transform: translate(-50%, -100%);
   z-index: 6;
 }
-.restaurant .rg-order-seat[data-r-seat="1"] { transform: translateX(1px); }
-.restaurant .rg-order-seat[data-r-single] { transform: translateX(-50%); }
 .restaurant .rg-order-seat[data-r-seat] > .r-order-bubble {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: end center;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 0;
+  padding: 0 0 4px;
   margin: 0;
   border: 0;
   border-radius: 5px;
@@ -73,22 +72,36 @@
 .restaurant .rg-order-seat > .r-order-bubble::after { content: none; }
 .restaurant .rg-order-seat > .r-order-bubble:active:not(:disabled) { transform: none !important; }
 .restaurant .rg-order-seat .rg-ticket-face {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2px;
   padding: 2px 3px;
   max-width: 100%;
-  min-height: 24px;
+  min-height: clamp(16px, 5cqw, 23px);
   border: 1px solid var(--ticket-line,#b0a18c);
   border-radius: 8px;
   background: var(--ticket-fill,#fff8ec);
   color: var(--ticket-ink,#5a4d3d);
   box-shadow: 0 1px 1px #6642252e;
 }
+.rg-ticket-face::after {
+  content: "";
+  position: absolute;
+  left: clamp(5px, calc(50% + var(--head-offset)), calc(100% - 5px));
+  bottom: -4px;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%) rotate(45deg);
+  border: solid var(--ticket-line,#b0a18c);
+  border-width: 0 1px 1px 0;
+  background: var(--ticket-fill,#fff8ec);
+  pointer-events: none;
+}
 .restaurant .rg-order-seat > [data-r-action] .rg-ticket-face {
   width: 100%;
-  min-height: clamp(34px, 10cqw, 40px);
+  min-height: clamp(19px, 7cqw, 34px);
   border-color: var(--ticket-line);
   background: linear-gradient(#fffaf0 0%, var(--ticket-fill) 80%);
   box-shadow: inset 0 1px 0 #fffdf5, 0 2px 0 var(--ticket-line);
@@ -100,14 +113,14 @@
   font-weight: 850;
   line-height: 1.15;
 }
-.rg-ticket-face .rg-tier-food { width: clamp(16px,5.5cqw,25px); height: auto; aspect-ratio: 1; }
+.rg-ticket-face .rg-tier-food { position: static; isolation: auto; width: clamp(13px,4.5cqw,22px); height: auto; aspect-ratio: 1; }
 .rg-ticket-face .rg-tier-food .r-food { width: 100% !important; height: 100% !important; filter: none; }
 .restaurant .rg-ticket-face .rg-tier-food>.rg-tier-coating { display: none; }
 .restaurant .rg-ticket-face .rg-dish-grade {
-  top: -4px; right: -1px; min-width: 10px; height: 10px; padding: 0 1px; border-radius: 3px; font-size: 7px;
+  top: -7px; left: 0; right: auto; min-width: 10px; height: 9px; padding: 0 1px; border-radius: 3px; font-size: 6px;
 }
 .rg-ticket-course {
-  position: absolute; top: -5px; right: 1px; padding: 0 2px; border-radius: 4px;
+  position: absolute; top: -7px; right: 0; padding: 0 1px; border-radius: 4px;
   background: #f1f3ee; color: #465760; font: 700 8px/1.15 system-ui,sans-serif;
 }
 .rg-order-seat[data-r-guest-tier=gold] .rg-ticket-course { background: #f7df9c; color: #6a4e1a; }
@@ -132,15 +145,18 @@
 .rg-order-seat:is(.is-cooking,.is-preparing,.is-course-thinking) .rg-ticket-face { padding-bottom: 4px; }
 .rg-order-seat .r-order-bubble:focus-visible { outline: 2px solid #507c82; outline-offset: 0; }
 .rg-order-seat .r-order-bubble:active:not(:disabled) .rg-ticket-face { box-shadow: inset 0 1px 2px #67482d30; }
-/* On a short phone the room can be narrower than the screen. Stack the art
- * above the action so it stays legible in the six-seat row. */
+/* A short phone still fits the art and the verb in one line. The wider
+ * transparent target above it remains clear of the next row of seats. */
 @container (max-width: 350px) {
-  .restaurant .rg-order-seat[data-r-table="0"] { top: calc(var(--ty) + 1% + 2px); }
-  .restaurant .rg-order-seat > [data-r-action] .rg-ticket-face { flex-direction: column; gap: 0; padding: 1px; }
-  .rg-ticket-face .r-collect-fish,.rg-ticket-face .r-collect-fish svg { width: 12px; height: 12px; }
-  .restaurant .rg-order-seat .rg-ticket-face { padding-inline: 1px; }
+  .restaurant .rg-order-seat .rg-ticket-face { gap: 1px; padding: 1px; }
+  .rg-ticket-face .r-collect-fish,.rg-ticket-face .r-collect-fish svg { width: 10px; height: 10px; }
 }
-
+@container (max-width: 260px) {
+  .restaurant .rg-order-seat .rg-ticket-face strong { font-size: 9px; }
+  .rg-ticket-face .rg-tier-food { width: 11px; }
+  .restaurant .rg-order-seat.is-collectible .r-collect-fish { display: none; }
+  .restaurant .rg-ticket-face .rg-dish-grade { left: -1px; }
+}
 /* The kitchen sign and its tutorial share the divider on shallow stages. */
 @container (max-width: 320px) {
   .restaurant .r-kitchen-label,.restaurant .rk-focus-tools { top: max(63.4%, calc(56.1% + 44px)); }
@@ -150,6 +166,25 @@
 
 @media(max-width:420px){.restaurant .r-scene-controls{width:52px;gap:5px}.restaurant .r-scene-controls .rr-research-shortcut{transform:scale(.72);transform-origin:top center;margin-bottom:-23px}}
 @media(max-width:420px) and (max-height:640px){.restaurant .r-scene-controls .rr-research-shortcut{transform:scale(.55);margin-bottom:-39px}}
+
+/* Keep the event entrance with the other upper controls, clear of the first
+ * guest. The existing back button and the room keep their positions. */
+.restaurant .r-scene-controls .rs-shortcut {
+  position: absolute;
+  left: calc(100% + 2px);
+  top: 0;
+  width: 42px;
+  height: 58px;
+}
+.restaurant .r-scene-controls .rs-shortcut strong { font-size: 9px; line-height: 14px; }
+@media (min-width: 361px) and (max-width: 420px) {
+  .restaurant .r-scene-controls .rr-research-shortcut { left: -5px; }
+}
+@media (max-width: 360px) {
+  .restaurant .r-scene-controls { left: 0; width: 44px; }
+  .restaurant .r-scene-controls .rs-shortcut { left: calc(100% + 1px); width: 40px; }
+  .restaurant .r-tools { gap: 4px; }
+}
 
 /* Tool buttons share the upper edge, leaving the scene and rest badge in place. */
 .restaurant .r-tools .r-auto-cook{height:48px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#95764e;transition:background .18s,border-color .18s,box-shadow .18s}

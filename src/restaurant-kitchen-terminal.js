@@ -42,5 +42,5 @@ export function paintKitchenTerminal(root,info,options={}) {
 }
 
 export function kitchenGuideMarkup(info) {
-  return `<section class="rk-guide" aria-label="料理工序教材"><h3>料理工序教材</h3><p>先点击客人的需求接单，再逐步点击食材圈推进；每一步完成后，员工会等你继续操作，最后点击餐桌送餐。员工体力耗尽会在本步完成后去休息，点击下一步可让空闲员工接手。工位一次只接待一位员工，送餐后返回厨房。</p>${kitchenRecipesInMenuOrder(info).map(({id,name})=>{const steps=KITCHEN_FLOWS[id];return `<details><summary>${esc(name)} · ${steps.length} 道工序</summary><ol>${steps.map(step=>`<li><b>${step.zoneId}号 · ${esc(KITCHEN_ZONES.find(zone=>zone.id===step.zoneId).name)}</b><span>${esc(step.label)}</span></li>`).join('')}<li><b>送餐与返回</b><span>料理装好后点击餐桌送出，客人用餐后结账，员工返回厨房。</span></li></ol></details>`;}).join('')}</section>`;
+  return `<section class="rk-guide" aria-label="料理工序教材"><h3>料理工序教材</h3><p>先点击客人的需求接单，再逐步点击食材圈推进；每一步完成后，员工会等你继续操作，最后点顾客头顶的“送餐”。员工体力耗尽会在本步完成后去休息，点击下一步可让空闲员工接手。工位一次只接待一位员工，送餐后返回厨房。</p>${kitchenRecipesInMenuOrder(info).map(({id,name})=>{const steps=KITCHEN_FLOWS[id];return `<details><summary>${esc(name)} · ${steps.length} 道工序</summary><ol>${steps.map(step=>`<li><b>${step.zoneId}号 · ${esc(KITCHEN_ZONES.find(zone=>zone.id===step.zoneId).name)}</b><span>${esc(step.label)}</span></li>`).join('')}<li><b>送餐与返回</b><span>装盘后，点顾客头顶的“送餐”。员工上菜后返回厨房。客人吃完，再点头顶的小鱼干结账。</span></li></ol></details>`;}).join('')}</section>`;
 }
