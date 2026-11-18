@@ -70,7 +70,8 @@ export function createRestaurantDecorationScene({container,onComplete=()=>{},onS
     }else{
       status.classList.remove('is-construction');
       status.hidden=true;statusSignature='';status.innerHTML='';
-      const finished=lastJob&&now>=lastJob.finishAt?lastJob:null;
+      const installed=lastJob && (job?.id===lastJob.id || current.activeDecorationId===lastJob.toDecorationId);
+      const finished=installed&&now>=lastJob.finishAt?lastJob:null;
       if(finished&&!seenJobs.has(finished.id)){seenJobs.add(finished.id);onComplete(restaurantDecoration(finished.toDecorationId));}
     }
   }

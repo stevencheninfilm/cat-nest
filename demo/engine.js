@@ -10,6 +10,7 @@ import { restaurantStaffDebugResult, unlockRestaurantDecorations } from './resta
 import { restaurantCheckoutReceipt } from '../src/restaurant-checkout-receipt.js';
 
 export const DEMO_ROOM = 'dddddddddddddddddddddddddddd5174';
+export const DEMO_ACTION_BATCH_LIMIT = 6;
 const clone = value => structuredClone(value);
 export const DEMO_ACTORS = Object.fromEntries(COUPLE_ROLES.map(role => [role.id, { id:role.clientId, name:role.name }]));
 
@@ -33,29 +34,59 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
   const listeners = new Set();
   const logs = [];
   const controls = { latency:650, offline:false, rejectNext:false, partnerOnline:true };
-  function snapshot(event) {
-    const state = normalizeState(record.state, now());
+  function snapshot(event, source = record) {
+    const state = normalizeState(source.state, now());
     state.games = publicGameHub(state.games);
-    return { roomId:DEMO_ROOM, state, revision:record.revision, ...(event ? {event:clone(event)} : {}) };
+    return { roomId:DEMO_ROOM, state, revision:source.revision, ...(event ? {event:clone(event)} : {}) };
   }
   function log(method, path, status) { logs.unshift({at:new Date(now()).toISOString(),method,path,status,revision:record.revision}); logs.splice(30); }
   function notify(type, data) { for (const listener of listeners) listener(type,clone(data)); }
-  function persist(event) { storage.setItem(key, JSON.stringify(record)); publish(record.revision); notify(event ? 'action':'state', snapshot(event)); }
+  function persist() { storage.setItem(key, JSON.stringify(record)); publish(record.revision); notify('state', snapshot()); }
   function replace(state) { record.state=normalizeState(state,now()); record.revision++; persist(); }
+  function applyItems(items) {
+    let next=record;
+    const results=[];
+    for(const item of items){
+      const actor=Object.values(DEMO_ACTORS).find(actor=>actor.id===item?.clientId);
+      if(!actor||typeof item.operationId!=='string')return {status:400,error:'请选择一个演示身份'};
+      const prior=next.receipts.find(receipt=>(receipt?.operationId??receipt)===item.operationId);
+      if(prior){
+        // Earlier demo visits kept only IDs. The original single-operation route
+        // can acknowledge them, but cannot attest to the actor in a batch receipt.
+        if(typeof prior==='string'&&items.length>1)return {status:409,error:'这次操作需要逐项确认'};
+        if(typeof prior!=='string'&&(prior.actor.id!==actor.id||JSON.stringify(prior.action)!==JSON.stringify(item.action)))return {status:409,error:'这个操作编号已用于另一项互动'};
+        results.push({...snapshot(typeof prior==='string'?undefined:prior,next),duplicate:true});
+        continue;
+      }
+      const state=reduceAction(next.state,item.action,actor,now(),item.operationId);
+      if(!state)return {status:409,error:'这次操作不满足条件，已恢复原来的状态'};
+      const checkout=restaurantCheckoutReceipt(item.action,next.state,state);
+      const event={operationId:item.operationId,action:item.action,actor,...(checkout?{restaurantCheckout:checkout}:{})};
+      next={...next,state,revision:next.revision+1,receipts:[...next.receipts,event].slice(-500)};
+      results.push(snapshot(event,next));
+    }
+    if(next!==record){
+      storage.setItem(key,JSON.stringify(next));
+      record=next;
+      publish(record.revision);
+      for(const result of results)if(!result.duplicate)notify('action',result);
+    }
+    return {status:200,data:{results}};
+  }
   function action(item) {
-    const actor = Object.values(DEMO_ACTORS).find(actor => actor.id === item.clientId);
-    if (!actor || typeof item.operationId !== 'string') return {status:400,error:'请选择一个演示身份'};
-    if (record.receipts.includes(item.operationId)) return {status:200,data:snapshot()};
-    const state = reduceAction(record.state,item.action,actor,now(),item.operationId);
-    if (!state) return {status:409,error:'这次操作不满足条件，已恢复原来的状态'};
-    const checkout = restaurantCheckoutReceipt(item.action, record.state, state);
-    record.state=state; record.revision++; record.receipts.push(item.operationId); record.receipts=record.receipts.slice(-500);
-    const event={operationId:item.operationId,action:item.action,actor,...(checkout ? {restaurantCheckout:checkout} : {})}; persist(event);
-    return {status:200,data:snapshot(event)};
+    const result=applyItems([item]);
+    return result.error?result:{status:200,data:result.data.results[0]};
+  }
+  function actionBatch(items) {
+    const invalid = !Array.isArray(items) || items.length < 2 || items.length > DEMO_ACTION_BATCH_LIMIT
+      || items.some(item => !item || item.clientId !== items[0]?.clientId)
+      || new Set(items.map(item => item.operationId)).size !== items.length;
+    if(invalid)return {status:400,error:'批量操作需要 2 至 6 个同一身份的独立操作'};
+    return applyItems(items);
   }
   storage.setItem(key,JSON.stringify(record));
   return {
-    controls, logs, snapshot, action, log,
+    controls, logs, snapshot, action, actionBatch, log,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     roster(me) { return [me, ...(controls.partnerOnline ? [Object.values(DEMO_ACTORS).find(actor => actor.id !== me.id)] : [])]; },
     presence() { notify('presence-refresh',null); },

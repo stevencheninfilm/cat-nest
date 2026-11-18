@@ -7,13 +7,15 @@ import { validRestaurant, restaurantUpgradeCurrentLevel } from './restaurant.js'
 import { isInteractiveWorkflow, interactiveWorkerReservations } from './restaurant-kitchen-interactive.js';
 import { restaurantResearchInfo } from './restaurant-research.js';
 import { validSupperClub } from './restaurant-supper-club.js';
+import { premiumRestaurantTheme, equippedPremiumDecorations } from './restaurant-premium-decorations.js';
 
 // Random cards and arrival IDs still come from the server. Deterministic
 // upgrades immediately project the exact target clicked and reserve its cost.
 // A first-course collection allocates the next order ID, so it waits for that
 // canonical receipt while unrelated kitchen commands continue to preview.
 const RESTAURANT_MANAGEMENT=new Set(['restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration','restaurant-supper-start']);
-const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect',...RESTAURANT_MANAGEMENT]);
+const RESTAURANT_APPEARANCE=new Set(['restaurant-theme','restaurant-palette','restaurant-decoration','restaurant-premium-decoration']);
+const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect',...RESTAURANT_APPEARANCE,...RESTAURANT_MANAGEMENT]);
 const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
 const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
 const guestConditions=data=>data?.restaurantGuestConditionsV2??data?.restaurantGuestConditions;
@@ -50,6 +52,8 @@ export function createCloudRoom(options) {
   // confirmedState and never change the payload sent to the server.
   const restaurantTimelines = new Map();
   const liveReceipts = new Map();
+  let actionBatchLimit = 1;
+  const retryIndividually = new WeakSet();
   const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'claim-restaurant-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
   let authoritativeState = null, displayedState = null;
   const me = profile ? { id: profile.clientId, name: profile.name } : { id: clientId, name };
@@ -60,6 +64,13 @@ export function createCloudRoom(options) {
     return action?.type==='restaurant-collect'&&(state?.restaurant?.parties??[]).some(party=>party.members.some(member=>member.orderId===action.orderId&&restaurantGuestHasNextCourse(member)));
   }
   function restaurantEffectPresent(state,action){
+    const restaurant=state.restaurant;
+    if(action.type==='restaurant-palette')return (restaurant?.circlePalette??'cream')===action.paletteId;
+    if(action.type==='restaurant-decoration')return (restaurant?.construction?.toDecorationId??restaurant?.decorationId)===action.decorationId;
+    if(action.type==='restaurant-premium-decoration'||action.type==='restaurant-theme'&&premiumRestaurantTheme(action.themeId)){
+      return equippedPremiumDecorations(restaurant).includes(action.themeId)===(action.type==='restaurant-theme'||action.equipped);
+    }
+    if(action.type==='restaurant-theme')return restaurant?.theme===action.themeId;
     if(action?.expectedLevel!==undefined)return restaurantUpgradeCurrentLevel(state?.restaurant,action)>=action.expectedLevel;
     if(action?.type==='restaurant-unlock-special')return state?.restaurant?.ownedSpecialRecipes?.includes(action.recipeId)??false;
     if(action?.type==='restaurant-research-fuse')return (state?.restaurant?.research?.fusion?.revision??0)>action.expectedFusion;
@@ -136,9 +147,10 @@ export function createCloudRoom(options) {
   }
   function scheduleDrain(delay=8000){const wait=Math.max(1,delay);retryAt=Date.now()+wait;clearTimeout(retry);retry=setTimeout(()=>{retry=null;retryAt=0;void drain();},wait);}
   function queuedStatus(message='餐厅操作已在本机排队，连接恢复后自动保存',retrying=true){onSaveStatus({phase:'queued',message,retrying,pending:queue.length});}
-  async function request(path, options = {}) {
+  async function request(path, options = {}, timeoutMs) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), optimisticReducer && options.method === 'POST' && path.endsWith('/actions') ? 15000 : 95000);
+    const saving = options.method === 'POST' && /\/actions(?:\/batch)?$/.test(path);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs ?? (optimisticReducer && saving ? 15000 : 95000));
     try {
       const snapshot=(!options.method||options.method==='GET') && (path==='/api/couple/home'||/^\/api\/rooms\/[a-f0-9]{32}$/.test(path));
       const tag=snapshotTags.get(path);
@@ -194,7 +206,7 @@ export function createCloudRoom(options) {
       if (next) {
         display = next; optimistic = true;if(game)pendingGames.push(item.action);
         if(restaurant){const order=restaurantOrder(next,item.action);preview.order=order?structuredClone(order):null;preview.training=order?.workflow?.workerId?structuredClone(next.restaurant.staffTraining?.[order.workflow.workerId]):null;preview.workers=restaurantWorkerClocks(next,order);}
-      }else if(restaurant&&restaurantUpgradeCurrentLevel(display.restaurant,item.action)!==null){heldPurchase=true;}
+      }else if(restaurant&&(restaurantUpgradeCurrentLevel(display.restaurant,item.action)!==null||RESTAURANT_APPEARANCE.has(item.action.type))){heldPurchase=true;}
       else if(!restaurant&&item.action.type!=='claim-restaurant-growth'){preview.active = false; withdrawn.push(item);}
       // A later authoritative timestamp can temporarily make a restaurant
       // dependency unplayable. Keep its intent and preview active until its
@@ -266,7 +278,7 @@ export function createCloudRoom(options) {
     queue.unshift(queue.splice(index,1)[0]);saveQueue();publishState();return true;
   }
   function promoteReadyManagement(researchOnly=false){
-    if(!optimisticReducer||!['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(queue[0]?.action?.type))return false;
+    if(!optimisticReducer||queue.length<2||!['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(queue[0]?.action?.type))return false;
     const info=restaurantResearchInfo(authoritativeState.restaurant);
     const index=queue.findIndex((item,index)=>index>0
       &&queue.slice(0,index).every(previous=>['restaurant-kitchen-step','restaurant-kitchen-accept'].includes(previous.action?.type))
@@ -278,6 +290,58 @@ export function createCloudRoom(options) {
     // Preserve purchase order and never cross income, research or other commands
     // that could change a cost, balance, target level or card quality.
     queue.unshift(queue.splice(index,1)[0]);saveQueue();publishState();return true;
+  }
+  // Send the first tap immediately. Only group a contiguous backlog that is
+  // already ready to save, keeping timed steps on the same order separate.
+  function readyBatch(now) {
+    if (actionBatchLimit < 2 || queue.length < 2) return [];
+    const batch = [], orders = new Set();
+    for (const item of queue.slice(0, actionBatchLimit)) {
+      const { action } = item;
+      if (retryIndividually.has(item) || seen.has(item.operationId) || item.clientId !== queue[0].clientId) break;
+      if (!restaurantPreview(action) && !previewTypes.has(action.type)) break;
+      if (action.orderId) {
+        if (orders.has(action.orderId) || restaurantAllocatesCourse(authoritativeState, action)
+          || restaurantActionAt(authoritativeState, action, now) > now) break;
+        orders.add(action.orderId);
+      }
+      batch.push(item);
+    }
+    return batch;
+  }
+  async function sendBatch(items) {
+    // An older tab still receives ordinary per-action SSE events. This tab
+    // can also move on when all durable receipts arrive ahead of the HTTP body.
+    const live = Promise.all(items.map(item => new Promise(resolve => liveReceipts.set(item.operationId, resolve))));
+    try {
+      const post = request(`/api/rooms/${room}/actions/batch`, {
+        method: 'POST', body: JSON.stringify({ operations: items.map(outgoing) }),
+      }).then(data => data.results);
+      const results = await Promise.race([post, live]);
+      if (destroyed) return;
+      if (!Array.isArray(results) || results.length !== items.length || !items.every((item, i) => {
+        const result = results[i];
+        return result?.event?.operationId === item.operationId && result.event.actor?.id === item.clientId
+          && result.event.action?.type === item.action.type && (result.roomId === undefined || result.roomId === room)
+          && Number.isSafeInteger(result.revision) && result.revision >= 0
+          && result.state && typeof result.state === 'object' && !Array.isArray(result.state) && validRestaurantMetadata(result);
+      })) throw new Error('云端尚未确认全部操作');
+      for (const [index, item] of items.entries()) apply(results[index], item);
+      queue.splice(0, items.length);
+      saveQueue();
+      onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
+    } catch (error) {
+      if (destroyed) return;
+      // A batch error says nothing about an individual intent. Retry using
+      // the exact saved IDs; only its own receipt or refusal may settle it.
+      for (const item of items) retryIndividually.add(item);
+      if (error.status === 404 || error.status === 405) actionBatchLimit = 1;
+      if (!error.status || error.status >= 500 || [408, 429].includes(error.status)) {
+        queuedStatus(); scheduleDrain();
+      }
+    } finally {
+      for (const item of items) liveReceipts.delete(item.operationId);
+    }
   }
   async function drain() {
     if (draining || !ready || destroyed) return;
@@ -303,6 +367,12 @@ export function createCloudRoom(options) {
         }
       }
       onSaveStatus({ phase:'saving', message:'正在保存到云端…' });
+      const batch = readyBatch(Date.now());
+      if (batch.length > 1) {
+        await sendBatch(batch);
+        if (retryAt > Date.now()) break;
+        continue;
+      }
       try {
         // An SSE receipt already confirms the durable write. Release the next
         // queued move immediately rather than waiting for its duplicate HTTP
@@ -326,10 +396,15 @@ export function createCloudRoom(options) {
         }
         const restaurant=restaurantAction(item.action);
         const refusedRestaurant=restaurant&&error.status>=400&&error.status<500&&['RESTAURANT_ACTION_REJECTED','DEMO_ACTION_REJECTED','DEMO_REJECTED','ACTION_REJECTED','INVALID_ACTION','OPERATION_CONFLICT'].includes(error.code);
+        // Several refusal paths need the same authoritative snapshot. A slow
+        // reconciliation must not stall every following tap for a cold-start timeout.
+        let conflictRead;
+        const reconcileConflict = () => conflictRead ??= request(`/api/rooms/${room}`, {}, 4000)
+          .then(data => apply(data)).catch(() => {});
         if(restaurant&&error.status===409){
           // A conflict can be an uncertain write or a delayed live receipt.
           // Read before judging it; never manufacture another operation ID.
-          try{apply(await request(`/api/rooms/${room}`));}catch{}
+          await reconcileConflict();
           if(destroyed)break;
           if(seen.has(item.operationId)){queue.shift();saveQueue();publishState();continue;}
           // The other owner can claim the shared gift first. Only a canonical
@@ -348,7 +423,7 @@ export function createCloudRoom(options) {
         }
         if (refusedRestaurant||!restaurant&&error.status >= 400 && error.status < 500 && ![408,429].includes(error.status)&&!(item.action.type==='claim-restaurant-growth'&&error.status===425)) {
           if(error.status===409&&['game-next','game-join','game-cancel','game-arcade-ready'].includes(item.action?.type)) {
-            try { apply(await request(`/api/rooms/${room}`)); } catch { /* Fall back to the latest live snapshot. */ }
+            await reconcileConflict();
             if(destroyed)break;
             if(redundantDuoTransition(authoritativeState,item.action,me)) {
               queue.shift(); previews.delete(item.operationId); saveQueue(); publishState();
@@ -371,7 +446,7 @@ export function createCloudRoom(options) {
           // live stream was interrupted. Reconcile from the cloud immediately;
           // never award XP or remove a bubble based only on the rejection.
           if ((optimisticReducer || ['claim-growth','invite-cat'].includes(item.action?.type) || item.action?.type?.startsWith('game-')) && error.status === 409) {
-            try { apply(await request(`/api/rooms/${room}`)); } catch { /* The next live snapshot or poll can still reconcile it. */ }
+            await reconcileConflict();
             if (destroyed) break;
           }
           onSaveStatus({ phase:'error', message:error.message, rejected:true, action:item.action, operationId:item.operationId });
@@ -430,6 +505,7 @@ export function createCloudRoom(options) {
       if (coupleMode && ((homeRoomId !== undefined && data?.roomId !== homeRoomId) || typeof data?.roomId !== 'string' || !/^[a-f0-9]{32}$/.test(data.roomId) || !data.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) {
         throw new Error('共同小窝存档暂不可用，原存档没有被修改');
       }
+      actionBatchLimit = Number.isInteger(data.actionBatchLimit) ? Math.min(6, data.actionBatchLimit) : 1;
       room=data.roomId; onRoom(room); apply(data);
       onSaveStatus({phase:'saved',message:`已读取 ${storageLabel}存档`,at:Date.now()});
       ready=true; subscribe(); drain();
@@ -449,7 +525,8 @@ export function createCloudRoom(options) {
       // failed save and must not allocate another ID, reward or POST, even when
       // other queued commands have filled the admission limit meanwhile.
       if(action?.type==='restaurant-collect'&&queue.some(item=>item.action?.type==='restaurant-collect'&&item.action.orderId===action.orderId))return true;
-      if(queue.length >= (restaurantAction(action)?200:20))return false;
+      if(queue.length>=200)return false;
+      if(!restaurantAction(action)&&queue.length>=20&&queue.filter(item=>!restaurantAction(item.action)).length>=20)return false;
       const target=restaurantUpgradeCurrentLevel((displayedState||authoritativeState)?.restaurant,action);
       if(target!==null&&action.expectedLevel===undefined)action={...action,expectedLevel:target+1};
       if(['restaurant-arrive','restaurant-wait'].includes(action?.type)&&queue.some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type)))return false;

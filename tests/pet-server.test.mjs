@@ -173,3 +173,58 @@ for (const code of ['CARE_COOLDOWN', 'DAILY_CARE_LIMIT', 'REWARD_ALREADY_CLAIMED
     } finally { handler.close(); }
   });
 }
+
+test('batch API advertises support, uses durable ordered receipts, and broadcasts ordinary partner events', async t => {
+  const store = memoryStore();
+  let unblock, acknowledgeStarted;
+  const started = new Promise(resolve => { acknowledgeStarted = resolve; });
+  const completed = new Promise(resolve => { unblock = resolve; });
+  store.applyActions = async (id, operations) => {
+    acknowledgeStarted(); await completed;
+    const results = [];
+    for (const item of operations) results.push(await store.applyAction(id, item));
+    return results;
+  };
+  const {base} = await running(t, {store, coupleRoomId:roomId});
+  for (const endpoint of ['/api/couple/home', `/api/rooms/${roomId}`]) {
+    assert.equal((await fetch(base + endpoint).then(res => res.json())).actionBatchLimit, 6);
+  }
+  assert.equal((await post(base, '/api/rooms', {}).then(res => res.json())).actionBatchLimit, 6);
+  const {COUPLE_ROLES} = await import('../src/couple-profile.js');
+  const [mine, partner] = COUPLE_ROLES;
+  const stream = await sse(base, partner.clientId);
+  t.after(() => stream.close());
+  const endpoint = `/api/rooms/${roomId}/actions/batch`;
+  const operations = ['糯米', '奶盖'].map((name, i) => ({
+    operationId:`http-save-burst-${i}`, clientId:mine.clientId, name:'错误的角色名', action:{type:'rename', name},
+  }));
+  const rejected = await post(base, endpoint, {operations:[operations[0], {...operations[1], clientId:partner.clientId}]});
+  assert.equal(rejected.status, 400);
+  const invalidRole = await post(base, endpoint, {operations:operations.map(item => ({...item,clientId:'unknown-player'}))});
+  assert.equal((await invalidRole.json()).error.code, 'INVALID_COUPLE_ROLE');
+  const response = post(base, endpoint, {operations});
+  await started;
+  assert.equal(stream.events.some(event => event.event === 'action'), false);
+  unblock();
+  const answer = await response;
+  assert.equal(answer.status, 200);
+  const {results} = await answer.json();
+  assert.deepEqual(results.map(item => item.revision), [1, 2]);
+  assert.ok(results.every(item => item.event.actor.name === mine.name));
+  await until(() => stream.events.filter(event => event.event === 'action').length === 2);
+  assert.deepEqual(stream.events.filter(event => event.event === 'action').map(item => item.data.event.operationId),
+    operations.map(item => item.operationId));
+});
+
+test('batch admission counts each operation against the same limit used by single clicks', async t => {
+  const store = memoryStore();
+  let total = 0;
+  store.applyActions = async (_id, operations) => { total += operations.length; return []; };
+  const {base} = await running(t, {store});
+  const endpoint = `/api/rooms/${roomId}/actions`;
+  const op = {operationId:'rate-limit-test', clientId:'rate-owner', name:'店长', action:{type:'rename', name:'布丁'}};
+  assert.equal((await post(base, endpoint + '/batch', {operations:Array(7).fill(op)})).status, 400);
+  for (let i = 0; i < 15; i++) assert.equal((await post(base, endpoint + '/batch', {operations:Array(6).fill(op)})).status, 200);
+  assert.equal((await post(base, endpoint, op)).status, 429);
+  assert.equal(total, 90);
+});

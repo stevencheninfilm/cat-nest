@@ -112,8 +112,83 @@ function careRejection(action, info, now) {
   return new StorageError('CARE_COOLDOWN', `${label}还在冷却中，请等待${wait}后再试。`, 409);
 }
 
+function prepareOperation({ operationId, clientId, name, action: suppliedAction } = {}) {
+  const actor = sanitizeActor(clientId, name);
+  const action = sanitizeAction(suppliedAction);
+  if (!actor || !action || typeof operationId !== 'string' || !OPERATION_ID.test(operationId)) throw new StorageError('INVALID_ACTION', '互动内容或操作编号无效。', 400);
+  return { operationId, actor, action };
+}
+
+export const ACTION_BATCH_LIMIT = 6;
+export function validateActionBatch(operations) {
+  if (!Array.isArray(operations) || operations.length < 2 || operations.length > ACTION_BATCH_LIMIT ||
+      !operations.every(item => plain(item) && item.clientId === operations[0].clientId)) {
+    throw new StorageError('INVALID_ACTION_BATCH', '请用同一位铲屎官提交 2 至 6 个操作。', 400);
+  }
+}
+
+function applyRoomOperation(room, { operationId, actor, action }, now) {
+  const journalAction=action.type==='game-local-finish'?localGameReceipt(action):action;
+  const duplicate = room.operations.find(operation => operation.id === operationId);
+  if (duplicate) {
+    if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(journalAction)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+    return { room, event: publicGameEvent(duplicate.event), duplicate: true };
+  }
+  if(action.type==='game-local-finish'){
+    const receipt=room.state.games.localReceipts?.find(r=>r.id===action.session.id);
+    if(receipt){if(receipt.actorId!==actor.id)throw new StorageError('OPERATION_CONFLICT','这个对局编号已用于另一位玩家。',409);return {room,event:{operationId,action:journalAction,actor},duplicate:true};}
+    if(room.state.games.match?.id===action.session.id||room.state.pendingGrowth?.some(r=>r.id===`game:${action.session.id}`)||room.claimedGrowth.some(r=>r.id===`game:${action.session.id}`))throw new StorageError('OPERATION_CONFLICT','这个对局编号已经使用。',409);
+  }
+  const invitation = room.state.collection?.sceneInvited?.find(record=>record.operationId===operationId) || room.state.collection?.invited.find(record => record.operationId === operationId);
+  if (action.type === 'game-create' && (room.state.games.localReceipts?.some(r=>r.id===operationId)||room.state.pendingGrowth?.some(reward => reward.id === `game:${operationId}`) || room.claimedGrowth.some(reward => reward.id === `game:${operationId}`))) throw new StorageError('OPERATION_CONFLICT','这个操作编号已用于已结算的小游戏。',409);
+  if (invitation) {
+    if (invitation.actorId !== actor.id || action.type !== 'invite-cat' || action.catId !== invitation.id || (action.sceneId || 'station') !== (invitation.sceneId || 'station')) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+    return { room, event:{ operationId, action, actor }, duplicate:true };
+  }
+  // The short operation journal may roll over while a device is away.
+  // A saved reward or permanent receipt still identifies its original
+  // care operation, so replay can never regenerate a collected bubble.
+  const produced = room.state.pendingGrowth?.find(reward => reward.id === operationId)
+    || room.claimedGrowth.find(reward => reward.id === operationId);
+  if (produced) {
+    if (produced.actorId !== actor.id || produced.kind !== action.type || produced.furniture !== action.furniture || (action.type === 'feed' && produced.food !== action.food) || (action.type === 'restaurant-collect' && produced.orderId !== action.orderId)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
+    return { room, event: { operationId, action, actor }, duplicate: true };
+  }
+  if (action.type === 'claim-restaurant-growth') {
+    const pending = new Map(room.state.pendingGrowth.map(reward => [reward.id, reward]));
+    const claimed = new Map(room.claimedGrowth.map(reward => [reward.id, reward]));
+    if (action.rewardIds.some(id => !isRestaurantGrowth(pending.get(id) || claimed.get(id)))) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '餐厅经验记录已更新，请按最新气泡领取。', 409);
+    // A lost acknowledgement or another caregiver's collection cannot
+    // mint XP again, even after the short operation journal rolls over.
+    if (action.rewardIds.every(id => claimed.has(id))) return { room, event: { operationId, action, actor }, duplicate: true };
+  }
+  const actionAt = now();
+  const info = careActionInfo(room.state, action, actor.id, actionAt);
+  if (!info.allowed) throw careRejection(action, info, actionAt);
+  if (action.type === 'claim-growth' && !room.state.pendingGrowth?.some(reward => reward.id === action.rewardId)) throw new StorageError('REWARD_ALREADY_CLAIMED', '这颗成长气泡已经被领取，或暂时无法找到。', 409);
+  if (action.type === 'invite-cat') {
+    if (action.sceneId ? collectionSceneInvitation(room.state.collection,action.catId,action.sceneId) : room.state.collection.invited.some(record => record.id === action.catId)) throw new StorageError('CAT_ALREADY_INVITED', '这位猫猫已经来到这个庭院啦。', 409);
+    if (!canInviteCat(action.catId, normalizeState(room.state,actionAt).collection, levelInfo(room.state.xp).level,action.sceneId,room.state.diary)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
+  }
+  const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
+  if (!reduced && action.type.startsWith('restaurant-')) throw new StorageError('RESTAURANT_ACTION_REJECTED',restaurantActionResult(normalizeState(room.state,actionAt),action,actor,actionAt).reason||'餐桌已更新，请按最新小馆继续操作。',409);
+  if (!reduced && action.type.startsWith('nest-')) throw new StorageError('NEST_ACTION_REJECTED','布置已更新，或金币、空间不足。请按最新小窝继续摆放。',409);
+  if (!reduced && action.type.startsWith('game-')) throw new StorageError('GAME_ACTION_REJECTED', '对局已更新，请按最新回合操作；只有本局玩家可以参与。', 409);
+  if (!reduced && ['claim-growth','claim-restaurant-growth'].includes(action.type)) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
+  if (!reduced && action.type === 'invite-cat') throw new StorageError('CAT_SCENE_UNAVAILABLE', '这个庭院尚未开放，或这位猫友会在其他庭院相遇。', 409);
+  if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
+  const checkout = restaurantCheckoutReceipt(action, room.state, reduced);
+  const event = { operationId, action:journalAction, actor, ...(checkout ? {restaurantCheckout:checkout} : {}) };
+  const claimIds = new Set(action.type === 'claim-growth' ? [action.rewardId] : action.type === 'claim-restaurant-growth' ? action.rewardIds : []);
+  const claimedGrowth = claimIds.size ? [...room.claimedGrowth, ...room.state.pendingGrowth.filter(reward => claimIds.has(reward.id)).map(copy)] : room.claimedGrowth;
+  const savedState=safeState(reduced,actionAt);
+  if(!restaurantProgressPreserved(room.state.restaurant,savedState.restaurant))throw new StorageError('RESTAURANT_SAVE_GUARD','餐厅存档保护已拦截异常更新，原进度保持不变，请联系维护者。');
+  const next = { ...room, revision: room.revision + 1, state: savedState, claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
+  return { room:next, event:publicGameEvent(event), duplicate:false };
+}
+
 /** GitHub Contents API is the source of truth; no successful write is simulated.
- * Each operation is stored with its state in one Git commit before acknowledgment.
+ * An ordered group saves its state and operation IDs in one commit before acknowledgment.
  * A retry with the same operation ID is safe after an uncertain network timeout.
  * In-process room queues plus SHA compare-and-swap retries prevent lost updates
  * across instances. The most recent 100 operation IDs remain deduplicated.
@@ -250,6 +325,43 @@ export function createGitHubStore({
     return true;
   }
 
+  async function saveOperations(id, operations) {
+    checkId(id);
+    const commands = operations.map(prepareOperation);
+    return withLock(id, async () => {
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const saved = attempt === 0 && cache.get(id)?.written ? copy(cache.get(id).record) : null;
+        const { room, sha } = saved || await read(id);
+        try {
+          let next = room;
+          const results = commands.map(command => {
+            const result = applyRoomOperation(next, command, now);
+            next = result.room;
+            return result;
+          });
+          // Publish no receipt until the complete sequence is durable. On a
+          // competing commit, replay the original IDs against the winning save.
+          if (next === room || await write(next, sha)) {
+            return results.map(result => ({
+              ...publicRoom(result.room), event:result.event, duplicate:result.duplicate,
+            }));
+          }
+          cache.delete(id);
+        } catch (error) {
+          // A local snapshot can lag another writer. Before refusing a
+          // command, re-read the canonical room and validate once more.
+          if (saved && error instanceof StorageError && error.status >= 400 && error.status < 500) {
+            cache.delete(id);
+            attempt -= 1; // Validation refresh does not spend a CAS retry.
+            continue;
+          }
+          throw error;
+        }
+      }
+      throw new StorageError('STORAGE_CONFLICT', '两位铲屎官的存档正在合并，请重试这次互动。');
+    });
+  }
+
   return {
     configured,
     async createRoom({ initialState: suppliedState } = {}) {
@@ -265,87 +377,13 @@ export function createGitHubStore({
       throw new StorageError('STORAGE_CONFLICT', '云端正在处理其他存档，请稍后重试。');
     },
     async getRoom(id) { return publicRoom((await read(id)).room); },
-    async applyAction(id, { operationId, clientId, name, action: suppliedAction } = {}) {
-      checkId(id);
-      const actor = sanitizeActor(clientId, name);
-      const action = sanitizeAction(suppliedAction);
-      if (!actor || !action || typeof operationId !== 'string' || !OPERATION_ID.test(operationId)) throw new StorageError('INVALID_ACTION', '互动内容或操作编号无效。', 400);
-      return withLock(id, async () => {
-        for (let attempt = 0; attempt < maxRetries; attempt += 1) {
-          const saved = attempt === 0 && cache.get(id)?.written ? copy(cache.get(id).record) : null;
-          const { room, sha } = saved || await read(id);
-          try {
-            const journalAction=action.type==='game-local-finish'?localGameReceipt(action):action;
-            const duplicate = room.operations.find(operation => operation.id === operationId);
-            if (duplicate) {
-              if (duplicate.event.actor.id !== actor.id || JSON.stringify(duplicate.event.action) !== JSON.stringify(journalAction)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
-              return { ...publicRoom(room), event: publicGameEvent(duplicate.event), duplicate: true };
-            }
-            if(action.type==='game-local-finish'){
-              const receipt=room.state.games.localReceipts?.find(r=>r.id===action.session.id);
-              if(receipt){if(receipt.actorId!==actor.id)throw new StorageError('OPERATION_CONFLICT','这个对局编号已用于另一位玩家。',409);return {...publicRoom(room),event:{operationId,action:journalAction,actor},duplicate:true};}
-              if(room.state.games.match?.id===action.session.id||room.state.pendingGrowth?.some(r=>r.id===`game:${action.session.id}`)||room.claimedGrowth.some(r=>r.id===`game:${action.session.id}`))throw new StorageError('OPERATION_CONFLICT','这个对局编号已经使用。',409);
-            }
-            const invitation = room.state.collection?.sceneInvited?.find(record=>record.operationId===operationId) || room.state.collection?.invited.find(record => record.operationId === operationId);
-            if (action.type === 'game-create' && (room.state.games.localReceipts?.some(r=>r.id===operationId)||room.state.pendingGrowth?.some(reward => reward.id === `game:${operationId}`) || room.claimedGrowth.some(reward => reward.id === `game:${operationId}`))) throw new StorageError('OPERATION_CONFLICT','这个操作编号已用于已结算的小游戏。',409);
-            if (invitation) {
-              if (invitation.actorId !== actor.id || action.type !== 'invite-cat' || action.catId !== invitation.id || (action.sceneId || 'station') !== (invitation.sceneId || 'station')) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
-              return { ...publicRoom(room), event:{ operationId, action, actor }, duplicate:true };
-            }
-            // The short operation journal may roll over while a device is away.
-            // A saved reward or permanent receipt still identifies its original
-            // care operation, so replay can never regenerate a collected bubble.
-            const produced = room.state.pendingGrowth?.find(reward => reward.id === operationId)
-              || room.claimedGrowth.find(reward => reward.id === operationId);
-            if (produced) {
-              if (produced.actorId !== actor.id || produced.kind !== action.type || produced.furniture !== action.furniture || (action.type === 'feed' && produced.food !== action.food) || (action.type === 'restaurant-collect' && produced.orderId !== action.orderId)) throw new StorageError('OPERATION_CONFLICT', '这个操作编号已用于另一项互动。', 409);
-              return { ...publicRoom(room), event: { operationId, action, actor }, duplicate: true };
-            }
-            if (action.type === 'claim-restaurant-growth') {
-              const pending = new Map(room.state.pendingGrowth.map(reward => [reward.id, reward]));
-              const claimed = new Map(room.claimedGrowth.map(reward => [reward.id, reward]));
-              if (action.rewardIds.some(id => !isRestaurantGrowth(pending.get(id) || claimed.get(id)))) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '餐厅经验记录已更新，请按最新气泡领取。', 409);
-              // A lost acknowledgement or another caregiver's collection cannot
-              // mint XP again, even after the short operation journal rolls over.
-              if (action.rewardIds.every(id => claimed.has(id))) return { ...publicRoom(room), event: { operationId, action, actor }, duplicate: true };
-            }
-            const actionAt = now();
-            const info = careActionInfo(room.state, action, actor.id, actionAt);
-            if (!info.allowed) throw careRejection(action, info, actionAt);
-            if (action.type === 'claim-growth' && !room.state.pendingGrowth?.some(reward => reward.id === action.rewardId)) throw new StorageError('REWARD_ALREADY_CLAIMED', '这颗成长气泡已经被领取，或暂时无法找到。', 409);
-            if (action.type === 'invite-cat') {
-              if (action.sceneId ? collectionSceneInvitation(room.state.collection,action.catId,action.sceneId) : room.state.collection.invited.some(record => record.id === action.catId)) throw new StorageError('CAT_ALREADY_INVITED', '这位猫猫已经来到这个庭院啦。', 409);
-              if (!canInviteCat(action.catId, normalizeState(room.state,actionAt).collection, levelInfo(room.state.xp).level,action.sceneId,room.state.diary)) throw new StorageError('CAT_ACHIEVEMENT_REQUIRED', '完成这位猫猫的成就后，就可以邀请它入住。', 409);
-            }
-            const reduced = reduceAction(copy(room.state), action, actor, actionAt, operationId);
-            if (!reduced && action.type.startsWith('restaurant-')) throw new StorageError('RESTAURANT_ACTION_REJECTED',restaurantActionResult(normalizeState(room.state,actionAt),action,actor,actionAt).reason||'餐桌已更新，请按最新小馆继续操作。',409);
-            if (!reduced && action.type.startsWith('nest-')) throw new StorageError('NEST_ACTION_REJECTED','布置已更新，或金币、空间不足。请按最新小窝继续摆放。',409);
-            if (!reduced && action.type.startsWith('game-')) throw new StorageError('GAME_ACTION_REJECTED', '对局已更新，请按最新回合操作；只有本局玩家可以参与。', 409);
-            if (!reduced && ['claim-growth','claim-restaurant-growth'].includes(action.type)) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
-            if (!reduced && action.type === 'invite-cat') throw new StorageError('CAT_SCENE_UNAVAILABLE', '这个庭院尚未开放，或这位猫友会在其他庭院相遇。', 409);
-            if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
-            const checkout = restaurantCheckoutReceipt(action, room.state, reduced);
-            const event = { operationId, action:journalAction, actor, ...(checkout ? {restaurantCheckout:checkout} : {}) };
-            const claimIds = new Set(action.type === 'claim-growth' ? [action.rewardId] : action.type === 'claim-restaurant-growth' ? action.rewardIds : []);
-            const claimedGrowth = claimIds.size ? [...room.claimedGrowth, ...room.state.pendingGrowth.filter(reward => claimIds.has(reward.id)).map(copy)] : room.claimedGrowth;
-            const savedState=safeState(reduced,actionAt);
-            if(!restaurantProgressPreserved(room.state.restaurant,savedState.restaurant))throw new StorageError('RESTAURANT_SAVE_GUARD','餐厅存档保护已拦截异常更新，原进度保持不变，请联系维护者。');
-            const next = { ...room, revision: room.revision + 1, state: savedState, claimedGrowth, updatedAt: actionAt, operations: [...room.operations, { id: operationId, event }].slice(-100) };
-            if (await write(next, sha)) return { ...publicRoom(next), event:publicGameEvent(event), duplicate: false };
-            cache.delete(id);
-          } catch (error) {
-            // A local snapshot can lag another writer. Before refusing a
-            // command, re-read the canonical room and validate once more.
-            if (saved && error instanceof StorageError && error.status >= 400 && error.status < 500) {
-              cache.delete(id);
-              attempt -= 1; // Validation refresh does not spend a CAS retry.
-              continue;
-            }
-            throw error;
-          }
-        }
-        throw new StorageError('STORAGE_CONFLICT', '两位铲屎官的存档正在合并，请重试这次互动。');
-      });
+    async applyAction(id, operation) {
+      const [result] = await saveOperations(id, [operation]);
+      return result;
+    },
+    async applyActions(id, operations) {
+      validateActionBatch(operations);
+      return saveOperations(id, operations);
     },
   };
 }

@@ -17,6 +17,11 @@ test('the decoration completion cue fires once after the job finishes, never jus
   const container={closest:()=>root,querySelector:selector=>nodes[selector],querySelectorAll:()=>[]};
   const completed=[],scene=createRestaurantDecorationScene({container,onComplete:suite=>completed.push(suite.id)});
   const state=reduceAction(initialState(NOW),{type:'restaurant-decoration',decorationId:'cream-bakery'},actor,NOW);
+  const cancelled=createRestaurantDecorationScene({container,onComplete:suite=>completed.push(suite.id)});
+  cancelled.open();cancelled.sync(restaurantInfo(state,now));now+=13000;
+  cancelled.sync(restaurantInfo(initialState(NOW),now));cancelled.destroy();
+  assert.deepEqual(completed,[],'a withdrawn local preview never announces an installation');
+  now=NOW;
   scene.open();scene.sync(restaurantInfo(state,now));now+=7000;scene.sync(restaurantInfo(state,now));assert.deepEqual(completed,[],'installation is still in progress');
   now=NOW+12000;scene.sync(restaurantInfo(state,now));assert.deepEqual(completed,['cream-bakery']);
   for(let i=0;i<5;i++)scene.sync(restaurantInfo(state,now+i*400));scene.close();scene.open();assert.deepEqual(completed,['cream-bakery']);scene.destroy();
