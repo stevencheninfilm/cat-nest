@@ -228,7 +228,11 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
   const reject=reason=>({ok:false,reason});
   if(!sanitizeRestaurantAction(action))return reject('这项餐厅操作无效。');
   now=safeNow(now);
-  const info=restaurantInfo(state,now),restaurant=info.restaurant;
+  // A kitchen intent only needs the normalised ledger. Preserve the same save
+  // validation without rebuilding the customer book and every unlock milestone.
+  const kitchenIntent=action.type==='restaurant-kitchen-accept'||action.type==='restaurant-kitchen-step';
+  const info=kitchenIntent?null:restaurantInfo(state,now);
+  const restaurant=kitchenIntent?normalizeRestaurant(state?.restaurant,now):info.restaurant;
   if(action.expectedLevel!==undefined&&restaurantUpgradeCurrentLevel(restaurant,action)+1!==action.expectedLevel)return reject('这项升级的进度已更新，本次操作未扣费，请按最新等级继续。');
   const decorationSnapshot=restaurantDecorationSnapshot(restaurant),cookSpeed=decorationSnapshot?.cookSpeed??0;
   let coins=state.coins,goldFish=normalizeGoldFish(state.goldFish),xp=state.xp,text,growthReward;
@@ -255,7 +259,7 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     coins+=info.dailyLogin.amount;
     restaurant.dailyLogin={day:info.dailyLogin.day,claimedAt:now};
     text='领取每日开店礼，获得 300 小鱼干（已同步小窝金币）';
-  }else if(action.type==='restaurant-kitchen-accept'||action.type==='restaurant-kitchen-step'){
+  }else if(kitchenIntent){
     const order=restaurant.orders.find(item=>item.id===action.orderId);
     if(!order||!isInteractiveWorkflow(order.workflow))return reject('这份订单暂时没有逐步制作流程。');
     const result=action.type==='restaurant-kitchen-accept'?acceptInteractiveWorkflow(restaurant,order,now):advanceInteractiveWorkflow(restaurant,order,action.stepId,now);

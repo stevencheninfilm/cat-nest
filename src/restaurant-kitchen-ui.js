@@ -42,8 +42,8 @@ export function kitchenFlowPanel(info,{orderId=null,recipeId='rice',zoneId=null,
 }
 
 /** Read-only selection model shared by scene and phone instructions. */
-export function kitchenViewModel(restaurant,selectedId=null,now=Date.now()){
-  const model=kitchenInfo(restaurant,now),orders=model.orders;
+export function kitchenViewModel(restaurant,selectedId=null,now=Date.now(),model=kitchenInfo(restaurant,now)){
+  const orders=model.orders;
   const active=orders.find(order=>order.id===selectedId)||orders.find(order=>!['complete','completed'].includes(order.phase))||orders[0]||null;
   return orderViewModel(model,active);
 }
@@ -109,6 +109,49 @@ export function layoutKitchenActions(actions,{width=480,height=960,obstacles=[]}
   }
   return actions.map(action=>points.get(action.order.id));
 }
+/** Busy stations have a single paged control. Small queues keep the individual circles. */
+export function kitchenPromptGroups(actions,choices=new Map()){
+  const atStation=new Map();
+  for(const action of actions){
+    const key=action.step.zoneId?`station:${action.step.zoneId}`:`table:${action.order.seat}`;
+    if(!atStation.has(key))atStation.set(key,[]);
+    atStation.get(key).push(action);
+  }
+  const groups=[];
+  for(const [key,items] of atStation){
+    if(actions.length<5||items.length===1){
+      for(const selected of items)groups.push({key:`order:${selected.order.id}`,items:[selected],selected});
+    }else{
+      const selected=items.find(item=>item.order.id===choices.get(key))??items.find(item=>item.counting)??items[0];
+      groups.push({key,items,selected});
+    }
+  }
+  return groups;
+}
+
+/** Only phase boundaries require projecting every order and employee again. */
+export function nextKitchenBoundary(restaurant,now){
+  let next=Infinity;
+  function include(at){if(at>now&&at<next)next=at;}
+  for(const order of restaurant.orders){
+    const flow=order.workflow;
+    if(!flow)continue;
+    include(flow.createdAt);
+    // Saved segments are in chronological order, including future reservations.
+    const segment=flow.segments.find(item=>item.phase!=='rest-walk'&&item.endAt>now);
+    if(segment){include(segment.startAt);include(segment.endAt);}
+  }
+  for(const record of Object.values(restaurant.staffTraining??{})){
+    if(!record.rest)continue;
+    include(record.rest.fullAt);
+    const segment=record.rest.segments.find(item=>item.endAt>now);
+    if(segment){include(segment.startAt);include(segment.endAt);}
+  }
+  return next;
+}
+
+const positionTransform=point=>`translate3d(${point.x}cqw,${point.y}cqh,0) translate(-50%,-93.75%)`;
+
 const guidePages=[
   '① 先回到餐桌，点击顾客头上的点餐需求。这里只记下订单，员工还不会自行开工。',
   '② 接单后，冰箱上方会出现食材圈。点一下，员工才会去拿食材；走到工位后开始倒计时，蓝色圆环显示加工进度。',
@@ -118,18 +161,92 @@ const guidePages=[
 
 /** A frame only paints saved runs. It never submits a cooking action. */
 export function createKitchenScene({container,getRestaurant,palette='cream'}){
-  let snapshot=null,selectedId=null,frame=0,running=false,lastFrame=0,lastSignature='',lastLayout='',tutorial=false,guideIndex=0,blocked=false;
-  const actors=new Map(),props=new Map(),prompts=new Map(),root=container.closest('.restaurant');
-  let currentPalette=kitchenCirclePalette(palette).id;
-  function setPalette(id){currentPalette=kitchenCirclePalette(id).id;container.dataset.rkPalette=currentPalette;container.style.cssText=kitchenCircleStyle(currentPalette);}
-  setPalette(currentPalette);
+  let snapshot=null,selectedId=null,running=false,lastSignature='',lastLayout='',tutorial=false,guideIndex=0,blocked=false;
+  let timer=0,nextBoundary=Infinity,clocks=[],groups=[],currentPalette=null;
+  const actors=new Map(),props=new Map(),prompts=new Map(),choices=new Map(),root=container.closest('.restaurant');
+  const workerLayer=container.querySelector('[data-rk-workers]'),actionLayer=container.querySelector('[data-rk-next-actions]');
+  const stations=new Map(KITCHEN_ZONES.map(zone=>[zone.id,{
+    element:container.querySelector(`[data-r-kitchen-zone="${zone.id}"]`),surface:container.querySelector(`[data-rk-surface="${zone.id}"]`),
+  }]));
+  const fridgeTask=container.querySelector('[data-rk-fridge-task]'),guideButton=container.querySelector('[data-r-kitchen-tutorial]');
+  function setPalette(id){
+    const next=kitchenCirclePalette(id).id;if(currentPalette===next)return;
+    currentPalette=next;container.dataset.rkPalette=next;container.style.cssText=kitchenCircleStyle(next);
+  }
+  setPalette(palette);
   const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
   function actor(id){
     if(actors.has(id))return actors.get(id);
     const index=Math.max(0,Number(String(id).match(/\d+$/)?.[0]??1)-1),character=index===0?'chef':RESTAURANT_STAFF[index-1]?.sprite||'waiter';
     const element=document.createElement('div');element.className='rk-worker';element.dataset.rkWorker=id;
     element.innerHTML=`<span class="rk-worker-body"><span class="r-cat r-cat-${character}" aria-hidden="true"></span><span class="rk-carried" hidden></span></span><span class="rk-worker-progress" hidden>${ring()}</span><span class="rk-worker-thought" hidden></span>`;
-    container.querySelector('[data-rk-workers]').append(element);actors.set(id,element);return element;
+    const record={element,carry:element.querySelector('.rk-carried'),head:element.querySelector('.rk-worker-progress'),thought:element.querySelector('.rk-worker-thought')};
+    workerLayer.append(element);actors.set(id,record);return record;
+  }
+  function positionWorker(record,item,moving,now){
+    const {element}=record,end=moving?item.endAt:null,destination=moving?item.to:item.position;
+    const transform=positionTransform(destination);
+    const key=[item.phase,moving?item.startAt:0,end,transform,moving?positionTransform(item.from):''].join('|');
+    if(record.motion===key)return;
+    record.motion=key;
+    // The saved kitchen route begins and ends in the aisle. Join the idle
+    // formation on that same patch of floor without jumping to the aisle origin.
+    let from=item.from,start=item.startAt,finish=end;
+    const leavingIdle=moving&&record.phase==='idle'&&now-start<250;
+    const settling=item.phase==='idle'&&record.phase==='return'&&record.leg&&now-record.leg.end<250;
+    if(leavingIdle||settling){
+      const previous=record.leg;
+      const t=previous&&previous.end>previous.start?Math.min(1,Math.max(0,(now-previous.start)/(previous.end-previous.start))):1;
+      from=previous?{x:previous.from.x+t*(previous.to.x-previous.from.x),y:previous.from.y+t*(previous.to.y-previous.from.y)}:record.destination;
+      start=now;if(settling)finish=now+360;
+    }
+    record.phase=item.phase;record.destination=destination;record.leg=null;
+    record.walk?.cancel();element.style.transform=transform;
+    if(finish>now){
+      record.leg={from,to:destination,start,end:finish};
+      const duration=finish-start;
+      record.walk=element.animate([{transform:positionTransform(from)},{transform}],{
+        duration,delay:Math.min(0,start-now),easing:reduced?`steps(${Math.max(1,Math.ceil(duration/250))},end)`:'linear',
+      });
+    }
+  }
+  function fitPrompts(){
+    if(!running||!groups.length)return;
+    const bounds=container.getBoundingClientRect();
+    if(!bounds.width||!bounds.height)return;
+    const guide=guideButton.getBoundingClientRect();
+    const obstacle={left:guide.left-bounds.left,right:guide.right-bounds.left,top:guide.top-bounds.top,bottom:guide.bottom-bounds.top};
+    const actions=groups.map(({selected})=>selected);
+    for(const [index,point] of layoutKitchenActions(actions,{width:bounds.width,height:bounds.height,obstacles:[obstacle]}).entries()){
+      const prompt=prompts.get(groups[index].key).element;
+      prompt.style.left=`${point.x}%`;prompt.style.top=`${point.y}%`;
+    }
+  }
+  const resize=new ResizeObserver(fitPrompts);
+  function schedule(now){
+    clearTimeout(timer);
+    if(!running||document.hidden)return;
+    let wake=nextBoundary;
+    for(const clock of clocks){
+      const seconds=Math.max(0,Math.ceil((clock.end-now)/1000)),label=`${seconds}s`;
+      if(clock.counter.textContent!==label)clock.counter.textContent=label;
+      if(clock.button)clock.button.setAttribute('aria-label',`${clock.label}，还剩 ${seconds} 秒`);
+      if(seconds)wake=Math.min(wake,clock.end-(seconds-1)*1000);
+    }
+    if(Number.isFinite(wake))timer=setTimeout(()=>{
+      const time=Date.now();
+      if(time>=nextBoundary)update(time);else schedule(time);
+    },Math.max(1,Math.min(2147483647,wake-Date.now())));
+  }
+  function progressClock(host,fill,counter,start,end,now,length,extra={}){
+    const key=`${start}/${end}`;
+    if(host.progressKey!==key){
+      host.progressKey=key;host.fill?.cancel();
+      host.fill=fill.animate([{strokeDashoffset:String(length)},{strokeDashoffset:'0'}],{
+        duration:end-start,delay:Math.min(0,start-now),easing:'linear',fill:'forwards',
+      });
+    }
+    clocks.push({counter,end,...extra});
   }
   function setGuide(value){
     tutorial=value;container.classList.toggle('is-tutorial',value);
@@ -142,79 +259,136 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
     root.querySelector('[data-rk-guide-text]').textContent=guidePages[guideIndex];
     root.querySelector('[data-r-kitchen-tutorial-next]').textContent=guideIndex===guidePages.length-1?'开始营业':'下一步 →';
   }
-  function update(now){
-    const restaurant=snapshot||getRestaurant();if(!restaurant)return;
-    const view=kitchenViewModel(restaurant,selectedId,now),{model,active,worker,phase,next,step,finished,waiting,label,stationBusy}=view;
+  function update(now,model){
+    const restaurant=snapshot||getRestaurant();if(!restaurant||!running||document.hidden)return;
+    const view=kitchenViewModel(restaurant,selectedId,now,model);
+    const {active,phase,next}=view;
+    model=view.model;
     const actions=kitchenActionPresentations(restaurant,now,model);
+    nextBoundary=nextKitchenBoundary(restaurant,now);
+    clocks=[];
     if(active)selectedId=active.id;
     for(const item of model.workers){
-      const element=actor(item.id),moving=['walk','delivery','return','rest-walk'].includes(item.phase);
-      element.style.left=`${item.position.x}%`;element.style.top=`${item.position.y}%`;element.style.zIndex=String(10+Math.round(item.position.y));
-      element.dataset.phase=item.phase;element.classList.toggle('is-moving',moving);element.classList.toggle('is-working',item.phase==='work');
-      element.classList.toggle('is-back',moving&&item.to.y<item.from.y-.1||item.phase==='work'&&item.step?.zoneId===10);
-      const carry=element.querySelector('.rk-carried'),carrying=item.carrying;
-      if(carry.dataset.item!==String(carrying)){carry.innerHTML=carrying?propImage(carrying):'';carry.dataset.item=String(carrying);}
-      carry.hidden=!carrying||!moving;
-      const head=element.querySelector('.rk-worker-progress');head.hidden=!['walk','work','delivery'].includes(item.phase)||actions.some(action=>action.order.id===item.orderId&&action.running);
-      if(!head.hidden){head.querySelector('.rk-ring').style.setProperty('--rk-progress',item.progress);head.querySelector('b').textContent=item.phase==='work'?`${Math.max(0,Math.ceil((item.endAt-now)/1000))}s`:'→';}
-      const thought=element.querySelector('.rk-worker-thought'),awaiting=['awaiting','wait','queue'].includes(item.phase);
-      thought.hidden=!awaiting;thought.textContent=item.phase==='awaiting'?'等你点下一步':item.phase==='wait'?'等工位空闲':'等待上一单';
-      element.setAttribute('aria-label',`${workerName(item.id)}，${item.phase==='awaiting'?'等待玩家点击下一步':item.step?.label||phaseText(item.phase)}`);
+      const record=actor(item.id),{element,carry,head,thought}=record,moving=['walk','delivery','return','rest-walk'].includes(item.phase);
+      positionWorker(record,item,moving,now);
+      const depth=String(10+Math.round(item.position.y));
+      if(element.style.zIndex!==depth)element.style.zIndex=depth;
+      const back=moving&&item.to.y<item.from.y-.1||item.phase==='work'&&item.step?.zoneId===10;
+      const showHead=['walk','work','delivery'].includes(item.phase)&&!actions.some(action=>action.order.id===item.orderId&&action.running);
+      const showThought=['awaiting','wait','queue'].includes(item.phase)&&actions.length<5;
+      const state=[item.phase,back,item.step?.label,item.carrying,showHead,showThought].join('|');
+      if(record.state!==state){
+        record.state=state;element.dataset.phase=item.phase;
+        element.classList.toggle('is-moving',moving);element.classList.toggle('is-working',item.phase==='work');element.classList.toggle('is-back',back);
+        if(carry.dataset.item!==String(item.carrying)){carry.innerHTML=item.carrying?propImage(item.carrying):'';carry.dataset.item=String(item.carrying);}
+        carry.hidden=!item.carrying||!moving;head.hidden=!showHead;
+        thought.hidden=!showThought;
+        thought.textContent=item.phase==='awaiting'?'等你点下一步':item.phase==='wait'?'等工位空闲':'等待上一单';
+        element.setAttribute('aria-label',`${workerName(item.id)}，${item.phase==='awaiting'?'等待玩家点击下一步':item.step?.label||phaseText(item.phase)}`);
+      }
+      if(showHead){
+        const counter=head.querySelector('b');
+        if(item.phase==='work')progressClock(record,head.querySelector('.rk-ring-fill'),counter,item.startAt,item.endAt,now,100.531);
+        else{
+          if(record.fill){record.fill.cancel();record.fill=null;record.progressKey=null;}
+          head.querySelector('.rk-ring').style.setProperty('--rk-progress',item.progress);
+          if(counter.textContent!=='→')counter.textContent='→';
+        }
+      }
     }
-    for(const [id,element] of actors)if(!model.workers.some(worker=>worker.id===id)){element.remove();actors.delete(id);}
+    for(const [id,record] of actors)if(!model.workers.some(worker=>worker.id===id)){record.element.remove();actors.delete(id);}
     for(const zone of model.zones){
-      const occupant=zone.occupant,element=container.querySelector(`[data-r-kitchen-zone="${zone.id}"]`),surface=container.querySelector(`[data-rk-surface="${zone.id}"]`);
-      element.classList.toggle('is-active',Boolean(occupant));element.setAttribute('aria-label',`${zone.id}号${zone.name}，${occupant?`${workerName(occupant.workerId)}操作中`:'空闲'}`);
+      const occupant=zone.occupant,{element,surface}=stations.get(zone.id);
+      const label=`${zone.id}号${zone.name}，${occupant?`${workerName(occupant.workerId)}操作中`:'空闲'}`;
+      if(element.getAttribute('aria-label')!==label){element.setAttribute('aria-label',label);element.classList.toggle('is-active',Boolean(occupant));}
       const working=occupant&&model.workers.find(worker=>worker.orderId===occupant.orderId),workingOrder=occupant&&model.orders.find(order=>order.id===occupant.orderId);
       const process=working?.step,id=zone.id===10?occupant?'fridge-open':'fridge-closed':process?reduced?process.prop:kitchenAnimationId(process.id,workingOrder?.recipeId):null;
-      surface.hidden=zone.id!==10&&!occupant;
+      const hidden=zone.id!==10&&!occupant;
+      if(surface.hidden!==hidden)surface.hidden=hidden;
       const source=zone.id===10||reduced?'static':'loop',key=`${source}:${id}`;
       if(props.get(zone.id)!==key){surface.innerHTML=id?(source==='loop'?`<img class="rk-prop rk-loop" src="${animationAsset(id)}" alt="" draggable="false"/>`:propImage(id)):'';props.set(zone.id,key);}
       if(zone.id===10){
-        const task=container.querySelector('[data-rk-fridge-task]'),taskId=occupant?kitchenAnimationId('gather',workingOrder?.recipeId):null;
-        task.hidden=!occupant;
+        const task=fridgeTask,taskId=occupant?kitchenAnimationId('gather',workingOrder?.recipeId):null;
+        if(task.hidden!==!occupant)task.hidden=!occupant;
         if(task.dataset.asset!==String(taskId)){task.innerHTML=taskId?(reduced?propImage(process.prop):`<img class="rk-prop rk-loop" src="${animationAsset(taskId)}" alt="" draggable="false"/>`):'';task.dataset.asset=String(taskId);}
       }
     }
-    for(const [id,prompt] of prompts)if(!actions.some(action=>action.order.id===id)){prompt.remove();prompts.delete(id);}
-    for(const action of actions){
-      let prompt=prompts.get(action.order.id);
-      if(!prompt){prompt=document.createElement('div');prompt.className='rk-next-action';prompt.dataset.rkNextAction=action.order.id;container.querySelector('[data-rk-next-actions]').append(prompt);prompts.set(action.order.id,prompt);}
-      if(prompt.dataset.step!==action.step.id){prompt.innerHTML=actionMarkup(action.order,action.step);prompt.dataset.step=action.step.id;}
-      const button=prompt.querySelector('button'),countdown=button.querySelector('.rk-action-countdown');
-      button.disabled=action.running||blocked||action.stationBusy;
-      button.classList.toggle('is-running',action.running);
-      button.classList.toggle('is-counting',action.counting);
-      button.style.setProperty('--rk-progress',action.progress);
-      countdown.hidden=!action.counting;countdown.textContent=action.counting?`${action.seconds}s`:'';
-      button.querySelector('.rk-action-order').hidden=actions.length<2;
-      button.querySelector('.rk-action-caption').textContent=action.queued?'排队中':action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
-      const orderLabel=actions.length>1?`${action.order.seat+1}号桌，`:'';
-      button.setAttribute('aria-label',orderLabel+(action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.counting?`${action.step.label}，还剩 ${action.seconds} 秒`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${blocked||action.stationBusy?'，暂时不可操作':''}`));
-      prompt.setAttribute('aria-label',action.queued?'已排队，等待开始':action.counting?'当前工序进度':action.moving?'员工正在前往工位':action.stationBusy?'工位正在使用，等空闲后继续':'点击开始下一步');
+    groups=kitchenPromptGroups(actions,choices);
+    for(const key of choices.keys())if(!groups.some(group=>group.key===key&&group.items.length>1))choices.delete(key);
+    for(const [key,record] of prompts)if(!groups.some(group=>group.key===key)){record.element.remove();prompts.delete(key);}
+    for(const {key,items,selected:action} of groups){
+      let record=prompts.get(key);
+      if(!record){
+        const element=document.createElement('div'),switcher=document.createElement('button');
+        element.className='rk-next-action';switcher.className='rk-queue-next';switcher.type='button';switcher.dataset.rkQueue=key;
+        element.append(switcher);actionLayer.append(element);record={element,switcher};prompts.set(key,record);
+      }
+      const {element,switcher}=record,grouped=items.length>1;
+      if(element.dataset.rkNextAction!==action.order.id||element.dataset.step!==action.step.id){
+        record.fill?.cancel();record.fill=null;record.progressKey=null;record.button?.remove();record.state=null;
+        element.insertAdjacentHTML('afterbegin',actionMarkup(action.order,action.step));
+        record.button=element.firstElementChild;record.counter=record.button.querySelector('.rk-action-countdown');
+        element.dataset.rkNextAction=action.order.id;element.dataset.step=action.step.id;
+      }
+      const index=items.indexOf(action),button=record.button,caption=action.queued?'排队中':action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
+      const disabled=action.running||blocked||action.stationBusy;
+      const party=grouped?restaurant.parties?.find(party=>party.table===action.order.seat):null;
+      const seat=party?.members.length>1?['左座','右座'][party.members.findIndex(member=>member.orderId===action.order.id)]??'':'';
+      const tableLabel=`${action.order.seat+1}桌${seat}`;
+      const orderLabel=actions.length>1?`${action.order.seat+1}号桌${seat}，`:'';
+      const state=[action.phase,action.step.id,disabled,actions.length>1,action.stationBusy,grouped,index,items.length,seat].join('|');
+      if(record.state!==state){
+        record.state=state;button.disabled=disabled;
+        button.classList.toggle('is-running',action.running);button.classList.toggle('is-counting',action.counting);
+        record.counter.hidden=!action.counting;
+        button.querySelector('.rk-action-order').hidden=actions.length<2||grouped;
+        button.querySelector('.rk-action-caption').textContent=grouped?`${tableLabel} · ${caption}`:caption;
+        button.setAttribute('aria-label',orderLabel+(action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${disabled?'，暂时不可操作':''}`));
+        element.setAttribute('aria-label',action.queued?'已排队，等待开始':action.counting?'当前工序进度':action.moving?'员工正在前往工位':action.stationBusy?'工位正在使用，等空闲后继续':'点击开始下一步');
+        switcher.hidden=!grouped;
+        if(grouped){
+          switcher.textContent=`${index+1}/${items.length} ›`;
+          switcher.setAttribute('aria-label',`${zoneName(action.step.zoneId)}第 ${index+1} 份，共 ${items.length} 份，查看下一份工序`);
+        }
+      }
+      if(action.counting){
+        progressClock(record,button.querySelector('.rk-action-fill'),record.counter,action.step.startAt,action.step.endAt,now,169.646,{button,label:orderLabel+action.step.label});
+      }
     }
-    const width=container.clientWidth||480,height=container.clientHeight||960,layoutKey=JSON.stringify([width,height,actions.map(action=>[action.order.id,action.step.id,action.step.zoneId])]);
-    if(lastLayout!==layoutKey){
-      lastLayout=layoutKey;
-      const bounds=container.getBoundingClientRect(),obstacles=Array.from(container.querySelectorAll('.rk-focus-tools>button')).map(button=>{const r=button.getBoundingClientRect();return {left:r.left-bounds.left,right:r.right-bounds.left,top:r.top-bounds.top,bottom:r.bottom-bounds.top};});
-      for(const point of layoutKitchenActions(actions,{width,height,obstacles})){const prompt=prompts.get(point.orderId);prompt.style.left=`${point.x}%`;prompt.style.top=`${point.y}%`;}
-    }
+    const layoutKey=groups.map(({key,selected})=>`${key}/${selected.step.zoneId??selected.order.seat}`).join('|');
+    if(lastLayout!==layoutKey){lastLayout=layoutKey;fitPrompts();}
     const signature=JSON.stringify([active?.id,phase,next?.id]);
     if(signature!==lastSignature){
       lastSignature=signature;
       container.dispatchEvent(new CustomEvent('kitchen:step',{bubbles:true,detail:{orderId:active?.id,phase}}));
     }
+    schedule(now);
     return model;
   }
-  function loop(time){if(!running)return;if(time-lastFrame>(reduced?250:45)){lastFrame=time;update(Date.now());}frame=requestAnimationFrame(loop);}
+  function cycle(event){
+    const switcher=event.target.closest('[data-rk-queue]');if(!switcher)return;
+    const group=groups.find(item=>item.key===switcher.dataset.rkQueue);if(!group||group.items.length<2)return;
+    const next=group.items[(group.items.indexOf(group.selected)+1)%group.items.length];
+    choices.set(group.key,next.order.id);update(Date.now());
+  }
+  function visibility(){
+    if(document.hidden){clearTimeout(timer);return;}
+    if(!running)return;
+    for(const record of actors.values()){record.motion=null;record.progressKey=null;}
+    for(const record of prompts.values())record.progressKey=null;
+    update(Date.now());
+  }
+  actionLayer.addEventListener('click',cycle);
+  document.addEventListener('visibilitychange',visibility);
   return {
-    sync(restaurant,options={}){snapshot=restaurant;blocked=options.blocked===true;return update(Date.now());},
-    select(orderId){selectedId=orderId;update(Date.now());},
+    sync(restaurant,options={}){snapshot=restaurant;blocked=options.blocked===true;return update(options.now??Date.now(),options.model);},
+    select(orderId){selectedId=orderId;const group=groups.find(item=>item.items.some(action=>action.order.id===orderId));if(group)choices.set(group.key,orderId);update(Date.now());},
     get selectedId(){return selectedId;},get palette(){return currentPalette;},setPalette,
     toggleTutorial(){setGuide(!tutorial);},endTutorial(){setGuide(false);},
     nextTutorial(){if(guideIndex===guidePages.length-1)setGuide(false);else{guideIndex++;paintGuide();}},
     toggleZones(){setGuide(!tutorial);},
-    open(){if(!running){running=true;frame=requestAnimationFrame(loop);}},close(){running=false;cancelAnimationFrame(frame);},
-    destroy(){running=false;cancelAnimationFrame(frame);actors.clear();for(const prompt of prompts.values())prompt.remove();prompts.clear();},
+    open(){if(!running){running=true;resize.observe(container);resize.observe(guideButton);timer=setTimeout(()=>update(Date.now()),0);}},
+    close(){running=false;clearTimeout(timer);resize.disconnect();},
+    destroy(){running=false;clearTimeout(timer);resize.disconnect();document.removeEventListener('visibilitychange',visibility);actionLayer.removeEventListener('click',cycle);actors.clear();for(const record of prompts.values())record.element.remove();prompts.clear();},
   };
 }

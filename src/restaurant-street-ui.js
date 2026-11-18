@@ -77,26 +77,53 @@ export function restaurantStreetMarkup(){
 export function createRestaurantStreet({container,random=Math.random}){
   const life=createRestaurantStreetLife({random}),actors=new Map(),bubbles=new Map();
   const actorLayer=container.querySelector('[data-r-street-actors]'),chatLayer=container.querySelector('[data-r-street-chat]'),sign=container.querySelector('[data-r-queue-sign]');
-  let info=null,running=false,frame=0,active=true;
+  let info=null,running=false,active=true,timer=null;
   function paint(now=Date.now()){
-    if(!info)return;
+    if(!info)return false;
     const scene=life.update(info,now,{active}),live=new Set(),talking=new Set();
     for(const actor of scene.actors){
       live.add(actor.id);let element=actors.get(actor.id);
       if(!element){element=document.createElement('span');element.className=`rs-actor rs-${actor.kind}`;element.dataset.rGuestTier=restaurantGuestTier(actor.cat);element.setAttribute('role','img');element.setAttribute('aria-label',`${names[actor.cat]}，${actor.kind==='queue'?'门外等位':'路过小馆'}`);element.innerHTML=`<span class="rs-facing">${restaurantGuestSprite(actor.cat)}</span>`;actorLayer.append(element);actors.set(actor.id,element);}
-      element.style.left=`${actor.x}%`;element.style.top=`${actor.y}%`;element.dataset.facing=actor.facing;
+      position(element,actor);
+      if(element.dataset.facing!==actor.facing)element.dataset.facing=actor.facing;
     }
     for(const [id,element] of actors)if(!live.has(id)){element.remove();actors.delete(id);}
     for(const bubble of scene.bubbles){
       talking.add(bubble.id);let element=bubbles.get(bubble.id);
       if(!element){element=document.createElement('span');element.className='rs-chat-bubble';element.dataset.rChatKind=bubble.kind;element.setAttribute('aria-label',`${bubble.name}说：${bubble.text}`);element.textContent=bubble.text;chatLayer.append(element);bubbles.set(bubble.id,element);}
-      element.style.left=`${bubble.x}%`;element.style.top=`${bubble.y}%`;
+      position(element,bubble);
     }
     for(const [id,element] of bubbles)if(!talking.has(id)){element.remove();bubbles.delete(id);}
-    sign.hidden=scene.waiting===0;sign.textContent=scene.waiting?`等位 · ${scene.waiting} 组`:'';
+    if(sign.hidden!==(scene.waiting===0))sign.hidden=scene.waiting===0;
+    const caption=scene.waiting?`等位 · ${scene.waiting} 组`:'';
+    if(sign.textContent!==caption)sign.textContent=caption;
+    return scene.actors.some(actor=>actor.kind==='passer')||info.waitingParties?.some(party=>now<party.arrivedAt+3500);
   }
-  function tick(){if(!running)return;if(!document.hidden)paint();frame=requestAnimationFrame(tick);}
-  function stop(){running=false;cancelAnimationFrame(frame);}
+  const lastPositions=new WeakMap();
+  function position(element,point){
+    const prior=lastPositions.get(element);
+    if(prior?.x===point.x&&prior.y===point.y)return;
+    if(prior?.x!==point.x)element.style.left=`${point.x}%`;
+    if(prior?.y!==point.y)element.style.top=`${point.y}%`;
+    lastPositions.set(element,{x:point.x,y:point.y});
+  }
+  function update(){
+    clearTimeout(timer);timer=null;
+    if(!running||!active||document.hidden)return;
+    const moving=paint();
+    timer=setTimeout(update,moving?33:350);
+  }
+  function stop(){running=false;clearTimeout(timer);timer=null;}
+  document.addEventListener('visibilitychange',update);
   function clear(){life.reset();for(const element of [...actors.values(),...bubbles.values()])element.remove();actors.clear();bubbles.clear();sign.hidden=true;}
-  return {sync(value,{enabled=true}={}){info=value;active=enabled;paint();},start(){if(running)return;running=true;paint();frame=requestAnimationFrame(tick);},stop,reset:clear,destroy(){stop();clear();}};
+  return {
+    sync(value,{enabled=true}={}){
+      info=value;
+      if(active&&!enabled)clear();
+      active=enabled;
+      update();
+    },
+    start(){if(running)return;running=true;update();},stop,reset:clear,
+    destroy(){stop();clear();document.removeEventListener('visibilitychange',update);},
+  };
 }

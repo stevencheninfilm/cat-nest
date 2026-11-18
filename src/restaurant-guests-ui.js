@@ -6,7 +6,7 @@ import { kitchenTerminalMarkup } from './restaurant-kitchen-terminal.js';
 import { restaurantMaxLevelTerminal, restaurantStaffTerminal } from './restaurant-staff-terminal.js';
 import { RESTAURANT_DECORATIONS } from './restaurant-decor.js';
 import { KITCHEN_CIRCLE_PALETTES } from './restaurant-circle-palettes.js';
-import { RESTAURANT_TABLES, RESTAURANT_GUESTS, restaurantSeat, restaurantGuestMotion, RESTAURANT_PAIR_CHANCE } from './restaurant-guests.js';
+import { RESTAURANT_TABLES, RESTAURANT_GUESTS, restaurantGuestMotion, RESTAURANT_PAIR_CHANCE } from './restaurant-guests.js';
 
 const catNames=Object.fromEntries(RESTAURANT_GUESTS.map(guest=>[guest.id,guest.name]));
 const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -32,39 +32,64 @@ function createEntryForeground(container){
   return ()=>{observer.disconnect();for(const wall of walls)wall.remove();};
 }
 
-export function restaurantGuestTables(info,{icon,food,blocked=false,replaying=[],pendingCourses=[],pendingAccepts=[]}={}){
-  const signature = info.supperClub?.active?.signature;
-  const unstamped = new Set(signature && !signature.completed ? signature.dishes.filter(dish => !signature.collected.includes(dish.id)).map(dish => dish.id) : []);
-  return Array.from({length:Math.max(6,info.capacity)},(_,table)=>{
-    const position=RESTAURANT_TABLES[table],party=info.parties.find(party=>party.table===table);
-    const base=`--tx:${position.x}%;--ty:${position.y}%`;
-    if(table>=info.capacity)return `<button class="r-locked-table" style="${base}" data-r-tab="upgrades" aria-label="扩建餐厅，解锁更多餐桌">${icon('lock')}<small>扩建解锁</small></button>`;
-    const extra=table>=6?`<div class="rg-added-table" style="${base}" aria-hidden="true"></div>`:'';
-    if(!party)return `${extra}<span class="rg-empty-table" style="${base}">${table+1} 号 · 空桌</span>`;
-    if(party.status==='arriving'||replaying.includes(party.id))return `${extra}<span class="rg-arrival-label" style="${base}" data-r-party="${party.id}"><i></i>${party.members.length} 位客人正在入座</span>`;
-    return extra+`<span class="rg-table-number" style="${base}">${table+1} 号${party.members.length===2?' · 双人桌':''}</span>`+party.members.map(member=>{
-      const seat=restaurantSeat(table,member.seat),order=member.order,status=order?.status||'paid';
-      const tier=order?.guestTier??member.service?.tier,course=order?.course??member.service?.round,rounds=order?.courses??member.service?.rounds,collecting=Boolean(order?.status==='collectible'&&pendingCourses.includes(order.id)),waiting=collecting&&Boolean(order.hasNextCourse);
-      const dish=id=>restaurantTierFood(id,tier,food,order?.recipeLevel);
-      const acceptPending = pendingAccepts.includes(order?.id) && ['requested','awaiting','preparing'].includes(status);
-      const action=collecting||acceptPending&&status==='requested'?null:status==='requested'?'kitchen-accept':status==='dish-ready'?'kitchen-step':status==='ready'?'serve':status==='collectible'?'collect':null;
-      const selectable=['awaiting','preparing'].includes(status)&&[2,3,4].includes(order?.workflow?.version);
-      const text={requested:'想吃这份',awaiting:'等待厨师继续制作',cooking:'制作中',preparing:'厨师制作中','dish-ready':'送餐啦',ready:'送餐啦',delivering:'正在送餐',dining:'好好吃喵',paid:'已结账'}[status];
-      const label=acceptPending?`${order.recipe.name}，本机已接单，待同步${status==='preparing'?'，厨师制作中':''}`:collecting&&!waiting?`${table+1}号桌${member.seat===0?'左':'右'}座，正在收款，这笔小鱼干已记下，无需重复点击`:waiting?`${table+1}号桌${member.seat===0?'左':'右'}座，正在看菜单，思考第二道餐中，请稍候`:action==='kitchen-accept'?`接单 · ${order.recipe.name}`:action==='kitchen-step'||action==='serve'?`送餐 · ${order.recipe.name}`:action==='collect'?`收取 ${order.rewardCoins} 小鱼干和 ${order.rewardXp} 点成长${order.hasNextCourse?'，吃完第一餐，再点第二餐':''}${order.rewardGuestGold?`，额外 ${order.rewardGuestGold} 金鱼干`:''}`:selectable?`${order.recipe.name}，${text}`:`${table+1}号桌${member.seat===0?'左':'右'}座 · ${status==='paid'?'等待伙伴':text}`;
-      const stamp = !collecting && unstamped.has(order?.recipe.id);
-      let content;
-      if(status==='paid')content='<span><strong>已结账 ♡</strong><small>等伙伴一起回家</small></span>';
-      else if(waiting)content=`<span class="rg-menu-icon" aria-hidden="true">${icon('book')}</span><span><strong>正在看菜单…</strong><small>思考第二道餐中</small></span>`;
-      else if(collecting)content=`<span class="r-collect-fish">${icon('fish')}</span><span><strong>正在收款…</strong><small>这笔小鱼干已记下</small></span>`;
-      else if(status==='collectible')content=`<span class="r-collect-fish">${icon('fish')}</span><strong>+${order.rewardCoins}</strong>`;
-      else if(acceptPending)content=`${dish(order.recipe.id)}<span class="rg-accept-sync"><strong>已接单</strong><span class="rg-accept-sync-note">待同步</span></span>`;
-      else if(['awaiting','preparing'].includes(status))content=`${dish(order.recipe.id)}<span><strong>${text}</strong></span>`;
-      else content=`${dish(order.recipe.id)}<span><strong>${text}</strong><small data-r-countdown="${order.id}">${status==='requested'?'点击记下点餐需求':status==='cooking'?`${Math.ceil(order.remainingMs/1000)}秒`:['ready','dish-ready'].includes(status)?'点击端到餐桌':status==='delivering'?'员工端餐过来啦':'用餐中…'}</small></span>`;
-      const progress=waiting?'<span class="rg-menu-progress" role="progressbar" aria-label="思考第二道餐中" aria-valuetext="正在看菜单，请稍候"><i></i></span>':['cooking','preparing'].includes(status)?`<i class="r-order-progress" style="--progress:${order.progress}" data-r-progress="${order.id}"></i>`:'';
-      const courseText=tier?`${restaurantTierName(tier)} · ${waiting?'第二餐':`${course}/${rounds} 餐`}`:'';
-      return `<div class="r-table-guest rg-order-seat is-${status}${waiting?' is-course-thinking':''}${acceptPending?' is-accept-pending':''}" data-r-seat="${member.seat}"${table===0?' data-r-supper-front-seat':''}${table>=6?' data-r-center-table':''}${tier?` data-r-guest-tier="${tier}"`:""} style="--tx:${seat.x}%;--ty:${seat.y}%" data-r-order="${order?.id||member.orderId}"><button class="r-order-bubble" ${action?`data-r-action="${action}" data-r-order-id="${order.id}"${action==='kitchen-step'?' data-r-step="delivery"':''}`:selectable?`data-r-kitchen-select="${order.id}"`:''} ${(!action&&!selectable)||blocked||collecting?'disabled':''} ${collecting?'aria-busy="true" ':''}aria-label="${esc(label)}${stamp?'，结账可为招牌菜单集章':''}">${stamp?'<em class="rs-order-stamp" aria-hidden="true">集章</em>':''}${tier?`<em class="rg-course-tag">${courseText}</em>`:""}${content}${progress}</button></div>${status==='dining'?`<span class="rg-dining-food" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${dish(order.recipe.id)}</span>`:''}`;
-    }).join('');
+export function restaurantGuestTables(info, options) {
+  return Array.from({length:Math.max(6,info.capacity)}, (_,table) =>
+    restaurantGuestTable(info, table, options)).join('');
+}
+
+const ticketStatus = {
+  requested:'想吃这份', awaiting:'等待厨师继续制作', preparing:'厨师制作中', cooking:'制作中',
+  'dish-ready':'送餐啦', ready:'送餐啦', delivering:'正在送餐', dining:'用餐中', paid:'已结账',
+};
+const ticketCaption = {
+  requested:'接单', awaiting:'待制作', preparing:'制作中', cooking:'制作中',
+  'dish-ready':'送餐', ready:'送餐', delivering:'送餐中', dining:'用餐中', paid:'已结账',
+};
+
+export function restaurantGuestTable(info, table, {icon,food,blocked=false,replaying=[],pendingCourses=[],pendingAccepts=[]}={}) {
+  const position=RESTAURANT_TABLES[table];
+  const party=info.parties.find(party=>party.table===table);
+  const base=`data-r-table="${table}" style="--tx:${position.x}%;--ty:${position.y}%"`;
+  if(table>=info.capacity)return `<button class="r-locked-table" ${base} data-r-tab="upgrades" aria-label="扩建餐厅，解锁更多餐桌">${icon('lock')}<small>扩建解锁</small></button>`;
+  const extra=table>=6?`<div class="rg-added-table" ${base} aria-hidden="true"></div>`:'';
+  if(!party)return `${extra}<span class="rg-empty-table" ${base}>${table+1} 号 · 空桌</span>`;
+  if(party.status==='arriving'||replaying.includes(party.id))return `${extra}<span class="rg-arrival-label" ${base} data-r-party="${party.id}"><i></i>${party.members.length} 位客人正在入座</span>`;
+
+  const signature=info.supperClub?.active?.signature;
+  // In the eight-table room the outside pairs sit slightly outboard of their
+  // tabletop centres, leaving the centre table its own two touch targets.
+  const lane=info.capacity>6 && table<6 ? (table%2===0?20:80) : position.x;
+  const tickets=party.members.map(member=>{
+    const order=member.order,status=order?.status||'paid';
+    const tier=order?.guestTier??member.service?.tier;
+    const course=order?.course??member.service?.round, rounds=order?.courses??member.service?.rounds;
+    const collecting=Boolean(status==='collectible' && pendingCourses.includes(order.id));
+    const waiting=collecting && order.hasNextCourse;
+    const acceptPending=pendingAccepts.includes(order?.id) && ['requested','awaiting','preparing'].includes(status);
+    const action=collecting||acceptPending&&status==='requested'?null:status==='requested'?'kitchen-accept':status==='dish-ready'?'kitchen-step':status==='ready'?'serve':status==='collectible'?'collect':null;
+    const selectable=['awaiting','preparing'].includes(status) && [2,3,4].includes(order?.workflow?.version);
+    const dish=id=>restaurantTierFood(id,tier,food,order?.recipeLevel);
+    const location=`${table+1}号桌${member.seat===0?'左':'右'}座`;
+    const label=acceptPending?`${order.recipe.name}，本机已接单，待同步${status==='preparing'?'，厨师制作中':''}`:collecting&&!waiting?`${location}，正在收款…这笔小鱼干已记下`:waiting?`${location}，正在看菜单…思考第二道餐中，请稍候`:action==='kitchen-accept'?`接单 · ${order.recipe.name}`:action==='kitchen-step'||action==='serve'?`送餐 · ${order.recipe.name}`:action==='collect'?`收取 ${order.rewardCoins} 小鱼干和 ${order.rewardXp} 点成长${order.hasNextCourse?'，吃完第一餐，再点第二餐':''}${order.rewardGuestGold?`，额外 ${order.rewardGuestGold} 金鱼干`:''}`:order?`${order.recipe.name}，${ticketStatus[status]}`:`${location}，已结账，等待伙伴`;
+    const stamp=!collecting && signature && !signature.completed && signature.dishes.some(dish=>dish.id===order?.recipe.id && !signature.collected.includes(dish.id));
+    const description=[location,order?.recipe.name,tier&&`${restaurantTierName(tier)} · ${course}/${rounds} 餐`,ticketStatus[status],stamp&&'结账可为招牌菜单集章'].filter(Boolean).join(' · ');
+    const disabled=(!action&&!selectable)||blocked||collecting;
+    const command=action?`data-r-action="${action}" data-r-order-id="${order.id}"${action==='kitchen-step'?' data-r-step="delivery"':''}`:selectable?`data-r-kitchen-select="${order.id}"`:'';
+    let content;
+    if(waiting)content='<strong>看菜单</strong><span class="rg-menu-progress" role="progressbar" aria-label="思考第二道餐中" aria-valuetext="正在看菜单，请稍候"><i></i></span>';
+    else if(collecting)content='<strong>收款中</strong>';
+    else if(status==='collectible')content=`<span class="r-collect-fish">${icon('fish')}</span><strong>${order.rewardCoins<1000?`+${order.rewardCoins}`:'收款'}</strong>`;
+    else if(acceptPending)content='<strong>已接单</strong><span class="rg-accept-sync-note">待同步</span>';
+    else if(action)content=`${dish(order.recipe.id)}<strong>${ticketCaption[status]}</strong>`;
+    else content=`<strong>${ticketCaption[status]}</strong>${status==='cooking'?`<span data-r-countdown="${order.id}"></span>`:''}`;
+    if(['cooking','preparing'].includes(status))content+=`<i class="r-order-progress" data-r-progress="${order.id}"></i>`;
+    const classes=`rg-order-seat is-${status}${waiting?' is-course-thinking':''}${acceptPending?' is-accept-pending':''}`;
+    const button=`<button class="r-order-bubble" ${command} ${disabled?'disabled':''} ${collecting?'aria-busy="true" ':''}aria-label="${esc(label)}${stamp?'，结账可为招牌菜单集章':''}" title="${esc(description)}"><span class="rg-ticket-face">${content}${tier&&!collecting?`<em class="rg-ticket-course" aria-hidden="true">${course}/${rounds}</em>`:''}${stamp?'<em class="rs-order-stamp" aria-hidden="true">集章</em>':''}</span></button>`;
+    const item=`<div class="r-table-guest ${classes}" data-r-table="${table}" data-r-seat="${member.seat}"${party.members.length===1?' data-r-single':''}${tier?` data-r-guest-tier="${tier}"`:''} style="--tx:${lane}%;--ty:${position.y}%" data-r-order="${order?.id||member.orderId}">${button}</div>`;
+    if(status!=='dining')return item;
+    return item+`<span class="rg-dining-food" data-r-table="${table}" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${dish(order.recipe.id)}</span>`;
   }).join('');
+  return extra+`<span class="rg-table-number" ${base}>${table+1} 号</span>`+tickets;
 }
 
 /** Order prompts redraw as the clock and server receipts advance. Keep transient
@@ -74,59 +99,19 @@ export function createRestaurantGuestFeedback(container) {
   const view = doc.defaultView;
   const preference = view.matchMedia?.('(prefers-reduced-motion: reduce)');
   const records = new Map();
-  const effects = new Map();
-  let effectLayer = null;
   let announcement = null;
 
   const isVisible = () => !container.hidden && !doc.hidden && !container.querySelector('dialog[open]');
-  function layers() {
-    if (effectLayer?.isConnected) return effectLayer;
-    const stage = container.querySelector('.r-stage');
-    if (!stage) return null;
-    effectLayer = doc.createElement('div');
-    effectLayer.className = 'rg-order-feedback';
-    effectLayer.setAttribute('aria-hidden', 'true');
-    announcement = doc.createElement('div');
-    announcement.className = 'rg-order-announcement';
-    announcement.setAttribute('role', 'status');
-    stage.append(effectLayer, announcement);
-    return effectLayer;
-  }
-
-  function removeEffect(element) {
-    view.clearTimeout(effects.get(element));
-    effects.delete(element);
-    element.remove();
-  }
-
-  function showEffect(button, className, duration, {event, text} = {}) {
-    if (!isVisible()) return;
-    const layer = layers();
-    if (!layer) return;
-    const bounds = layer.getBoundingClientRect();
-    const target = button.getBoundingClientRect();
-    if (!bounds.width || !bounds.height || !target.width || !target.height) return;
-    const x = event?.detail ? event.clientX : target.left + target.width / 2;
-    const y = event?.detail ? event.clientY : target.top + target.height / 2;
-    if (effects.size >= 12) removeEffect(effects.keys().next().value);
-    const element = doc.createElement('span');
-    element.className = className;
-    element.style.left = `${(x - bounds.left) / bounds.width * 100}%`;
-    element.style.top = `${(y - bounds.top) / bounds.height * 100}%`;
-    if (text) element.textContent = text;
-    layer.append(element);
-    effects.set(element, view.setTimeout(() => removeEffect(element), duration));
-  }
-
-  function tap(event) {
-    const button = event.target.closest?.('.r-stage :is(.r-order-bubble,.rk-action-circle)');
-    if (!button || button.disabled || preference?.matches) return;
-    showEffect(button, 'rg-order-tap', 310, {event});
-  }
-  container.addEventListener('click', tap, {capture:true});
-
   function sync(orders, pendingAccepts = []) {
-    layers();
+    if (!announcement?.isConnected) {
+      const stage = container.querySelector('.r-stage');
+      if (stage) {
+        announcement = doc.createElement('div');
+        announcement.className = 'rg-order-announcement';
+        announcement.setAttribute('role', 'status');
+        stage.append(announcement);
+      }
+    }
     const rows = new Map(Array.from(container.querySelectorAll('.rg-order-seat[data-r-order]'), row => [row.dataset.rOrder, row]));
     const orderIds = new Set(orders.map(order => order.id));
     const visible = isVisible();
@@ -157,15 +142,9 @@ export function createRestaurantGuestFeedback(container) {
         if (previous?.acceptPending && !acceptPending && order.status === 'requested') announcement.textContent = `${detail}接单未完成，可以重新接单`;
       }
       if (!canAnimate || !button?.animate) continue;
-      if (firstRequest) button.animate([
-        {transform:'translate(-50%, -14px)', opacity:.55},
-        {transform:'translate(-50%, 0) scale(1.04, .94)', opacity:1, offset:.5},
-        {transform:'translate(-50%, -1px) scale(.99, 1.02)', offset:.74},
-        {transform:'translate(-50%, 0)'},
-      ], {duration:220, easing:'ease-out'});
-      if (justReady) button.animate([
-        {scale:'.97'}, {scale:'1.045', offset:.55}, {scale:'1'},
-      ], {duration:240, easing:'ease-out'});
+      if (firstRequest || justReady) button.animate(
+        [{opacity:.65},{opacity:1}], {duration:160, easing:'ease-out'});
+
     }
   }
 
@@ -174,20 +153,17 @@ export function createRestaurantGuestFeedback(container) {
     if (!order?.accepted || !order.requested || order.confirmed) return;
     order.confirmed = true;
     if (!order.button?.isConnected || !isVisible()) return;
-    showEffect(order.button, 'rg-order-confirm', 1000, {text:'✓ 已接单'});
+    if (!preference?.matches) order.button.animate?.([{opacity:.65},{opacity:1}], {duration:160});
     if (announcement) announcement.textContent = `${order.detail}已接单，等待厨房制作`;
   }
 
   function reset() {
     records.clear();
-    for (const element of effects.keys()) removeEffect(element);
     if (announcement) announcement.textContent = '';
   }
 
   return {sync, confirm, reset, destroy() {
     reset();
-    container.removeEventListener('click', tap, {capture:true});
-    effectLayer?.remove();
     announcement?.remove();
   }};
 }
@@ -199,34 +175,42 @@ export function restaurantTerminalPanel(info,{auto=true,logs=[],icon,unlockDecor
 
 /** Actor nodes survive order/state redraws, so saving never restarts a walk. */
 export function createRestaurantGuests({container,onChange=()=>{}}){
-  const actors=new Map();let running=false,frame=0;
+  const actors=new Map();
+  let running=false,frame=null;
   const removeEntryForeground=createEntryForeground(container);
-  const reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
+  const motionPreference=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
   function paint(now=Date.now()){
+    let moving=false,finishedReplay=false;
     for(const [key,actor] of actors){
-      const motion=restaurantGuestMotion(actor.party,actor.seat,now,{replayAt:actor.replayAt,departAt:actor.departAt,reducedMotion:reducedMotion(),layoutCapacity:actor.layoutCapacity});
+      if(actor.settled)continue;
+      const motion=restaurantGuestMotion(actor.party,actor.seat,now,{replayAt:actor.replayAt,departAt:actor.departAt,reducedMotion:motionPreference?.matches===true,layoutCapacity:actor.layoutCapacity});
       if(motion.phase==='gone'){actor.element.remove();actors.delete(key);continue;}
       const element=actor.element;
-      element.style.left=`${motion.x}%`;element.style.top=`${motion.y}%`;
-      element.style.zIndex=String(20+Math.round(motion.y*10));
-      element.dataset.facing=motion.facing;
+      if(actor.x!==motion.x){element.style.left=`${motion.x}%`;actor.x=motion.x;}
+      if(actor.y!==motion.y){element.style.top=`${motion.y}%`;element.style.zIndex=String(20+Math.round(motion.y*10));actor.y=motion.y;}
+      if(element.dataset.facing!==motion.facing)element.dataset.facing=motion.facing;
       if(element.dataset.phase!==motion.phase){element.dataset.phase=motion.phase;element.setAttribute('aria-label',`${catNames[actor.cat]}，${actor.party.table+1}号桌${actor.seat===0?'左':'右'}座，${{arriving:'进店中',seated:'已入座',leaving:'正在离店'}[motion.phase]}`);}
-      if(actor.replayAt!==null&&motion.phase==='seated'){actor.replayAt=null;onChange();}
+      actor.settled=motion.phase==='seated';
+      if(!actor.settled)moving=true;
+      else if(actor.replayAt!==null){actor.replayAt=null;finishedReplay=true;}
     }
+    if(finishedReplay)onChange();
+    if(running&&moving&&frame===null)frame=requestAnimationFrame(tick);
   }
-  function tick(){if(!running)return;if(!document.hidden)paint();frame=requestAnimationFrame(tick);}
+  function tick(){frame=null;if(running)paint();}
   function sync(info){
     const live=new Set();
     for(const party of info.parties)for(const member of party.members){
       const key=`${party.id}:${member.seat}`;live.add(key);
       let actor=actors.get(key);
       if(!actor){const element=document.createElement('span');element.className='rg-guest-actor';element.dataset.guest=key;element.dataset.rGuestTier=restaurantGuestTier(member.cat);element.setAttribute('role','img');element.innerHTML=`<span class="rg-entry-aura" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i></span><span class="rg-facing">${guestSprite(member.cat)}</span>`;container.append(element);actor={element,party,seat:member.seat,cat:member.cat,layoutCapacity:info.capacity,replayAt:null,departAt:null};actors.set(key,actor);}
+      if(actor.departAt!==null||actor.party.table!==party.table||actor.party.arrivedAt!==party.arrivedAt||actor.party.seatedAt!==party.seatedAt)actor.settled=false;
       actor.party=party;actor.departAt=null;
     }
-    for(const [key,actor] of actors)if(!live.has(key)&&actor.departAt===null){actor.departAt=Date.now();actor.replayAt=null;}
+    for(const [key,actor] of actors)if(!live.has(key)&&actor.departAt===null){actor.departAt=Date.now();actor.replayAt=null;actor.settled=false;}
     paint();
   }
-  function start(){if(running)return;running=true;paint();frame=requestAnimationFrame(tick);}
-  function stop(){running=false;cancelAnimationFrame(frame);}
-  return {sync,start,stop,replay(){const now=Date.now();let count=0;for(const actor of actors.values())if(actor.departAt===null){actor.replayAt=now;count++;}paint(now);return count;},replaying(){return [...new Set([...actors.values()].filter(actor=>actor.replayAt!==null).map(actor=>actor.party.id))];},destroy(){stop();removeEntryForeground();for(const actor of actors.values())actor.element.remove();actors.clear();}};
+  function start(){if(running)return;running=true;paint();}
+  function stop(){running=false;if(frame!==null)cancelAnimationFrame(frame);frame=null;}
+  return {sync,start,stop,replay(){const now=Date.now();let count=0;for(const actor of actors.values())if(actor.departAt===null){actor.replayAt=now;actor.settled=false;count++;}paint(now);return count;},replaying(){return [...new Set([...actors.values()].filter(actor=>actor.replayAt!==null).map(actor=>actor.party.id))];},destroy(){stop();removeEntryForeground();for(const actor of actors.values())actor.element.remove();actors.clear();}};
 }

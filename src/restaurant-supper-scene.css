@@ -87,16 +87,6 @@
   font: 750 8px/1.4 system-ui, sans-serif;
   pointer-events: none;
 }
-.restaurant .rg-order-seat[data-supper-clearance] > .r-order-bubble {
-  width: 50px;
-  min-width: 50px;
-  min-height: 44px;
-  flex-direction: column;
-  gap: 0;
-  padding: 3px 2px;
-}
-.restaurant .rg-order-seat[data-supper-clearance] > .r-order-bubble small { display: none }
-.restaurant .rg-order-seat[data-supper-clearance][data-r-guest-tier] > .r-order-bubble { padding-top: 11px }
 @media (max-width: 420px) {
   .restaurant .rs-shortcut { width: 44px; height: 51px }
   .rs-shortcut strong { font-size: 9px; line-height: 14px; letter-spacing: 0 }

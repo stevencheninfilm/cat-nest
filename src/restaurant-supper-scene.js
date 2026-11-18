@@ -26,27 +26,3 @@ export function paintSupperScene(shortcut, garlands, club) {
     garlands.dataset.theme = theme;
   }
 }
-
-// The same seat can fall under the control on a tall phone but clear it on
-// a desktop. Keep the order and its sibling reachable at their actual sizes.
-export function fitSupperOrders(stage, shortcut) {
-  const seats = [...stage.querySelectorAll('[data-r-supper-front-seat]')];
-  if (!seats.length) return;
-  for (const seat of seats) {
-    if (seat.hasAttribute('data-supper-clearance')) {
-      seat.removeAttribute('data-supper-clearance');
-      seat.firstElementChild.style.removeProperty('margin-left');
-    }
-  }
-  let obstacle = shortcut.getBoundingClientRect();
-  for (const seat of seats) {
-    const bubble = seat.firstElementChild;
-    const bounds = bubble.getBoundingClientRect();
-    if (bounds.top >= obstacle.bottom || bounds.bottom <= obstacle.top || bounds.left >= obstacle.right + 4 || bounds.right <= obstacle.left) break;
-    seat.setAttribute('data-supper-clearance','');
-    const compact = bubble.getBoundingClientRect();
-    const shift = Math.max(0, Math.ceil(obstacle.right + 5 - compact.left));
-    bubble.style.marginLeft = `${shift}px`;
-    obstacle = {top:compact.top,bottom:compact.bottom,left:compact.left+shift,right:compact.right+shift};
-  }
-}
