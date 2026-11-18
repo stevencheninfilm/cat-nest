@@ -13,7 +13,7 @@ export function createInteractionFeedback({
   layer.className = 'nest-motion-layer'; layer.setAttribute('aria-hidden', 'true');
   root.body.append(layer);
   const active = new Set(), presses = new Map(), pointers = new Map(), seen = new Set(), listeners = [];
-  let lastInput = null, serial = 0, destroyed = false;
+  let lastInput = null, lastHaptic = -Infinity, serial = 0, destroyed = false;
   const visible = () => !destroyed && !root.hidden && canPresent();
   const moving = () => visible() && !reducedMotion();
   const listen = (target, event, handler, options) => {
@@ -92,6 +92,19 @@ export function createInteractionFeedback({
       { opacity: 0, transform: 'translate(-50%,-50%) scale(1.8)' },
     ], { duration: 450, easing: 'ease-out' }, { remove: true, operationId });
   }
+  function receiptDelta(target, amount, operationId) {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const box = rect(target);
+    if (!box) return;
+    const label = node('nest-motion-growth-delta', point(box, .5, 0), `+${amount} 成长`);
+    if (!label) return;
+    animate(label, [
+      { opacity:0, transform:'translate(-50%, -70%) scale(.96)' },
+      { opacity:1, transform:'translate(-50%, -100%) scale(1)', offset:.16 },
+      { opacity:1, transform:'translate(-50%, -100%) scale(1)', offset:.76 },
+      { opacity:0, transform:'translate(-50%, -115%) scale(.98)' },
+    ], { duration:1140, easing:'ease-out' }, { remove:true, operationId });
+  }
   const buttonFrom = event => event.target?.closest?.('button, a[role="button"]');
   const enabled = button => button && !button.disabled && button.getAttribute('aria-disabled') !== 'true';
   function release(button, bounce = true) {
@@ -136,6 +149,9 @@ export function createInteractionFeedback({
       if (rect(dish)) lastInput.food = { box: rect(dish), art: dish.cloneNode(true) };
     }
     if (event.detail === 0 && !button.matches('#cat, .catbook-actor')) release(button);
+    if (moving() && lastInput.point && button.closest('.nest') && button.matches('[data-action], #feed-button, .growth-bubble')) {
+      ring(lastInput.point);
+    }
   }, { capture: true });
 
   function clear(operationId) {
@@ -181,26 +197,33 @@ export function createInteractionFeedback({
         const moon = node('nest-motion-sleep', point(box, .7, .22), '☾');
         if (moon) animate(moon, [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: .85, offset: .25 }, { opacity: 0, transform: 'translateY(-18px)' }], { duration: 1000, easing: 'ease-out' }, { remove: true, operationId });
       }
-      if (local && view.navigator?.vibrate) view.navigator.vibrate(8);
+      if (local && view.navigator?.vibrate && now() - lastHaptic >= 120) {
+        lastHaptic = now();
+        view.navigator.vibrate(8);
+      }
     },
-    collect({ origin, target, artwork, operationId } = {}) {
+    collect({ origin, target, artwork, operationId, amount } = {}) {
       if (!once('collect', operationId) || !moving()) return;
       const end = rect(target); if (!origin || !end) return;
       const from = point(origin), to = point(end);
+      const dx = to.x - from.x, dy = to.y - from.y;
       const group = operationId || `local-collect-${++serial}`;
       ring(from, group);
-      for (let index = 0; index < 3; index += 1) {
-        const heart = node('nest-motion-reward', from); if (!heart) break;
-        if (artwork) {
-          const image = root.createElement('img'); image.src = artwork; image.alt = ''; image.draggable = false; heart.append(image);
-        } else heart.textContent = '♥';
-        animate(heart, [
-          { opacity: 0, transform: 'translate(-50%,-50%) scale(.7)' },
-          { opacity: 1, offset: .12 },
-          { opacity: 1, transform: `translate(calc(-50% + ${(to.x - from.x) * .46 + (index - 1) * 14}px),calc(-50% + ${(to.y - from.y) * .46 - 36}px)) scale(1.06) rotate(-8deg)`, offset: .48 },
-          { opacity: 0, transform: `translate(calc(-50% + ${to.x - from.x}px),calc(-50% + ${to.y - from.y}px)) scale(.25)` },
-        ], { duration: 690, delay: index * 55, easing: SPRING }, { remove: true, operationId: group, done: index === 2 ? () => pulse(target, group) : undefined });
-      }
+      const heart = node('nest-motion-reward', from);
+      if (!heart) return;
+      if (artwork) {
+        const image = root.createElement('img');
+        image.src = artwork; image.alt = ''; image.draggable = false; heart.append(image);
+      } else heart.textContent = '♥';
+      animate(heart, [
+        { opacity:0, transform:'translate(-50%, -50%) scale(.82, .68)' },
+        { opacity:1, transform:'translate(-50%, -56%) scale(.9, 1.1)', offset:.14 },
+        { opacity:1, transform:`translate(calc(-50% + ${dx * .46}px), calc(-50% + ${dy * .46 - 28}px)) scale(1.03) rotate(-8deg)`, offset:.48 },
+        { opacity:0, transform:`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.25)` },
+      ], { duration:540, easing:SPRING }, { remove:true, operationId:group, done() {
+        pulse(target, group);
+        receiptDelta(target, amount, group);
+      } });
     },
     panel(element) {
       if (moving()) animate(element, [{ opacity: 0, transform: 'translateY(9px) scale(.99)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 230, easing: SPRING });
@@ -209,10 +232,10 @@ export function createInteractionFeedback({
     rewardReady(element, operationId) {
       if (!once('reward', operationId) || !rect(element) || !moving()) return;
       animate(element.querySelector('.growth-orb') || element, [
-        { opacity: 0, scale: '.65', translate: '0 5px' },
-        { opacity: 1, scale: '1.055', translate: '0 -1px', offset: .65 },
-        { opacity: 1, scale: '1', translate: '0 0' },
-      ], { duration: 420, easing: SPRING }, { operationId });
+        { scale:'.94 1.06', translate:'0 -6px' },
+        { scale:'1.07 .92', translate:'0 1px', offset:.54 },
+        { scale:'1', translate:'0 0' },
+      ], { duration:300, easing:SPRING }, { operationId });
     },
     rollback(operationId) { if (operationId) clear(operationId); },
     clear,

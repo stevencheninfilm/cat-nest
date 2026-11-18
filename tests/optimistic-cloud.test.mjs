@@ -144,6 +144,7 @@ test('duplicate HTTP and live claim receipts do not republish the same snapshot 
   const base = reduceAction(initialState(), { type:'pet' }, male, Date.now(), 'rapid-claim-reward'), ack = deferred();
   const h = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : ack.promise);
   await h.room.start(); h.room.dispatch({type:'claim-growth',rewardId:'rapid-claim-reward'});
+  assert.equal(h.observed.actions.at(-1).confirmedGrowth,undefined,'preview does not report a committed gain');
   const item=h.requests.at(-1).body, saved=reduceAction(base,item.action,male,Date.now(),item.operationId), data=receipt(item,saved);
   h.sources[0].emit('action',data);
   const updates=h.observed.states.length;
@@ -154,6 +155,19 @@ test('duplicate HTTP and live claim receipts do not republish the same snapshot 
   assert.deepEqual(h.latest(),saved);assert.equal(h.latest().xp,base.xp+base.pendingGrowth[0].amount);
   assert.deepEqual(h.observed.pending.at(-1),[]);
   assert.equal(h.observed.actions.filter(event=>!event.optimistic).length,1);
+  assert.equal(h.observed.actions.at(-1).confirmedGrowth,base.pendingGrowth[0].amount);
+});
+
+test('claim snapshots that skip revisions do not attribute other growth to this draw',async t=>{
+  const base = reduceAction(initialState(), { type:'pet' }, male, Date.now(), 'claim-revision-gap');
+  const action={type:'claim-growth',rewardId:'claim-revision-gap'};
+  const saved=reduceAction(base,action,male,Date.now(),'own-gap-receipt');
+  saved.xp+=10;
+  const h=harness(t,()=>response(snapshot(base)));
+  await h.room.start();
+  h.sources[0].emit('action',snapshot(saved,2,{operationId:'own-gap-receipt',action,actor:male}));
+  assert.equal(h.latest().xp,saved.xp);
+  assert.equal(h.observed.actions.at(-1).confirmedGrowth,null);
 });
 
 test('a simultaneous winning partner claim replaces our preview without restoring an already-collected bubble', async t => {

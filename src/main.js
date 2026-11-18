@@ -1,4 +1,4 @@
-import { RESTAURANT_INCOME_ID, RESTAURANT_INCOME_ART, restaurantGrowthClaims, growthClaimIds, growthAmount } from './restaurant-income-growth.js';
+import { RESTAURANT_INCOME_ID, RESTAURANT_INCOME_ART, restaurantGrowthClaims, growthClaimIds } from './restaurant-income-growth.js';
 import { formatAffection } from './affection.js';
 import { createPetNameLayout } from './pet-name-layout.js';
 import './onboarding.css';
@@ -45,6 +45,8 @@ import './restaurant-staff-rest.css';
 import './restaurant-locked.css';
 import './restaurant-recipe-detail.css';
 import './restaurant-layout.css';
+import './game-ui-finish.css';
+import { restaurantCheckoutReceipt } from './restaurant-checkout-receipt.js';
 import { createRestaurant } from './restaurant-ui.js';
 import { restaurantActionResult } from './restaurant.js';
 import './growth-bars.css';
@@ -96,7 +98,7 @@ import { nestItem, nestLevel, nestActionResult } from './nest-decor.js';
 import { WORLD_EXPLORATION_ENABLED, WORLD_LOCK_MESSAGE } from './feature-availability.js';
 import { feedingHome, feedingSheet, feedingButtonContent, countdown, updateFoodPortions, foodArt } from './feeding-ui';
 import { careQuotaText, careStatusText, careBlockedMessage, careRuleText } from './care-ui.js';
-import { createGrowthBubbleView, growthTray, growthLabel, jellyHeartMarkup } from './growth-ui.js';
+import { createGrowthBubbleView, growthTray, jellyHeartMarkup } from './growth-ui.js';
 import { growthStageForXp, getGrowthStageById, stageStyle, growthUpgrade } from './growth-stages.js';
 import { growthStagesPanel, growthUpgradePanel } from './growth-stage-ui.js';
 import { normalizeAppearance, MAGE_CAT_VERSION } from './mage-cat-config.js';
@@ -177,9 +179,7 @@ let gameRenderedSelection=null;
 let careFeedbackKey = '', careFeedbackAt = 0;
 let growthPage = 0, claimingRewardId = null, growthGlowTimer;
 let stagePreviewId = null, pendingUpgrade = null, upgradeTimer, lastCelebratedStage = 0;
-const rewardVisuals = new Map();
 const claimOrigins = new Map();
-const incomeClaimVisuals = new Map();
 let growthHomeSignature = '';
 
 
@@ -329,9 +329,12 @@ function updateFeatureEntries() {
   if(roleEntered&&$('#modal').open&&view==='expressions'&&catPaletteLevel!==levelInfo(cloudConfigured?confirmedState.xp:state.xp).level){$('#modal-content').innerHTML=expressionPanel();positionCatPanels();}
 }
 let renderedSkin='';
+const confirmedPetXp = () => (cloudConfigured ? confirmedState : state).xp;
+const visibleGrowthRewards = () => (cloudConfigured ? confirmedState : state).pendingGrowth || [];
 function render() {
-  const level = levelInfo(state.xp);
-  const stage = growthStageForXp(state.xp);
+  const xp = confirmedPetXp();
+  const level = levelInfo(xp);
+  const stage = growthStageForXp(xp);
   // Every device derives the same skin from the authoritative saved XP.
   if(renderedSkin!==stage.id){
   renderedSkin=stage.id;
@@ -481,10 +484,9 @@ function renderFeedingHome(now = Date.now()) {
   if (home.innerHTML !== content) home.innerHTML = content;
 }
 function renderGrowth() {
-  const rewards = state.pendingGrowth || [];
-  for (const reward of rewards) rewardVisuals.set(reward.id, { ...reward, visualXp:state.xp });
+  const rewards = visibleGrowthRewards();
   if (claimingRewardId && !rewards.some(reward => reward.id === claimingRewardId)) claimingRewardId = null;
-  const options = { blocked:!careConnected(), claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(state.xp) };
+  const options = { blocked:!careConnected(), claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(confirmedPetXp()) };
   const signature = JSON.stringify([rewards.map(({id,amount,kind,food,game,boosted,boostCount}) => [id,amount,kind,food,game,boosted,boostCount]), options.blocked, claimingRewardId, [...pendingGrowthClaims].sort(), options.stage.id]);
   if (signature !== growthHomeSignature) { growthBubbleView.render(rewards, options); growthHomeSignature = signature; }
   if ($('#modal').open && $('#modal-content').dataset.view === 'growth') {
@@ -494,21 +496,21 @@ function renderGrowth() {
     $('#modal').scrollTop = scroll;
     if (focusedId) Array.from(document.querySelectorAll('[data-growth-reward]')).find(button => button.dataset.growthReward === focusedId)?.focus({ preventScroll:true });
   }
-  while (rewardVisuals.size > rewards.length + 100) rewardVisuals.delete(rewardVisuals.keys().next().value);
 }
-function animateGrowthCollection(rewardId, stage, operationId, restaurantIncome = false) {
-  const origin = claimOrigins.get(rewardId) || $('#growth-rewards').getBoundingClientRect();
-  interactionFeedback.collect({ origin, target:$('.progress-track'), artwork:`${import.meta.env.BASE_URL}${restaurantIncome ? RESTAURANT_INCOME_ART : `assets/growth-hearts/v1/${stage.id}.webp`}`, operationId });
-  claimOrigins.delete(rewardId);
-  $('.pet-card').classList.add('growth-collected');
+function animateGrowthCollection({ origin, stage, operationId, amount, restaurantIncome }) {
+  const artwork = restaurantIncome ? RESTAURANT_INCOME_ART : `assets/growth-hearts/v1/${stage.id}.webp`;
+  interactionFeedback.collect({ origin, target:$('.progress-track'), artwork:`${import.meta.env.BASE_URL}${artwork}`, operationId, amount });
+  const card = $('.pet-card');
+  card.classList.add('growth-collected');
   clearTimeout(growthGlowTimer);
-  growthGlowTimer = setTimeout(() => $('.pet-card').classList.remove('growth-collected'), 1500);
+  growthGlowTimer = setTimeout(() => card.classList.remove('growth-collected'), 1600);
 }
 function refreshStagesPanel() {
   if (!$('#modal').open || $('#modal-content').dataset.view !== 'stages') return;
   const scroll=$('#modal').scrollTop, focused=document.activeElement?.dataset.stagePreview;
   const previewFocused=document.activeElement?.matches('.stage-preview');
-  $('#modal-content').innerHTML=growthStagesPanel(state.xp, stagePreviewId || growthStageForXp(state.xp).id);
+  const xp = confirmedPetXp();
+  $('#modal-content').innerHTML=growthStagesPanel(xp, stagePreviewId || growthStageForXp(xp).id);
   $('#modal').scrollTop=scroll;
   if (focused) $(`[data-stage-preview="${focused}"]`)?.focus({preventScroll:true});
   else if (previewFocused) $('.stage-preview')?.focus({preventScroll:true});
@@ -527,7 +529,7 @@ function chime() {
   if (!sound) return;
   try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const gain = ctx.createGain(); gain.connect(ctx.destination); gain.gain.setValueAtTime(.04, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .35); const osc = ctx.createOscillator(); osc.connect(gain); osc.type = 'sine'; osc.frequency.setValueAtTime(660, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + .1); osc.start(); osc.stop(ctx.currentTime + .35); osc.onended = () => ctx.close(); } catch {}
 }
-function react(action, actor, { optimistic = false, previewed = false, operationId, previousXp, confirmedXp } = {}) {
+function react(action, actor, { optimistic = false, previewed = false, operationId, previousXp, confirmedXp, confirmedGrowth, restaurantCheckout } = {}) {
   onboarding?.confirmed(action,actor,{optimistic,operationId});
   if (['join-home','adopt-cat'].includes(action.type)) return;
   nestLife.interrupt();
@@ -537,11 +539,9 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   if (action.type?.startsWith('game-')) { refreshGames(); return; }
   if (action.type?.startsWith('restaurant-')) {
     restaurant?.render();
+    if (!optimistic && action.type === 'restaurant-kitchen-accept') restaurant?.confirmGuestOrder(action.orderId);
+    if (!optimistic && mine && action.type === 'restaurant-collect') restaurant?.confirmCheckout(action.orderId, restaurantCheckout);
     if(!optimistic&&mine&&action.type==='restaurant-research-draw'&&!$('.rr-draw-scene')?.open)toast(action.count===10?'十连探索完成，10 份灵感已收进手账':'研发完成，菜谱碎片已收进灵感手账');
-    if(!optimistic&&action.type==='restaurant-collect'){
-      if(mine)toast('金币已同步小窝，回小窝领取「餐厅经营经验」');
-      chime();
-    }
     return;
   }
   if (action.type === 'invite-cat') {
@@ -551,32 +551,30 @@ function react(action, actor, { optimistic = false, previewed = false, operation
     return;
   }
   if (action.type === 'claim-growth' || action.type === 'claim-restaurant-growth') {
+    if (optimistic) return;
     const batch = action.type === 'claim-restaurant-growth';
-    const visualId = batch ? action.rewardIds[0] : action.rewardId;
-    const reward = batch ? incomeClaimVisuals.get(visualId) || { visualXp:previousXp ?? state.xp, animate:false } : rewardVisuals.get(visualId);
-    if (reward) {
-      if (!previewed && (!batch || reward.animate)) {
-        if (mine && $('#modal').open && $('#modal-content').dataset.view === 'growth') closeModal();
-        animateGrowthCollection(visualId, growthStageForXp(reward.visualXp), operationId, batch);
-        if (batch && mine) toast(`已收下累计 ${reward.total} 点餐厅经营经验 ♡`);
+    const rewardIds = growthClaimIds(action);
+    const origin = claimOrigins.get(rewardIds[0]);
+    if (confirmedGrowth > 0) {
+      const label = batch ? '餐厅经营经验' : '成长';
+      toast(`${mine ? '已收下' : `${actor.name}收下了`} ${confirmedGrowth} 点${label} ♡`);
+      if (mine && origin && !$('.nest').hidden && !companion.active) {
+        if ($('#modal').open && $('#modal-content').dataset.view === 'growth') closeModal();
+        animateGrowthCollection({ origin, stage:growthStageForXp(previousXp), operationId, amount:confirmedGrowth, restaurantIncome:batch });
+        catSpeech.say('collect');
+        chime();
       }
-      if (!optimistic) {
-        const upgrade=growthUpgrade(previousXp ?? reward.visualXp, confirmedXp ?? state.xp);
-        if (upgrade && upgrade.to.min>lastCelebratedStage && (!pendingUpgrade || upgrade.to.min>=pendingUpgrade.to.min)) {
-          pendingUpgrade=upgrade; scheduleUpgrade();
-        }
-        if (!batch) {
-          if (mine) toast(`已收下 ${reward.amount} 点成长 ♡`);
-          else toast(`${actor.name}收下了 ${reward.amount} 点成长 ♡`);
-        }
-        for (const id of growthClaimIds(action)) rewardVisuals.delete(id);
-        if (batch) incomeClaimVisuals.delete(visualId);
-      }
-      if (!previewed && (!batch || reward.animate)) catSpeech.say('collect');
+    } else if (mine && origin) {
+      toast('成长进度已同步');
     }
+    const upgrade = growthUpgrade(previousXp ?? confirmedXp, confirmedXp);
+    if (upgrade && upgrade.to.min > lastCelebratedStage && (!pendingUpgrade || upgrade.to.min >= pendingUpgrade.to.min)) {
+      pendingUpgrade = upgrade;
+      scheduleUpgrade();
+    }
+    for (const id of rewardIds) claimOrigins.delete(id);
     claimingRewardId = null;
     renderGrowth();
-    if (!previewed && (!batch || reward?.animate)) chime();
     return;
   }
   if (mine && action.type === 'feed' && !previewed) toast(`${state.name}吃到${FOODS[action.food]?.name || '美味小餐'}啦 ♡`);
@@ -584,7 +582,14 @@ function react(action, actor, { optimistic = false, previewed = false, operation
     if(appearanceSubmitting && JSON.stringify(action.appearance)===JSON.stringify(appearanceDraft)){appearanceSubmitting=false;closeModal();}
     if(!previewed)toast('小猫换好新装扮啦 ♡');
   }
-  if (previewed) return;
+  if (!optimistic && !companion.active && !$('.nest').hidden && operationId) {
+    const rewardButton = Array.from($('#growth-rewards').querySelectorAll('[data-growth-reward]')).find(button => button.dataset.growthReward === operationId);
+    if (rewardButton) interactionFeedback.rewardReady(rewardButton, operationId);
+  }
+  if (previewed) {
+    if (!optimistic && ['feed', 'pet', 'play', 'sleep'].includes(action.type)) chime();
+    return;
+  }
   // Let a successful local form submission close its dialog before the cat replies.
   queueMicrotask(() => catSpeech.say(action.type, action, { ...actor, mine }));
   $('.kitten').classList.remove('react-pet','react-feed','react-play');
@@ -593,10 +598,8 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   catModel?.react(action.type, { ...petNeeds(state), sleeping: state.sleeping });
   if (!companion.active) {
     interactionFeedback.care(action.type, { local:mine, sleeping:state.sleeping, operationId, foodMarkup:action.type === 'feed' ? foodArt(action.food) : '' });
-    const rewardButton = Array.from($('#growth-rewards').querySelectorAll('[data-growth-reward]')).find(button => button.dataset.growthReward === operationId);
-    if (rewardButton) interactionFeedback.rewardReady(rewardButton, operationId);
   }
-  chime();
+  if (!optimistic) chime();
 }
 function rollbackReaction(action, actor, { operationId }) {
   if(action.type?.startsWith('restaurant-')){cloudUi.request('state');return;}
@@ -614,7 +617,7 @@ function rollbackReaction(action, actor, { operationId }) {
   catSpeech.say('idle');
   claimingRewardId = null;
   if (action.type === 'claim-growth') claimOrigins.delete(action.rewardId);
-  if (action.type === 'claim-restaurant-growth') { claimOrigins.delete(action.rewardIds[0]); incomeClaimVisuals.delete(action.rewardIds[0]); }
+  if (action.type === 'claim-restaurant-growth') claimOrigins.delete(action.rewardIds[0]);
   if (action.type === 'dress') appearanceDraft = normalizeAppearance(state.appearance);
 }
 function careSaving() { return cloudConfigured && (pendingCloudActions > 0 || saveStatus.phase === 'saving'); }
@@ -670,7 +673,9 @@ function dispatch(action) {
   const next = reduceAction(state, action, actor, Date.now(), localOperationId);
   if (!next) { toast('这次互动暂时不能完成，请稍后再试'); updateCareControls(); return false; }
   const previousXp=state.xp;
-  state = next; render(); react(action, actor, { operationId:localOperationId,previousXp,confirmedXp:state.xp });
+  const confirmedGrowth = growthClaimIds(action).length ? Math.round((next.xp - previousXp) * 10) / 10 : null;
+  const restaurantCheckout = restaurantCheckoutReceipt(action, state, next);
+  state = next; render(); react(action, actor, { operationId:localOperationId,previousXp,confirmedXp:state.xp,confirmedGrowth,restaurantCheckout });
   if (['join-home','adopt-cat','rename','claim-restaurant-growth'].includes(action.type)) return true;
   actionLocked = true; setTimeout(() => actionLocked = false, 650);
   return true;
@@ -785,7 +790,7 @@ function openModal(view, options = {}) {
   if (view === 'nest') { closeModal(); void showWorld({decorate:true}); return; }
   if (view === 'shared-care' && (!$('#modal').open || $('#modal-content').dataset.view !== 'shared-care')) { coupleTab='activity'; couplePages.activity=couplePages.memories=0; coupleHasNew=false; }
   if(view==='appearance' && (!$('#modal').open || $('#modal-content').dataset.view!=='appearance')){appearanceDraft=normalizeAppearance(state.appearance);appearanceSubmitting=false;}
-  if (view==='stages' && (!$('#modal').open || $('#modal-content').dataset.view!=='stages')) stagePreviewId=growthStageForXp(state.xp).id;
+  if (view==='stages' && (!$('#modal').open || $('#modal-content').dataset.view!=='stages')) stagePreviewId=growthStageForXp(confirmedPetXp()).id;
   if (view === 'games' && (!$('#modal').open || $('#modal-content').dataset.view !== 'games')) { gameLobby = true; gameSelectedGame = null; }
   $('#modal-content').dataset.view = view;
   if (view === 'versions') versionHistory.open();
@@ -812,9 +817,9 @@ function openModal(view, options = {}) {
     games: () => minigamesPanel(gameOptions()),
     'growth-bonus': () => growthBonusDetails(state),
     ...Object.fromEntries(NEED_KEYS.map(key => [`need-${key}`, () => needDetails(state, key, { clientId })])),
-    growth: () => growthTray(state.pendingGrowth || [], { blocked:!careConnected(), claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(state.xp) }),
-    stages: () => growthStagesPanel(state.xp, stagePreviewId),
-    'stage-upgrade': () => pendingUpgrade ? growthUpgradePanel(pendingUpgrade,state.xp) : growthStagesPanel(state.xp),
+    growth: () => growthTray(visibleGrowthRewards(), { blocked:!careConnected(), claimingRewardId, pendingRewardIds:pendingGrowthClaims, page:growthPage, stage:growthStageForXp(confirmedPetXp()) }),
+    stages: () => growthStagesPanel(confirmedPetXp(), stagePreviewId),
+    'stage-upgrade': () => pendingUpgrade ? growthUpgradePanel(pendingUpgrade,confirmedPetXp()) : growthStagesPanel(confirmedPetXp()),
     appearance: () => appearanceSheet(),
     expressions: () => expressionPanel(),
     feeding: () => feedingSheet(feedingSheetOptions()),
@@ -1081,18 +1086,11 @@ document.addEventListener('click', event => {
   if (el.dataset.growthReward) {
     if (el.dataset.growthReward === RESTAURANT_INCOME_ID) {
       const rewards = (state.pendingGrowth || []).filter(reward => !pendingGrowthClaims.has(reward.id));
-      const actions = restaurantGrowthClaims(rewards), total = growthAmount(rewards.filter(reward => reward.kind === 'restaurant-collect'));
-      const origin = el.getBoundingClientRect();
-      let acceptedTenths = 0;
-      for (const [index, action] of actions.entries()) {
+      const actions = restaurantGrowthClaims(rewards);
+      for (const action of actions) {
         const id = action.rewardIds[0];
-        incomeClaimVisuals.set(id, { total, visualXp:state.xp, animate:index === 0 });
-        if (index === 0) claimOrigins.set(id, origin);
-        if (!dispatch(action)) { incomeClaimVisuals.delete(id); claimOrigins.delete(id); break; }
-        const ids = new Set(action.rewardIds);
-        acceptedTenths += Math.round(growthAmount(rewards.filter(reward => ids.has(reward.id))) * 10);
-        const first = incomeClaimVisuals.get(actions[0].rewardIds[0]);
-        if (first) first.total = acceptedTenths / 10;
+        if (action === actions[0]) claimOrigins.set(id, el.getBoundingClientRect());
+        if (!dispatch(action)) { claimOrigins.delete(id); break; }
       }
       renderGrowth(); return;
     }
@@ -1235,7 +1233,30 @@ function showRestaurant({fromHome=false}={}) {
   restaurantReturnHome=fromHome;
   if(fromHome){homeScroll=window.scrollY;$('.nest').hidden=true;interactionFeedback.clear();}
   if(!restaurant)restaurant=createRestaurant({container:restaurantContainer,getState:()=>state,
-    getAvailability:()=>({connected:!cloudConfigured||status.phase==='online',ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,saving:careSaving(),savePhase:saveStatus.phase,saveRejected:saveStatus.rejected===true,retrying:saveStatus.retrying===true,pendingKitchenSteps:cloud?.getPendingActions().filter(item=>item.action?.type==='restaurant-kitchen-step').map(item=>`${item.action.orderId}:${item.action.stepId}`)??[],pendingRestaurantCollections:cloud?.getPendingActions().filter(item=>item.action?.type==='restaurant-collect').map(item=>item.action.orderId)??[],pendingRestaurantArrival:cloud?.getPendingActions().some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type))??false,pendingResearchDraw:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-research-draw')?.action.draw??null,pendingResearchCount:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-research-draw')?.action.count??1,refusedResearchDraw:saveStatus.rejected&&saveStatus.action?.type==='restaurant-research-draw'?saveStatus.action.draw:null,pendingDailyLoginDay:cloud?.getPendingActions().find(item=>item.action?.type==='restaurant-daily-login')?.action.day??null}),onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,guidePreferences:runtime.guidePreferences||runtime.localStorage,getGuideContext:()=>({role:coupleRole,entered:roleEntered,available:!gameGuide?.isOpen()&&!onboarding?.isOpen()}),testActions:runtime.testActions,
+    getConfirmedState:()=>cloudConfigured ? confirmedState : state,
+    getAvailability:()=>{
+      const queue=cloud?.getPendingActions()??[];
+      const research=queue.find(item=>item.action?.type==='restaurant-research-draw')?.action;
+      const confirmedOrders=confirmedState.restaurant?.orders??[];
+      const pendingRestaurantAccepts=queue
+        .filter(item=>item.action?.type==='restaurant-kitchen-accept')
+        .map(item=>item.action.orderId)
+        .filter(id=>!confirmedOrders.some(order=>order.id===id&&order.workflow?.acceptedAt!=null));
+      return {
+        connected:!cloudConfigured||status.phase==='online', ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,
+        saving:careSaving(), savePhase:saveStatus.phase, saveRejected:saveStatus.rejected===true, retrying:saveStatus.retrying===true,
+        pendingKitchenSteps:queue.filter(item=>item.action?.type==='restaurant-kitchen-step').map(item=>`${item.action.orderId}:${item.action.stepId}`),
+        pendingRestaurantAccepts,
+        pendingRestaurantCollections:queue.filter(item=>item.action?.type==='restaurant-collect').map(item=>item.action.orderId),
+        pendingRestaurantArrival:queue.some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type)),
+        pendingResearchDraw:research?.draw??null, pendingResearchCount:research?.count??1,
+        refusedResearchDraw:saveStatus.rejected&&saveStatus.action?.type==='restaurant-research-draw'?saveStatus.action.draw:null,
+        pendingDailyLoginDay:queue.find(item=>item.action?.type==='restaurant-daily-login')?.action.day??null,
+      };
+    },
+    onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,
+    guidePreferences:runtime.guidePreferences||runtime.localStorage,
+    getGuideContext:()=>({role:coupleRole,entered:roleEntered,available:!gameGuide?.isOpen()&&!onboarding?.isOpen()}),testActions:runtime.testActions,
     onBack(){const url=new URL(location.href);url.hash='';history.replaceState(null,'',url);if(restaurantReturnHome){$('.nest').hidden=false;document.body.classList.remove('catbook-mode');updateModelPause();scheduleUpgrade();window.scrollTo(0,homeScroll);$('[data-open="restaurant"]')?.focus({preventScroll:true});}else{document.body.classList.add('catbook-mode');catbook.open();updateModelPause();}},
   });
   catbook.close();document.body.classList.remove('catbook-mode');

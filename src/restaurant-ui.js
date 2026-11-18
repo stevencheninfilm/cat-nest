@@ -1,4 +1,4 @@
-import { createRestaurantGoldDrops } from './restaurant-gold-drop.js';
+import { createRestaurantCheckoutFeedback } from './restaurant-checkout-feedback.js';
 import { createRestaurantAutoCook, paintRestaurantAutoCook } from './restaurant-auto-cook.js';
 import { RESTAURANT_AUTO_COOK_LEVEL } from './restaurant-progression.js';
 import { STAFF_IDLE_RECOVERY_MS } from './restaurant-staff-training.js';
@@ -16,7 +16,7 @@ import { restaurantCustomersPanel, restaurantCustomerDetail } from './restaurant
 import { restaurantInfo, restaurantActionResult, RESTAURANT_RECIPE_CATEGORIES, RESTAURANT_STAFF } from './restaurant.js';
 import { levelInfo } from './state.js';
 import { KITCHEN_FLOWS } from './restaurant-kitchen.js';
-import { restaurantGuestTables, restaurantTerminalPanel, createRestaurantGuests } from './restaurant-guests-ui.js';
+import { restaurantGuestTables, restaurantTerminalPanel, createRestaurantGuests, createRestaurantGuestFeedback } from './restaurant-guests-ui.js';
 import { createRestaurantArrivalRhythm } from './restaurant-street.js';
 import { restaurantStreetMarkup, createRestaurantStreet } from './restaurant-street-ui.js';
 import { kitchenSceneMarkup, kitchenFlowPanel, createKitchenScene } from './restaurant-kitchen-ui.js';
@@ -28,7 +28,7 @@ import { kitchenCirclePalette, kitchenPaletteMarkup } from './restaurant-kitchen
 import { restaurantDecorationsPanel, decorationBuffLabels, decorationSceneMarkup, createRestaurantDecorationScene } from './restaurant-decor-ui.js';
 import { goldWalletMarkup, goldPrice, restaurantTrainingPanel, restaurantGoldPanel, premiumThemesMarkup, premiumSceneMarkup, paintPremiumScene, preloadPremiumScene, specialRecipeCardsMarkup } from './restaurant-economy-ui.js';
 import { createRestaurantStaffDebugger } from './restaurant-staff-terminal.js';
-import { restaurantResourceLevel } from './restaurant-progression.js';
+import { restaurantExperienceInfo, restaurantResourceLevel } from './restaurant-progression.js';
 import { restaurantProgressionPanel, progressionEntryMarkup } from './restaurant-progression-ui.js';
 import { createRestaurantExperience } from './restaurant-experience-ui.js';
 import { restaurantFacilityCards, restaurantUpgradeHelp } from './restaurant-upgrade-ui.js';
@@ -122,7 +122,7 @@ export function restaurantMarkup(state, {isTest=false,debugEnabled=isTest}={}) {
     <section class="r-viewport" aria-label="完整餐厅全景，顾客与厨房同屏"><div class="r-scene-controls"><button class="r-round r-back" data-r-back aria-label="返回猫猫图鉴">${restaurantIcon('back')}</button>${restaurantResearchShortcut()}</div><aside class="r-header-actions r-tools" aria-label="餐厅工具"><button class="r-round ra-entry" data-r-audio-open aria-label="声音设置" title="声音设置">${restaurantAudioIcon}</button><button class="r-round r-info-entry" data-r-tab="info" aria-label="查看小馆营业信息">${restaurantIcon('info')}</button>${debugEnabled?`<button class="r-round rg-terminal-entry" data-r-tab="terminal" aria-label="打开餐厅控制终端" aria-controls="rg-terminal" aria-expanded="false">${restaurantIcon('terminal')}<small>终端</small></button>`:`<button class="r-round" data-r-tab="help" aria-label="餐厅玩法说明">${restaurantIcon('help')}</button>`}${restaurantDailyLoginMarkup()}<button class="r-round r-auto-cook" data-r-auto-cook aria-label="一键制作，小馆 Lv.10 解锁" aria-pressed="false" data-locked="true"><span>${restaurantIcon('chef')}<svg class="r-auto-spark" viewBox="0 0 16 20" aria-hidden="true"><path d="M9 1 2 11h5l-1 8 8-11H9z"/></svg></span><small>Lv.10</small></button></aside><div class="r-stage"><img class="r-scene-art" src="${asset('restaurant-scene.webp')}" alt="暖暖的猫猫小馆，花园旁摆着小餐桌，厨房里亮着灯" draggable="false"/><div class="r-sunlight" aria-hidden="true"></div>
       <div class="r-shop-sign" title="${esc(state.name)}的小食光"><strong>${esc(state.name)}的小食光</strong></div>
       ${restaurantStreetMarkup()}<div class="rg-guest-layer" data-r-guests></div>
-      ${decorationSceneMarkup()}${premiumSceneMarkup()}<div class="r-tables" data-r-tables></div>${kitchenSceneMarkup()}${restRoomSceneMarkup()}<div class="rg-gold-drops" data-r-gold-drops></div>
+      ${decorationSceneMarkup()}${premiumSceneMarkup()}<div class="r-tables" data-r-tables></div>${kitchenSceneMarkup()}${restRoomSceneMarkup()}
       <div class="r-kitchen-label">${restaurantIcon('chef')} 喵喵厨房 <span data-r-kitchen-level>Lv.1</span></div>
       <div class="r-scene-hint" data-r-hint>新客人入座后，主厨就开始制作啦</div>
     </div></section>
@@ -133,22 +133,25 @@ export function restaurantMarkup(state, {isTest=false,debugEnabled=isTest}={}) {
     <dialog class="r-recipe-dialog" aria-labelledby="r-recipe-detail-title"></dialog>
     <dialog class="rr-celebration rr-quality-card" aria-labelledby="rr-promotion-title"></dialog>
     <dialog class="rr-draw-scene rr-quality-card" aria-labelledby="rr-discovery-title"></dialog>
-    ${restaurantAudioMarkup()}${restaurantDailyLoginDialog()}<div class="r-reward-layer" aria-live="polite" aria-atomic="true"></div>
+    ${restaurantAudioMarkup()}${restaurantDailyLoginDialog()}
+    <div class="r-checkout-flight" aria-hidden="true"></div>
+    <div class="r-checkout-status" role="status" aria-atomic="true"></div>
   </main>`;
 }
 
-export function createRestaurant({container,getState,getAvailability=()=>({connected:true,saving:false}),onAction,onBack,toast=()=>{},isTest=false,debugEnabled=isTest,preferences=null,guidePreferences=preferences,getGuideContext=()=>({entered:false}),testActions=null}) {
+export function createRestaurant({container,getState,getConfirmedState=getState,getAvailability=()=>({connected:true,saving:false}),onAction,onBack,toast=()=>{},isTest=false,debugEnabled=isTest,preferences=null,guidePreferences=preferences,getGuideContext=()=>({entered:false}),testActions=null}) {
   debugEnabled=restaurantTerminalAllowed({isTest,debugEnabled});
-  let opened=false, panel=null, timer=null, signature='', panelSignature='', mounted=false, pending=false, unlockAnnounced=0, lastEarnings=null, rewardTimer;
+  let opened=false, panel=null, timer=null, signature='', panelSignature='', mounted=false, pending=false, unlockAnnounced=0;
   let recipeCategory='all',progressionCategory='all',customerFilter='all',customerSelected=null,customerDialogSignature='';
   let staffPreview=null,trainingWorker='worker-1',themeView='colors',researchShowcase=null,recipeSelected=null,recipeDetailSignature='';
   let guests=null,street=null,autoGuests=true,kitchenScene=null,flowOrderId=null,flowRecipe='rice',selectedZone=null,pendingKitchenRecipe=null,previousKitchenOrders=new Set();
   const arrivalRhythm=createRestaurantArrivalRhythm();
   const logs=[],pendingCourseOrders=new Set();
-  let terminalOpen=false,terminalSignature='',terminalOrderId=null,decorationScene=null,experienceFeedback=null,recipeCelebration=null,researchReveal=null,deferredResearchDraw=null,dailyLogin=null,goldDrops=null,circlePalette='cream';
+  let terminalOpen=false,terminalSignature='',terminalOrderId=null,decorationScene=null,experienceFeedback=null,recipeCelebration=null,researchReveal=null,deferredResearchDraw=null,dailyLogin=null,checkoutFeedback=null,circlePalette='cream';
   let guide=null,guideReadyForAuto=false;
   try{autoGuests=preferences?.getItem('catnest.restaurant.autoGuests')!=='0';}catch{}
   const $ = selector => container.querySelector(selector);
+  const guestFeedback=createRestaurantGuestFeedback(container);
   const audio=createRestaurantAudioUI({container,preferences});
   function guideNavigate(view){
     dismiss();dismissTerminal();audio.closeSettings();kitchenScene?.endTutorial();
@@ -181,6 +184,13 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
   const staffDebugger=createRestaurantStaffDebugger({
     enabled:()=>isTest&&debugEnabled,availability:()=>({...getAvailability(),pending}),run:testActions?.restaurantStaff,
     beforeChange(command){
+      if(command.mode==='max-level'){
+        // A test fixture is not a series of earned level and recipe upgrades.
+        unlockAnnounced=0;
+        experienceFeedback?.reset();
+        recipeCelebration?.reset();
+        return;
+      }
       if(['unlock','recipes'].includes(command.mode))return;
       autoGuests=false;try{preferences?.setItem('catnest.restaurant.autoGuests','0');}catch{}
       if(command.mode==='stamina')return;
@@ -188,11 +198,11 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       guests?.destroy();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});
     },
     afterChange(command){
-      if(command.mode==='stamina'){signature='';panelSignature='';terminalSignature='';return;}
+      if(['stamina','max-level'].includes(command.mode)){signature='';panelSignature='';terminalSignature='';return;}
       staffPreview=null;trainingWorker='worker-1';pendingKitchenRecipe=null;flowOrderId=null;selectedZone=null;terminalOrderId=null;
       signature='';panelSignature='';terminalSignature='';
       if(command.mode==='guest'){dismiss();kitchenScene?.select(null);}
-      pendingCourseOrders.clear();goldDrops?.reset();
+      pendingCourseOrders.clear();checkoutFeedback?.reset();guestFeedback.reset();
       if(['reset','rest-six'].includes(command.mode)){
         kitchenScene?.endTutorial();kitchenScene?.select(null);
       }
@@ -203,7 +213,14 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     },
     message(text){log(text);toast(text);render();},
   });
-  function tableMarkup(info,availability){return restaurantGuestTables(info,{icon:restaurantIcon,food,blocked:pending||restaurantInputBlocked(availability),replaying:guests?.replaying()||[],pendingCourses:[...pendingCourseOrders,...(availability.pendingRestaurantCollections??[])]});}
+  function tableMarkup(info,availability){
+    return restaurantGuestTables(info, {
+      icon:restaurantIcon, food, blocked:pending||restaurantInputBlocked(availability),
+      replaying:guests?.replaying()||[],
+      pendingCourses:[...pendingCourseOrders,...(availability.pendingRestaurantCollections??[])],
+      pendingAccepts:availability.pendingRestaurantAccepts,
+    });
+  }
   function welcomeGuests(size=null,{manual=false,recipeId=null,keepPanel=false,waiting=false,waitingPartyId=null}={}){
     const availability=getAvailability(),info=restaurantInfo(getState());
     if(pending||restaurantInputBlocked(availability)){if(manual)toast('小馆正在读取，稍后再迎客');return false;}
@@ -323,7 +340,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     const content=$('[data-r-terminal-panel]');
     if(key===terminalSignature){paintKitchenTerminal(content,info,{orderId:terminalOrderId||kitchenScene?.selectedId,blocked:pending||restaurantInputBlocked(getAvailability()),palette:circlePalette});return;}terminalSignature=key;
     const detailsOpen=content.querySelector('.rg-terminal-details')?.open,staffOpen=content.querySelector('.rg-staff-debug')?.open,kitchenOpen=content.querySelector('.rk-terminal-kitchen')?.open,catalogOpen=content.querySelector('.rg-customer-catalog')?.open,guestTestOpen=content.querySelector('.rg-guest-tests')?.open,researchPreviewOpen=content.querySelector('.rr-terminal-preview')?.open,scroll=$('#rg-terminal').scrollTop,focus=document.activeElement;
-    const focused=content.contains(focus)?['data-r-debug-arrive','data-r-debug-auto','data-r-preview-grade','data-r-debug-guest','data-r-debug-reset','data-r-debug-unlock-decor','data-r-debug-unlock-recipes','data-r-debug-unlock-staff','data-r-debug-staff-preset','data-r-debug-staff-unlock','data-r-debug-staff-rehearse','data-r-debug-staff-stamina','data-r-debug-staff-rest-six','data-r-debug-dish','data-r-debug-kitchen-order'].find(name=>focus.hasAttribute(name)):null;
+    const focused=content.contains(focus)?['data-r-debug-arrive','data-r-debug-auto','data-r-preview-grade','data-r-debug-guest','data-r-debug-reset','data-r-debug-max-level','data-r-debug-unlock-decor','data-r-debug-unlock-recipes','data-r-debug-unlock-staff','data-r-debug-staff-preset','data-r-debug-staff-unlock','data-r-debug-staff-rehearse','data-r-debug-staff-stamina','data-r-debug-staff-rest-six','data-r-debug-dish','data-r-debug-kitchen-order'].find(name=>focus.hasAttribute(name)):null;
     const focusedValue=focused&&focus.getAttribute(focused);
     content.innerHTML=restaurantTerminalPanel(info,{auto:autoGuests,logs,icon:restaurantIcon,unlockDecorations:isTest&&typeof testActions?.unlockRestaurantDecorations==='function',staffTesting:isTest&&typeof testActions?.restaurantStaff==='function'});
     if(detailsOpen)content.querySelector('.rg-terminal-details').open=true;
@@ -334,7 +351,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     if(researchPreviewOpen)content.querySelector('.rr-terminal-preview').open=true;
     paintKitchenTerminal(content,info,{orderId:terminalOrderId||kitchenScene?.selectedId,blocked:pending||restaurantInputBlocked(getAvailability()),palette:circlePalette});
     $('#rg-terminal').scrollTop=scroll;
-    if(pending||getAvailability().saving||!getAvailability().connected)for(const button of content.querySelectorAll('[data-r-debug-arrive],[data-r-debug-guest],[data-r-debug-reset],[data-r-debug-unlock-recipes],[data-r-debug-unlock-staff],[data-r-debug-staff-preset],[data-r-debug-staff-unlock],[data-r-debug-staff-rehearse],[data-r-debug-staff-stamina],[data-r-debug-staff-rest-six],[data-r-debug-dish]'))button.disabled=true;
+    if(pending||getAvailability().saving||!getAvailability().connected)for(const button of content.querySelectorAll('[data-r-debug-arrive],[data-r-debug-guest],[data-r-debug-reset],[data-r-debug-max-level],[data-r-debug-unlock-recipes],[data-r-debug-unlock-staff],[data-r-debug-staff-preset],[data-r-debug-staff-unlock],[data-r-debug-staff-rehearse],[data-r-debug-staff-stamina],[data-r-debug-staff-rest-six],[data-r-debug-dish]'))button.disabled=true;
     if(focused)content.querySelector(`[${focused}="${focusedValue}"]`)?.focus({preventScroll:true});
   }
   function dismissTerminal(restoreFocus=false){terminalOpen=false;if(debugEnabled&&mounted){$('#rg-terminal').hidden=true;$('[aria-controls="rg-terminal"]').setAttribute('aria-expanded','false');if(restoreFocus)$('[aria-controls="rg-terminal"]').focus({preventScroll:true});}}
@@ -351,37 +368,40 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     }
     const info=restaurantInfo(state);
     circlePalette=kitchenCirclePalette(info.restaurant.circlePalette).id;
-    if(!mounted){container.innerHTML=restaurantMarkup(state,{isTest,debugEnabled});mounted=true;goldDrops=createRestaurantGoldDrops({stage:$('.r-stage'),layer:$('[data-r-gold-drops]')});dailyLogin=createRestaurantDailyLogin({dialog:$('.rdl-dialog'),entry:$('[data-r-daily-open]'),onAction,onCollect:()=>sound('collect'),onClick:()=>sound('click'),preferences});experienceFeedback=createRestaurantExperience({container:$('[data-r-experience-gain]')});recipeCelebration=createRestaurantRecipeCelebration({dialog:$('.rr-celebration')});researchReveal=createRestaurantResearchReveal({dialog:$('.rr-draw-scene'),onPhaseChange:researchAudio,onDeferred:researchDeferred});audio.paint();kitchenScene=createKitchenScene({container:$('.rk-scene'),getRestaurant:()=>getState().restaurant,palette:circlePalette});kitchenScene.open();decorationScene=createRestaurantDecorationScene({container:$('.r-stage'),onScenePrepare:variant=>preloadPremiumScene(variant,restaurantInfo(getState()).restaurant),onSceneChange:()=>paintPremiumScene(container,restaurantInfo(getState()).restaurant),onComplete:decorationComplete});decorationScene.open();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});street=createRestaurantStreet({container:$('.r-stage')});}
+    if(!mounted){
+      container.innerHTML=restaurantMarkup(state,{isTest,debugEnabled});
+      mounted=true;
+      checkoutFeedback=createRestaurantCheckoutFeedback({
+        layer:$('.r-checkout-flight'),status:$('.r-checkout-status'),
+        fishTarget:$('.r-fish-medallion'),goldTarget:$('.re-wallet>.re-art'),
+      });
+      dailyLogin=createRestaurantDailyLogin({dialog:$('.rdl-dialog'),entry:$('[data-r-daily-open]'),onAction,onCollect:()=>sound('collect'),onClick:()=>sound('click'),preferences});experienceFeedback=createRestaurantExperience({container:$('[data-r-experience-gain]')});recipeCelebration=createRestaurantRecipeCelebration({dialog:$('.rr-celebration')});researchReveal=createRestaurantResearchReveal({dialog:$('.rr-draw-scene'),onPhaseChange:researchAudio,onDeferred:researchDeferred});audio.paint();kitchenScene=createKitchenScene({container:$('.rk-scene'),getRestaurant:()=>getState().restaurant,palette:circlePalette});kitchenScene.open();decorationScene=createRestaurantDecorationScene({container:$('.r-stage'),onScenePrepare:variant=>preloadPremiumScene(variant,restaurantInfo(getState()).restaurant),onSceneChange:()=>paintPremiumScene(container,restaurantInfo(getState()).restaurant),onComplete:decorationComplete});decorationScene.open();guests=createRestaurantGuests({container:$('[data-r-guests]'),onChange:()=>{signature='';}});street=createRestaurantStreet({container:$('.r-stage')});}
     if(!guide)guide=createRestaurantGuide({storage:guidePreferences,assetBase:import.meta.env?.BASE_URL||'./',getContext:()=>{const context=getGuideContext(),availability=getAvailability();return {...context,active:opened&&!container.hidden,ready:(availability.ready??availability.connected)&&context.ready!==false,available:guideReadyForAuto&&context.available!==false};},navigate:guideNavigate,onClose(){arrivalRhythm.reset();}});
     if(availability.savePhase==='error')pendingCourseOrders.clear();
     for(const id of pendingCourseOrders)if(!info.orders.some(order=>order.id===id))pendingCourseOrders.delete(id);
-    goldDrops.sync(info);
-    experienceFeedback.sync(info.progression);
+    const wallet = availability.pendingRestaurantCollections?.length ? getConfirmedState() : state;
+    const hudProgress = wallet === state ? info.progression : restaurantExperienceInfo(wallet.restaurant);
+    experienceFeedback.sync(hudProgress);
     guests.sync(info);guests.start();street.sync(info,{enabled:!panel&&!terminalOpen&&!guide?.isOpen()&&!info.decorationInfo.construction});street.start();kitchenScene.setPalette(circlePalette);kitchenScene.sync(info.restaurant,{blocked:pending||restaurantInputBlocked(availability)});decorationScene.sync(info);paintRestaurantStaffRest(container,info.restaurant);
     if(pendingKitchenRecipe){const order=info.orders.find(order=>order.workflow&&order.recipeId===pendingKitchenRecipe&&!previousKitchenOrders.has(order.id));if(order){terminalOrderId=order.id;if(order.status!=='arriving'){pendingKitchenRecipe=null;kitchenScene.select(order.id);}}}
-    if(lastEarnings!==null&&info.restaurant.stats.earned>lastEarnings){
-      const layer=$('.r-reward-layer');layer.innerHTML=`<div class="r-reward-pop">${restaurantIcon('fish')}<strong>+${info.restaurant.stats.earned-lastEarnings}</strong>${info.research.lastGift?.amount?`<span class="rr-inspiration-award">💡 灵感 +${info.research.lastGift.amount}</span>`:''}</div>`;
-      clearTimeout(rewardTimer);rewardTimer=setTimeout(()=>{if(layer.isConnected)layer.innerHTML='';},2200);
-    }
-    lastEarnings=info.restaurant.stats.earned;
     $('.restaurant').dataset.theme=info.restaurant.theme;paintPremiumScene(container,info.restaurant);
-    $('[data-r-wallet]').textContent=number(state.coins);
+    $('[data-r-wallet]').textContent=number(wallet.coins);
     const researchCount=$('[data-r-research-count]');researchCount.hidden=info.research.availableDraws===0;researchCount.textContent=info.research.availableDraws>99?'99+':String(info.research.availableDraws);$('.rr-research-shortcut').dataset.rResearchReady=String(info.research.availableDraws>0);$('.rr-research-shortcut').setAttribute('aria-label',`进入菜谱研发室，可探索 ${info.research.availableDraws} 次`);
-    $('[data-r-gold]').textContent=number(state.goldFish);
-    $('.r-wallet').classList.toggle('is-large',state.coins>=100000);$('.re-wallet').classList.toggle('is-large',state.goldFish>=100000);
-    $('.re-wallet').setAttribute('aria-label',`金鱼干 ${number(state.goldFish)}，查看获取和用途`);
-    const growthStage=applyRestaurantGrowthStage($('.r-level'),info.level);
+    $('[data-r-gold]').textContent=number(wallet.goldFish);
+    $('.r-wallet').classList.toggle('is-large',wallet.coins>=100000);$('.re-wallet').classList.toggle('is-large',wallet.goldFish>=100000);
+    $('.re-wallet').setAttribute('aria-label',`金鱼干 ${number(wallet.goldFish)}，查看获取和用途`);
+    const growthStage=applyRestaurantGrowthStage($('.r-level'),hudProgress.level);
     $('[data-r-stage-title]').textContent=growthStage.title;
-    $('[data-r-level]').textContent=`Lv.${info.level}`;
-    $('[data-r-level-value]').textContent=`${number(info.progression.levelExperience)} / ${number(info.progression.levelTarget)}`;
+    $('[data-r-level]').textContent=`Lv.${hudProgress.level}`;
+    $('[data-r-level-value]').textContent=`${number(hudProgress.levelExperience)} / ${number(hudProgress.levelTarget)}`;
     const stars=$('.r-level>.rg-stars');
     stars.setAttribute('aria-label',`${growthStage.stars}星${growthStage.title}`);
     stars.querySelector('b').textContent=String(growthStage.stars);
-    $('[data-r-level-bar]').style.width=`${info.progression.progress*100}%`;
+    $('[data-r-level-bar]').style.width=`${hudProgress.progress*100}%`;
     const levelTrack=$('[data-r-level-bar]').parentElement;
-    levelTrack.setAttribute('aria-valuenow',String(Math.round(info.progression.progress*100)));
-    levelTrack.setAttribute('aria-valuetext',`${number(info.progression.levelExperience)} / ${number(info.progression.levelTarget)} 经验`);
-    $('[data-r-tab="progression"].r-level').setAttribute('aria-label',`${growthStage.title} Lv.${info.level}，${growthStage.stars}星，还差 ${number(info.progression.remaining)} 经验升级，查看资源解锁进度`);
+    levelTrack.setAttribute('aria-valuenow',String(Math.round(hudProgress.progress*100)));
+    levelTrack.setAttribute('aria-valuetext',`${number(hudProgress.levelExperience)} / ${number(hudProgress.levelTarget)} 经验`);
+    $('[data-r-tab="progression"].r-level').setAttribute('aria-label',`${growthStage.title} Lv.${hudProgress.level}，${growthStage.stars}星，还差 ${number(hudProgress.remaining)} 经验升级，查看资源解锁进度`);
     paintRestaurantAutoCook($('[data-r-auto-cook]'),info,autoCook.enabled);
     $('[data-r-pet-level]').textContent=`成长 Lv.${levelInfo(state.xp).level}`;
     $('[data-r-save]').textContent=restaurantSaveLabel(availability,isTest);
@@ -391,10 +411,12 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     $('[data-r-hint]').textContent=hint;
     const nextSignature=JSON.stringify([[...pendingCourseOrders],info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,availability,pending]);
     if(nextSignature!==signature){
-      signature=nextSignature;const focus=document.activeElement;const orderId=focus?.dataset.rOrderId,recipeId=focus?.dataset.rRecipe;
-      $('[data-r-tables]').innerHTML=tableMarkup(info,availability);
-      if(orderId)$('[data-r-tables]').querySelector(`[data-r-order-id="${orderId}"]`)?.focus({preventScroll:true});
-      else if(recipeId)$('[data-r-tables]').querySelector(`[data-r-recipe="${recipeId}"]`)?.focus({preventScroll:true});
+      signature=nextSignature;
+      const tables=$('[data-r-tables]'), focus=document.activeElement;
+      const focusedOrder=tables.contains(focus)?focus.closest('[data-r-order]')?.dataset.rOrder:null;
+      tables.innerHTML=tableMarkup(info,availability);
+      guestFeedback.sync(info.orders, availability.pendingRestaurantAccepts);
+      if(focusedOrder)tables.querySelector(`[data-r-order="${focusedOrder}"] > .r-order-bubble:not(:disabled)`)?.focus({preventScroll:true});
     }
     for(const order of info.orders){const countdown=$(`[data-r-countdown="${order.id}"]`),progress=$(`[data-r-progress="${order.id}"]`);if(countdown&&order.status==='cooking')countdown.textContent=`${Math.ceil(order.remainingMs/1000)}秒`;if(progress)progress.style.setProperty('--progress',order.progress);}
     if(unlockAnnounced&&info.level>unlockAnnounced){void audio.play('upgrade');toast(`小馆升级到 Lv.${info.level}，查看成长路线了解新开放的资源！`);}
@@ -432,13 +454,12 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
     const firstCourse=type==='collect'&&info.orders.find(order=>order.id===action.orderId)?.hasNextCourse;
     if(type==='collect')pendingCourseOrders.add(action.orderId);
     const collectOrder=type==='collect'?info.orders.find(order=>order.id===action.orderId):null;
-    if(collectOrder)goldDrops.prepare(collectOrder);
+    if(collectOrder)checkoutFeedback.remember(collectOrder.id,button);
     pending=true;render();
     try {
       const accepted=onAction(action);
-      if(accepted===false){goldDrops.cancel(action.orderId);pendingCourseOrders.delete(action.orderId);if(type==='research-draw')researchReveal.fail();return;}
-      if(collectOrder)goldDrops.play(collectOrder.id);
-      if(type!=='research-draw')sound(restaurantActionSound(type,action.stepId));
+      if(accepted===false){checkoutFeedback.cancel(action.orderId);pendingCourseOrders.delete(action.orderId);if(type==='research-draw')researchReveal.fail();return;}
+      if(!['research-draw','collect'].includes(type))sound(restaurantActionSound(type,action.stepId));
       if(firstCourse)toast('猫猫正在看菜单，想好后就能接第二道餐');
       log(type==='collect'?'提交订单结账':type==='serve'?'提交送餐':`提交${type}操作`);
       if(type==='start'){dismiss();toast('接单成功，主厨开始制作啦');}
@@ -447,10 +468,10 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
       if(type==='kitchen-accept'||type==='kitchen-step'){
         flowOrderId=action.orderId;terminalOrderId=action.orderId;kitchenScene.select(action.orderId);
         if(!fromTerminal){dismiss();dismissTerminal();}
-        if(type==='kitchen-accept')toast(autoCook.enabled?'已记下订单，员工会自动制作并送到桌上':'点冰箱上的食材圈，员工才会去取料');
+        if(type==='kitchen-accept'&&!autoCook.enabled)toast('点冰箱上的食材圈，员工才会去取料');
       }
       if(['train','unlock-special','hire','theme','recipe','palette','premium-decoration'].includes(type))toast(result.text);
-    }catch(error){if(collectOrder)goldDrops.cancel(collectOrder.id);if(type!=='research-draw')throw error;researchReveal.fail('灵感还在路上，请稍后查看手账中的最新记录。');toast('暂时无法完成探索，请稍后再试');}finally{pending=false;render();}
+    }catch(error){if(collectOrder)checkoutFeedback.cancel(collectOrder.id);if(type!=='research-draw')throw error;researchReveal.fail('灵感还在路上，请稍后查看手账中的最新记录。');toast('暂时无法完成探索，请稍后再试');}finally{pending=false;render();}
   }
   container.addEventListener('click',event=>{
     const recipeDialog=$('.r-recipe-dialog');
@@ -540,7 +561,7 @@ export function createRestaurant({container,getState,getAvailability=()=>({conne
   });
   container.addEventListener('cancel',event=>{if(event.target.matches('.r-recipe-dialog')){event.preventDefault();closeRecipeDetails();return;}if(event.target.matches('.rc-customer-dialog')){event.preventDefault();closeCustomerDetails();return;}if(event.target.matches('.rr-celebration,.rr-draw-scene,.rdl-dialog'))return;event.preventDefault();dismiss();},true);
   container.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();if($('.rdl-dialog')?.open){dailyLogin.close();return;}if($('.rr-draw-scene')?.open){researchReveal.close();return;}if($('.rr-celebration')?.open){$('.rr-celebration').close();return;}if($('.r-recipe-dialog')?.open){closeRecipeDetails();return;}if($('.rc-customer-dialog')?.open){closeCustomerDetails();return;}if(terminalOpen)dismissTerminal(true);else if(panel)dismiss();else if($('[data-r-rest-summary]')?.open){$('[data-r-rest-summary]').open=false;$('[data-r-rest-summary]>summary')?.focus({preventScroll:true});}else{close();onBack();}}});
-  function open(){opened=true;audio.setActive(true);container.hidden=false;document.body.classList.add('restaurant-mode');signature='';lastEarnings=null;kitchenScene?.open();decorationScene?.open();arrivalRhythm.reset();street?.reset();render();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)render();},400);if(!$('.rdl-dialog').open)$('[data-r-back]').focus({preventScroll:true});}
-  function close(){goldDrops?.reset();guide?.close();dailyLogin?.reset();audio.closeSettings();audio.setActive(false);researchReveal?.reset();dismiss();dismissTerminal();opened=false;container.hidden=true;document.body.classList.remove('restaurant-mode');clearInterval(timer);timer=null;guests?.stop();street?.stop();arrivalRhythm.reset();kitchenScene?.close();decorationScene?.close();experienceFeedback?.reset();recipeCelebration?.reset();}
-  return {open,close,render,destroy(){close();goldDrops?.destroy();guide?.destroy();dailyLogin?.destroy();audio.destroy();guests?.destroy();street?.destroy();kitchenScene?.destroy();decorationScene?.destroy();experienceFeedback?.destroy();recipeCelebration?.destroy();researchReveal?.destroy();clearTimeout(rewardTimer);container.innerHTML='';}};
+  function open(){opened=true;audio.setActive(true);container.hidden=false;document.body.classList.add('restaurant-mode');signature='';kitchenScene?.open();decorationScene?.open();arrivalRhythm.reset();street?.reset();render();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)render();},400);if(!$('.rdl-dialog').open)$('[data-r-back]').focus({preventScroll:true});}
+  function close(){checkoutFeedback?.reset();guestFeedback.reset();dailyLogin?.reset();guide?.close();audio.closeSettings();audio.setActive(false);researchReveal?.reset();dismiss();dismissTerminal();opened=false;container.hidden=true;document.body.classList.remove('restaurant-mode');clearInterval(timer);timer=null;guests?.stop();street?.stop();arrivalRhythm.reset();kitchenScene?.close();decorationScene?.close();experienceFeedback?.reset();recipeCelebration?.reset();}
+  return {open,close,render,confirmGuestOrder:guestFeedback.confirm,confirmCheckout(orderId,receipt){if(opened&&checkoutFeedback?.confirm(orderId,receipt))sound('collect');},destroy(){close();guestFeedback.destroy();dailyLogin?.destroy();guide?.destroy();audio.destroy();guests?.destroy();street?.destroy();kitchenScene?.destroy();decorationScene?.destroy();experienceFeedback?.destroy();recipeCelebration?.destroy();researchReveal?.destroy();container.innerHTML='';}};
 }

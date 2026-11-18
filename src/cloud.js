@@ -217,6 +217,10 @@ export function createCloudRoom(options) {
     const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
     const preview = previews.get(event?.operationId || acknowledgement?.operationId);
     const previousXp = authoritativeState?.xp;
+    const claimsGrowth = growthClaimIds(event?.action).length > 0;
+    // Only an adjacent committed revision can isolate this claim's exact gain.
+    const confirmedGrowth = claimsGrowth && !data.duplicate && data.revision === revision + 1 && Number.isFinite(previousXp)
+      ? Math.round((incomingState.xp - previousXp) * 10) / 10 : null;
     const ownItem=acknowledgement||queue.find(item=>item.operationId===event?.operationId);
     if(ownItem&&preview)rememberRestaurantTimeline(ownItem,preview,data);
     if (event) previews.delete(event.operationId);
@@ -229,7 +233,7 @@ export function createCloudRoom(options) {
     if (changed || preview) publishState();
     if (event && !seen.has(event.operationId)) {
       seen.add(event.operationId); if (seen.size > 200) seen.delete(seen.values().next().value);
-      onAction(event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp });
+      onAction(event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp, confirmedGrowth, restaurantCheckout:event.restaurantCheckout });
     }
     if(event)liveReceipts.get(event.operationId)?.(data);
     // A late durable receipt also releases a queue waiting for its retry timer.

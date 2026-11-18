@@ -51,8 +51,11 @@ test('rolling back a food flight prevents its delayed arrival particles', async 
 test('collect arrival pulses its target, while cancelled collection never does', async () => {
   for(const cancel of [false,true]){
     const f=fixture(),target=f.element('div');
-    f.feedback.collect({origin:{left:0,top:0,width:30,height:30},target,operationId:'claim'});
+    f.feedback.collect({origin:{left:0,top:0,width:30,height:30},target,operationId:'claim',amount:38.5});
     if(cancel)f.feedback.rollback('claim');
+    await f.advance(800);
+    const delta=f.layer.children.find(node=>node.className==='nest-motion-growth-delta');
+    assert.equal(delta?.textContent,cancel?undefined:'+38.5 成长');
     await f.advance(2000);
     assert.equal(f.motions.some(motion=>motion.element===target),!cancel);
     assert.equal(f.layer.childElementCount,0);assert.equal(f.timers.size,0);f.feedback.destroy();

@@ -3,21 +3,12 @@ import { publicGameHub } from '../src/minigames.js';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { demoLocalStorage } from './storage.js';
 import { TOUCH_GAMES, TOUCH_DURATION, touchComputerEvents } from '../src/minigames-touch-rules.js';
-import { RESTAURANT_THEMES } from '../src/restaurant.js';
-import { PREMIUM_RESTAURANT_THEMES } from '../src/restaurant-economy.js';
-import { RESTAURANT_DECORATIONS } from '../src/restaurant-decor.js';
-import { KITCHEN_CIRCLE_PALETTES } from '../src/restaurant-circle-palettes.js';
-import { restaurantStaffDebugResult } from './restaurant-staff.js';
+import { restaurantStaffDebugResult, unlockRestaurantDecorations } from './restaurant-staff.js';
+import { restaurantCheckoutReceipt } from '../src/restaurant-checkout-receipt.js';
 
 export const DEMO_ROOM = 'dddddddddddddddddddddddddddd5174';
 const clone = value => structuredClone(value);
 export const DEMO_ACTORS = Object.fromEntries(COUPLE_ROLES.map(role => [role.id, { id:role.clientId, name:role.name }]));
-function unlockRestaurantDecorations(state) {
-  state.restaurant.ownedCirclePalettes=KITCHEN_CIRCLE_PALETTES.map(palette=>palette.id);
-  state.restaurant.ownedDecorations=[...new Set([...(state.restaurant.ownedDecorations??[]),...RESTAURANT_DECORATIONS.map(suite=>suite.id)])];
-  state.restaurant.ownedThemes=[...new Set([...state.restaurant.ownedThemes,...RESTAURANT_THEMES.map(theme=>theme.id),...PREMIUM_RESTAURANT_THEMES.map(theme=>theme.id),...RESTAURANT_DECORATIONS.map(suite=>suite.theme)])];
-  return state;
-}
 
 export function demoSeed(now = Date.now()) {
   let state = { ...initialState(now-13*86_400_000), name:'糯米', xp:400, love:320, hunger:90, mood:94, energy:96, needsUpdatedAt:now, updatedAt:now, appearance:{body:4,clothes:1,eyes:0,wand:0} };
@@ -54,8 +45,9 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
     if (record.receipts.includes(item.operationId)) return {status:200,data:snapshot()};
     const state = reduceAction(record.state,item.action,actor,now(),item.operationId);
     if (!state) return {status:409,error:'这次操作不满足条件，已恢复原来的状态'};
+    const checkout = restaurantCheckoutReceipt(item.action, record.state, state);
     record.state=state; record.revision++; record.receipts.push(item.operationId); record.receipts=record.receipts.slice(-500);
-    const event={operationId:item.operationId,action:item.action,actor}; persist(event);
+    const event={operationId:item.operationId,action:item.action,actor,...(checkout ? {restaurantCheckout:checkout} : {})}; persist(event);
     return {status:200,data:snapshot(event)};
   }
   storage.setItem(key,JSON.stringify(record));
@@ -68,7 +60,7 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
     sync() { try { const saved=JSON.parse(storage.getItem(key)); if (saved?.revision > record.revision) { record=saved; notify('state',snapshot()); } } catch {} },
     reset() { record={version:1,revision:record.revision+1,state:demoSeed(now()),receipts:[],court:null}; persist(); },
     debugRestaurantStaff(command) {
-      if(controls.offline)return {ok:false,message:'测试网络已断开，恢复后再切换员工。'};
+      if(controls.offline)return {ok:false,message:'测试网络已断开，恢复后再试。'};
       const result=restaurantStaffDebugResult(record.state,command,now());
       if(!result.ok)return result;
       replace(result.state);
