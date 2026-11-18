@@ -2,7 +2,7 @@
   --game-paper: url('/assets/game-ui/paw-paper.webp');
 }
 
-body:not(.restaurant-mode) #modal,
+body:not(.restaurant-mode) #modal:not(.feeding-sheet),
 .restaurant .r-sheet,
 .restaurant .rc-customer-dialog,
 .restaurant .r-recipe-dialog {

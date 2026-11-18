@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { initialState, reduceAction, FEEDING_WINDOW_MS, foodCooldownMs } from '../src/state.js';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { feedingHome, feedingSheet, feedingButtonContent } from '../src/feeding-ui.js';
@@ -18,6 +19,17 @@ function homeSlot(html, role) {
   const end = html.indexOf('data-feeder=', start + 1);
   return html.slice(start, end < 0 ? html.length : end);
 }
+
+test('ordinary home dialogs use the paper texture while the feeding sheet owns its background', async () => {
+  const css = await readFile(new URL('../src/game-ui-finish.css', import.meta.url), 'utf8');
+  const paperSelectors = [...css.matchAll(/([^{}]+)\{[^{}]*var\(--game-paper\)[^{}]*\}/g)]
+    .flatMap(rule => rule[1].split(',').map(selector => selector.trim()));
+  const homeDialogs = paperSelectors.filter(selector => selector.includes('#modal'));
+  assert.ok(homeDialogs.length > 0, 'the shared paper finish still applies to home dialogs');
+  for (const selector of homeDialogs) {
+    assert.match(selector, /#modal:not\(\.feeding-sheet\)/, 'the shared paper finish must exclude feeding');
+  }
+});
 
 test('the home empty plate never shows a selected menu food as a served meal', () => {
   const html = feedingHome({ ...options(initialState(now)), selectedFood:'salmon' });
