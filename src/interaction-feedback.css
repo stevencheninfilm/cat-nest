@@ -8,6 +8,21 @@
 .nest-motion-food .food-sprite{position:static!important;display:block!important;width:74px!important;height:64px!important;min-height:0!important;transform:none!important;margin:0!important}
 .nest-motion-reward{width:38px;height:38px;color:#ed9bac;font-size:32px;line-height:1;filter:drop-shadow(0 2px 5px #ffd78977)}
 .nest-motion-reward img{display:block;width:100%;height:100%;object-fit:contain}
+.nest-motion-growth-delta {
+  display: block;
+  padding: 5px 10px;
+  margin-top: -5px;
+  border: 1px solid #fff7dd;
+  border-radius: 12px;
+  background: #fbebc9;
+  box-shadow: 0 2px 8px #63442835;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: #633e29;
+  white-space: nowrap;
+}
 .nest-motion-sleep{font-size:27px;color:#e2d1ab;text-shadow:0 0 8px #fff4c5}
 button.has-motion-press{will-change:scale}
 button.has-motion-press:active{transform:none}
@@ -17,3 +32,7 @@ button.has-motion-press:active{transform:none}
 .nest .pet-card .need-button:has(>.need-delta.is-negative:not([hidden])){background:#edddc333}
 .need-dot,.needs-boost{transition:background-color 240ms ease,box-shadow 240ms ease,opacity 240ms ease}
 @media(prefers-reduced-motion:reduce){.nest-motion-layer{display:none}.has-motion-press{will-change:auto}.pantry-item,.feeding-tabs button,.food-categories button,.court-result-tabs button,.appearance-choice,.setting-row,.nest .pet-card .need-button,.need-dot,.needs-boost{transition:none}}
+@media (prefers-reduced-motion: reduce) {
+  .nest .progress-track > #xp-bar, .nest .growth-orb, .toast { transition: none; }
+  .nest :is(.currency, .side-actions button, .growth-bubble, .feed-button):active { transform: none; }
+}

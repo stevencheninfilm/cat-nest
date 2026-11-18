@@ -6,6 +6,7 @@ import { resolve, dirname } from 'node:path';
 import { createPetHandler } from '../server/pet-server.mjs';
 import { sanitizeAction, sanitizeActor, publicRoom, StorageError } from '../server/github-store.mjs';
 import { initialState, normalizeState, reduceAction, careActionInfo } from '../src/state.js';
+import { restaurantCheckoutReceipt } from '../src/restaurant-checkout-receipt.js';
 import { localGameReceipt } from '../src/minigames-local-rules.js';
 import { publicGameEvent, validGameHub } from '../src/minigames.js';
 
@@ -81,7 +82,8 @@ export function createLocalPreviewStore({ file, legacyFile, now=Date.now, homeId
         const next=reduceAction(room.state,action,actor,at,operationId);
         if (!next) throw new StorageError('ACTION_REJECTED','对局或小窝已更新，请按最新状态操作。',409);
         if (action.type==='claim-growth') room.claimedGrowth.push(room.state.pendingGrowth.find(r=>r.id===action.rewardId));
-        const event={operationId,action:journalAction,actor};
+        const checkout = restaurantCheckoutReceipt(action, room.state, next);
+        const event={operationId,action:journalAction,actor,...(checkout ? {restaurantCheckout:checkout} : {})};
         room.state=normalizeState(next,at); room.revision++; room.updatedAt=at;
         room.operations=[...room.operations,{id:operationId,event}].slice(-100);
         await persist(room);

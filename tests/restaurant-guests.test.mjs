@@ -135,3 +135,67 @@ test('order bubbles appear after seating, and the terminal exposes deterministic
   assert.ok(restaurantMarkup(state,{isTest:true,debugEnabled:true}).includes('打开餐厅控制终端'));
   assert.ok(!restaurantMarkup(state,{debugEnabled:false}).includes('打开餐厅控制终端'));
 });
+
+test('busy tables keep every full order bubble and preserve delivery and collection controls',()=>{
+  const state=arrive(arrive(),2,NOW+1);
+  const info=restaurantInfo(state,NOW+RESTAURANT_ARRIVAL_MS+1);
+  const buttonRows=markup=>Array.from(markup.matchAll(/<div class="r-table-guest rg-order-seat[^]*?<\/button><\/div>/g),row=>row[0]);
+  const render=options=>buttonRows(restaurantGuestTables(info,{icon:()=>'',food:id=>`<i>${id}</i>`,...options}));
+  const requested=render();
+  assert.equal(requested.length,4);
+  for (const row of requested) {
+    assert.match(row,/data-r-action="kitchen-accept"/);
+    assert.match(row,/<strong>想吃这份<\/strong>/);
+    assert.match(row,/点击记下点餐需求/);
+  }
+  const first=info.parties[1].members[0].order;
+  const next=info.parties[1].members[1].order;
+  first.status='dish-ready';
+  next.status='collectible';next.rewardInspiration=7;
+  const mixed=render();
+  assert.equal(mixed.length,4);
+  assert.match(mixed[0],/<strong>想吃这份<\/strong>/);
+  assert.match(mixed[1],/<strong>想吃这份<\/strong>/);
+  assert.match(mixed[2],/data-r-action="kitchen-step"[^>]*data-r-step="delivery"/);
+  assert.match(mixed[3],/data-r-action="collect"[^>]*收取/);
+  assert.doesNotMatch(mixed[3],/灵感/,'inspiration appears only on the actual checkout receipt');
+  const pending=render({pendingCourses:[next.id]});
+  assert.match(pending[3],/disabled[^>]*aria-busy="true"/);
+});
+
+test('an admitted local acceptance updates its bubble immediately and a rollback restores the accept button',()=>{
+  const original=arrive(),seatedAt=NOW+RESTAURANT_ARRIVAL_MS;
+  const before=restaurantInfo(original,seatedAt);
+  const order=before.orders.find(item=>item.status==='requested');
+  assert.ok(order);
+  const action={type:'restaurant-kitchen-accept',orderId:order.id};
+  const queued=act(original,action,seatedAt);
+  assert.ok(queued);
+  const after=restaurantInfo(queued,seatedAt);
+  const render=(info,pendingAccepts=[])=>restaurantGuestTables(info,{icon:()=>'',food:id=>`<i>${id}</i>`,pendingAccepts});
+
+  // The action lives in the local queue even when there is no server receipt.
+  const pending=render(after,[order.id]);
+  assert.match(pending,/is-accept-pending/);
+  assert.match(pending,/本机已接单，待同步/);
+  assert.match(pending,/<strong>已接单<\/strong><span class="rg-accept-sync-note">待同步<\/span>/);
+  assert.match(pending,new RegExp(`data-r-kitchen-select="${order.id}"`));
+  assert.doesNotMatch(pending,new RegExp(`data-r-action="kitchen-accept" data-r-order-id="${order.id}"`));
+
+  const cooking=act(queued,{type:'restaurant-kitchen-step',orderId:order.id,stepId:KITCHEN_FLOWS[order.recipeId][0].id},seatedAt);
+  assert.ok(cooking);
+  const active=render(restaurantInfo(cooking,seatedAt),[order.id]);
+  assert.match(active,/本机已接单，待同步，厨师制作中/);
+  assert.match(active,/<strong>已接单<\/strong>/);
+
+  // The brief queue/state repaint race must not allow a duplicate click.
+  const beforeProjection=render(before,[order.id]);
+  assert.doesNotMatch(beforeProjection,new RegExp(`data-r-action="kitchen-accept" data-r-order-id="${order.id}"`));
+
+  const confirmed=render(after);
+  assert.doesNotMatch(confirmed,/待同步/);
+  assert.match(confirmed,/等待厨师继续制作/);
+  const rejected=render(before);
+  assert.doesNotMatch(rejected,/已接单|待同步/);
+  assert.match(rejected,new RegExp(`data-r-action="kitchen-accept" data-r-order-id="${order.id}"`));
+});

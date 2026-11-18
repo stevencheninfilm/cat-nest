@@ -1,5 +1,11 @@
 import { RESTAURANT_STAFF } from './restaurant.js';
 
+export function restaurantMaxLevelTerminal(info,{enabled=false}={}) {
+  if(!enabled)return '';
+  const title=`满级测试 · Lv.${info.progression.lastUnlockLevel}`;
+  return `<button class="rd-terminal-unlock rg-terminal-max-level" data-r-debug-max-level aria-label="${title}" aria-describedby="rg-debug-max-level-note"><strong>${title}</strong><small id="rg-debug-max-level-note">设施与员工满级 · 菜谱 SSS · 全部装扮</small></button>`;
+}
+
 export function restaurantStaffTerminal(info,{enabled=false}={}) {
   if(!enabled)return '';
   const count=info.restaurant.staff;
@@ -7,6 +13,7 @@ export function restaurantStaffTerminal(info,{enabled=false}={}) {
 }
 
 export function restaurantStaffDebugCommand(button) {
+  if(button.hasAttribute('data-r-debug-max-level'))return {mode:'max-level'};
   if(button.hasAttribute('data-r-debug-unlock-staff'))return {mode:'unlock',staffId:RESTAURANT_STAFF.at(-1).id};
   if(button.hasAttribute('data-r-debug-unlock-recipes'))return {mode:'recipes'};
   if(button.hasAttribute('data-r-debug-guest'))return {mode:'guest',guestId:button.dataset.rDebugGuest};

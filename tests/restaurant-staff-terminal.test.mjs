@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
 import { RESTAURANT_STAFF, RESTAURANT_RECIPES, restaurantInfo, validRestaurant, sanitizeRestaurantAction, RESTAURANT_DINING_MS } from '../src/restaurant.js';
 import { SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
+import { restaurantLevelStartXp } from '../src/growth-levels.js';
 import { kitchenInfo } from '../src/restaurant-kitchen.js';
 import { isInteractiveWorkflow } from '../src/restaurant-kitchen-interactive.js';
 import { restaurantStaffDebugResult } from '../demo/restaurant-staff.js';
@@ -17,6 +18,59 @@ import { sanitizeAction } from '../server/github-store.mjs';
 const NOW=Date.parse('2026-10-18T12:00:00Z'),actor={id:'staff-terminal-client',name:'店长'};
 const setup=(state,command,now=NOW)=>{const result=restaurantStaffDebugResult(state,command,now);assert.equal(result.ok,true,result.message);return result.state;};
 const button=(name,value='')=>({hasAttribute:key=>key===name,dataset:{rDebugStaffUnlock:value,rDebugStaffPreset:value}});
+
+test('max-level testing unlocks the complete restaurant catalog while keeping the meal in progress and original save intact',()=>{
+  const intent=(type,fields)=>({type,orderId:'table-1',...fields});
+  const seatedAt=NOW+6000;
+  const arriving=reduceAction(initialState(NOW),{type:'restaurant-arrive',partySize:1,recipeId:'rice'},actor,NOW);
+  const accepted=reduceAction(arriving,intent('restaurant-kitchen-accept'),actor,seatedAt);
+  const cooking=reduceAction(accepted,intent('restaurant-kitchen-step',{stepId:'gather'}),actor,seatedAt);
+  const input=structuredClone(cooking);
+  const maxed=setup(cooking,{mode:'max-level'},seatedAt),info=restaurantInfo(maxed,seatedAt);
+  assert.equal(info.level,50);
+  assert.equal(info.capacity,8);
+  assert.ok(info.progression.catalog.every(resource=>resource.owned));
+  assert.ok(info.recipes.every(recipe=>recipe.unlocked&&recipe.level===5));
+  assert.equal(info.restaurant.staff,RESTAURANT_STAFF.length);
+  assert.ok(Object.values(info.restaurant.levels).every(level=>level===10));
+  assert.ok(Object.values(info.restaurant.staffTraining).every(record=>Object.values(record.levels).every(level=>level===10)));
+  assert.deepEqual(maxed.restaurant.orders,input.restaurant.orders);
+  assert.deepEqual(maxed.restaurant.parties,input.restaurant.parties);
+  assert.deepEqual(maxed.restaurant.research,input.restaurant.research);
+  assert.equal(maxed.restaurant.theme,input.restaurant.theme);
+  assert.equal(maxed.restaurant.circlePalette,input.restaurant.circlePalette);
+  for(const key of Object.keys(input).filter(key=>!['restaurant','updatedAt'].includes(key)))assert.deepEqual(maxed[key],input[key],key);
+  assert.deepEqual(cooking,input);
+  assert.equal(validRestaurant(maxed.restaurant),true);
+  maxed.restaurant.stats.experience=restaurantLevelStartXp(52);
+  assert.equal(restaurantInfo(setup(maxed,{mode:'max-level'},seatedAt),seatedAt).level,52,'the preset never lowers the restaurant level');
+});
+
+test('only the temporary test terminal can run the max-level fixture and a reset restores normal unlocks',()=>{
+  const engine=createDemoEngine({storage:createMemoryStorage(),now:()=>NOW});
+  const initial=engine.snapshot().state,info=restaurantInfo(initial,NOW);
+  const names={icon:()=>''};
+  assert.doesNotMatch(restaurantTerminalPanel(info,names),/data-r-debug-max-level/);
+  assert.match(restaurantTerminalPanel(info,{...names,staffTesting:true}),/data-r-debug-max-level[^>]*满级测试 · Lv\.50/);
+  let enabled=false,status={connected:true,saving:false},calls=0;
+  const controller=createRestaurantStaffDebugger({
+    enabled:()=>enabled,availability:()=>status,run:command=>{calls++;return engine.debugRestaurantStaff(command);},
+  });
+  const maxButton=button('data-r-debug-max-level');
+  assert.equal(controller.handle(maxButton),true);
+  enabled=true;status.saving=true;
+  controller.handle(maxButton);
+  assert.equal(calls,0);
+  status.saving=false;
+  controller.handle(maxButton);
+  assert.equal(calls,1);
+  assert.equal(restaurantInfo(engine.snapshot().state,NOW).level,50);
+  assert.equal(sanitizeAction({type:'restaurant-debug-max-level'}),null);
+  assert.equal(engine.debugRestaurantStaff({mode:'max-level',coins:999999}).ok,false);
+  engine.reset();
+  assert.equal(restaurantInfo(engine.snapshot().state,NOW).level,info.level);
+});
+
 test('unlock-all recipes is an isolated permission fixture that preserves current work, quality and wallets',()=>{
   const state=reduceAction(initialState(NOW),{type:'restaurant-start',recipeId:'rice'},actor,NOW);
   state.restaurant.recipeLevels.coffee=3;

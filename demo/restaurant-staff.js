@@ -1,12 +1,68 @@
 import { restaurantGuestDebugResult } from './restaurant-guests.js';
 import { restaurantResearchDebugResult } from './restaurant-research.js';
-import { RESTAURANT_STAFF, RESTAURANT_RECIPES, normalizeRestaurant, validRestaurant, restaurantActionResult } from '../src/restaurant.js';
-import { SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
-import { staffAbilitySnapshot, normalizeStaffTraining, staffMaxEnergy, createStaffExhaustionTestPreset, STAFF_REST_ROOM_ENTRANCE, STAFF_REST_ROOM_POSITION, STAFF_ENERGY_RECOVERY_MS } from '../src/restaurant-staff-training.js';
+import { RESTAURANT_STAFF, RESTAURANT_RECIPES, RESTAURANT_THEMES, RESTAURANT_UPGRADES, normalizeRestaurant, validRestaurant, restaurantActionResult, restaurantInfo } from '../src/restaurant.js';
+import { PREMIUM_RESTAURANT_THEMES, SPECIAL_RESTAURANT_RECIPES } from '../src/restaurant-economy.js';
+import { RESTAURANT_DECORATIONS } from '../src/restaurant-decor.js';
+import { KITCHEN_CIRCLE_PALETTES } from '../src/restaurant-circle-palettes.js';
+import { restaurantLevelStartXp } from '../src/growth-levels.js';
+import { RESTAURANT_DISH_GRADES } from '../src/restaurant-research.js';
+import {
+  staffAbilitySnapshot, normalizeStaffTraining, staffMaxEnergy, workerAbilitySnapshot, createStaffExhaustionTestPreset,
+  STAFF_REST_ROOM_ENTRANCE, STAFF_REST_ROOM_POSITION, STAFF_ENERGY_RECOVERY_MS, STAFF_TRAINING_MAX_LEVEL, STAFF_TRAINING_STATS,
+} from '../src/restaurant-staff-training.js';
 import { RESTAURANT_ARRIVAL_MS } from '../src/restaurant-guests.js';
 
 const exact=(value,keys)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
 const reject=message=>({ok:false,message});
+
+export function unlockRestaurantDecorations(state) {
+  const restaurant=state.restaurant;
+  restaurant.ownedCirclePalettes=KITCHEN_CIRCLE_PALETTES.map(palette=>palette.id);
+  restaurant.ownedDecorations=RESTAURANT_DECORATIONS.map(suite=>suite.id);
+  restaurant.ownedThemes=[...new Set([
+    ...restaurant.ownedThemes,
+    ...RESTAURANT_THEMES.map(theme=>theme.id),
+    ...PREMIUM_RESTAURANT_THEMES.map(theme=>theme.id),
+    ...RESTAURANT_DECORATIONS.map(suite=>suite.theme),
+  ])];
+  return state;
+}
+
+function maxLevelFixture(state,now) {
+  const restaurant=state.restaurant;
+  const target=restaurantInfo(state,now).progression.lastUnlockLevel;
+  const requiredXp=restaurantLevelStartXp(target)-restaurant.progression.experienceOffset;
+  restaurant.stats.experience=Math.max(restaurant.stats.experience,Math.round(requiredXp*10)/10);
+  restaurant.levels=Object.fromEntries(RESTAURANT_UPGRADES.map(facility=>[facility.id,facility.maxLevel]));
+  restaurant.ownedSpecialRecipes=SPECIAL_RESTAURANT_RECIPES.map(recipe=>recipe.id);
+  restaurant.recipeLevels=Object.fromEntries([...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES].map(recipe=>[recipe.id,RESTAURANT_DISH_GRADES.length]));
+
+  restaurant.staff=RESTAURANT_STAFF.length;
+  const training=normalizeStaffTraining(restaurant.staffTraining,now,restaurant.staff);
+  for(const [id,record] of Object.entries(training)){
+    // As with regular training, keep booked work and account for recovered
+    // energy before raising capacity. Existing order and rest routes keep their snapshots.
+    const ability=workerAbilitySnapshot(id,training,now);
+    if(now>=record.energyAt){
+      record.energy=ability.energy;
+      record.energyAt=now;
+    }
+    record.levels=Object.fromEntries(STAFF_TRAINING_STATS.map(stat=>[stat.id,STAFF_TRAINING_MAX_LEVEL]));
+    if(record.rest){
+      const maxEnergy=staffMaxEnergy(record.levels,ability.energyBase,ability.abilityVersion);
+      record.rest.fullAt=record.energyAt+Math.ceil((maxEnergy-record.energy)*STAFF_ENERGY_RECOVERY_MS);
+    }
+  }
+  restaurant.staffTraining=training;
+  unlockRestaurantDecorations(state);
+  restaurant.revision++;
+  state.updatedAt=now;
+  if(!validRestaurant(restaurant))return reject('满级测试状态未通过检查，请刷新后再试。');
+  return {
+    ok:true,state,workers:restaurant.staff+1,
+    message:`满级测试已开启 · 小馆解锁至 Lv.${target}，设施与员工能力满级，全部菜谱升至 SSS，装扮已解锁。仅影响本次测试存档。`,
+  };
+}
 
 /** Isolated test fixtures. This is deliberately outside the shared action
  * reducer: no debug intent or free recruitment is accepted by the real server. */
@@ -20,11 +76,13 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
   const stamina=exact(command,['mode'])&&command.mode==='stamina';
   const restSix=exact(command,['mode'])&&command.mode==='rest-six';
   const recipes=exact(command,['mode'])&&command.mode==='recipes';
-  if(!unlock&&!preset&&!rehearse&&!reset&&!stamina&&!restSix&&!recipes)return reject('这项餐厅测试操作无效。');
+  const maxLevel=exact(command,['mode'])&&command.mode==='max-level';
+  if(!unlock&&!preset&&!rehearse&&!reset&&!stamina&&!restSix&&!recipes&&!maxLevel)return reject('这项餐厅测试操作无效。');
   if(!Number.isSafeInteger(now)||now<0||!validRestaurant(state?.restaurant)||now<state.restaurant.openedAt)return reject('测试小馆尚未准备好。');
   const next=structuredClone(state),restaurant=normalizeRestaurant(state.restaurant,now);
   if(restaurant.revision>=Number.MAX_SAFE_INTEGER-8)return reject('请刷新测试小馆后再试。');
   next.restaurant=restaurant;restaurant.lastInteractionAt=Math.max(restaurant.lastInteractionAt,now);
+  if(maxLevel)return maxLevelFixture(next,now);
   if(reset){
     // Cancelling demo assignments releases them now, without granting energy
     // for the time they were previously waiting on an unfinished order.

@@ -4,6 +4,7 @@ import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGitHubStore, sanitizeAction } from '../server/github-store.mjs';
+import { } from '../src/state.js';
 import { restaurantLevelStartXp as levelStartXp } from '../src/growth-levels.js';
 import { RESTAURANT_DINING_MS, RESTAURANT_NEW_RECIPE_IDS, validRestaurant, restaurantInfo } from '../src/restaurant.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
@@ -77,7 +78,14 @@ test('two cloud clients cannot duplicate a first-course transition or the final 
   const requests=[payload('restaurant-collect',{orderId:start.id},'gold-course-one-a'),payload('restaurant-collect',{orderId:start.id},'gold-course-one-b','client-two')];
   const outcomes=await Promise.allSettled(requests.map((request,index)=>(index?second:first).applyAction(room.roomId,request)));
   assert.equal(outcomes.filter(item=>item.status==='fulfilled').length,1);
-  const winner=outcomes.findIndex(item=>item.status==='fulfilled');assert.equal((await first.applyAction(room.roomId,requests[winner])).duplicate,true);
+  const winner=outcomes.findIndex(item=>item.status==='fulfilled');
+  const firstReceipt=outcomes[winner].value;
+  const replay=await first.applyAction(room.roomId,requests[winner]);
+  assert.equal(replay.duplicate,true);
+  assert.deepEqual(replay.event.restaurantCheckout,firstReceipt.event.restaurantCheckout);
+  assert.deepEqual(firstReceipt.event.restaurantCheckout,{
+    coins:firstReceipt.state.coins-prepared.state.coins,goldFish:0,inspiration:firstGift,
+  });
   const half=await makeStore(mock,()=>clock).getRoom(room.roomId),member=half.state.restaurant.parties[0].members[0];
   assert.equal(half.state.restaurant.nextOrderId,3);assert.equal(member.service.round,2);assert.equal(member.service.history.length,1);
   assert.equal(half.state.restaurant.research.inspirationEarned,seeded.state.restaurant.research.inspirationEarned+firstGift);
@@ -89,6 +97,10 @@ test('two cloud clients cannot duplicate a first-course transition or the final 
   const finalRequests=[payload('restaurant-collect',{orderId:next.id},'gold-course-two-a'),payload('restaurant-collect',{orderId:next.id},'gold-course-two-b','client-two')];
   const finalOutcomes=await Promise.allSettled(finalRequests.map((request,index)=>(index?second:first).applyAction(room.roomId,request)));
   assert.equal(finalOutcomes.filter(item=>item.status==='fulfilled').length,1);
+  const finalReceipt=finalOutcomes.find(item=>item.status==='fulfilled').value;
+  assert.deepEqual(finalReceipt.event.restaurantCheckout,{
+    coins:finalReceipt.state.coins-beforeFinal.state.coins,goldFish:2,inspiration:finalGift,
+  });
   const done=await makeStore(mock,()=>clock).getRoom(room.roomId);
   assert.equal(done.state.restaurant.orders.length,0);assert.equal(done.state.restaurant.parties.length,0);assert.equal(done.state.restaurant.stats.served,2);
   assert.equal(done.state.restaurant.research.inspirationEarned,half.state.restaurant.research.inspirationEarned+finalGift);

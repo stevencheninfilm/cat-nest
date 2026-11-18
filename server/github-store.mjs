@@ -1,4 +1,5 @@
 import { sanitizeRestaurantGrowthClaim, isRestaurantGrowth } from '../src/restaurant-income-growth.js';
+import { restaurantCheckoutReceipt } from '../src/restaurant-checkout-receipt.js';
 import { validHomeBond } from '../src/home-bond.js';
 import { legacyRestaurantGuestConditions } from '../src/restaurant-guest-conditions-legacy.js';
 import { randomBytes } from 'node:crypto';
@@ -314,7 +315,8 @@ export function createGitHubStore({
             if (!reduced && ['claim-growth','claim-restaurant-growth'].includes(action.type)) throw new StorageError('GROWTH_REWARD_UNAVAILABLE', '暂时无法领取这颗成长气泡，请稍后重试。', 409);
             if (!reduced && action.type === 'invite-cat') throw new StorageError('CAT_SCENE_UNAVAILABLE', '这个庭院尚未开放，或这位猫友会在其他庭院相遇。', 409);
             if (!reduced) throw new StorageError('ACTION_REJECTED', '当前金币或精力不足，暂时无法完成这项互动。', 409);
-            const event = { operationId, action:journalAction, actor };
+            const checkout = restaurantCheckoutReceipt(action, room.state, reduced);
+            const event = { operationId, action:journalAction, actor, ...(checkout ? {restaurantCheckout:checkout} : {}) };
             const claimIds = new Set(action.type === 'claim-growth' ? [action.rewardId] : action.type === 'claim-restaurant-growth' ? action.rewardIds : []);
             const claimedGrowth = claimIds.size ? [...room.claimedGrowth, ...room.state.pendingGrowth.filter(reward => claimIds.has(reward.id)).map(copy)] : room.claimedGrowth;
             const savedState=safeState(reduced,actionAt);

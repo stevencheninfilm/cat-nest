@@ -73,6 +73,10 @@ test('restaurant receipts keep one upper-left icon while its total grows and car
   const f=fixture(),income=(index,amount)=>({id:`income-reward-${index}`,kind:'restaurant-collect',amount,actor:'男方'}),rewards=[income(0,8.1),reward(0),reward(1)];
   f.view.render(rewards);assert.equal(f.button(0).id,'restaurant-income-total');assert.match(f.button(0).markup,/\+8.1/);const care=f.button(1);
   f.view.render([...rewards,income(1,9.2)]);assert.match(f.button(0).markup,/\+17.3/);assert.equal(f.button(1),care);assert.equal(f.more.hidden,true);
+  const grouped=f.button(0);
+  f.view.render([...rewards,income(1,9.2)],{pendingRewardIds:new Set(['income-reward-0','income-reward-1'])});
+  assert.equal(f.button(0),grouped);
+  assert.equal(grouped.disabled,true);assert.equal(f.label(0).textContent,'领取中…');
   f.view.render(rewards.filter(r=>r.kind!=='restaurant-collect'));assert.equal(f.button(1),care);assert.notEqual(f.button(0)?.id,'restaurant-income-total');
 });
 
