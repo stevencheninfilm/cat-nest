@@ -18,7 +18,7 @@
   padding: 8px var(--sheet-padding) max(10px, env(safe-area-inset-bottom));
   overflow: visible; border: 1px solid #e8f4ff40; border-bottom: 0;
   border-radius: 26px 26px 0 0; color: #fff;
-  background: radial-gradient(ellipse at 100% 0, #b0d6d455, transparent 55%), linear-gradient(150deg, #8aaaca, #778db3 48%, #606f96);
+  background: #30445f radial-gradient(ellipse at top right, #415875, transparent 70%);
   box-shadow: 0 -8px 32px #43516a25;
 }
 .feeding-sheet::backdrop { background: #46354a18; backdrop-filter: none; }
@@ -77,9 +77,10 @@
 .pantry-item.selected .pantry-selected { display: block; }
 .feeding-footer { margin-top: 7px; flex-shrink: 0; }
 .feeding-care-status { margin: 0 0 5px; color: #fff0cd; font-size: 10px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; }
-.serve-food { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 42px; padding: 7px 10px; border: 1px solid #e4efffb3; border-radius: 17px; background: linear-gradient(145deg, #dce7f155, #e8f0ff30); box-shadow: inset 0 1px 3px #fff5; color: #fff; font-size: 16px; font-weight: 800; }
-.serve-food > span { font-size: 10px; color: #fff0f3; }
-.serve-food:disabled { cursor: default; opacity: .65; font-size: 13px; transform: none; }
+.serve-food { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 42px; padding: 7px 10px; border: 1px solid #ffe4ae; border-radius: 17px; background: linear-gradient(145deg, #ffeabb, #edc789); box-shadow: inset 0 1px 3px #fff5; color: #4d3523; font-size: 16px; font-weight: 800; }
+.serve-food > span { font-size: 10px; }
+.serve-food:disabled { cursor: default; background: #3e5067; color: #e1e9f4; border-color: #8393a7; box-shadow: none; font-size: 13px; transform: none; }
+.feeding-sheet :is(button, summary):focus-visible { outline: 2px solid #ffe4ae; outline-offset: -2px; }
 .feeding-growth-hint { margin: 5px 0 0; font-size: 9px; line-height: 1.4; color: #fff2db; }
 .feeding-balance { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px; min-height: 24px; font-size: 10px; color: #ffe9b6; }
 .feeding-rules { position: relative; color: #e6eeff; }
