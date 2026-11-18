@@ -74,7 +74,7 @@ export const restaurantIcon = id => `<svg viewBox="0 0 24 24" fill="none" stroke
 const food = (id, cls='') => `<span class="r-food r-food-${esc(id)} ${cls}" aria-hidden="true"></span>`;
 const cat = (id, cls='') => `<span class="r-cat r-cat-${id} ${cls}" aria-hidden="true"></span>`;
 const money = value => `<span class="r-price">${restaurantIcon('fish')}${number(value)}</span>`;
-const tabs = [['business','store','营业'],['customers','cat','顾客'],['recipes','book','菜谱'],['staff','cat','员工'],['upgrades','up','升级'],['themes','flower','装扮']];
+const tabs = [['business','store','营业'],['customers','cat','顾客'],['recipes','book','菜谱'],['staff','chef','员工'],['upgrades','up','升级'],['themes','flower','装扮']];
 
 export function restaurantRecipesPanel(info,{category='all'}={}) {
   const catalog=[...new Map([...info.recipes,...info.specialRecipes].map(recipe=>[recipe.id,recipe])).values()];

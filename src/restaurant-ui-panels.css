@@ -1,0 +1,281 @@
+/*
+ * 猫猫餐厅 · 面板改版（手机优先、图片为主、文字为辅）
+ * 覆盖：顾客图鉴 / 菜谱 / 员工能力升级 / 设施升级 / 装扮
+ * - 只改布局与外观，不改结构、按钮和数据；全部挂在 .restaurant[data-r-ui="refresh"] 下。
+ * - 次要说明文字收起（仍保留在 DOM / aria-label 里，读屏不受影响）。
+ */
+.restaurant[data-r-ui="refresh"] .r-sheet:is([data-panel="customers"],[data-panel="recipes"],[data-panel="training"],[data-panel="upgrades"],[data-panel="themes"]){
+  --r-panel-height:86dvh;height:var(--r-panel-height);max-height:calc(100dvh - 40px);padding-left:12px;padding-right:12px;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet:is([data-panel="customers"],[data-panel="recipes"],[data-panel="training"],[data-panel="upgrades"],[data-panel="themes"])>header{padding-bottom:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet:is([data-panel="customers"],[data-panel="recipes"],[data-panel="training"],[data-panel="upgrades"],[data-panel="themes"]) .r-sheet-content{padding:8px 2px max(16px,env(safe-area-inset-bottom));scroll-padding-top:56px}
+
+/* ---------- 通用：吸顶的胶囊筛选（可横滑） ---------- */
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-book-filters,.r-recipe-filters,.r-appearance-tabs){
+  position:sticky;top:-8px;z-index:3;display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;
+  margin:0 -2px 10px;padding:8px 2px;background:linear-gradient(180deg,var(--rfx-cream) 80%,rgba(255,250,240,0));
+}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-book-filters,.r-recipe-filters,.r-appearance-tabs)::-webkit-scrollbar{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-book-filters,.r-recipe-filters,.r-appearance-tabs) button{
+  flex:1 0 auto;min-height:36px;padding:0 14px;border-radius:99px;border:1.5px solid var(--rfx-line);background:#fff;
+  color:var(--rfx-ink-2);font-size:13px;font-weight:900;box-shadow:0 2px 0 rgba(74,44,28,.08);white-space:nowrap;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-book-filters button[aria-pressed="true"],.rc-book-filters button.selected,.r-recipe-filters button.selected,.r-appearance-tabs button[aria-pressed="true"]){
+  background:var(--rfx-ink);border-color:var(--rfx-ink);color:#fff8ea;box-shadow:0 2px 0 rgba(74,44,28,.35);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-filters button small{margin-left:4px;font-size:11px;opacity:.7}
+
+/* 共用的“展台”：卡片里图片下方一圈柔光 */
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-customer-card,.r-recipe-card,.r-theme-card,.ru-facility,.re-ability){position:relative;isolation:isolate}
+
+/* =====================================================================
+ * 1 · 顾客图鉴：三列大头像，未见过的顾客显示剪影
+ * ===================================================================== */
+.restaurant[data-r-ui="refresh"] .rc-book-stats{
+  display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;margin:0 0 4px;padding:0;background:none;border:0;
+}
+.restaurant[data-r-ui="refresh"] .rc-book-stats>span{
+  display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:8px 12px;border-radius:16px;background:#fff;
+  border:1.5px solid var(--rfx-line);font-size:11px;font-weight:800;color:var(--rfx-ink-3);box-shadow:var(--rfx-chunk-sm);
+}
+.restaurant[data-r-ui="refresh"] .rc-book-stats>span:first-child{background:linear-gradient(180deg,#fff3dc,#ffe3bb);border-color:var(--rfx-orange)}
+.restaurant[data-r-ui="refresh"] .rc-book-stats strong{font-size:22px;line-height:1.1;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .rc-book-stats strong small{font-size:13px;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-height:0;aspect-ratio:.86;padding:6px 6px 9px;
+  border:1.5px solid var(--rfx-line);border-radius:20px;overflow:hidden;
+  background:radial-gradient(circle at 50% 42%,#fff 0 30%,#ffeccd 31% 52%,#fff7ea 53%);box-shadow:var(--rfx-chunk-sm);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card>.r-cat{width:86%!important;height:auto!important;aspect-ratio:1;flex:0 0 auto;margin:auto 0 0}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card>strong{max-width:100%;font-size:12px;line-height:1.3;font-weight:900;color:var(--rfx-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card>small{
+  position:absolute;top:7px;left:7px;display:inline-flex;align-items:center;gap:2px;padding:1px 7px;border-radius:99px;
+  font-size:10px;font-weight:800;line-height:16px;background:rgba(255,255,255,.9);color:var(--rfx-ink-3);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card>small svg{width:10px;height:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card.is-unlocked>small{background:var(--rfx-mint);color:#fff}
+/* 没见过：剪影 + 问号 */
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card:not(.is-unlocked){background:radial-gradient(circle at 50% 42%,#f6ecdc 0 52%,#efe3cf 53%)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card:not(.is-unlocked)>.r-cat{filter:brightness(0) opacity(.2)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card:not(.is-unlocked)>strong{color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card:not(.is-unlocked)::after{
+  content:"?";position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:30px;font-weight:900;color:rgba(122,80,56,.45);pointer-events:none;
+}
+/* 高级顾客：银 / 金边 */
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card[data-r-guest-tier="silver"]{border-color:#a9b4c2;box-shadow:0 2px 0 #a9b4c2}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card[data-r-guest-tier="gold"]{border-color:#d7a62a;box-shadow:0 2px 0 #d7a62a}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card>i{position:absolute;top:5px;right:8px;font-size:14px;font-style:normal;color:#d7a62a}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card[aria-pressed="true"]{border-color:var(--rfx-orange);box-shadow:0 0 0 3px rgba(247,140,52,.3),var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-book-note,.rc-requirements-note){font-size:11px;text-align:center}
+
+/* =====================================================================
+ * 2 · 菜谱：两列大图，价格做成角标
+ * ===================================================================== */
+.restaurant[data-r-ui="refresh"] .r-sheet .r-catalog-toolbar{display:flex;align-items:center;gap:6px;margin:0 0 2px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-catalog-toolbar>span{margin-right:auto;font-size:13px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-catalog-toolbar button{min-height:32px;padding:0 12px;border-radius:99px;border:1.5px solid var(--rfx-line);background:#fff;font-size:12px;font-weight:900;color:var(--rfx-orange-deep);box-shadow:0 2px 0 rgba(74,44,28,.1)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card{
+  display:flex;flex-direction:column;align-items:stretch;padding:0 0 10px;border-radius:22px;overflow:hidden;min-height:0;
+  background:#fff;border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-preview{
+  display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;padding:14px 8px 0;border:0;
+  background:radial-gradient(ellipse 62% 46% at 50% 44%,#fff 0 55%,#ffeccd 56% 72%,transparent 73%),linear-gradient(180deg,#fff7ea,#fff 82%);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .rg-tier-food{width:auto;height:auto}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-food{width:96px!important;height:96px!important;max-width:none;margin:0;filter:drop-shadow(0 6px 4px rgba(74,44,28,.16))}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .rg-dish-grade{transform:scale(1.15);transform-origin:top right}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card h3{font-size:14px;font-weight:900;line-height:1.3;color:var(--rfx-ink);margin:0;padding:0 8px;text-align:center}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-sale{align-self:center;display:inline-flex;align-items:center;gap:3px;margin-top:6px;padding:3px 12px;border-radius:99px;background:#fff3dc;border:1.5px solid #f0d6ad;font-size:14px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-sale small{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-sale svg{width:14px;height:14px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.is-locked{background:#faf3e6;box-shadow:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.is-locked .r-recipe-preview{background:linear-gradient(180deg,#f3eadb,#faf3e6)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.is-locked .r-food{filter:grayscale(1) opacity(.45)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.is-locked h3{color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.is-locked .r-recipe-sale{opacity:.6}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-availability{
+  position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:99px;
+  background:rgba(74,44,28,.82);color:#fff8ea;font-size:11px;font-weight:900;line-height:18px;margin:0;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-availability svg{width:11px;height:11px}
+/* 金鱼干招牌菜 */
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.r-special-dish{border-color:#d7a62a;background:linear-gradient(180deg,#fff6d6,#fff)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.r-special-dish .r-recipe-preview{background:radial-gradient(ellipse 62% 46% at 50% 44%,#fff 0 55%,#ffe6a0 56% 72%,transparent 73%)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.r-special-dish .r-signature-mark{position:absolute;top:8px;left:10px;font-size:16px;color:#d7a62a;z-index:2}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.r-special-dish>div{padding:0 10px;margin-top:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-small-primary{min-height:36px;font-size:13px!important}
+
+/* =====================================================================
+ * 3 · 员工能力升级：大头像切换 + 2×2 能力卡
+ * ===================================================================== */
+.restaurant[data-r-ui="refresh"] .re-training{display:flex;flex-direction:column;gap:12px}
+.restaurant[data-r-ui="refresh"] .re-training-roster{display:flex;flex-direction:row;gap:10px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
+.restaurant[data-r-ui="refresh"] .re-training-roster :is(.re-training-chief,.re-training-partners){display:flex;flex-direction:column;gap:4px;min-width:0;flex:0 0 auto}
+.restaurant[data-r-ui="refresh"] .re-training-roster .re-training-partners{flex:1 1 auto}
+.restaurant[data-r-ui="refresh"] .re-roster-label{display:flex;gap:6px;align-items:baseline;font-size:11px;font-weight:800;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .re-roster-label strong{font-size:12px;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-training-roster .re-worker-tabs{display:flex!important;flex-direction:row;gap:8px;overflow:visible;padding:0}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;width:78px;height:92px!important;padding:4px!important;min-width:0;
+  border:1.5px solid var(--rfx-line);border-radius:20px;background:radial-gradient(circle at 50% 40%,#fff 0 36%,#ffeccd 37%);box-shadow:var(--rfx-chunk-sm);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button .r-cat{width:60px!important;height:60px!important}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button strong{font-size:11px;font-weight:900;color:var(--rfx-ink);white-space:nowrap}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button.selected{border:2.5px solid var(--rfx-orange);background:radial-gradient(circle at 50% 40%,#fff 0 36%,#ffd9a6 37%);box-shadow:0 3px 0 var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .re-roster-empty{display:grid;place-items:center;height:92px;border:1.5px dashed var(--rfx-line);border-radius:20px;font-size:12px;font-weight:800;color:var(--rfx-ink-3);background:rgba(255,255,255,.5)}
+/* 体力：一条带心形图标的粗进度条 */
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy{display:grid;grid-template-columns:40px 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:4px;align-items:center;margin:0;padding:10px 12px;border-radius:18px;background:#fff;border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy::before{content:"";grid-row:1 / 3;width:40px;height:40px;background:url('/assets/restaurant/ui-v2/ab-stamina.svg') center/contain no-repeat}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy>div:first-child{display:flex;justify-content:space-between;font-size:12px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy>div:first-child span{font-variant-numeric:tabular-nums;color:var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy-track{grid-column:2;height:12px;border-radius:99px;background:#f3e3c4;border:1.5px solid var(--rfx-line-strong);overflow:hidden}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy-track>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#f4826a,#ffb067);box-shadow:inset 0 2px 0 rgba(255,255,255,.4)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy>p{grid-column:1 / 3;margin:2px 0 0;font-size:10px;color:var(--rfx-ink-3)}
+/* 能力卡 */
+.restaurant[data-r-ui="refresh"] .re-ability-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 10px 10px;border-radius:22px;background:#fff;border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm);text-align:center;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-mark{display:block;width:58px;height:58px;font-size:0;color:transparent;border-radius:50%;background:#fff3dc center/44px 44px no-repeat;box-shadow:inset 0 0 0 2px #f0d6ad}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability[data-r-ability="speed"] .re-ability-mark{background-image:url('/assets/restaurant/ui-v2/ab-speed.svg')}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability[data-r-ability="stamina"] .re-ability-mark{background-image:url('/assets/restaurant/ui-v2/ab-stamina.svg')}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability[data-r-ability="endurance"] .re-ability-mark{background-image:url('/assets/restaurant/ui-v2/ab-endurance.svg')}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability[data-r-ability="skill"] .re-ability-mark{background-image:url('/assets/restaurant/ui-v2/ab-skill.svg')}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-head{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-head h4{margin:0;font-size:15px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-head p{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-level{padding:1px 7px;border-radius:99px;background:var(--rfx-ink);color:#fff8ea;font-size:10px;font-weight:900}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .re-skill-segments{width:100%;display:flex;gap:2px;height:7px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-skill-segments>i{flex:1;border-radius:4px;background:#efe3cf}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-skill-segments>i.is-lit{background:linear-gradient(180deg,var(--rfx-orange-2),var(--rfx-orange))}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects{display:flex;align-items:baseline;justify-content:center;gap:5px;margin:0;padding:0;background:none;border:0}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects>div{display:flex;align-items:baseline;gap:0;padding:0;background:none;border:0}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects span{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects strong{font-size:13px;font-weight:900;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects .ru-next strong{font-size:18px;color:var(--rfx-mint)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects .ru-next::before{content:"→";font-size:13px;font-weight:900;color:var(--rfx-ink-3);margin-right:4px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects .ru-max{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .r-buy{width:100%;min-height:40px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;font-size:14px!important;margin:2px 0 0}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .r-buy small{font-size:11px;opacity:.9}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-help-link{margin:10px auto 0;display:flex;font-size:12px;font-weight:800;color:var(--rfx-ink-3)}
+
+/* =====================================================================
+ * 4 · 设施升级：两列插画卡
+ * ===================================================================== */
+.restaurant[data-r-ui="refresh"] .r-sheet[data-panel="upgrades"]{--r-panel-height:auto;height:auto}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility.ru-facility-row{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 10px 10px;border-radius:22px;text-align:center;
+  background:#fff;border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility .ru-mark{display:block;width:84px;height:84px;font-size:0;color:transparent;border-radius:24px;background:#fff3dc center/62px 62px no-repeat;box-shadow:inset 0 0 0 2px #f0d6ad;flex:0 0 auto}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility[data-r-facility="kitchen"] .ru-mark{background-image:url('/assets/restaurant/ui-v2/fac-kitchen.svg');background-color:#ffe7df}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility[data-r-facility="fridge"] .ru-mark{background-image:url('/assets/restaurant/ui-v2/fac-fridge.svg');background-color:#e3f4ec}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility[data-r-facility="tables"] .ru-mark{background-image:url('/assets/restaurant/ui-v2/fac-tables.svg');background-color:#fff0cf}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility[data-r-facility="tips"] .ru-mark{background-image:url('/assets/restaurant/ui-v2/fac-tips.svg');background-color:#fdeaea}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-copy{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;min-width:0}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-copy>header{display:flex;align-items:center;justify-content:center;gap:6px}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-copy>header h3{margin:0;font-size:15px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-copy>header small{padding:1px 7px;border-radius:99px;background:var(--rfx-ink);color:#fff8ea;font-size:10px;font-weight:900}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility .re-skill-segments{width:100%;display:flex;gap:2px;height:7px}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-effect{display:flex;flex-direction:column;align-items:center;gap:0;margin:0;font-size:11px;font-weight:800;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-current{display:flex;align-items:baseline;gap:4px;font-size:11px}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-current strong{font-size:13px;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-next{font-size:17px;font-weight:900;color:var(--rfx-mint)}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-max{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility>.r-buy{width:100%;min-height:40px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;margin:2px 0 0;font-size:14px!important}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility>.r-buy small{font-size:11px!important;display:inline-flex;align-items:center;gap:2px}
+
+/* =====================================================================
+ * 5 · 装扮
+ * ===================================================================== */
+.restaurant[data-r-ui="refresh"] .r-sheet .r-appearance-tabs button{flex:1 1 0}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-panel-caption{margin:0 2px 10px;font-size:11px;font-weight:700;color:var(--rfx-ink-3)}
+/* 5a 配色：大色圈 */
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-options{padding:0;background:none;border:0;box-shadow:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-options>header{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-options>header strong{font-size:14px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-options>header small{font-size:11px;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-grid>button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px 10px;border-radius:22px;background:#fff;border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-grid>button[aria-pressed="true"]{border:2.5px solid var(--rfx-orange);box-shadow:0 3px 0 var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-grid strong{font-size:12px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-grid small{font-size:10px;font-weight:800;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rk-palette-sample{transform:scale(1.25);margin:6px 0}
+/* 5b 布置：两列竖版场景大图，名字压在图上 */
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-card{display:flex;flex-direction:column;padding:0;border-radius:22px;overflow:hidden;background:#fff;border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-preview{position:relative;width:100%;aspect-ratio:4 / 5;margin:0;border:0;border-radius:0;overflow:hidden;background:#efe3cf}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-preview img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-card[data-r-locked="true"] .rd-preview img{filter:grayscale(.85) opacity(.6)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-card-copy{display:flex;flex-direction:column;gap:6px;padding:8px 10px 10px;margin-top:-40px;position:relative;z-index:1}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-card-copy h4{align-self:flex-start;margin:0;padding:3px 10px;border-radius:99px;background:rgba(74,44,28,.82);color:#fff8ea;font-size:13px;font-weight:900}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-buffs{display:flex;flex-wrap:wrap;gap:4px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-buffs span{padding:1px 8px;border-radius:99px;background:var(--rfx-mint-soft);color:#2f5c48;font-size:10px;font-weight:900;border:0}
+.restaurant[data-r-ui="refresh"] .r-sheet .rd-card .r-small-primary{min-height:36px;font-size:13px!important}
+/* 5c 珍藏装扮：三列大图 */
+.restaurant[data-r-ui="refresh"] .r-sheet .r-mini-heading{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 10px;font-size:14px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-mini-heading small{font-size:11px;font-weight:700;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card{
+  display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px 10px;min-height:0;border-radius:20px;
+  background:radial-gradient(circle at 50% 38%,#fff 0 34%,#ffeccd 35% 54%,#fff7ea 55%);border:1.5px solid var(--rfx-line);box-shadow:var(--rfx-chunk-sm);
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card .re-art{width:88%;height:auto;aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 5px 4px rgba(74,44,28,.16))}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card>span{display:flex;flex-direction:column;align-items:center}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card strong{font-size:12px;font-weight:900;color:var(--rfx-ink);white-space:nowrap}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card em{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card>small{position:absolute;top:7px;left:7px;display:inline-flex;align-items:center;gap:2px;padding:1px 7px;border-radius:99px;background:rgba(74,44,28,.8);color:#fff8ea;font-size:10px;font-weight:900;line-height:16px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card>small svg{width:10px;height:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card[data-r-locked="true"]{background:radial-gradient(circle at 50% 38%,#f6ecdc 0 54%,#efe3cf 55%);opacity:1}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card[data-r-locked="true"] .re-art{filter:grayscale(1) opacity(.45)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-theme-card[data-r-theme-active="true"]{border:2.5px solid var(--rfx-orange);box-shadow:0 3px 0 var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-mark{width:58px!important;height:58px!important;min-height:58px;flex:0 0 58px;line-height:0;padding:0!important;position:static!important;inset:auto!important;transform:none!important;margin:0 auto!important;align-self:center}
+.restaurant[data-r-ui="refresh"] .re-training-partners{flex:1 1 auto;min-width:120px}
+.restaurant[data-r-ui="refresh"] .re-training-partners .re-roster-empty{width:100%;box-sizing:border-box}
+.restaurant[data-r-ui="refresh"] .re-training-partners>div:last-child{width:100%}
+
+/* ---------- 2026-11-17 调整：菜谱回到一排三个 ---------- */
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card{border-radius:18px;padding-bottom:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-preview{padding:10px 4px 0;gap:4px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-food{width:72px!important;height:72px!important}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card h3{font-size:12px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-sale{margin-top:4px;padding:2px 9px;font-size:12px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-recipe-availability{top:6px;left:6px;padding:1px 7px;font-size:10px;line-height:16px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.r-special-dish>div{padding:0 6px;margin-top:6px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card .r-small-primary{min-height:32px;font-size:11px!important;padding:0 4px}
+
+/* ---------- 员工能力升级：一屏放下，不滚动 ---------- */
+.restaurant[data-r-ui="refresh"] .r-sheet[data-panel="training"]{--r-panel-height:auto;height:auto;max-height:calc(100dvh - 24px)}
+.restaurant[data-r-ui="refresh"] .r-sheet[data-panel="training"] .r-sheet-content{overflow-y:auto;padding-top:4px}
+.restaurant[data-r-ui="refresh"] .r-sheet[data-panel="training"] .r-panel-switch{margin-bottom:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet[data-panel="training"] .r-panel-switch button{min-height:34px}
+.restaurant[data-r-ui="refresh"] .re-training{gap:8px}
+.restaurant[data-r-ui="refresh"] .re-training-roster{gap:8px;padding:0}
+.restaurant[data-r-ui="refresh"] .re-roster-label{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button{width:64px;height:68px!important;border-radius:16px;gap:0}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button .r-cat{width:44px!important;height:44px!important}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-worker-tabs button strong{font-size:10px}
+.restaurant[data-r-ui="refresh"] .re-roster-empty{height:68px;border-radius:16px;font-size:11px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy{grid-template-columns:28px 1fr;row-gap:3px;padding:7px 10px;border-radius:14px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy::before{width:28px;height:28px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy-track{height:9px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-energy>p{display:none}
+.restaurant[data-r-ui="refresh"] .re-ability-list{gap:8px}
+/* 能力卡改成横排：左图标，右名称 + 等级条，下方效果与按钮 */
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability{
+  display:grid;grid-template-columns:44px 1fr;grid-template-areas:"mark head" "mark seg" "fx fx" "buy buy";
+  column-gap:8px;row-gap:5px;align-items:center;padding:9px 9px 8px;border-radius:18px;text-align:left;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-mark{grid-area:mark;width:44px!important;height:44px!important;min-height:44px;flex:none;background-size:34px 34px;margin:0!important}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-head{grid-area:head;justify-content:flex-start;gap:5px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability-head h4{font-size:14px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .re-skill-segments{grid-area:seg;height:6px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects{grid-area:fx;justify-content:center}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .ru-effects .ru-next strong{font-size:16px}
+.restaurant[data-r-ui="refresh"] .r-sheet .re-ability .r-buy{grid-area:buy;min-height:36px;margin:0;font-size:13px!important}
+.restaurant[data-r-ui="refresh"] .r-sheet[data-panel="training"] .ru-help-link{margin-top:6px}

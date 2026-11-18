@@ -1,0 +1,308 @@
+/*
+ * 猫猫餐厅 UI 刷新层（2026-11）
+ * - 只改表现：颜色、字号、层级、按压与反馈动效；不改任何数值、结构或存档。
+ * - 全部规则挂在 .restaurant[data-r-ui="refresh"] 下，移除该属性即回到旧版外观。
+ * - 设计令牌与投放素材（暖可可描边 + 橘色主色）保持一致。
+ */
+.restaurant[data-r-ui="refresh"]{
+  --rfx-ink:#4a2c1c;
+  --rfx-ink-2:#7a5038;
+  --rfx-ink-3:#a07a58;
+  --rfx-cream:#fffaf0;
+  --rfx-paper:#fff3dc;
+  --rfx-line:#d9b98c;
+  --rfx-line-strong:#8a5a3c;
+  --rfx-orange:#f78c34;
+  --rfx-orange-2:#ffae5c;
+  --rfx-orange-deep:#c8641f;
+  --rfx-mint:#4fa37c;
+  --rfx-mint-soft:#e4f3e6;
+  --rfx-berry:#e0614f;
+  --rfx-gold:#f6c343;
+  --rfx-chunk:0 3px 0 rgba(74,44,28,.22);
+  --rfx-chunk-sm:0 2px 0 rgba(74,44,28,.2);
+  --rfx-float:0 8px 22px rgba(74,44,28,.16);
+  --rfx-spring:cubic-bezier(.34,1.56,.64,1);
+  --rfx-out:cubic-bezier(.2,.8,.25,1);
+  font-feature-settings:"tnum" 1;
+}
+
+/* ---------- 顶部资源栏 ---------- */
+.restaurant[data-r-ui="refresh"] .r-hud{gap:6px;min-height:44px}
+.restaurant[data-r-ui="refresh"] .r-hud :is(.r-wallet,.r-level,.re-wallet){
+  min-height:44px;border:1.5px solid var(--rfx-line-strong);border-radius:14px;
+  background:linear-gradient(180deg,#fffdf6,var(--rfx-paper));box-shadow:var(--rfx-chunk);
+}
+.restaurant[data-r-ui="refresh"] .r-wallet small,
+.restaurant[data-r-ui="refresh"] .re-wallet small{font-size:10px;line-height:1.1;font-weight:800;color:var(--rfx-ink-3);letter-spacing:.5px}
+.restaurant[data-r-ui="refresh"] .r-wallet strong,
+.restaurant[data-r-ui="refresh"] .re-wallet strong{font-size:20px;line-height:1.05;font-weight:900;color:var(--rfx-ink);letter-spacing:0;font-variant-numeric:tabular-nums;display:inline-block;transform-origin:left center}
+.restaurant[data-r-ui="refresh"] .r-fish-medallion{filter:drop-shadow(0 2px 0 rgba(74,44,28,.25))}
+.restaurant[data-r-ui="refresh"] .r-wallet-guide{border:1.5px solid var(--rfx-line);background:#fff;box-shadow:var(--rfx-chunk-sm);color:var(--rfx-ink-2)}
+.restaurant[data-r-ui="refresh"] .r-level{gap:4px;padding:4px 8px 4px 4px}
+.restaurant[data-r-ui="refresh"] .r-level-copy strong{font-size:13px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-level [data-r-level]{font-size:11px;font-weight:800;color:var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .r-level-track{height:8px;margin-top:4px;border:1.5px solid var(--rfx-line-strong);border-radius:99px;background:#f3e3c4;box-shadow:inset 0 1px 2px rgba(74,44,28,.18);overflow:hidden}
+.restaurant[data-r-ui="refresh"] .r-level-track>i{border-radius:99px;background:linear-gradient(90deg,var(--rfx-orange),var(--rfx-orange-2));box-shadow:inset 0 -2px 0 rgba(200,100,31,.35),inset 0 2px 0 rgba(255,255,255,.45);transition:width .6s var(--rfx-out)}
+.restaurant[data-r-ui="refresh"] .r-level-value{font-size:10px;font-weight:800;color:var(--rfx-ink-3)}
+/* 金额变化：数字弹一下，并飘出 +N */
+.restaurant[data-r-ui="refresh"] .rfx-bump{animation:rfx-bump .48s var(--rfx-spring)}
+.restaurant[data-r-ui="refresh"] .rfx-bump-shell{animation:rfx-shell .48s var(--rfx-spring)}
+@keyframes rfx-bump{0%{transform:scale(1)}35%{transform:scale(1.28)}100%{transform:scale(1)}}
+@keyframes rfx-shell{0%{transform:translateY(0)}30%{transform:translateY(-2px)}100%{transform:translateY(0)}}
+.rfx-delta{position:fixed;z-index:120;pointer-events:none;font:900 15px/1 system-ui,"PingFang SC",sans-serif;color:#fff;
+  paint-order:stroke fill;-webkit-text-stroke:4px #4a2c1c;text-shadow:0 2px 0 #c8641f;white-space:nowrap;animation:rfx-delta 1.1s cubic-bezier(.2,.8,.25,1) forwards}
+.rfx-delta.is-gold{color:#ffd65a}
+@keyframes rfx-delta{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}18%{opacity:1;transform:translate(-50%,-4px) scale(1.12)}70%{opacity:1;transform:translate(-50%,-16px) scale(1)}100%{opacity:0;transform:translate(-50%,-28px) scale(1)}}
+
+/* ---------- 场景工具按钮：统一尺寸、统一形状 ---------- */
+.restaurant[data-r-ui="refresh"] .r-tools{gap:6px;top:10px;right:8px}
+.restaurant[data-r-ui="refresh"] :is(.r-tools,.r-scene-controls) .r-round{
+  width:42px;height:42px;min-width:42px;padding:0;border-radius:14px;
+  border:1.5px solid var(--rfx-line-strong);background:linear-gradient(180deg,#fffdf6,var(--rfx-paper));
+  box-shadow:var(--rfx-chunk);color:var(--rfx-ink-2);position:relative;
+}
+.restaurant[data-r-ui="refresh"] :is(.r-tools,.r-scene-controls) .r-round svg{width:20px;height:20px;stroke-width:2.1}
+.restaurant[data-r-ui="refresh"] .r-tools .r-round>small{
+  position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);
+  padding:1px 6px;border-radius:99px;background:var(--rfx-ink);color:#fff8ea;
+  font-size:9px;line-height:14px;font-weight:800;letter-spacing:.3px;white-space:nowrap;
+}
+.restaurant[data-r-ui="refresh"] .r-tools .r-round>span{display:grid;place-items:center}
+.restaurant[data-r-ui="refresh"] .r-tools .r-round[data-locked="true"]{filter:saturate(.35);opacity:.82}
+.restaurant[data-r-ui="refresh"] .r-tools .r-round[aria-pressed="true"]{background:linear-gradient(180deg,var(--rfx-orange-2),var(--rfx-orange));color:#fff;border-color:var(--rfx-orange-deep)}
+
+/* ---------- 订单气泡：可读、可点、状态一眼可辨 ---------- */
+.restaurant[data-r-ui="refresh"] .rg-order-seat .r-order-bubble{
+  border:1.5px solid var(--rfx-line-strong);border-radius:14px;background:#fff;
+  box-shadow:var(--rfx-chunk);color:var(--rfx-ink);
+}
+.restaurant[data-r-ui="refresh"] .rg-order-seat .r-order-bubble strong{font-size:11px;line-height:1.25;font-weight:900;letter-spacing:0}
+.restaurant[data-r-ui="refresh"] .rg-order-seat .r-order-bubble small{font-size:9px;line-height:1.25;font-weight:700;color:var(--rfx-ink-3)}
+/* 双人桌两只气泡中心相距约 85px：竖排（菜品在上、字在下），宽 66px，不再互相遮挡 */
+.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble{width:66px;min-width:0;max-width:none;min-height:50px;padding:5px 4px 6px;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center}
+.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble strong{display:block;max-width:none;font-size:10.5px;line-height:1.2;white-space:normal}
+.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble small{display:none}
+.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble .r-food{width:28px;height:28px}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble strong{font-size:11.5px}
+/* 新点单 = 等你点：橘色描边 + 外圈呼吸 */
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble{
+  background:linear-gradient(180deg,#fff7ea,#ffe3bb);border-color:var(--rfx-orange-deep);color:var(--rfx-ink);box-shadow:0 3px 0 var(--rfx-orange-deep);
+}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble strong{color:var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble small{color:var(--rfx-ink-2)}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble::after{border-color:var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested:not(.is-accept-pending)>.r-order-bubble::before{
+  content:"";position:absolute;inset:-6px;border-radius:19px;border:2.5px solid var(--rfx-orange);
+  pointer-events:none;animation:rfx-breathe 1.6s ease-in-out infinite;
+}
+@keyframes rfx-breathe{0%,100%{opacity:0;transform:scale(.95)}50%{opacity:.9;transform:scale(1.04)}}
+/* 已接单 / 制作中 = 交给厨房：薄荷绿 */
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-awaiting>.r-order-bubble{background:#f4faf6;border-color:#6f9c86;box-shadow:0 3px 0 #6f9c86;color:#2f5c48}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-awaiting>.r-order-bubble::after{border-color:#6f9c86}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-preparing>.r-order-bubble{background:#f4faf6;border-color:#6f9c86;box-shadow:0 3px 0 #6f9c86}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-preparing>.r-order-bubble strong{color:#2f5c48}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble{
+  background:linear-gradient(180deg,#fff6c9,#ffe28a);border-color:#b07a12;box-shadow:0 3px 0 #b07a12;animation:rfx-coin-wiggle 1.8s ease-in-out infinite;
+}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble strong{color:#6b4300;font-size:15px}
+@keyframes rfx-coin-wiggle{0%,82%,100%{rotate:0deg}86%{rotate:-5deg}90%{rotate:5deg}94%{rotate:-3deg}}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-course-thinking>.r-order-bubble strong{font-size:10px}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-course-thinking>.r-order-bubble small{font-size:9px}
+.restaurant[data-r-ui="refresh"] .rg-order-seat.is-accept-pending .rg-accept-sync strong{font-size:11px}
+.restaurant[data-r-ui="refresh"] .rg-accept-sync-note{font-size:9px}
+/* 接单确认 ✓：从气泡角上弹出，不再盖住菜名 */
+.restaurant[data-r-ui="refresh"] .rg-order-confirm{
+  padding:4px 10px;border:1.5px solid #2f6b4d;border-radius:99px;background:var(--rfx-mint);color:#fff;
+  box-shadow:0 2px 0 #2f6b4d;font-size:11px;font-weight:900;letter-spacing:.5px;margin-top:-30px;
+  animation:rfx-confirm 1s var(--rfx-out) both;
+}
+@keyframes rfx-confirm{0%{opacity:0;transform:translate(-50%,-70%) scale(.4)}16%{opacity:1;transform:translate(-50%,-104%) scale(1.15)}28%,72%{opacity:1;transform:translate(-50%,-100%) scale(1)}100%{opacity:0;transform:translate(-50%,-130%) scale(.96)}}
+
+/* 桌号与桌面状态：最小 10px，深色可读 */
+.restaurant[data-r-ui="refresh"] .rg-table-number{font-size:10px;font-weight:900;padding:1px 7px;border-radius:99px;background:rgba(74,44,28,.72);color:#fff8ea;border:0;width:auto;min-width:0}
+.restaurant[data-r-ui="refresh"] :is(.rg-empty-table,.rg-arrival-label){font-size:10px;font-weight:800;color:var(--rfx-ink-2);background:rgba(255,250,240,.92);border:1px solid var(--rfx-line);border-radius:99px}
+
+/* 未开放餐桌：退到背景，不再抢视线 */
+.restaurant[data-r-ui="refresh"] .r-locked-table:is(:hover,:focus-visible){background:rgba(74,44,28,.8)!important}
+.restaurant[data-r-ui="refresh"] .r-locked-table{transition:background-color .2s ease;border:0;opacity:1;width:30px!important;height:30px!important;min-width:0!important;min-height:0!important;padding:0!important;border-radius:99px;display:grid;place-items:center;
+  background:rgba(74,44,28,.55)!important;color:#fff8ea;box-shadow:0 0 0 3px rgba(255,250,240,.35)}
+.restaurant[data-r-ui="refresh"] .r-locked-table svg{width:15px;height:15px;stroke-width:2.2}
+.restaurant[data-r-ui="refresh"] .r-locked-table>small{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 厨房标签 */
+.restaurant[data-r-ui="refresh"] .r-kitchen-label{font-size:12px;font-weight:900;color:var(--rfx-ink);background:var(--rfx-cream);border:1.5px solid var(--rfx-line-strong);box-shadow:var(--rfx-chunk-sm);border-radius:99px}
+.restaurant[data-r-ui="refresh"] .r-kitchen-label span{color:var(--rfx-orange-deep)}
+
+/* ---------- 底部提示 + 状态栏 ---------- */
+.restaurant[data-r-ui="refresh"] .r-scene-hint{
+  left:6%;right:6%;padding:8px 12px 8px 30px;border-radius:14px;
+  background:rgba(74,44,28,.86);color:#fff8ea;font-size:12px;font-weight:800;line-height:1.35;letter-spacing:.2px;text-align:left;
+  box-shadow:0 6px 16px rgba(74,44,28,.22);backdrop-filter:blur(4px);
+}
+.restaurant[data-r-ui="refresh"] .r-scene-hint::before{
+  content:"";position:absolute;left:10px;top:50%;width:13px;height:13px;margin-top:-6.5px;
+  background:var(--rfx-orange-2);-webkit-mask:var(--rfx-paw) center/contain no-repeat;mask:var(--rfx-paw) center/contain no-repeat;
+}
+.restaurant[data-r-ui="refresh"]{--rfx-paw:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='12' cy='16' rx='5.2' ry='4.4'/%3E%3Ccircle cx='5.2' cy='10.6' r='2.3'/%3E%3Ccircle cx='9.2' cy='6.4' r='2.4'/%3E%3Ccircle cx='14.8' cy='6.4' r='2.4'/%3E%3Ccircle cx='18.8' cy='10.6' r='2.3'/%3E%3C/svg%3E")}
+.restaurant[data-r-ui="refresh"] .r-scene-hint.rfx-hint-new{animation:rfx-hint-in .42s var(--rfx-spring)}
+@keyframes rfx-hint-in{0%{opacity:0;transform:translateY(8px) scale(.97)}100%{opacity:1;transform:none}}
+.restaurant[data-r-ui="refresh"] .r-status{min-height:24px;padding:3px 14px;font-size:10px;font-weight:700;color:var(--rfx-ink-3);background:var(--rfx-paper);border-top:1px solid var(--rfx-line)}
+.restaurant[data-r-ui="refresh"] .r-status .r-growth{font-size:10px;color:var(--rfx-ink-2)}
+
+/* ---------- 底部导航：选中态更明确，按下有回弹 ---------- */
+.restaurant[data-r-ui="refresh"] .r-nav{gap:4px;padding:6px 8px max(10px,env(safe-area-inset-bottom));background:var(--rfx-cream);border-top:1.5px solid var(--rfx-line)}
+.restaurant[data-r-ui="refresh"] .r-nav button{border-radius:16px;color:var(--rfx-ink-3);min-height:54px;gap:3px;transition:color .18s ease}
+.restaurant[data-r-ui="refresh"] .r-nav button>span{width:36px;height:28px;border-radius:99px;transition:background-color .2s ease,transform .32s var(--rfx-spring)}
+.restaurant[data-r-ui="refresh"] .r-nav button svg{width:22px;height:22px;stroke-width:2.1}
+.restaurant[data-r-ui="refresh"] .r-nav button strong{font-size:11px;font-weight:900;letter-spacing:.5px}
+.restaurant[data-r-ui="refresh"] .r-nav button.selected{background:transparent;box-shadow:none;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-nav button.selected>span{background:linear-gradient(180deg,var(--rfx-orange-2),var(--rfx-orange));color:#fff;box-shadow:0 2px 0 var(--rfx-orange-deep);transform:translateY(-1px)}
+.restaurant[data-r-ui="refresh"] .r-nav button.selected svg{fill:rgba(255,255,255,.28)}
+.restaurant[data-r-ui="refresh"] .r-nav-dot{top:5px;right:calc(50% - 20px);width:8px;height:8px;background:var(--rfx-berry);border:2px solid var(--rfx-cream)}
+
+/* ---------- 面板（底部抽屉） ---------- */
+.restaurant[data-r-ui="refresh"] .r-sheet{border:1.5px solid var(--rfx-line-strong);border-bottom:0;border-radius:24px 24px 0 0;background:var(--rfx-cream);color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet[open]{animation:rfx-sheet-up .34s var(--rfx-out)}
+@keyframes rfx-sheet-up{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+.restaurant[data-r-ui="refresh"] .r-sheet-handle{width:38px;height:5px;min-height:5px;background:var(--rfx-line);margin-bottom:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet>header{border-bottom:1.5px dashed var(--rfx-line);padding-bottom:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet h2{font-size:18px;font-weight:900;color:var(--rfx-ink);letter-spacing:.5px}
+.restaurant[data-r-ui="refresh"] .r-sheet>header .r-round{width:36px;height:36px;border-radius:99px;border:1.5px solid var(--rfx-line-strong);background:#fff;box-shadow:var(--rfx-chunk-sm);color:var(--rfx-ink-2)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-catalog-toolbar{font-size:11px;font-weight:700;color:var(--rfx-ink-3)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-catalog-toolbar button{font-size:11px;font-weight:800;color:var(--rfx-orange-deep)}
+/* 分段切换 / 筛选：胶囊 */
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.r-recipe-filters,.r-panel-switch) button{
+  min-height:32px;border-radius:99px;border:1.5px solid var(--rfx-line);background:#fff;color:var(--rfx-ink-2);font-size:12px;font-weight:800;box-shadow:none;
+  transition:background-color .18s ease,color .18s ease,border-color .18s ease;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.r-recipe-filters button.selected,.r-recipe-filters button[aria-pressed="true"],.r-panel-switch button[aria-pressed="true"]){
+  background:var(--rfx-ink);border-color:var(--rfx-ink);color:#fff8ea;
+}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-filters button small{font-size:10px;opacity:.75}
+/* 卡片 */
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.r-recipe-card,.r-staff-card,.rc-card,.rfx-card){border:1.5px solid var(--rfx-line);border-radius:16px;background:#fff;box-shadow:var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card h3{font-size:12px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card p,
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-stars{font-size:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-sale{font-size:13px;font-weight:900;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-sale small{font-size:10px;color:var(--rfx-ink-3);font-weight:700}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-card.is-locked{background:#faf3e6;box-shadow:none}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-recipe-availability{font-size:10px;font-weight:800}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-staff-card>strong{font-size:12px;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-staff-card>small{font-size:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-staff-card.selected{border-color:var(--rfx-orange);box-shadow:0 0 0 2px rgba(247,140,52,.25),var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-staff-count{font-size:12px}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-staff-count>span{font-size:11px}
+/* 主按钮：橘色、厚底、按下下沉 */
+.restaurant[data-r-ui="refresh"] :is(.r-primary,.r-small-primary,.r-buy,.rdl-claim){
+  border:1.5px solid var(--rfx-orange-deep)!important;border-radius:14px!important;
+  background:linear-gradient(180deg,var(--rfx-orange-2),var(--rfx-orange))!important;color:#fff!important;
+  box-shadow:0 3px 0 var(--rfx-orange-deep)!important;font-weight:900!important;text-shadow:0 1px 0 rgba(150,70,30,.35);
+  transition:transform .08s ease,box-shadow .08s ease,filter .15s ease;
+}
+.restaurant[data-r-ui="refresh"] :is(.r-primary,.r-small-primary,.r-buy,.rdl-claim):disabled{
+  background:#efe3cf!important;border-color:var(--rfx-line)!important;color:var(--rfx-ink-3)!important;box-shadow:0 2px 0 var(--rfx-line)!important;text-shadow:none;
+}
+.restaurant[data-r-ui="refresh"] :is(.r-primary,.r-small-primary,.r-buy,.rdl-claim):not(:disabled):active{transform:translateY(2px);box-shadow:0 1px 0 var(--rfx-orange-deep)!important}
+.restaurant[data-r-ui="refresh"] .r-sheet .r-hire-button{min-height:42px;font-size:13px!important}
+
+
+/* 面板里的小字统一抬到 ≥10px（原来有 6–9px） */
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.ru-facility>header>small,.ru-facility-copy>header>small,.ru-facility-effect,.ru-facility-max,.ru-facility-row>.r-buy small,.ru-facility>.r-buy small){font-size:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility-copy strong,.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility>header strong{font-size:13px;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .ru-facility{border:1.5px solid var(--rfx-line);border-radius:16px;background:#fff;box-shadow:var(--rfx-chunk-sm)}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-book-stats>span,.rc-eligibility,.rc-requirements-note,.rc-book-note,.rc-open-book){font-size:11px}
+.restaurant[data-r-ui="refresh"] .r-sheet :is(.rc-portrait>span,.rc-customer-intro>div>small,.rc-requirements small,.rc-customer-card small){font-size:10px}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card strong{font-size:11px;font-weight:800;color:var(--rfx-ink)}
+.restaurant[data-r-ui="refresh"] .r-sheet .rc-customer-card{border-radius:14px}
+
+/* ---------- 通用按压反馈 ---------- */
+.restaurant[data-r-ui="refresh"] :is(.r-round,.r-nav button,.r-level,.rr-research-shortcut,.r-locked-table,.rk-zone,.rk-action-circle,.r-recipe-card,.r-staff-card,.r-recipe-filters button,.r-panel-switch button){-webkit-tap-highlight-color:transparent}
+.restaurant[data-r-ui="refresh"] .rfx-press{scale:.93;transition:scale .07s ease}
+.rfx-tap{position:fixed;z-index:119;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;pointer-events:none;
+  border:2.5px solid rgba(255,255,255,.95);box-shadow:0 0 0 1.5px rgba(247,140,52,.55);animation:rfx-tap .42s cubic-bezier(.2,.8,.25,1) forwards}
+.rfx-tap.is-paw{border:0;box-shadow:none;width:22px;height:22px;margin:-11px 0 0 -11px;background:#fff;
+  -webkit-mask:var(--rfx-paw-global) center/contain no-repeat;mask:var(--rfx-paw-global) center/contain no-repeat;animation:rfx-paw .5s cubic-bezier(.2,.8,.25,1) forwards;filter:drop-shadow(0 0 2px #f78c34)}
+:root{--rfx-paw-global:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='12' cy='16' rx='5.2' ry='4.4'/%3E%3Ccircle cx='5.2' cy='10.6' r='2.3'/%3E%3Ccircle cx='9.2' cy='6.4' r='2.4'/%3E%3Ccircle cx='14.8' cy='6.4' r='2.4'/%3E%3Ccircle cx='18.8' cy='10.6' r='2.3'/%3E%3C/svg%3E")}
+@keyframes rfx-tap{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(7)}}
+@keyframes rfx-paw{0%{opacity:0;transform:scale(.4) rotate(-12deg)}30%{opacity:1;transform:scale(1.15) rotate(0)}100%{opacity:0;transform:translateY(-14px) scale(1)}}
+
+/* ---------- 每日开店礼 ---------- */
+.restaurant[data-r-ui="refresh"] .rdl-claim{min-height:48px;font-size:15px!important;letter-spacing:1px}
+
+/* 吐司：餐厅中抬到导航上方，不再遮住标签 */
+body:has(#restaurant-root:not([hidden])) #toast{
+  bottom:calc(150px + env(safe-area-inset-bottom));padding:9px 16px;border-radius:14px;
+  background:rgba(74,44,28,.92);color:#fff8ea;font-size:13px;font-weight:800;box-shadow:0 8px 24px rgba(74,44,28,.25);
+}
+
+@media(prefers-reduced-motion:reduce){
+  .restaurant[data-r-ui="refresh"] *,.rfx-delta,.rfx-tap{animation:none!important;transition:none!important}
+  .rfx-tap,.rfx-delta{display:none}
+}
+
+/* =====================================================================
+ * v2 · 美术素材层（public/assets/restaurant/ui-v2/*.svg）
+ * 粗可可描边 + 奶油底的手绘图标，替换细线图标；面板顶部加遮阳棚花边；
+ * 提示条由主厨橘子“说话”；金币、锁桌徽章、闪光统一成同一套画风。
+ * ===================================================================== */
+.restaurant[data-r-ui="refresh"]{
+  --rfx-art:'/assets/restaurant/ui-v2/';
+}
+/* 底部导航：手绘图标 */
+.restaurant[data-r-ui="refresh"] .r-nav{background:linear-gradient(180deg,#fffaf0,#fff1d8);box-shadow:0 -6px 18px rgba(74,44,28,.08)}
+.restaurant[data-r-ui="refresh"] .r-nav button>span{width:46px;height:34px;background:center/28px 28px no-repeat;border:2px solid transparent;filter:saturate(.6) opacity(.82);transition:filter .2s ease,background-color .2s ease,border-color .2s ease,transform .32s var(--rfx-spring),background-size .32s var(--rfx-spring)}
+.restaurant[data-r-ui="refresh"] .r-nav button>span>svg{display:none}
+.restaurant[data-r-ui="refresh"] .r-nav button[data-r-tab="business"]>span{background-image:url('/assets/restaurant/ui-v2/nav-business.svg')}
+.restaurant[data-r-ui="refresh"] .r-nav button[data-r-tab="customers"]>span{background-image:url('/assets/restaurant/ui-v2/nav-customers.svg')}
+.restaurant[data-r-ui="refresh"] .r-nav button[data-r-tab="recipes"]>span{background-image:url('/assets/restaurant/ui-v2/nav-recipes.svg')}
+.restaurant[data-r-ui="refresh"] .r-nav button[data-r-tab="staff"]>span{background-image:url('/assets/restaurant/ui-v2/nav-staff.svg')}
+.restaurant[data-r-ui="refresh"] .r-nav button[data-r-tab="upgrades"]>span{background-image:url('/assets/restaurant/ui-v2/nav-upgrades.svg')}
+.restaurant[data-r-ui="refresh"] .r-nav button[data-r-tab="themes"]>span{background-image:url('/assets/restaurant/ui-v2/nav-themes.svg')}
+.restaurant[data-r-ui="refresh"] .r-nav button.selected>span{
+  filter:none;background-color:#ffe3bb;background-repeat:no-repeat;background-position:center;background-size:31px 31px;border-color:var(--rfx-orange);
+  box-shadow:0 3px 0 var(--rfx-orange-deep),inset 0 2px 0 rgba(255,255,255,.7);transform:translateY(-3px);
+}
+.restaurant[data-r-ui="refresh"] .r-nav button.selected strong{color:var(--rfx-orange-deep)}
+.restaurant[data-r-ui="refresh"] .r-nav button:not(.selected):hover>span{filter:none}
+
+/* 资源栏：金币徽章 + 卡片高光 */
+.restaurant[data-r-ui="refresh"] .r-fish-medallion{background:url('/assets/restaurant/ui-v2/coin-fish.svg') center/contain no-repeat!important;border:0!important;box-shadow:none!important;filter:drop-shadow(0 2px 0 rgba(74,44,28,.28))}
+.restaurant[data-r-ui="refresh"] .r-fish-medallion>svg{visibility:hidden}
+.restaurant[data-r-ui="refresh"] .r-hud :is(.r-wallet,.r-level,.re-wallet),
+.restaurant[data-r-ui="refresh"] :is(.r-tools,.r-scene-controls) .r-round{box-shadow:var(--rfx-chunk),inset 0 2px 0 rgba(255,255,255,.85)}
+.restaurant[data-r-ui="refresh"] .r-wallet.rfx-bump-shell .r-fish-medallion{animation:rfx-coin-spin .6s var(--rfx-out)}
+@keyframes rfx-coin-spin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
+
+/* 锁桌：手绘徽章 */
+.restaurant[data-r-ui="refresh"] .r-locked-table{background:url('/assets/restaurant/ui-v2/lock-badge.svg') center/contain no-repeat!important;box-shadow:none;width:32px!important;height:32px!important;filter:drop-shadow(0 2px 2px rgba(74,44,28,.25));opacity:.92}
+.restaurant[data-r-ui="refresh"] .r-locked-table:is(:hover,:focus-visible){background:url('/assets/restaurant/ui-v2/lock-badge.svg') center/contain no-repeat!important;opacity:1;scale:1.08}
+.restaurant[data-r-ui="refresh"] .r-locked-table>svg{visibility:hidden}
+
+/* 提示条：主厨橘子在说话 */
+.restaurant[data-r-ui="refresh"] .r-scene-hint{padding-left:52px;min-height:36px;display:flex;align-items:center;border:1.5px solid rgba(255,255,255,.14)}
+.restaurant[data-r-ui="refresh"] .r-scene-hint::before{
+  left:4px;top:auto;bottom:2px;width:44px;height:44px;margin:0;-webkit-mask:none;mask:none;
+  background:url('/assets/restaurant/characters/chef.webp') center bottom/contain no-repeat;filter:drop-shadow(0 2px 0 rgba(0,0,0,.25));
+}
+.restaurant[data-r-ui="refresh"] .r-scene-hint.rfx-hint-new::before{animation:rfx-chef-hop .5s var(--rfx-spring)}
+@keyframes rfx-chef-hop{0%{transform:translateY(0)}35%{transform:translateY(-7px) rotate(-6deg)}100%{transform:none}}
+
+/* 面板：顶部遮阳棚花边 + 纸纹 */
+.restaurant[data-r-ui="refresh"] .r-sheet{padding-top:24px;background:var(--rfx-cream) url('/assets/game-ui/paw-paper.webp') 0 0/180px 180px}
+.restaurant[data-r-ui="refresh"] .r-sheet::before{content:"";position:absolute;left:0;right:0;top:0;height:20px;background:url('/assets/restaurant/ui-v2/awning.svg') 0 0/32px 18px repeat-x;pointer-events:none}
+.restaurant[data-r-ui="refresh"] .r-sheet-handle{display:none}
+.restaurant[data-r-ui="refresh"] .r-sheet h2{display:flex;align-items:center;gap:8px}
+.restaurant[data-r-ui="refresh"] .r-sheet h2::before{content:"";width:22px;height:22px;flex:0 0 auto;background:url('/assets/restaurant/ui-v2/sparkle.svg') center/contain no-repeat}
+
+/* 主按钮：糖果高光 */
+.restaurant[data-r-ui="refresh"] :is(.r-primary,.r-small-primary,.r-buy,.rdl-claim):not(:disabled){box-shadow:0 3px 0 var(--rfx-orange-deep),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(200,100,31,.25)!important}
+.restaurant[data-r-ui="refresh"] :is(.r-primary,.r-small-primary,.r-buy,.rdl-claim):not(:disabled):active{box-shadow:0 1px 0 var(--rfx-orange-deep),inset 0 2px 0 rgba(255,255,255,.35)!important}
+
+/* 金额飘字：带一枚闪光 */
+.rfx-delta::after{content:"";display:inline-block;width:14px;height:14px;margin-left:2px;vertical-align:-1px;background:url('/assets/restaurant/ui-v2/sparkle.svg') center/contain no-repeat}
+
+@media(prefers-reduced-motion:reduce){
+  .restaurant[data-r-ui="refresh"] .r-nav button.selected>span{transform:none}
+}
