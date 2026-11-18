@@ -22,6 +22,7 @@
 .rk-worker-progress{position:absolute;bottom:98%;left:50%;transform:translateX(-50%);z-index:8}
 .rk-worker-thought{position:absolute;bottom:100%;left:50%;translate:-50% 0;padding:4px 6px;border:1px solid #c3b08d;border-radius:9px;background:#fff8e8ed;color:#968058;font-size:8px;white-space:nowrap}
 .rk-carried{position:absolute;left:-14%;bottom:10%;width:56%;height:60%;z-index:3;filter:drop-shadow(0 1px 1px #694c3533)}.rk-carried>.rk-prop,.rk-carried>.r-food{width:100%;height:100%;object-fit:contain;display:block}
+.rk-worker[data-phase="delivery"] .rk-carried{left:3%;bottom:12%;width:43%;height:43%}
 .rk-worker.is-back>.rk-worker-body>.r-cat-chef{background-position:33.333% 0}.rk-worker.is-back>.rk-worker-body>.r-cat-waiter{background-position:100% 0}
 .rk-worker.is-back>.rk-worker-body>:is(.r-cat-staff-pudding,.r-cat-staff-mint,.r-cat-staff-chestnut,.r-cat-staff-sesame,.r-cat-staff-milky){background-position-y:100%}
 .rk-next-actions{position:absolute;inset:0;z-index:30;pointer-events:none}

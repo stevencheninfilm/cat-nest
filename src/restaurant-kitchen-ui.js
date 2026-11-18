@@ -38,7 +38,7 @@ export function kitchenFlowPanel(info,{orderId=null,recipeId='rice',zoneId=null,
     const status=step.status||'pending',done=['done','complete','completed'].includes(status),current=['active','work','working'].includes(status);
     const seconds=step.endAt&&step.startAt?Math.max(0,Math.ceil((step.endAt-(current?now:step.startAt))/1000)):Math.max(1,Math.round(step.durationMs/1000));
     return `<li class="${done?'is-done':current?'is-current':''}" data-rk-step="${esc(step.id)}"><button class="rk-step-number" data-r-kitchen-zone="${step.zoneId}" aria-label="查看${step.zoneId}号${zoneName(step.zoneId)}">${done?'✓':step.zoneId}</button><div><strong>${esc(step.label)}</strong><small>${esc(zoneName(step.zoneId))}${current?` · ${seconds}秒`:done?' · 已完成':step.startAt&&step.startAt>now?' · 等待前序工序':` · 约${seconds}秒`}</small>${current?`<span class="rk-inline-progress"><i style="width:${step.progress*100}%"></i></span>`:''}</div>${propImage(step.prop,'rk-step-prop')}</li>`;
-  }).join('')}<li class="rk-final-step"><span class="rk-step-number">↗</span><div><strong>端到客人的餐桌</strong><small>负责送餐的员工按通道返回厨房</small></div></li></ol><p class="r-fine">接下顾客的需求后，每一步都要点击对应食材圈才会开始。完成后员工会停下来等你；最后再点击餐桌送餐。升级冰箱加快取料，升级料理台加快加工。</p>${!active?`<p class="r-fine">${!recipe.unlocked?(recipe.special?'先解锁这份金色招牌':`Lv.${recipe.unlockLevel} 解锁后制作`):'顾客会从已开售菜品中随机点餐。'}</p>`:'<button class="r-primary" data-r-kitchen-watch>回到餐厅继续操作</button>'}`;
+  }).join('')}<li class="rk-final-step"><span class="rk-step-number">↗</span><div><strong>端到客人的餐桌</strong><small>负责送餐的员工按通道返回厨房</small></div></li></ol><p class="r-fine">接下顾客的需求后，每一步都要点击对应食材圈才会开始。完成后员工会停下来等你；最后点顾客头顶的「送餐」。升级冰箱加快取料，升级料理台加快加工。</p>${!active?`<p class="r-fine">${!recipe.unlocked?(recipe.special?'先解锁这份金色招牌':`Lv.${recipe.unlockLevel} 解锁后制作`):'顾客会从已开售菜品中随机点餐。'}</p>`:'<button class="r-primary" data-r-kitchen-watch>回到餐厅继续操作</button>'}`;
 }
 
 /** Read-only selection model shared by scene and phone instructions. */
@@ -62,7 +62,9 @@ export function kitchenActionPresentation(restaurant,view,now=Date.now()){
   const {active,phase,next,stationBusy}=view;
   const queued=phase==='queued',running=queued||['walk','work','delivery'].includes(phase);
   const step=running?active?.currentStep:next;
-  if(!active||!step||!running&&!view.waiting)return null;
+  // The guest's seat button dispatches delivery. Once dispatched, the dish
+  // travels with its worker until it appears at that guest's place setting.
+  if(!active||!step||step.id==='delivery'||!running&&!view.waiting)return null;
   const saved=restaurant.orders.find(order=>order.id===active.id)?.workflow;
   const work=saved?.segments?.find(segment=>segment.phase==='work'&&segment.stepId===step.id);
   const counting=phase==='work',moving=running&&!counting&&!queued;
@@ -209,7 +211,7 @@ const guidePages=[
   '① 先回到餐桌，点击顾客头上的点餐需求。这里只记下订单，员工还不会自行开工。',
   '② 接单后，冰箱上方会出现食材圈。点一下，员工才会去拿食材；走到工位后开始倒计时，蓝色圆环显示加工进度。',
   '③ 每一步结束后都会停下来。继续点洗菜、打蛋、切肉等下一处气泡；同一个工位同时只能一位员工操作。',
-  '④ 装盘完成后，点击餐桌上的料理把它送出。客人用餐后再收小鱼干，同时获得成长。',
+  '④ 装盘完成后，点顾客头顶的「送餐」把菜送出。客人用餐后再收小鱼干，同时获得成长。',
 ];
 
 /** A frame only paints saved runs. It never submits a cooking action. */
@@ -354,7 +356,7 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
       const depth=String(10+Math.round(item.position.y));
       if(element.style.zIndex!==depth)element.style.zIndex=depth;
       const back=moving&&item.to.y<item.from.y-.1||item.phase==='work'&&item.step?.zoneId===10;
-      const showHead=['walk','work','delivery'].includes(item.phase)&&!actions.some(action=>action.order.id===item.orderId&&action.running);
+      const showHead=item.step?.id!=='delivery'&&['walk','work'].includes(item.phase)&&!actions.some(action=>action.order.id===item.orderId&&action.running);
       const showThought=['awaiting','wait','queue'].includes(item.phase)&&actions.length<5;
       const state=[item.phase,back,item.step?.label,item.carrying,showHead,showThought].join('|');
       if(record.state!==state){
@@ -420,7 +422,7 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
         element.dataset.rkNextAction=action.order.id;element.dataset.step=action.step.id;
       }
       const dispatched=!action.running&&pendingSteps.includes(`${action.order.id}:${action.step.id}`);
-      const index=items.indexOf(action),button=record.button,caption=dispatched?'已派工':action.queued?'排队中':action.moving?(action.phase==='delivery'?'送餐中':'前往中'):shortStep(action.step.id);
+      const index=items.indexOf(action),button=record.button,caption=dispatched?'已派工':action.queued?'排队中':action.moving?'前往中':shortStep(action.step.id);
       const disabled=action.running||dispatched||blocked||action.stationBusy;
       const party=grouped?restaurant.parties?.find(party=>party.table===action.order.seat):null;
       const seat=party?.members.length>1?['左座','右座'][party.members.findIndex(member=>member.orderId===action.order.id)]??'':'';
@@ -433,7 +435,7 @@ export function createKitchenScene({container,getRestaurant,palette='cream'}){
         record.counter.hidden=!action.counting;
         button.querySelector('.rk-action-order').hidden=actions.length<2||grouped;
         button.querySelector('.rk-action-caption').textContent=grouped?`${tableLabel} · ${caption}`:caption;
-        button.setAttribute('aria-label',orderLabel+(dispatched?`${action.step.label}，已派工，等待确认`:action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.moving?`${action.step.label}，员工正在前往${action.phase==='delivery'?'餐桌':'工位'}`:`${action.step.label}，点击开始${disabled?'，暂时不可操作':''}`));
+        button.setAttribute('aria-label',orderLabel+(dispatched?`${action.step.label}，已派工，等待确认`:action.queued?`${action.step.label}，已排队，等待前序工序或员工空闲`:action.moving?`${action.step.label}，员工正在前往工位`:`${action.step.label}，点击开始${disabled?'，暂时不可操作':''}`));
         element.setAttribute('aria-label',action.queued?'已排队，等待开始':action.counting?'当前工序进度':action.moving?'员工正在前往工位':action.stationBusy?'工位正在使用，等空闲后继续':'点击开始下一步');
         switcher.hidden=!grouped;
         if(grouped){

@@ -5,7 +5,7 @@ import { restaurantMarkup } from '../src/restaurant-ui.js';
 import { restaurantGuestTables } from '../src/restaurant-guests-ui.js';
 import { paintSupperScene } from '../src/restaurant-supper-scene.js';
 
-test('the permanent supper control is directly below research in every home and opens the restaurant sheet', () => {
+test('the permanent supper control shares the scene toolbar with research in every home and opens the restaurant sheet', () => {
   for (const isTest of [false, true]) {
     const html = restaurantMarkup(initialState(), {isTest});
     const controls = html.split('class="r-scene-controls">')[1].split('</div><aside')[0];
@@ -45,7 +45,7 @@ test('only uncollected signature dishes carry a visible stamp hint on a real ord
   assert.doesNotMatch(render(), /rs-order-stamp/);
   const signature = {dishes:[recipe],collected:[],completed:false};
   info.supperClub = {active:{signature}};
-  assert.match(render(), /aria-label="接单 · 蛋包饭，结账可为招牌菜单集章"/);
+  assert.match(render(), /aria-label="1号桌左座，接单 · 蛋包饭，结账可为招牌菜单集章"/);
   assert.match(render(), /class="rs-order-stamp"/);
   signature.collected.push(recipe.id);
   assert.doesNotMatch(render(), /rs-order-stamp/);

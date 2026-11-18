@@ -59,7 +59,7 @@ test('automatic first visit waits for identity, loaded state, visible restaurant
 
 test('pausing and reopening resumes the same target, completing stops auto popups, and replay can be paused again',async t=>{
   const h=harness(t);await h.guide.start();await h.click('next');await h.click('next');await h.click('close');assert.equal(loadRestaurantGuide(h.storage,'male').step,'orders');
-  await h.guide.start();assert.match(h.dialog.innerHTML,/点桌边的“接单”/);
+  await h.guide.start();assert.match(h.dialog.innerHTML,/点猫咪头顶的“接单”/);
   await h.click(undefined,'finish');await h.click('next');assert.equal(loadRestaurantGuide(h.storage,'male').phase,'completed');assert.equal(h.dialog.open,false);
   h.guide.sync();await tick();assert.equal(h.dialog.open,false);
   await h.guide.start();assert.match(h.dialog.innerHTML,/欢迎来到/);await h.click('next');await h.click('close');await h.guide.start();assert.match(h.dialog.innerHTML,/小鱼干和金鱼干/);

@@ -7,7 +7,7 @@ import { kitchenTerminalMarkup } from './restaurant-kitchen-terminal.js';
 import { restaurantMaxLevelTerminal, restaurantStaffTerminal } from './restaurant-staff-terminal.js';
 import { RESTAURANT_DECORATIONS } from './restaurant-decor.js';
 import { KITCHEN_CIRCLE_PALETTES } from './restaurant-circle-palettes.js';
-import { RESTAURANT_TABLES, RESTAURANT_GUESTS, restaurantGuestMotion, RESTAURANT_PAIR_CHANCE } from './restaurant-guests.js';
+import { RESTAURANT_TABLES, RESTAURANT_GUESTS, restaurantSeat, restaurantGuestMotion, RESTAURANT_PAIR_CHANCE } from './restaurant-guests.js';
 
 const catNames=Object.fromEntries(RESTAURANT_GUESTS.map(guest=>[guest.id,guest.name]));
 const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -50,8 +50,18 @@ export function restaurantGuestTables(info, options) {
     restaurantGuestTable(info, table, options)).join('');
 }
 
-// Six seats share one row when the two centre tables are unlocked.
-const fullRoomTicketCenters = [19, 80, 19, 80, 19, 80, 49.5, 49.5];
+// In a six-seat row the inner chairs nearly touch. Give each chair a fixed
+// slot and point the ticket back at the guest. Occupancy never moves a target.
+const crowdedHeadSlots = {
+  0: [11.75, 27], 6: [42.25, 57.5], 1: [72.75, 88],
+  4: [10, 25.25], 7: [40.5, 55.75], 5: [71, 86.25],
+};
+function guestTicketPosition(table, seat, capacity) {
+  const head = restaurantSeat(table, seat);
+  const centreTable = table === 0 || table === 1 || table === 6 ? 6 : 7;
+  const slot = capacity > centreTable ? crowdedHeadSlots[table]?.[seat] ?? head.x : head.x;
+  return `--tx:${slot}%;--ty:${head.y}%;--head-offset:${(head.x-slot).toFixed(2)}cqw`;
+}
 
 const ticketStatus = {
   requested:'想吃这份', awaiting:'等待厨师继续制作', preparing:'厨师制作中', cooking:'制作中',
@@ -72,7 +82,6 @@ export function restaurantGuestTable(info, table, {icon,food,blocked=false,repla
   if(party.status==='arriving'||replaying.includes(party.id))return `${extra}<span class="rg-arrival-label" ${base} data-r-party="${party.id}"><i></i>${party.members.length} 位客人正在入座</span>`;
 
   const signature=info.supperClub?.active?.signature;
-  const lane=info.capacity>6 ? fullRoomTicketCenters[table] : position.x;
   const tickets=party.members.map(member=>{
     const order=member.order;
     const pendingDelivery=order?.status==='collectible' && pendingDeliveries.includes(order.id) && !pendingCourses.includes(order.id);
@@ -86,7 +95,8 @@ export function restaurantGuestTable(info, table, {icon,food,blocked=false,repla
     const selectable=['awaiting','preparing'].includes(status) && [2,3,4].includes(order?.workflow?.version);
     const dish=id=>restaurantTierFood(id,tier,food,order?.recipeLevel);
     const location=`${table+1}号桌${member.seat===0?'左':'右'}座`;
-    const label=acceptPending?`${order.recipe.name}，本机已接单，待同步${status==='preparing'?'，厨师制作中':''}`:collecting&&!waiting?`${location}，正在收款…这笔小鱼干已记下`:waiting?`${location}，正在看菜单…思考第二道餐中，请稍候`:action==='kitchen-accept'?`接单 · ${order.recipe.name}`:action==='kitchen-step'||action==='serve'?`送餐 · ${order.recipe.name}`:action==='collect'?`收取 ${order.rewardCoins} 小鱼干和 ${order.rewardXp} 点成长${order.hasNextCourse?'，吃完第一餐，再点第二餐':''}${order.rewardGuestGold?`，额外 ${order.rewardGuestGold} 金鱼干`:''}`:order?`${order.recipe.name}，${ticketStatus[status]}`:`${location}，已结账，等待伙伴`;
+    const message=acceptPending?`${order.recipe.name}，本机已接单，待同步${status==='preparing'?'，厨师制作中':''}`:collecting&&!waiting?'正在收款…这笔小鱼干已记下':waiting?'正在看菜单…思考第二道餐中，请稍候':action==='kitchen-accept'?`接单 · ${order.recipe.name}`:action==='kitchen-step'||action==='serve'?`送餐 · ${order.recipe.name}`:action==='collect'?`收取 ${order.rewardCoins} 小鱼干和 ${order.rewardXp} 点成长${order.hasNextCourse?'，吃完第一餐，再点第二餐':''}${order.rewardGuestGold?`，额外 ${order.rewardGuestGold} 金鱼干`:''}`:order?`${order.recipe.name}，${ticketStatus[status]}`:'已结账，等待伙伴';
+    const label=`${location}，${message}`;
     const stamp=!collecting && signature && !signature.completed && signature.dishes.some(dish=>dish.id===order?.recipe.id && !signature.collected.includes(dish.id));
     const description=[location,order?.recipe.name,tier&&`${restaurantTierName(tier)} · ${course}/${rounds} 餐`,ticketStatus[status],stamp&&'结账可为招牌菜单集章'].filter(Boolean).join(' · ');
     const disabled=(!action&&!selectable)||blocked||collecting;
@@ -101,9 +111,9 @@ export function restaurantGuestTable(info, table, {icon,food,blocked=false,repla
     if(['cooking','preparing'].includes(status))content+=`<i class="r-order-progress" data-r-progress="${order.id}"></i>`;
     const classes=`rg-order-seat is-${status}${waiting?' is-course-thinking':''}${acceptPending?' is-accept-pending':''}`;
     const button=`<button class="r-order-bubble" ${command} ${disabled?'disabled':''} ${collecting||pendingDelivery?'aria-busy="true" ':''}aria-label="${esc(label)}${stamp?'，结账可为招牌菜单集章':''}" title="${esc(description)}"><span class="rg-ticket-face">${content}${tier&&!collecting?`<em class="rg-ticket-course" aria-hidden="true">${course}/${rounds}</em>`:''}${stamp?'<em class="rs-order-stamp" aria-hidden="true">集章</em>':''}</span></button>`;
-    const item=`<div class="r-table-guest ${classes}" data-r-table="${table}" data-r-seat="${member.seat}"${party.members.length===1?' data-r-single':''}${tier?` data-r-guest-tier="${tier}"`:''} style="--tx:${lane}%;--ty:${position.y}%" data-r-order="${order?.id||member.orderId}">${button}</div>`;
+    const item=`<div class="r-table-guest ${classes}" data-r-table="${table}" data-r-seat="${member.seat}"${tier?` data-r-guest-tier="${tier}"`:''} style="${guestTicketPosition(table,member.seat,info.capacity)}" data-r-order="${order?.id||member.orderId}">${button}</div>`;
     if(status!=='dining')return item;
-    return item+`<span class="rg-dining-food" data-r-table="${table}" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${dish(order.recipe.id)}</span>`;
+    return item+`<span class="rg-dining-food" aria-hidden="true" data-r-table="${table}" data-r-seat="${member.seat}" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${food(order.recipe.id)}</span>`;
   }).join('');
   return extra+`<span class="rg-table-number" ${base}>${table+1} 号</span>`+tickets;
 }

@@ -188,7 +188,7 @@ test('online checkout waits only for its own saved delivery, while an offline ta
   assert.deepEqual(unconfirmedRestaurantDeliveries(legacy,{orders:[{id:first.id,workflow:{version:1,servedAt:null}}]},true),[]);
 });
 
-test('table-edge tickets keep independent seat actions and explicit dish descriptions',()=>{
+test('overhead tickets keep independent seat actions and explicit dish descriptions',()=>{
   const state=arrive(arrive(),2,NOW+1);
   const info=restaurantInfo(state,NOW+RESTAURANT_ARRIVAL_MS+1);
   const buttonRows=markup=>Array.from(markup.matchAll(/<div class="r-table-guest rg-order-seat[^]*?<\/button><\/div>/g),row=>row[0]);
@@ -215,7 +215,7 @@ test('table-edge tickets keep independent seat actions and explicit dish descrip
   assert.match(pending[3],/disabled[^>]*aria-busy="true"/);
 });
 
-test('sixteen table-edge tickets keep unique seat actions and a stable row as cooking time advances',()=>{
+test('sixteen overhead tickets keep unique seat actions and a stable row as cooking time advances',()=>{
   const first=restaurantInfo(arrive(),NOW+RESTAURANT_ARRIVAL_MS);
   const options={icon:()=>'',food:id=>`<i>${id}</i>`};
   const info={...first,capacity:8,parties:Array.from({length:8},(_,table)=>({
@@ -232,6 +232,11 @@ test('sixteen table-edge tickets keep unique seat actions and a stable row as co
     for(const member of party.members) {
       assert.ok(table.includes(`data-r-table="${party.table}" data-r-seat="${member.seat}"`));
       assert.ok(table.includes(`data-r-action="kitchen-accept" data-r-order-id="${member.order.id}"`));
+      const row=table.match(new RegExp(`data-r-seat="${member.seat}"[^>]*style="--tx:([\\d.]+)%;--ty:([\\d.]+)%;--head-offset:([-\\d.]+)cqw"`));
+      assert.ok(row);
+      const [,x,y,offset]=row.map(Number);
+      const head=restaurantSeat(party.table,member.seat);
+      assert.ok(Math.abs(x+offset-head.x)<.01 && Math.abs(y-head.y)<.01, 'tip anchors to the individual guest');
     }
   }
   const order=info.parties[6].members[1].order;
