@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createGitHubStore, ROOM_ID, sanitizeActor, StorageError } from './github-store.mjs';
+import { createGitHubStore, ROOM_ID, sanitizeActor, StorageError, ACTION_BATCH_LIMIT, validateActionBatch } from './github-store.mjs';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { createModelAssetHandler } from './model-assets.mjs';
 import { createGuideHandler } from './guide-api.mjs';
@@ -32,16 +32,17 @@ export function createPetHandler({
   const origins = new Set((Array.isArray(corsOrigin) ? corsOrigin : corsOrigin.split(',')).map(value => value.trim()).filter(Boolean));
   const rooms = new Map();
   const rates = new Map();
+  const capabilities = typeof store.applyActions === 'function' ? { actionBatchLimit: ACTION_BATCH_LIMIT } : {};
   let closed = false;
 
   function fail(request, response, error) {
     sendPetJson(request, response, error instanceof StorageError ? error.status : 500, { error: { code: error instanceof StorageError ? error.code : 'INTERNAL_ERROR', message: error instanceof StorageError ? error.message : '服务暂时不可用，请稍后重试。' } });
   }
-  function rate(key, count, duration) {
+  function rate(key, count, duration, weight = 1) {
     const now = Date.now();
     const entry = rates.get(key);
-    if (!entry || entry.until < now) { rates.set(key, { count: 1, until: now + duration }); return; }
-    entry.count += 1;
+    if (!entry || entry.until < now) { rates.set(key, { count: weight, until: now + duration }); return; }
+    entry.count += weight;
     if (rates.size > 10_000) for (const [storedKey, value] of rates) if (value.until < now) rates.delete(storedKey);
     if (entry.count > count) throw new StorageError('TOO_MANY_REQUESTS', '互动太快啦，请稍等片刻再试。', 429);
   }
@@ -140,29 +141,40 @@ export function createPetHandler({
           }
           if (typeof coupleRoomId !== 'string' || !ROOM_ID.test(coupleRoomId)) throw new StorageError('INVALID_COUPLE_HOME', '共同小窝配置无效，请联系网站维护者。', 503);
           // Read only: a missing or inaccessible save must never create a new home.
-          sendPetSnapshot(request, response, { ...await store.getRoom(coupleRoomId), roles: COUPLE_ROLES }); return true;
+          sendPetSnapshot(request, response, { ...await store.getRoom(coupleRoomId), ...capabilities, roles: COUPLE_ROLES }); return true;
         }
         if (url.pathname === '/api/rooms' && request.method === 'POST') {
           rate(`create:${request.socket.remoteAddress}`, 10, 3_600_000);
           const input = await body(request);
           if (input.name !== undefined && !sanitizeActor('create-user', input.name)) throw new StorageError('INVALID_NAME', '昵称需要 1–20 个字符。', 400);
           if (input.initialState !== undefined && (input.initialState === null || typeof input.initialState !== 'object' || Array.isArray(input.initialState))) throw new StorageError('INVALID_STATE', '初始存档格式无效。', 400);
-          json(response, 201, await store.createRoom(input)); return true;
+          json(response, 201, { ...await store.createRoom(input), ...capabilities }); return true;
         }
-        const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9]{32})(?:\/(actions|events))?$/);
+        const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9]{32})(?:\/(actions(?:\/batch)?|events))?$/);
         if (!match || !ROOM_ID.test(match[1])) { json(response, 404, { error: { code: 'NOT_FOUND', message: '没有找到这个接口。' } }); return true; }
         const [, id, route] = match;
-        if (!route && request.method === 'GET') { sendPetSnapshot(request, response, await store.getRoom(id)); return true; }
-        if (route === 'actions' && request.method === 'POST') {
+        if (!route && request.method === 'GET') {
+          sendPetSnapshot(request, response, { ...await store.getRoom(id), ...capabilities }); return true;
+        }
+        if ((route === 'actions' || route === 'actions/batch') && request.method === 'POST') {
+          const batch = route === 'actions/batch';
+          if (batch && !capabilities.actionBatchLimit) throw new StorageError('NOT_FOUND', '没有找到这个接口。', 404);
           const input = await body(request);
-          const actor = roomActor(id, input.clientId, input.name);
+          const operations = batch ? input.operations : [input];
+          if (batch) validateActionBatch(operations);
+          const commands = operations.map(operation => {
+            const actor = roomActor(id, operation.clientId, operation.name);
+            return { ...operation, clientId: actor.id, name: actor.name };
+          });
+          const actorId = commands[0].clientId;
           const hub = rooms.get(id);
-          if (hub?.members.size >= 2 && !hub.members.has(actor.id)) throw new StorageError('ROOM_FULL', '这个小窝已经有两位铲屎官啦。', 409);
-          rate(`action:${id}:${actor.id}`, 90, 60_000);
-          const result = await store.applyAction(id, { ...input, clientId: actor.id, name: actor.name });
-          // The GitHub commit has completed before any response or live event.
-          if (hub && !result.duplicate) updateHub(hub, result, 'action');
-          json(response, 200, result); return true;
+          if (hub?.members.size >= 2 && !hub.members.has(actorId)) throw new StorageError('ROOM_FULL', '这个小窝已经有两位铲屎官啦。', 409);
+          rate(`action:${id}:${actorId}`, 90, 60_000, commands.length);
+          const results = batch ? await store.applyActions(id, commands) : [await store.applyAction(id, commands[0])];
+          // Each revision is now durable. Older clients receive their usual events.
+          const live = rooms.get(id);
+          if (live) for (const result of results) if (!result.duplicate) updateHub(live, result, 'action');
+          json(response, 200, batch ? { results } : results[0]); return true;
         }
         if (route === 'events' && request.method === 'GET') {
           const actor = roomActor(id, url.searchParams.get('clientId'), url.searchParams.get('name'));
@@ -194,7 +206,7 @@ export function createPetHandler({
           });
           return true;
         }
-        json(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: '这个接口不支持当前请求方式。' } }, { Allow: route === 'actions' ? 'POST' : 'GET' }); return true;
+        json(response, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: '这个接口不支持当前请求方式。' } }, { Allow: route?.startsWith('actions') ? 'POST' : 'GET' }); return true;
       }
       if (!['GET', 'HEAD'].includes(request.method)) return false;
       let decoded;

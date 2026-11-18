@@ -172,6 +172,7 @@ let coupleTab = 'activity', coupleHasNew = false, coupleSnapshotReady = false, c
 const couplePages = { activity:0, memories:0 };
 let actionLocked = false;
 let pendingCloudActions = 0;
+let pendingRestaurant = summarizeRestaurantQueue([]);
 let pendingGrowthClaims = new Set();
 let pendingInvitations = new Set();
 let toastTimer;
@@ -624,6 +625,21 @@ function rollbackReaction(action, actor, { operationId }) {
   if (action.type === 'dress') appearanceDraft = normalizeAppearance(state.appearance);
 }
 function careSaving() { return cloudConfigured && (pendingCloudActions > 0 || saveStatus.phase === 'saving'); }
+// The restaurant reads this several times per frame. Rebuild the summary only
+// when the durable queue changes; it contains no mutable references to actions.
+function summarizeRestaurantQueue(queue) {
+  const actions = queue.map(item => item.action);
+  const research = actions.find(action => action?.type === 'restaurant-research-draw');
+  return {
+    pendingKitchenSteps: Object.freeze(actions.filter(action => action?.type === 'restaurant-kitchen-step').map(action => `${action.orderId}:${action.stepId}`)),
+    pendingRestaurantAccepts: Object.freeze(actions.filter(action => action?.type === 'restaurant-kitchen-accept').map(action => action.orderId)),
+    pendingRestaurantCollections: Object.freeze(actions.filter(action => action?.type === 'restaurant-collect').map(action => action.orderId)),
+    pendingRestaurantArrival: actions.some(action => action?.type === 'restaurant-arrive' || action?.type === 'restaurant-wait'),
+    pendingResearchDraw: research?.draw ?? null,
+    pendingResearchCount: research?.count ?? 1,
+    pendingDailyLoginDay: actions.find(action => action?.type === 'restaurant-daily-login')?.day ?? null,
+  };
+}
 function careConnected() { return !cloudConfigured || coupleSnapshotReady && cloud?.ready === true; }
 function renderSaveStatus() {
   const text=saveError || '', phase=text?'error':'';
@@ -702,6 +718,7 @@ function startCloud() {
   const pendingKey = `catnest.pending.${runtime.pendingScope}.${chosenRole}`;
   const pending = read(pendingKey, []);
   pendingCloudActions = pending.length;
+  pendingRestaurant = summarizeRestaurantQueue(pending);
   queuedLocalGames=new Set(pending.filter(item=>item.action?.type==='game-local-finish').map(item=>item.action.session.id));
   pendingGrowthClaims = new Set(pending.flatMap(item => growthClaimIds(item.action)));
   pendingInvitations = new Set(pending.filter(item=>item.action?.type==='invite-cat').map(item=>`${item.action.catId}:${item.action.sceneId || 'station'}`));
@@ -745,6 +762,7 @@ function startCloud() {
     onPending(queue) {
       queuedLocalGames=new Set(queue.filter(item=>item.action?.type==='game-local-finish').map(item=>item.action.session.id));
       pendingCloudActions=queue.length;
+      pendingRestaurant = summarizeRestaurantQueue(queue);
       pendingGrowthClaims=new Set(queue.flatMap(item => growthClaimIds(item.action)));
       const invitations=new Set(queue.filter(item=>item.action?.type==='invite-cat').map(item=>`${item.action.catId}:${item.action.sceneId || 'station'}`));
       if(invitations.size!==pendingInvitations.size||[...invitations].some(id=>!pendingInvitations.has(id)))cloudUi.request('invitations');
@@ -1238,23 +1256,15 @@ function showRestaurant({fromHome=false}={}) {
   if(!restaurant)restaurant=createRestaurant({container:restaurantContainer,getState:()=>state,
     getConfirmedState:()=>cloudConfigured ? confirmedState : state,
     getAvailability:()=>{
-      const queue=cloud?.getPendingActions()??[];
-      const research=queue.find(item=>item.action?.type==='restaurant-research-draw')?.action;
       const confirmedOrders=confirmedState.restaurant?.orders??[];
-      const pendingRestaurantAccepts=queue
-        .filter(item=>item.action?.type==='restaurant-kitchen-accept')
-        .map(item=>item.action.orderId)
+      const pendingRestaurantAccepts=pendingRestaurant.pendingRestaurantAccepts
         .filter(id=>!confirmedOrders.some(order=>order.id===id&&order.workflow?.acceptedAt!=null));
       return {
         connected:!cloudConfigured||status.phase==='online', ready:!cloudConfigured||coupleSnapshotReady&&cloud?.isReady()===true,
         saving:careSaving(), savePhase:saveStatus.phase, saveRejected:saveStatus.rejected===true, retrying:saveStatus.retrying===true,
-        pendingKitchenSteps:queue.filter(item=>item.action?.type==='restaurant-kitchen-step').map(item=>`${item.action.orderId}:${item.action.stepId}`),
+        ...pendingRestaurant,
         pendingRestaurantAccepts,
-        pendingRestaurantCollections:queue.filter(item=>item.action?.type==='restaurant-collect').map(item=>item.action.orderId),
-        pendingRestaurantArrival:queue.some(item=>['restaurant-arrive','restaurant-wait'].includes(item.action?.type)),
-        pendingResearchDraw:research?.draw??null, pendingResearchCount:research?.count??1,
         refusedResearchDraw:saveStatus.rejected&&saveStatus.action?.type==='restaurant-research-draw'?saveStatus.action.draw:null,
-        pendingDailyLoginDay:queue.find(item=>item.action?.type==='restaurant-daily-login')?.action.day??null,
       };
     },
     onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,

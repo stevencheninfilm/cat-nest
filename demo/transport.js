@@ -1,4 +1,4 @@
-import { createDemoEngine, DEMO_ROOM, DEMO_ACTORS } from './engine.js';
+import { createDemoEngine, DEMO_ROOM, DEMO_ACTORS, DEMO_ACTION_BATCH_LIMIT } from './engine.js';
 import { createDemoCourt } from './court-engine.js';
 
 export const DEMO_ORIGIN = 'https://demo.cat-nest.invalid';
@@ -30,10 +30,14 @@ export async function demoFetch(input, options={}) {
   if (url.origin!==DEMO_ORIGIN) throw new TypeError('演示接口禁止连接正式服务器');
   const method=(options.method || 'GET').toUpperCase(), path=url.pathname;
   const mutating=method!=='GET';
+  const batchRequest=method==='POST' && path===`/api/rooms/${DEMO_ROOM}/actions/batch`;
   await pause(mutating ? demoEngine.controls.latency : 35,options.signal);
   if (demoEngine.controls.offline) { demoEngine.log(method,path,'offline'); throw new TypeError('演示：网络已断开'); }
   if (mutating && demoEngine.controls.rejectNext) {
-    demoEngine.controls.rejectNext=false; demoEngine.log(method,path,409);
+    // A batch refusal is retried one item at a time. Keep the simulated refusal
+    // for the first such item so the demo still exercises an actual rollback.
+    if(!batchRequest)demoEngine.controls.rejectNext=false;
+    demoEngine.log(method,path,409);
     return response(409,{error:{code:'DEMO_REJECTED',message:'演示：服务器拒绝了这次操作，已恢复原来的状态'}});
   }
   let body={};
@@ -41,7 +45,11 @@ export async function demoFetch(input, options={}) {
   demoEngine.sync();
   let result;
   if (path.startsWith('/api/court/')) result=demoCourt.request(path.slice('/api/court'.length)+url.search,method,body,options.headers);
-  else if (method==='GET' && (path==='/api/couple/home' || path===`/api/rooms/${DEMO_ROOM}`)) result={data:demoEngine.snapshot()};
+  else if (method==='GET' && (path==='/api/couple/home' || path===`/api/rooms/${DEMO_ROOM}`)) result={data:{...demoEngine.snapshot(),actionBatchLimit:DEMO_ACTION_BATCH_LIMIT}};
+  else if (batchRequest) {
+    result=demoEngine.actionBatch(body?.operations);
+    if(result.status===200 && body.operations.some(item=>item.action?.type?.startsWith('game-')))schedulePartner(body.operations[0].clientId);
+  }
   else if (method==='POST' && path===`/api/rooms/${DEMO_ROOM}/actions`) { result=demoEngine.action(body); if(body.action?.type?.startsWith('game-') && result.status===200)schedulePartner(body.clientId); }
   else result={status:404,error:'此接口不属于独立演示环境'};
   const status=result.status || 200; demoEngine.log(method,path,status);

@@ -749,3 +749,167 @@ test('supper bookings reserve coins immediately and replay the same booking afte
   assert.deepEqual(restored.latest().restaurant.supperClub, saved.restaurant.supperClub);
   assert.equal(restored.pending().length, 0);
 });
+
+test('theme, palette and construction show at click time and replay in order after reconnecting', async t => {
+  const base = upgradeFixture(), offline = deferred();
+  const first = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : offline.promise, {state:base});
+  await first.cloud.start();
+  const changes = [
+    {type:'restaurant-theme', themeId:'mint'},
+    {type:'restaurant-palette', paletteId:'sky'},
+    {type:'restaurant-decoration', decorationId:'cream-library'},
+  ];
+  let projected = base;
+  for (const action of changes) {
+    assert.equal(first.cloud.dispatch(action), true);
+    projected = apply(projected, first.pending().at(-1));
+    assert.deepEqual(first.latest().restaurant, projected.restaurant);
+    assert.equal(first.latest().coins, projected.coins);
+  }
+  const queue = structuredClone(first.pending());
+  assert.equal(first.posts().length, 1);
+  assert.equal(projected.restaurant.construction.startedAt, NOW);
+  assert.equal(first.observed.states.at(-1).confirmedState.coins, base.coins);
+  first.cloud.destroy();
+  t.mock.timers.reset();
+
+  const ack = deferred();
+  let saved = base, revision = 0;
+  const resumed = harness(t, async req => {
+    if (req.method === 'GET') return response(snapshot(base));
+    await ack.promise;
+    saved = apply(saved, req.body);
+    return response(receipt(req.body, saved, ++revision));
+  }, {state:base, pending:queue});
+  t.mock.timers.tick(3000);
+  await resumed.cloud.start();
+  assert.equal(resumed.latest().restaurant.construction.startedAt, NOW, 'a reload preserves the original projected start');
+  assert.equal(resumed.latest().coins, projected.coins);
+  ack.resolve();
+  await flush();
+  assert.deepEqual(resumed.posts().map(req => req.body.operationId), queue.map(item => item.operationId));
+  assert.equal(saved.restaurant.construction.startedAt, NOW+3000, 'the server owns the durable construction clock');
+  assert.deepEqual(resumed.latest(), saved);
+  assert.equal(saved.coins, projected.coins, 'coins are charged once');
+});
+
+test('a confirmed refusal releases construction and its reserved coins', async t => {
+  const base = upgradeFixture(), ack = deferred();
+  let saved=base, revision=0;
+  const h = harness(t, req => req.method === 'GET' ? response(snapshot(saved,revision)) : ack.promise, {state:base});
+  await h.cloud.start();
+  assert.equal(h.cloud.dispatch({type:'restaurant-decoration', decorationId:'cream-library'}), true);
+  assert.ok(h.latest().restaurant.construction);
+  assert.ok(h.latest().coins < base.coins);
+  const preview = h.latest();
+  saved={...base,coins:1};revision++;
+  h.sources[0].emit('state',snapshot(saved,revision));
+  assert.deepEqual(h.latest(),preview,'a competing wallet update is not a refusal');
+  ack.resolve(response({error:{code:'RESTAURANT_ACTION_REJECTED', message:'施工状态已更新'}}, 409));
+  await flush();
+  assert.deepEqual(h.latest(), saved);
+  assert.equal(h.pending().length, 0);
+  assert.equal(h.observed.rollbacks.length, 1);
+});
+
+test('restaurant backlog leaves room for home care without lifting the total or home queue limits', async t => {
+  const base = upgradeFixture(), hold = deferred();
+  const h = harness(t, req => req.method === 'GET' ? response(snapshot(base)) : hold.promise, {state:base});
+  await h.cloud.start();
+  const palette = index => ({type:'restaurant-palette', paletteId:index % 2 ? 'cream' : 'sky'});
+  for (let index=0; index<20; index++) assert.equal(h.cloud.dispatch(palette(index)), true);
+  const previousIds = h.pending().map(item => item.operationId);
+  assert.equal(h.cloud.dispatch({type:'feed', food:'water'}), true);
+  assert.deepEqual(h.pending().slice(0,20).map(item => item.operationId), previousIds);
+  assert.equal(h.latest().coins, base.coins-5);
+  for (let index=1; index<20; index++) assert.equal(h.cloud.dispatch({type:'rename',name:`糯米${index}`}), true);
+  assert.equal(h.cloud.dispatch({type:'rename',name:'糯米21'}), false);
+  for (let index=20; index<180; index++) assert.equal(h.cloud.dispatch(palette(index)), true);
+  assert.equal(h.pending().length, 200);
+  assert.equal(h.cloud.dispatch(palette(180)), false);
+});
+
+test('seven rapid restaurant and home taps save in two round trips with immediate local feedback', async t => {
+  const state = upgradeFixture(), first = deferred(), batch = deferred();
+  const h = harness(t, req => req.method === 'GET' ? response({...snapshot(state), actionBatchLimit:6})
+    : req.url.endsWith('/batch') ? batch.promise : first.promise, {state});
+  await h.cloud.start();
+  for (const action of [
+    {type:'restaurant-upgrade', upgradeId:'kitchen'}, {type:'restaurant-upgrade', upgradeId:'kitchen'},
+    {type:'restaurant-train', workerId:'worker-1', statId:'stamina'}, {type:'restaurant-hire'},
+    {type:'restaurant-recipe', recipeId:'rice'}, {type:'pet'}, {type:'rename', name:'米粒'},
+  ]) assert.equal(h.cloud.dispatch(action), true);
+  const items = h.pending();
+  assert.equal(h.posts().length, 1);
+  assert.equal(h.latest().restaurant.levels.kitchen, 3);
+  assert.equal(h.latest().name, '米粒');
+  let saved = apply(state, items[0]);
+  first.resolve(response(receipt(items[0], saved))); await flush();
+  const second = h.posts()[1];
+  assert.ok(second.url.endsWith('/actions/batch'));
+  assert.deepEqual(second.body.operations.map(i => i.operationId), items.slice(1).map(i => i.operationId));
+  const results = second.body.operations.map((item, i) => receipt(item, saved = apply(saved, item), i + 2));
+  for (const result of results) h.sources[0].emit('action', result);
+  await flush();
+  assert.deepEqual(h.pending(), [], 'live receipts release the batch while HTTP is still pending');
+  batch.resolve(response({results})); await flush();
+  assert.equal(h.posts().length, 2);
+  assert.equal(h.observed.actions.filter(a => !a.optimistic).length, 7);
+  assert.deepEqual(h.latest(), saved);
+});
+
+test('a rejected batch settles each original intent individually and keeps later valid taps', async t => {
+  const state = upgradeFixture();
+  const pending = ['一','二','三'].map((name,i) => ({operationId:`batch-rename-${i}`, clientId:ACTOR.id, name:ACTOR.name, action:{type:'rename', name}}));
+  let saved = state, revision = 0;
+  const h = harness(t, req => {
+    if (req.method === 'GET') return response({...snapshot(saved,revision), actionBatchLimit:6});
+    if (req.url.endsWith('/batch') || req.body.action.name === '二') return response({error:{code:'ACTION_REJECTED',message:'已被拒绝'}},409);
+    const item = req.body; saved = apply(saved,item); return response(receipt(item,saved,++revision));
+  }, {state,pending});
+  await h.cloud.start(); await flush();
+  assert.deepEqual(h.posts().slice(1).map(req => req.body.operationId), pending.map(item => item.operationId));
+  assert.equal(h.latest().name, '三'); assert.equal(revision,2);
+  assert.deepEqual(h.pending(), []);
+  assert.equal(h.observed.saves.filter(save => save.rejected).length,1);
+});
+
+test('a lost batch response preserves the outbox and retries original IDs without applying rewards twice', async t => {
+  const state = upgradeFixture();
+  const pending = ['pet','play'].map(type => ({operationId:`batch-lost-${type}`, clientId:ACTOR.id,name:ACTOR.name,action:{type}}));
+  const receipts = new Map(); let saved = state;
+  const h = harness(t, req => {
+    if (req.method === 'GET') return response({...snapshot(saved,receipts.size),actionBatchLimit:6});
+    if (req.url.endsWith('/batch')) {
+      for (const item of req.body.operations) receipts.set(item.operationId,receipt(item,saved = apply(saved,item),receipts.size+1));
+      throw new TypeError('response lost after commit');
+    }
+    const item = req.body;
+    return response({...receipt(item,saved,receipts.size),duplicate:true});
+  }, {state,pending});
+  await h.cloud.start(); await flush();
+  assert.deepEqual(h.cloud.getPendingActions(),pending);
+  assert.equal(h.observed.saves.at(-1).phase,'queued');
+  t.mock.timers.tick(8000); await flush();
+  assert.deepEqual(h.posts().slice(1).map(req => req.body.operationId),pending.map(item => item.operationId));
+  assert.deepEqual(h.pending(),[]); assert.deepEqual(h.latest(),saved);
+  assert.equal(receipts.size,2); assert.equal(h.observed.rollbacks.length,0);
+});
+
+test('one stalled reconciliation after a restaurant refusal cannot block the next tap for a cold start', async t => {
+  const state = requested(); let reads = 0;
+  const h = harness(t, req => {
+    if (req.method === 'GET') {
+      if (++reads === 1) return response(snapshot(state));
+      return new Promise((_,reject) => req.signal.addEventListener('abort',() => reject(new Error('timed out'))));
+    }
+    if (req.body.action.type === 'restaurant-kitchen-accept') return response({error:{code:'RESTAURANT_ACTION_REJECTED',message:'订单已更新'}},409);
+    return response(receipt(req.body,apply(state,req.body),1));
+  }, {state});
+  await h.cloud.start();
+  assert.ok(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:'table-1'}));
+  assert.ok(h.cloud.dispatch({type:'rename',name:'小米'}));
+  await flush(); t.mock.timers.tick(4000); await flush();
+  assert.equal(reads,2,'one initial load and one read for this conflict');
+  assert.deepEqual(h.pending(),[]); assert.equal(h.latest().name,'小米');
+});

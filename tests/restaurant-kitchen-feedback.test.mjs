@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
 import { kitchenViewModel, kitchenActionPresentation } from '../src/restaurant-kitchen-ui.js';
-import { restaurantInputBlocked, restaurantSaveLabel } from '../src/restaurant-ui.js';
+import { restaurantArrivalBlocked, restaurantInputBlocked, restaurantSaveLabel } from '../src/restaurant-ui.js';
 
 const NOW=Date.parse('2026-10-18T19:00:00Z'),actor={id:'manual-kitchen-feedback',name:'店长'};
 function acceptedOrder(){
@@ -52,6 +52,18 @@ test('background saves and an offline loaded home allow normal play while the fi
   assert.equal(restaurantInputBlocked({ready:false,connected:true,saving:false}),true);
   assert.equal(restaurantInputBlocked({ready:false,connected:false,saving:false}),true);
   assert.equal(restaurantInputBlocked({connected:true,saving:true}),false);
+});
+
+test('natural arrivals can proceed during an unrelated save, with only one arrival outstanding',()=>{
+  const saving={ready:true,connected:true,saving:true};
+  assert.equal(restaurantArrivalBlocked(saving,false),false);
+  for(const hasWaitingTable of [false,true]){
+    assert.equal(restaurantArrivalBlocked({...saving,pendingRestaurantArrival:true},hasWaitingTable),true);
+    assert.equal(restaurantArrivalBlocked({...saving,ready:false},hasWaitingTable),true);
+  }
+  assert.equal(restaurantArrivalBlocked({...saving,connected:false},false),true);
+  assert.equal(restaurantArrivalBlocked({...saving,retrying:true},false),true);
+  assert.equal(restaurantArrivalBlocked({...saving,connected:false},true),false);
 });
 
 test('successful background saving stays quiet and only a connection or saving problem changes the status',()=>{

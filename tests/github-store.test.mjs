@@ -737,3 +737,52 @@ test('energy recovery is saved once across store restarts and keeps working afte
   assert.equal(next.state.pendingGrowth[1].amount,3.9);
   assert.equal(next.state.xp,room.state.xp);
 });
+
+test('a burst commits once and returns a distinct ordered snapshot for each original action', async () => {
+  const mock = mockGitHub();
+  mock.controls.writeSha = true;
+  const store = makeStore(mock, {now: () => CARE_START});
+  const room = await store.createRoom();
+  const operations = Array.from({length: 6}, (_, index) => ({
+    ...operation(`batch-rename-${index}`), action:{type:'rename', name:`糯米${index}`},
+  }));
+  mock.calls.length = 0;
+  const results = await store.applyActions(room.roomId, operations);
+  assert.deepEqual(mock.calls.map(call => call.method), ['PUT']);
+  assert.deepEqual(results.map(result => result.revision), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(results.map(result => result.state.name), operations.map(op => op.action.name));
+  assert.deepEqual(results.map(result => result.event.operationId), operations.map(op => op.operationId));
+  assert.equal(mock.files.get(room.roomId).room.operations.length, 6);
+  const replay = await store.applyActions(room.roomId, operations);
+  assert.ok(replay.every(result => result.duplicate && result.revision === 6));
+  assert.deepEqual(mock.calls.map(call => call.method), ['PUT']);
+});
+
+test('one refused action leaves the whole batch unapplied, including a legitimate earlier care reward', async () => {
+  const mock = mockGitHub(), store = makeStore(mock, {now: () => CARE_START}), room = await store.createRoom();
+  const first = operation('batch-pet-first'), second = operation('batch-pet-second');
+  const writes = mock.calls.filter(call => call.method === 'PUT').length;
+  await assert.rejects(store.applyActions(room.roomId, [first, second]), error => error.code === 'CARE_COOLDOWN');
+  assert.equal(mock.calls.filter(call => call.method === 'PUT').length, writes);
+  assert.equal(mock.files.get(room.roomId).room.revision, 0);
+  assert.equal(mock.files.get(room.roomId).room.state.pendingGrowth.length, 0);
+  await assert.rejects(store.applyActions(room.roomId, [first, {...second, clientId:'another-owner'}]), error => error.code === 'INVALID_ACTION_BATCH');
+  await assert.rejects(store.applyActions(room.roomId, [first, {...first, action:{type:'sleep'}}]), error => error.code === 'OPERATION_CONFLICT');
+  assert.equal((await store.applyAction(room.roomId, first)).state.pendingGrowth.length, 1);
+});
+
+test('a batch merges a competing writer and replay after a lost commit reply never awards growth twice', async () => {
+  const mock = mockGitHub();
+  mock.controls.writeSha = true;
+  const first = makeStore(mock, {now: () => CARE_START}), second = makeStore(mock, {now: () => CARE_START});
+  const room = await first.createRoom();
+  await second.applyAction(room.roomId, {...operation('batch-partner-rename'), clientId:'other-partner', action:{type:'rename',name:'奶盖'}});
+  const operations = [operation('batch-safe-pet'), {...operation('batch-safe-water'), action:{type:'feed', food:'water'}}];
+  mock.controls.loseAcknowledgment = true;
+  await assert.rejects(first.applyActions(room.roomId, operations), error => error.code === 'STORAGE_UNAVAILABLE');
+  const writes = mock.calls.filter(call => call.method === 'PUT').length;
+  const results = await first.applyActions(room.roomId, operations);
+  assert.equal(mock.calls.filter(call => call.method === 'PUT').length, writes);
+  assert.ok(results.every(result => result.duplicate && result.revision === 3 && result.state.name === '奶盖'));
+  assert.deepEqual(results.at(-1).state.pendingGrowth.map(reward => reward.id), operations.map(op => op.operationId));
+});
