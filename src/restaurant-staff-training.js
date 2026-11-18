@@ -45,7 +45,8 @@ const validWorkerId=value=>typeof value==='string'&&WORKER_ID.test(value);
 const activeWorkerCount=staffCount=>1+(integer(staffCount,0,98)?staffCount:0);
 const maxEnergyFor=staffMaxEnergy;
 const recordMaxEnergy=record=>maxEnergyFor(record.levels,staffEnergyBase(record),staffAbilityVersion(record));
-const normalizedLevels=value=>Object.fromEntries(STAT_IDS.map(id=>[id,integer(value?.[id],1,STAFF_TRAINING_MAX_LEVEL)?value[id]:1]));
+const normalizedLevel=value=>integer(value,1,STAFF_TRAINING_MAX_LEVEL)?value:1;
+const normalizedLevels=value=>Object.fromEntries(STAT_IDS.map(id=>[id,normalizedLevel(value?.[id])]));
 const initialRecord=now=>({levels:normalizedLevels(null),energyBase:STAFF_BASE_ENERGY,abilityVersion:STAFF_ABILITY_VERSION,energy:STAFF_BASE_ENERGY,energyAt:safeTime(now)});
 const point=value=>exact(value,['x','y'])&&Number.isFinite(value.x)&&Number.isFinite(value.y)&&value.x>=0&&value.x<=100&&value.y>=0&&value.y<=100;
 const validRest=value=>value===null||exact(value,['departAt','arriveAt','fullAt','speedLevel','segments',...Object.keys(staffAbilitySnapshot(value))])&&validStaffAbilityVersion(value)&&integer(value.departAt)&&integer(value.arriveAt,value.departAt+1)&&integer(value.fullAt,value.arriveAt)&&integer(value.speedLevel,1,10)&&Array.isArray(value.segments)&&value.segments.length>0&&value.segments.length<20&&value.segments.every((s,i)=>exact(s,['phase','startAt','endAt','from','to','zoneId','stepId','carrying'])&&s.phase==='rest-walk'&&integer(s.startAt)&&integer(s.endAt,s.startAt+1)&&s.startAt===(i?value.segments[i-1].endAt:value.departAt)&&point(s.from)&&point(s.to)&&s.zoneId===null&&s.stepId==='rest'&&s.carrying===null&&(s.from.x===s.to.x||s.from.y===s.to.y)&&s.endAt-s.startAt===5*Math.max(180,Math.round(Math.round((Math.abs(s.to.x-s.from.x)+Math.abs(s.to.y-s.from.y))*45)/(1+.075*abilityScale(staffAbilityVersion(value))*(value.speedLevel-1))))&&(i===0||s.from.x===value.segments[i-1].to.x&&s.from.y===value.segments[i-1].to.y))&&value.segments.at(-1).endAt===value.arriveAt&&value.segments.at(-1).to.x===STAFF_REST_ROOM_POSITION.x&&value.segments.at(-1).to.y===STAFF_REST_ROOM_POSITION.y;
@@ -53,9 +54,12 @@ const recordIsValid=value=>exact(value,['levels','energy','energyAt',...Object.k
 
 /** Snapshot-friendly duration factors, independent of a worker's live ledger. */
 export function workerDurationMultipliers(levels,abilityVersion=STAFF_ABILITY_VERSION) {
-  levels=normalizedLevels(levels);
   const scale=abilityScale(abilityVersion);
-  return {walkMsMultiplier:1/(1+.075*scale*(levels.speed-1)),workMsMultiplier:1/(1+.065*scale*(levels.skill-1)),enduranceMultiplier:1-.05*scale*(levels.endurance-1)};
+  return {
+    walkMsMultiplier:1/(1+.075*scale*(normalizedLevel(levels?.speed)-1)),
+    workMsMultiplier:1/(1+.065*scale*(normalizedLevel(levels?.skill)-1)),
+    enduranceMultiplier:1-.05*scale*(normalizedLevel(levels?.endurance)-1),
+  };
 }
 
 /** Cumulative effects relative to level 1, shared by numeric upgrade previews.

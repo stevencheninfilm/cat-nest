@@ -4,7 +4,7 @@ import { initialState, normalizeState, reduceAction } from '../src/state.js';
 import { restaurantInfo, validRestaurant, sanitizeRestaurantAction } from '../src/restaurant.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { RESTAURANT_ARRIVAL_MS, restaurantSeat, restaurantGuestRoute, restaurantGuestMotion, restaurantArrivalPlan } from '../src/restaurant-guests.js';
-import { restaurantGuestTable, restaurantGuestTables, restaurantTerminalPanel } from '../src/restaurant-guests-ui.js';
+import { unconfirmedRestaurantDeliveries, restaurantGuestTable, restaurantGuestTables, restaurantTerminalPanel } from '../src/restaurant-guests-ui.js';
 import { restaurantMarkup } from '../src/restaurant-ui.js';
 
 const NOW=Date.parse('2026-10-18T12:00:00Z'),alice={id:'client-alice',name:'猫友'},bob={id:'client-bobby',name:'伙伴'};
@@ -24,6 +24,23 @@ function collect(state,id){
   commit({type:'restaurant-collect',orderId:id},Math.max(at,order.collectAt));
   return state;
 }
+
+test('a kitchen intent normalizes legacy fields and rechecks other seats on every invocation',()=>{
+  const state=arrive(), at=state.restaurant.parties[0].seatedAt;
+  const [first,second]=state.restaurant.orders;
+  delete state.restaurant.levels.fridge;
+  delete state.restaurant.waitingParties;
+  const accept={type:'restaurant-kitchen-accept',orderId:first.id};
+  const before=structuredClone(state);
+  const accepted=act(state,accept,at);
+  assert.ok(accepted);
+  assert.deepEqual(accepted,normalizeState(accepted,at));
+  assert.deepEqual(accepted,act(normalizeState(state,at),accept,at));
+  assert.deepEqual(state,before);
+  second.workflow.acceptedAt=second.createdAt-1;
+  assert.equal(act(state,accept,at),null);
+  assert.equal(accepted.restaurant.orders[1].workflow.acceptedAt,null);
+});
 
 test('a pair reserves one table and two distinct orders; detailed dishes wait for seating and a player request',()=>{
   const state=arrive(),info=restaurantInfo(state,NOW),party=info.parties[0];
@@ -134,6 +151,41 @@ test('order bubbles appear after seating, and the terminal exposes deterministic
   assert.match(restaurantTerminalPanel(restaurantInfo(state,NOW),{icon}),/data-r-debug-reset[^>]+disabled/);
   assert.ok(restaurantMarkup(state,{isTest:true,debugEnabled:true}).includes('打开餐厅控制终端'));
   assert.ok(!restaurantMarkup(state,{debugEnabled:false}).includes('打开餐厅控制终端'));
+});
+
+test('online checkout waits only for its own saved delivery, while an offline tap can still queue',()=>{
+  const state=arrive(),info=restaurantInfo(state,NOW+RESTAURANT_ARRIVAL_MS);
+  const [first,second]=info.parties[0].members.map(member=>member.order);
+  // Both local plates finished, but only the neighbouring seat's delivery is saved.
+  const confirmed=structuredClone(state.restaurant);
+  for(const order of [first,second]){
+    order.workflow={...order.workflow,servedAt:NOW};
+    order.status='collectible';
+  }
+  confirmed.orders[1].workflow.servedAt=NOW;
+  const displayed={...state.restaurant,orders:[first,second]};
+  const render=(connected,pendingCourses=[])=>restaurantGuestTables(info,{
+    icon:()=>'',food:()=>'',pendingCourses,
+    pendingDeliveries:unconfirmedRestaurantDeliveries(displayed,confirmed,connected),
+  });
+  const collectFor=order=>`data-r-action="collect" data-r-order-id="${order.id}"`;
+  let html=render(true);
+  assert.ok(!html.includes(collectFor(first)));
+  assert.match(html,/disabled[^>]*aria-busy="true"[^>]*aria-label="[^"]*正在送餐/);
+  assert.ok(html.includes(collectFor(second)));
+  assert.ok(render(false).includes(collectFor(first)));
+  first.hasNextCourse=true;
+  assert.match(render(true,[first.id]),/正在看菜单/,'a first course already queued offline retains its acknowledgement');
+  confirmed.orders[0].workflow.servedAt=NOW+200;
+  assert.ok(render(true).includes(collectFor(first)));
+  confirmed.orders.shift();
+  assert.ok(!render(true).includes(collectFor(first)),'a missing or already cleared order cannot be collected from a stale ticket');
+  confirmed.orders.push({id:first.id,servedAt:null});
+  assert.ok(!render(true).includes(collectFor(first)),'an incomplete legacy snapshot does not confirm the delivery');
+  confirmed.orders.at(-1).servedAt=NOW;
+  assert.ok(render(true).includes(collectFor(first)),'a legacy, explicitly saved delivery is sufficient');
+  const legacy={orders:[{id:first.id,workflow:{version:1,servedAt:NOW}}]};
+  assert.deepEqual(unconfirmedRestaurantDeliveries(legacy,{orders:[{id:first.id,workflow:{version:1,servedAt:null}}]},true),[]);
 });
 
 test('table-edge tickets keep independent seat actions and explicit dish descriptions',()=>{

@@ -27,7 +27,7 @@
 .restaurant .r-open-sign{top:auto;bottom:calc(100% - 64px);left:auto;right:18px;display:none}
 .restaurant .rk-focus-tools{left:28%;right:28%}
 @media(max-width:360px){.restaurant .r-hud{inset:auto;margin-left:11px;margin-right:11px;gap:5px}.restaurant .r-level-copy [data-r-stage-title]{font-size:9px}.restaurant .r-level-value{font-size:7px}.r-scene-controls{left:3px}.restaurant .r-tools{right:5px}.restaurant .r-tools .r-round{width:38px;height:38px}}
-@media(max-height:600px){.restaurant .r-nav{padding-top:5px;padding-bottom:max(6px,env(safe-area-inset-bottom))}.restaurant .r-nav button{padding-top:5px;padding-bottom:5px;min-height:46px}.restaurant .r-status{min-height:23px;padding-block:3px}.restaurant .r-scene-controls{gap:5px}}
+@media(max-height:600px){.restaurant .r-nav{padding-top:5px;padding-bottom:max(6px,var(--r-nav-safe-bottom,env(safe-area-inset-bottom)))}.restaurant .r-nav button{padding-top:5px;padding-bottom:5px;min-height:46px}.restaurant .r-status{min-height:23px;padding-block:3px}.restaurant .r-scene-controls{gap:5px}}
 /* A short landscape screen uses side rails so the whole kitchen can keep the
  * screen's height instead of losing it to a stacked wallet and menu. */
 @media(max-height:520px) and (min-width:650px){
@@ -43,8 +43,8 @@
  * combined width fits in one of three lanes, including the eight-table room. */
 .restaurant .rg-order-seat {
   top: calc(var(--ty) + 1%);
-  width: min(13cqw, 60px);
-  height: clamp(25px, 14cqw, 44px);
+  width: min(calc(15.25cqw - 2px), 72px);
+  height: clamp(40px, 15cqw, 48px);
   transform: translateX(calc(-100% - 1px));
   z-index: 6;
 }
@@ -79,35 +79,39 @@
   gap: 2px;
   padding: 2px 3px;
   max-width: 100%;
-  min-height: 18px;
+  min-height: 24px;
   border: 1px solid var(--ticket-line,#b0a18c);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--ticket-fill,#fff8ec);
   color: var(--ticket-ink,#5a4d3d);
   box-shadow: 0 1px 1px #6642252e;
 }
-.restaurant .rg-order-seat:not(.is-accept-pending):is(.is-requested,.is-ready,.is-dish-ready) .rg-ticket-face {
-  min-height: 24px;
+.restaurant .rg-order-seat > [data-r-action] .rg-ticket-face {
+  width: 100%;
+  min-height: clamp(34px, 10cqw, 40px);
+  border-color: var(--ticket-line);
+  background: linear-gradient(#fffaf0 0%, var(--ticket-fill) 80%);
+  box-shadow: inset 0 1px 0 #fffdf5, 0 2px 0 var(--ticket-line);
 }
 .restaurant .rg-order-seat .rg-ticket-face strong {
   color: inherit;
   white-space: nowrap;
-  font-size: clamp(8px,2.8cqw,11px);
+  font-size: clamp(10px,3.2cqw,14px);
   font-weight: 850;
   line-height: 1.15;
 }
-.rg-ticket-face .rg-tier-food { width: clamp(12px,4.5cqw,20px); height: auto; aspect-ratio: 1; }
+.rg-ticket-face .rg-tier-food { width: clamp(16px,5.5cqw,25px); height: auto; aspect-ratio: 1; }
 .rg-ticket-face .rg-tier-food .r-food { width: 100% !important; height: 100% !important; filter: none; }
 .restaurant .rg-ticket-face .rg-tier-food>.rg-tier-coating { display: none; }
 .restaurant .rg-ticket-face .rg-dish-grade {
-  top: -6px; right: -1px; min-width: 9px; height: 9px; padding: 0 1px; border-radius: 3px; font-size: 6px;
+  top: -4px; right: -1px; min-width: 10px; height: 10px; padding: 0 1px; border-radius: 3px; font-size: 7px;
 }
 .rg-ticket-course {
   position: absolute; top: -5px; right: 1px; padding: 0 2px; border-radius: 4px;
-  background: #f1f3ee; color: #465760; font: 700 7px/1.2 system-ui,sans-serif;
+  background: #f1f3ee; color: #465760; font: 700 8px/1.15 system-ui,sans-serif;
 }
 .rg-order-seat[data-r-guest-tier=gold] .rg-ticket-course { background: #f7df9c; color: #6a4e1a; }
-.rg-ticket-face .r-collect-fish,.rg-ticket-face .r-collect-fish svg { flex: none; width: 12px; height: 12px; }
+.rg-ticket-face .r-collect-fish,.rg-ticket-face .r-collect-fish svg { flex: none; width: 14px; height: 14px; }
 .rg-ticket-face .r-order-progress,.rg-ticket-face .rg-menu-progress {
   position: absolute;
   left: 6%;
@@ -118,22 +122,30 @@
   background: #568f77;
 }
 .rg-ticket-face .rg-menu-progress { width: 88%; background: #8ca7ab; }
-.rg-order-seat.is-requested { --ticket-line:#bd7840; --ticket-fill:#fff0d1; --ticket-ink:#834820; }
+.rg-order-seat.is-requested { --ticket-line:#bd7840; --ticket-fill:#ffdfae; --ticket-ink:#753e18; }
 .rg-order-seat:is(.is-ready,.is-dish-ready) { --ticket-line:#76924d; --ticket-fill:#eff7d5; --ticket-ink:#3f582b; }
 .rg-order-seat:is(.is-awaiting,.is-accept-pending,.is-preparing,.is-cooking) { --ticket-line:#8da897; --ticket-fill:#f0f5ea; --ticket-ink:#42614f; }
-.rg-order-seat.is-collectible { --ticket-line:#aa7e32; --ticket-fill:#ffebae; --ticket-ink:#6d491a; }
+.rg-order-seat.is-collectible { --ticket-line:#aa7e32; --ticket-fill:#ffe4a0; --ticket-ink:#674318; }
 .rg-order-seat.is-accept-pending .rg-ticket-face { flex-direction: column; gap: 0; }
-.rg-accept-sync-note,.rg-ticket-face [data-r-countdown] { font-size: 8px; line-height: 1.1; }
+.rg-accept-sync-note,.rg-ticket-face [data-r-countdown] { font-size: 9px; line-height: 1.1; }
 .rg-ticket-face .rs-order-stamp { bottom: -4px; right: 0; top: auto; left: auto; padding: 0 1px; font-size: 6px; }
 .rg-order-seat:is(.is-cooking,.is-preparing,.is-course-thinking) .rg-ticket-face { padding-bottom: 4px; }
 .rg-order-seat .r-order-bubble:focus-visible { outline: 2px solid #507c82; outline-offset: 0; }
 .rg-order-seat .r-order-bubble:active:not(:disabled) .rg-ticket-face { box-shadow: inset 0 1px 2px #67482d30; }
+/* On a short phone the room can be narrower than the screen. Stack the art
+ * above the action so it stays legible in the six-seat row. */
 @container (max-width: 350px) {
-  .rg-ticket-face .r-collect-fish { display: none; }
-}
-@container (max-width: 300px) {
-  .rg-ticket-face .rg-tier-food { display: none; }
+  .restaurant .rg-order-seat[data-r-table="0"] { top: calc(var(--ty) + 1% + 2px); }
+  .restaurant .rg-order-seat > [data-r-action] .rg-ticket-face { flex-direction: column; gap: 0; padding: 1px; }
+  .rg-ticket-face .r-collect-fish,.rg-ticket-face .r-collect-fish svg { width: 12px; height: 12px; }
   .restaurant .rg-order-seat .rg-ticket-face { padding-inline: 1px; }
+}
+
+/* The kitchen sign and its tutorial share the divider on shallow stages. */
+@container (max-width: 320px) {
+  .restaurant .r-kitchen-label,.restaurant .rk-focus-tools { top: max(63.4%, calc(56.1% + 44px)); }
+  .restaurant .r-kitchen-label { transform: translateX(calc(-100% + 16px)); }
+  .restaurant .rk-focus-tools { left: calc(50% + 20px); right: auto; }
 }
 
 @media(max-width:420px){.restaurant .r-scene-controls{width:52px;gap:5px}.restaurant .r-scene-controls .rr-research-shortcut{transform:scale(.72);transform-origin:top center;margin-bottom:-23px}}

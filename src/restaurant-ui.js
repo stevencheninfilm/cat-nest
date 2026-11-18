@@ -20,10 +20,10 @@ import { restaurantCustomersPanel, restaurantCustomerDetail } from './restaurant
 import { restaurantInfo, restaurantActionResult, RESTAURANT_RECIPE_CATEGORIES, RESTAURANT_STAFF } from './restaurant.js';
 import { levelInfo } from './state.js';
 import { KITCHEN_FLOWS } from './restaurant-kitchen.js';
-import { restaurantGuestTable, restaurantTerminalPanel, createRestaurantGuests, createRestaurantGuestFeedback } from './restaurant-guests-ui.js';
+import { unconfirmedRestaurantDeliveries, restaurantGuestTable, restaurantTerminalPanel, createRestaurantGuests, createRestaurantGuestFeedback } from './restaurant-guests-ui.js';
 import { createRestaurantArrivalRhythm } from './restaurant-street.js';
 import { restaurantStreetMarkup, createRestaurantStreet } from './restaurant-street-ui.js';
-import { kitchenSceneMarkup, kitchenFlowPanel, createKitchenScene } from './restaurant-kitchen-ui.js';
+import { kitchenSceneMarkup, kitchenFlowPanel, kitchenSceneSource, createKitchenScene } from './restaurant-kitchen-ui.js';
 import { kitchenGuideMarkup, paintKitchenTerminal } from './restaurant-kitchen-terminal.js';
 import { restaurantRecipeMenuOrder } from './restaurant-recipe-order.js';
 import { restaurantRecipePreview, restaurantRecipeDetailMarkup } from './restaurant-recipe-detail.js';
@@ -235,11 +235,13 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
     },
     message(text){log(text);toast(text);render();},
   });
-  function paintTables(info,availability){
+  let lastTableLayout;
+  function paintTables(info,availability,pendingDeliveries){
     const tables=$('[data-r-tables]');
     const options={
       icon:restaurantIcon, food, blocked:pending||restaurantInputBlocked(availability),
       replaying:guests?.replaying()||[],
+      pendingDeliveries,
       pendingCourses:[...pendingCourseOrders,...(availability.pendingRestaurantCollections??[])],
       pendingAccepts:availability.pendingRestaurantAccepts,
     };
@@ -276,6 +278,11 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
         else view.host.insertBefore(node,sibling);
       }
       view.children=next;
+    }
+    const layout = info.parties.map(p=>[p.table,p.status,p.members.length]).join('|')+';'+options.replaying.join(',');
+    if(layout!==lastTableLayout){
+      lastTableLayout=layout;
+      kitchenScene?.fitPrompts();
     }
   }
   function welcomeGuests(size=null,{manual=false,recipeId=null,keepPanel=false,waiting=false,waitingPartyId=null}={}){
@@ -464,7 +471,12 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
     const wallet = availability.pendingRestaurantCollections?.length ? getConfirmedState() : state;
     const hudProgress = wallet === state ? info.progression : restaurantExperienceInfo(wallet.restaurant);
     experienceFeedback.sync(hudProgress);
-    guests.sync(info);guests.start();street.sync(info,{enabled:!panel&&!terminalOpen&&!guide?.isOpen()&&!info.decorationInfo.construction});street.start();kitchenScene.setPalette(circlePalette);kitchenScene.sync(info.restaurant,{blocked:pending||restaurantInputBlocked(availability),model:info.kitchen,now});decorationScene.sync(info);paintRestaurantStaffRest(container,info.restaurant,now);
+    guests.sync(info);guests.start();street.sync(info,{enabled:!panel&&!terminalOpen&&!guide?.isOpen()&&!info.decorationInfo.construction});street.start();
+    const autoCookEnabled=autoCook.enabled;
+    const kitchen=kitchenSceneSource(state,confirmed,info,availability,autoCookEnabled);
+    kitchenScene.setPalette(circlePalette);
+    kitchenScene.sync(kitchen.restaurant,{blocked:pending||restaurantInputBlocked(availability),model:kitchen.model,pendingSteps:kitchen.pendingSteps,now});
+    decorationScene.sync(info);paintRestaurantStaffRest(container,kitchen.restaurant,now);
     orderTray.sync({...info, dailyCommission:visibleCommission(info, availability)}, {
       blocked:pending || restaurantInputBlocked(availability),
       replaying:guests.replaying(),
@@ -474,7 +486,7 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
     const scene=$('.restaurant');
     if(scene.dataset.theme!==info.restaurant.theme)scene.dataset.theme=info.restaurant.theme;
     paintPremiumScene(container,info.restaurant);
-    const saveLabel=restaurantSaveLabel(availability,isTest), autoCookEnabled=autoCook.enabled;
+    const saveLabel=restaurantSaveLabel(availability,isTest);
     const nextHudKey=JSON.stringify([wallet.coins,wallet.goldFish,hudProgress.level,hudProgress.levelExperience,hudProgress.levelTarget,
       info.research.availableDraws,info.level,autoCookEnabled,state.xp,saveLabel,info.restaurant.levels.kitchen]);
     if(nextHudKey!==hudKey){
@@ -501,15 +513,16 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
       $('[data-r-save]').textContent=saveLabel;
       $('[data-r-kitchen-level]').textContent=`Lv.${info.restaurant.levels.kitchen}`;
     }
+    const pendingDeliveries=unconfirmedRestaurantDeliveries(state.restaurant,confirmed.restaurant,availability.connected);
     const thinkingCourse=order=>order.hasNextCourse&&(pendingCourseOrders.has(order.id)||availability.pendingRestaurantCollections?.includes(order.id));
-    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible'&&!thinkingCourse(o))?'小鱼干在闪闪发光，点一下收好它':info.orders.some(thinkingCourse)?'猫猫正在看菜单，想好后就能接第二道餐':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCookEnabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCookEnabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
+    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible'&&!thinkingCourse(o)&&!pendingDeliveries.includes(o.id))?'小鱼干在闪闪发光，点一下收好它':info.orders.some(thinkingCourse)?'猫猫正在看菜单，想好后就能接第二道餐':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCookEnabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCookEnabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):pendingDeliveries.length||info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
     setText($('[data-r-hint]'),hint);
-    const nextSignature=JSON.stringify([[...pendingCourseOrders],info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,pending||restaurantInputBlocked(availability),availability.pendingRestaurantCollections,availability.pendingRestaurantAccepts]);
+    const nextSignature=JSON.stringify([[...pendingCourseOrders],pendingDeliveries,info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,pending||restaurantInputBlocked(availability),availability.pendingRestaurantCollections,availability.pendingRestaurantAccepts]);
     if(nextSignature!==signature||renderedLedger!==state.restaurant){
       signature=nextSignature;renderedLedger=state.restaurant;
       const tables=$('[data-r-tables]'), focus=document.activeElement;
       const focusedOrder=tables.contains(focus)?focus.closest('[data-r-order]')?.dataset.rOrder:null;
-      paintTables(info,availability);
+      paintTables(info,availability,pendingDeliveries);
       guestFeedback.sync(info.orders, availability.pendingRestaurantAccepts);
       if(focusedOrder&&!focus.isConnected)tables.querySelector(`[data-r-order="${focusedOrder}"] > .r-order-bubble:not(:disabled)`)?.focus({preventScroll:true});
     }
@@ -554,7 +567,8 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
     }
     const before=getState(),availability=getAvailability();
     if(restaurantInputBlocked(availability)){toast('小馆正在读取，稍后就能开始营业');return;}
-    if(type==='collect'&&availability.pendingRestaurantCollections?.includes(action.orderId)){render();return;}
+    if(type==='collect' && (availability.pendingRestaurantCollections?.includes(action.orderId)
+      || unconfirmedRestaurantDeliveries(before.restaurant,getConfirmedState()?.restaurant,availability.connected).includes(action.orderId))){render();return;}
     const result=restaurantActionResult(before,action);
     if(!result.ok){toast(result.reason);return;}
     if(type==='research-draw'&&!researchReveal.start(action.draw,action.count??1))return;
@@ -689,7 +703,34 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
   });
   container.addEventListener('cancel',event=>{if(event.target.matches('.r-recipe-dialog')){event.preventDefault();closeRecipeDetails();return;}if(event.target.matches('.rc-customer-dialog')){event.preventDefault();closeCustomerDetails();return;}if(event.target.matches('.rr-celebration,.rr-draw-scene,.rdl-dialog'))return;event.preventDefault();dismiss();},true);
   container.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();if($('.rdl-dialog')?.open){dailyLogin.close();return;}if($('.rr-draw-scene')?.open){researchReveal.close();return;}if($('.rr-celebration')?.open){$('.rr-celebration').close();return;}if($('.r-recipe-dialog')?.open){closeRecipeDetails();return;}if($('.rc-customer-dialog')?.open){closeCustomerDetails();return;}if(terminalOpen)dismissTerminal(true);else if(panel)dismiss();else if(orderTray?.isOpen())orderTray.close({restoreFocus:true});else if($('[data-r-rest-summary]')?.open){$('[data-r-rest-summary]').open=false;$('[data-r-rest-summary]>summary')?.focus({preventScroll:true});}else{close();onBack();}}});
-  function open(){previousSupperRun=null;opened=true;audio.setActive(true);container.hidden=false;document.body.classList.add('restaurant-mode');signature='';kitchenScene?.open();decorationScene?.open();arrivalRhythm.reset();street?.reset();paint();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)render();},400);if(!$('.rdl-dialog').open)$('[data-r-back]').focus({preventScroll:true});}
-  function close(){orderTray?.close();checkoutFeedback?.reset();guestFeedback.reset();dailyLogin?.reset();guide?.close();audio.closeSettings();audio.setActive(false);researchReveal?.reset();dismiss();dismissTerminal();opened=false;frame.cancel();container.hidden=true;document.body.classList.remove('restaurant-mode');clearInterval(timer);timer=null;guests?.stop();street?.stop();arrivalRhythm.reset();kitchenScene?.close();decorationScene?.close();experienceFeedback?.reset();recipeCelebration?.reset();}
+  // Some mobile browsers revise even the small viewport as their bars move.
+  // Measure once on entry; a new width, orientation or larger screen gets
+  // its own fit. CSS can always shrink to fit a genuinely smaller viewport.
+  let openingViewport = null;
+  function fitRestaurantViewport() {
+    const view = container.ownerDocument.defaultView;
+    const width = view.innerWidth;
+    const phone = view.matchMedia('(hover:none) and (pointer:coarse) and (orientation:portrait) and (max-width:600px)').matches;
+    if (!phone) {
+      openingViewport = null;
+      container.style.removeProperty('--r-opening-height');
+      return;
+    }
+    const sameScreen = openingViewport?.width === width && view.innerHeight <= openingViewport.screenHeight;
+    if (sameScreen) {
+      if (view.innerHeight >= openingViewport.height || view.screen.height !== openingViewport.screenHeight) return;
+      // A keyboard or pinch zoom can briefly reduce the visible area. Only a
+      // smaller browser-chrome fit should become the new steady frame.
+      if (view.visualViewport?.scale > 1 || container.ownerDocument.activeElement?.matches('input,textarea,select,[contenteditable="true"]')) return;
+    } else {
+      container.style.removeProperty('--r-opening-height');
+    }
+    const height = $('.restaurant')?.getBoundingClientRect().height;
+    if (!height) return;
+    openingViewport = {width, height, screenHeight:Math.max(view.screen.height, view.innerHeight)};
+    container.style.setProperty('--r-opening-height', height + 'px');
+  }
+  function open(){previousSupperRun=null;opened=true;audio.setActive(true);container.hidden=false;document.body.classList.add('restaurant-mode');signature='';kitchenScene?.open();decorationScene?.open();arrivalRhythm.reset();street?.reset();paint();fitRestaurantViewport();window.addEventListener('resize',fitRestaurantViewport);clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)render();},400);if(!$('.rdl-dialog').open)$('[data-r-back]').focus({preventScroll:true});}
+  function close(){orderTray?.close();checkoutFeedback?.reset();guestFeedback.reset();dailyLogin?.reset();guide?.close();audio.closeSettings();audio.setActive(false);researchReveal?.reset();dismiss();dismissTerminal();opened=false;window.removeEventListener('resize',fitRestaurantViewport);openingViewport=null;container.style.removeProperty('--r-opening-height');frame.cancel();container.hidden=true;document.body.classList.remove('restaurant-mode');clearInterval(timer);timer=null;guests?.stop();street?.stop();arrivalRhythm.reset();kitchenScene?.close();decorationScene?.close();experienceFeedback?.reset();recipeCelebration?.reset();}
   return {open,close,render,confirmGuestOrder(id){if(opened&&!document.hidden)frame.afterPaint(()=>guestFeedback.confirm(id));},confirmCheckout(orderId,receipt){if(opened&&checkoutFeedback?.confirm(orderId,receipt))sound('collect');},destroy(){close();guestFeedback.destroy();dailyLogin?.destroy();guide?.destroy();audio.destroy();guests?.destroy();street?.destroy();kitchenScene?.destroy();decorationScene?.destroy();experienceFeedback?.destroy();recipeCelebration?.destroy();researchReveal?.destroy();container.innerHTML='';}};
 }

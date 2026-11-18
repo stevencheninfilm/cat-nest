@@ -177,6 +177,13 @@ export function initialState(now = Date.now()) {
 const cap = n => Math.max(0, Math.min(100, n));
 export function normalizeState(value, now = Date.now()) {
   now = validTime(now) ? now : 0;
+  const next = normalizeHome(value, now);
+  if (value?.version === 1) next.restaurant = normalizeRestaurant(value.restaurant, now);
+  return next;
+}
+
+// Home systems have their own normalization rules and do not read restaurant data.
+function normalizeHome(value, now) {
   const fallback = initialState(now);
   if (!value || value.version !== 1) return fallback;
   const next = { ...fallback };
@@ -192,7 +199,6 @@ export function normalizeState(value, now = Date.now()) {
   next.sleeping = value.sleeping === true;
   next.appearance = normalizeAppearance(value.appearance);
   next.nest = normalizeNest(value.nest);
-  next.restaurant = normalizeRestaurant(value.restaurant, now);
   next.history = Array.isArray(value.history) ? value.history.filter(x => x && typeof x.text === 'string' && typeof x.actor === 'string' && Number.isFinite(x.at)).slice(0, 40) : [];
   if (validTime(value.updatedAt) && value.updatedAt <= now + 60_000) next.updatedAt = value.updatedAt;
   const savedBoostCount=['hunger','mood','energy'].filter(key=>next[key]>80).length;
@@ -313,7 +319,10 @@ function recordFeeding(state, food, actor, now) {
 export function reduceAction(state, action, actor = { name: '铲屎官' }, now = Date.now(), operationId) {
   now = validTime(now) ? now : 0;
   if (!action || typeof action !== 'object') return null;
-  const current = normalizeState(state, now);
+  // Kitchen commands validate and copy the entire order ledger themselves. Keep
+  // the home normalization, without making another copy of every route.
+  const kitchenCommand = action.type === 'restaurant-kitchen-accept' || action.type === 'restaurant-kitchen-step';
+  const current = kitchenCommand ? normalizeHome(state, now) : normalizeState(state, now);
   const feature=action.type==='invite-cat'?'collection':action.type==='diary-favorite'?'diary':null;
   if(feature&&!isFeatureUnlocked(feature,levelInfo(current.xp).level))return null;
   if(action.type==='diary-favorite') {
@@ -326,7 +335,8 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
     return normalizeState({...current,nest:result.nest,coins:result.coins,updatedAt:now,history:[{text:result.text,actor:cleanName(actor?.name).slice(0,16),at:now},...current.history].slice(0,40)},now);
   }
   if (typeof action.type==='string' && action.type.startsWith('restaurant-')) {
-    const result=restaurantActionResult(current,action,actor,now);if(!result.ok)return null;
+    const input = kitchenCommand && state?.version === 1 ? {...current, restaurant:state.restaurant} : current;
+    const result=restaurantActionResult(input,action,actor,now);if(!result.ok)return null;
     const next={...current,restaurant:result.restaurant,coins:result.coins,goldFish:result.goldFish??current.goldFish,xp:result.xp,updatedAt:now,history:[{text:result.text,actor:cleanName(actor?.name).slice(0,16),at:now},...current.history].slice(0,40)};
     if(result.growthReward){
       const actorId=typeof actor?.id==='string'&&CLIENT_ID.test(actor.id)?actor.id:'local-care';
@@ -335,6 +345,9 @@ export function reduceAction(state, action, actor = { name: '铲屎官' }, now =
       next.pendingGrowth=[...current.pendingGrowth,reward];
     }
     next.diary=recordMemoryJournal(current.diary,{before:current,after:next,action,actorId:actor?.id,now,id:operationId,levelBefore:levelInfo(current.xp).level,levelAfter:levelInfo(next.xp).level});
+    // The validated kitchen result already has this tick's migrations and
+    // recovery applied. Preserve the original final normalization of the home.
+    if (kitchenCommand) return {...normalizeHome(next, now), restaurant:result.restaurant};
     return normalizeState(next,now);
   }
   if (action.type === 'join-home' || action.type === 'adopt-cat') {
