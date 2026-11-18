@@ -39,17 +39,101 @@
   .restaurant .r-nav button{flex-direction:row;justify-content:center;gap:5px;padding:3px;min-height:44px}.restaurant .r-nav button>span{width:21px;height:21px}.restaurant .r-nav button strong{font-size:10px}
 }
 
-/* Paired guests keep separate tap targets even when the art becomes narrower. */
-.restaurant .rg-order-seat{--r-order-clearance:max(0px,calc((48px - 19cqw) / 2))}
-.restaurant .rg-order-seat .r-order-bubble{width:clamp(44px,18cqw,75px)}
-.restaurant .rg-order-seat[data-r-seat="0"] .r-order-bubble{left:calc(50% - var(--r-order-clearance))}
-.restaurant .rg-order-seat[data-r-seat="1"] .r-order-bubble{left:calc(50% + var(--r-order-clearance))}
-@container(max-width:380px){
-  .restaurant .rg-order-seat .r-order-bubble{flex-direction:column;gap:0;padding:3px;min-height:44px}
-  .restaurant .rg-order-seat .r-order-bubble .r-food{width:23px;height:23px}
-  .restaurant .rg-order-seat .r-order-bubble strong{font-size:7px;line-height:1.3}
-  .restaurant .rg-order-seat .r-order-bubble small{display:none}
-  .restaurant .rg-order-seat.is-collectible .r-order-bubble strong{font-size:12px}
+/* The two seat targets meet at the front edge of the table. Their maximum
+ * combined width fits in one of three lanes, including the eight-table room. */
+.restaurant .rg-order-seat {
+  top: calc(var(--ty) + 1%);
+  width: min(13cqw, 60px);
+  height: clamp(25px, 14cqw, 44px);
+  transform: translateX(calc(-100% - 1px));
+  z-index: 6;
+}
+.restaurant .rg-order-seat[data-r-seat="1"] { transform: translateX(1px); }
+.restaurant .rg-order-seat[data-r-single] { transform: translateX(-50%); }
+.restaurant .rg-order-seat[data-r-seat] > .r-order-bubble {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #5b4b37;
+  box-shadow: none;
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+.restaurant .rg-order-seat > .r-order-bubble::after { content: none; }
+.restaurant .rg-order-seat > .r-order-bubble:active:not(:disabled) { transform: none !important; }
+.restaurant .rg-order-seat .rg-ticket-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 3px;
+  max-width: 100%;
+  min-height: 18px;
+  border: 1px solid var(--ticket-line,#b0a18c);
+  border-radius: 6px;
+  background: var(--ticket-fill,#fff8ec);
+  color: var(--ticket-ink,#5a4d3d);
+  box-shadow: 0 1px 1px #6642252e;
+}
+.restaurant .rg-order-seat:not(.is-accept-pending):is(.is-requested,.is-ready,.is-dish-ready) .rg-ticket-face {
+  min-height: 24px;
+}
+.restaurant .rg-order-seat .rg-ticket-face strong {
+  color: inherit;
+  white-space: nowrap;
+  font-size: clamp(8px,2.8cqw,11px);
+  font-weight: 850;
+  line-height: 1.15;
+}
+.rg-ticket-face .rg-tier-food { width: clamp(12px,4.5cqw,20px); height: auto; aspect-ratio: 1; }
+.rg-ticket-face .rg-tier-food .r-food { width: 100% !important; height: 100% !important; filter: none; }
+.restaurant .rg-ticket-face .rg-tier-food>.rg-tier-coating { display: none; }
+.restaurant .rg-ticket-face .rg-dish-grade {
+  top: -6px; right: -1px; min-width: 9px; height: 9px; padding: 0 1px; border-radius: 3px; font-size: 6px;
+}
+.rg-ticket-course {
+  position: absolute; top: -5px; right: 1px; padding: 0 2px; border-radius: 4px;
+  background: #f1f3ee; color: #465760; font: 700 7px/1.2 system-ui,sans-serif;
+}
+.rg-order-seat[data-r-guest-tier=gold] .rg-ticket-course { background: #f7df9c; color: #6a4e1a; }
+.rg-ticket-face .r-collect-fish,.rg-ticket-face .r-collect-fish svg { flex: none; width: 12px; height: 12px; }
+.rg-ticket-face .r-order-progress,.rg-ticket-face .rg-menu-progress {
+  position: absolute;
+  left: 6%;
+  bottom: 1px;
+  width: calc(var(--progress,0) * 88%);
+  height: 2px;
+  border-radius: 100px;
+  background: #568f77;
+}
+.rg-ticket-face .rg-menu-progress { width: 88%; background: #8ca7ab; }
+.rg-order-seat.is-requested { --ticket-line:#bd7840; --ticket-fill:#fff0d1; --ticket-ink:#834820; }
+.rg-order-seat:is(.is-ready,.is-dish-ready) { --ticket-line:#76924d; --ticket-fill:#eff7d5; --ticket-ink:#3f582b; }
+.rg-order-seat:is(.is-awaiting,.is-accept-pending,.is-preparing,.is-cooking) { --ticket-line:#8da897; --ticket-fill:#f0f5ea; --ticket-ink:#42614f; }
+.rg-order-seat.is-collectible { --ticket-line:#aa7e32; --ticket-fill:#ffebae; --ticket-ink:#6d491a; }
+.rg-order-seat.is-accept-pending .rg-ticket-face { flex-direction: column; gap: 0; }
+.rg-accept-sync-note,.rg-ticket-face [data-r-countdown] { font-size: 8px; line-height: 1.1; }
+.rg-ticket-face .rs-order-stamp { bottom: -4px; right: 0; top: auto; left: auto; padding: 0 1px; font-size: 6px; }
+.rg-order-seat:is(.is-cooking,.is-preparing,.is-course-thinking) .rg-ticket-face { padding-bottom: 4px; }
+.rg-order-seat .r-order-bubble:focus-visible { outline: 2px solid #507c82; outline-offset: 0; }
+.rg-order-seat .r-order-bubble:active:not(:disabled) .rg-ticket-face { box-shadow: inset 0 1px 2px #67482d30; }
+@container (max-width: 350px) {
+  .rg-ticket-face .r-collect-fish { display: none; }
+}
+@container (max-width: 300px) {
+  .rg-ticket-face .rg-tier-food { display: none; }
+  .restaurant .rg-order-seat .rg-ticket-face { padding-inline: 1px; }
 }
 
 @media(max-width:420px){.restaurant .r-scene-controls{width:52px;gap:5px}.restaurant .r-scene-controls .rr-research-shortcut{transform:scale(.72);transform-origin:top center;margin-bottom:-23px}}

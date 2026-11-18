@@ -4,7 +4,7 @@ import { initialState, normalizeState, reduceAction } from '../src/state.js';
 import { restaurantInfo, validRestaurant, sanitizeRestaurantAction } from '../src/restaurant.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
 import { RESTAURANT_ARRIVAL_MS, restaurantSeat, restaurantGuestRoute, restaurantGuestMotion, restaurantArrivalPlan } from '../src/restaurant-guests.js';
-import { restaurantGuestTables, restaurantTerminalPanel } from '../src/restaurant-guests-ui.js';
+import { restaurantGuestTable, restaurantGuestTables, restaurantTerminalPanel } from '../src/restaurant-guests-ui.js';
 import { restaurantMarkup } from '../src/restaurant-ui.js';
 
 const NOW=Date.parse('2026-10-18T12:00:00Z'),alice={id:'client-alice',name:'猫友'},bob={id:'client-bobby',name:'伙伴'};
@@ -136,7 +136,7 @@ test('order bubbles appear after seating, and the terminal exposes deterministic
   assert.ok(!restaurantMarkup(state,{debugEnabled:false}).includes('打开餐厅控制终端'));
 });
 
-test('busy tables keep every full order bubble and preserve delivery and collection controls',()=>{
+test('table-edge tickets keep independent seat actions and explicit dish descriptions',()=>{
   const state=arrive(arrive(),2,NOW+1);
   const info=restaurantInfo(state,NOW+RESTAURANT_ARRIVAL_MS+1);
   const buttonRows=markup=>Array.from(markup.matchAll(/<div class="r-table-guest rg-order-seat[^]*?<\/button><\/div>/g),row=>row[0]);
@@ -145,8 +145,8 @@ test('busy tables keep every full order bubble and preserve delivery and collect
   assert.equal(requested.length,4);
   for (const row of requested) {
     assert.match(row,/data-r-action="kitchen-accept"/);
-    assert.match(row,/<strong>想吃这份<\/strong>/);
-    assert.match(row,/点击记下点餐需求/);
+    assert.match(row,/<strong>接单<\/strong>/);
+    assert.match(row,/title="[^"]+号桌[左右]座 · [^"]+/);
   }
   const first=info.parties[1].members[0].order;
   const next=info.parties[1].members[1].order;
@@ -154,13 +154,41 @@ test('busy tables keep every full order bubble and preserve delivery and collect
   next.status='collectible';next.rewardInspiration=7;
   const mixed=render();
   assert.equal(mixed.length,4);
-  assert.match(mixed[0],/<strong>想吃这份<\/strong>/);
-  assert.match(mixed[1],/<strong>想吃这份<\/strong>/);
+  assert.match(mixed[0],/<strong>接单<\/strong>/);
+  assert.match(mixed[1],/<strong>接单<\/strong>/);
   assert.match(mixed[2],/data-r-action="kitchen-step"[^>]*data-r-step="delivery"/);
   assert.match(mixed[3],/data-r-action="collect"[^>]*收取/);
   assert.doesNotMatch(mixed[3],/灵感/,'inspiration appears only on the actual checkout receipt');
   const pending=render({pendingCourses:[next.id]});
   assert.match(pending[3],/disabled[^>]*aria-busy="true"/);
+});
+
+test('sixteen table-edge tickets keep unique seat actions and a stable row as cooking time advances',()=>{
+  const first=restaurantInfo(arrive(),NOW+RESTAURANT_ARRIVAL_MS);
+  const options={icon:()=>'',food:id=>`<i>${id}</i>`};
+  const info={...first,capacity:8,parties:Array.from({length:8},(_,table)=>({
+    ...first.parties[0],id:`party-${table+1}`,table,
+    members:first.parties[0].members.map((member,seat)=>({...member,order:{
+      ...member.order,id:`table-${table*2+seat+1}`,status:'requested',
+    }})),
+  }))};
+  const all=restaurantGuestTables(info,options);
+  assert.equal((all.match(/class="rg-ticket-face"/g)||[]).length,16);
+  for(const party of info.parties) {
+    const table=restaurantGuestTable(info,party.table,options);
+    assert.ok(all.includes(table));
+    for(const member of party.members) {
+      assert.ok(table.includes(`data-r-table="${party.table}" data-r-seat="${member.seat}"`));
+      assert.ok(table.includes(`data-r-action="kitchen-accept" data-r-order-id="${member.order.id}"`));
+    }
+  }
+  const order=info.parties[6].members[1].order;
+  order.status='cooking';order.remainingMs=1200;order.progress=.2;
+  const cooking=restaurantGuestTable(info,6,options);
+  order.remainingMs=200;order.progress=.9;
+  assert.equal(restaurantGuestTable(info,6,options),cooking);
+  assert.ok(cooking.includes(`data-r-progress="${order.id}"`));
+  assert.ok(cooking.includes(`data-r-countdown="${order.id}"`));
 });
 
 test('an admitted local acceptance updates its bubble immediately and a rollback restores the accept button',()=>{

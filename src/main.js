@@ -337,7 +337,17 @@ function updateFeatureEntries() {
 let renderedSkin='';
 const confirmedPetXp = () => (cloudConfigured ? confirmedState : state).xp;
 const visibleGrowthRewards = () => (cloudConfigured ? confirmedState : state).pendingGrowth || [];
+function inRestaurant() { return restaurant && !restaurantContainer.hidden; }
 function render() {
+  const snapshotToPersist=cloudConfigured ? confirmedState : state;
+  if (snapshotToPersist!==persistedSnapshot || roomId!==persistedRoomId) {
+    if(save(`catnest.state.${roomId}`,snapshotToPersist)){persistedSnapshot=snapshotToPersist;persistedRoomId=roomId;}
+  }
+  if(inRestaurant()){
+    if(roleEntered&&(!cloudConfigured||coupleSnapshotReady))coupleExperience.observe(cloudConfigured?confirmedState:state);
+    restaurant.render();
+    return;
+  }
   const xp = confirmedPetXp();
   const level = levelInfo(xp);
   const stage = growthStageForXp(xp);
@@ -378,10 +388,6 @@ function render() {
   $('.nest').classList.toggle('sleeping', state.sleeping);
   $('#sleep-button small').textContent = state.sleeping ? '叫醒' : '休息';
   $('#sleep-button').setAttribute('aria-label', state.sleeping ? '轻轻叫醒小猫' : '让小猫休息');
-  const snapshotToPersist=cloudConfigured ? confirmedState : state;
-  if (snapshotToPersist!==persistedSnapshot || roomId!==persistedRoomId) {
-    if(save(`catnest.state.${roomId}`,snapshotToPersist)){persistedSnapshot=snapshotToPersist;persistedRoomId=roomId;}
-  }
   renderFeedingHome();
   renderGrowth();
   refreshStagesPanel();
@@ -389,7 +395,6 @@ function render() {
   updateCareControls();
   updateFeatureEntries();
   catbook?.render();
-  restaurant?.render();
   refreshGames();
   renderCoupleCare();
   diary.refresh();
@@ -544,7 +549,6 @@ function react(action, actor, { optimistic = false, previewed = false, operation
   if(action.type?.startsWith('nest-')){if(!optimistic&&!previewed)toast(`${actor.name}${mine?'':'刚刚'}${state.nest.lastEdit?.text||'更新了小窝布置'}`);return;}
   if (action.type?.startsWith('game-')) { refreshGames(); return; }
   if (action.type?.startsWith('restaurant-')) {
-    restaurant?.render();
     if (!optimistic && action.type === 'restaurant-kitchen-accept') restaurant?.confirmGuestOrder(action.orderId);
     if (!optimistic && mine && action.type === 'restaurant-collect') restaurant?.confirmCheckout(action.orderId, restaurantCheckout);
     if(!optimistic&&mine&&action.type==='restaurant-research-draw'&&!$('.rr-draw-scene')?.open)toast(action.count===10?'十连探索完成，10 份灵感已收进手账':'研发完成，菜谱碎片已收进灵感手账');
@@ -703,7 +707,13 @@ function dispatch(action) {
 }
 const cloudUi=createUiFrameBatch(flags=>{
   const full=flags.has('state');
-  if(full){render();renderHomeLoading();}
+  if(full)render();
+  if(inRestaurant()){
+    if(!full&&(flags.has('pending')||flags.has('connection')||flags.has('save')))restaurant.render();
+    if(flags.has('connection')&&roleEntered)guideSync?.sync(coupleRole);
+    return;
+  }
+  if(full)renderHomeLoading();
   if(flags.has('connection'))renderConnection({panels:!full});
   else if(flags.has('pending')&&!full){renderGrowth();refreshGames();}
   else if(flags.has('games')&&!full)refreshGames();
@@ -994,7 +1004,7 @@ function updateCareControls(now = Date.now()) {
 }
 const careClock = setInterval(() => {
   nestLife.tick();
-  if (document.hidden) return;
+  if (document.hidden || inRestaurant()) return;
   refreshGames();
   updateCareControls();
   renderNeeds();
@@ -1272,7 +1282,16 @@ function showRestaurant({fromHome=false}={}) {
     onAction:dispatch,toast,isTest:runtime.isTest,debugEnabled:runtime.isTest,preferences:runtime.localStorage,
     guidePreferences:runtime.guidePreferences||runtime.localStorage,
     getGuideContext:()=>({role:coupleRole,entered:roleEntered,available:!gameGuide?.isOpen()&&!onboarding?.isOpen()}),testActions:runtime.testActions,
-    onBack(){const url=new URL(location.href);url.hash='';history.replaceState(null,'',url);if(restaurantReturnHome){$('.nest').hidden=false;document.body.classList.remove('catbook-mode');updateModelPause();scheduleUpgrade();window.scrollTo(0,homeScroll);$('[data-open="restaurant"]')?.focus({preventScroll:true});}else{document.body.classList.add('catbook-mode');catbook.open();updateModelPause();}},
+    onBack(){
+      const url=new URL(location.href);url.hash='';history.replaceState(null,'',url);
+      if(restaurantReturnHome){
+        $('.nest').hidden=false;document.body.classList.remove('catbook-mode');
+      }else{
+        document.body.classList.add('catbook-mode');catbook.open();
+      }
+      render();renderConnection({panels:false});updateModelPause();
+      if(restaurantReturnHome){scheduleUpgrade();window.scrollTo(0,homeScroll);$('[data-open="restaurant"]')?.focus({preventScroll:true});}
+    },
   });
   catbook.close();document.body.classList.remove('catbook-mode');
   const url=new URL(location.href);url.hash='restaurant';history.replaceState(null,'',url);

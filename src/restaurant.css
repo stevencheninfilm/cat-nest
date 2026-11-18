@@ -3,10 +3,15 @@ body.restaurant-mode .demo-launcher{display:none}
 #restaurant-root[hidden]{display:none}
 #restaurant-root{position:fixed;inset:0;z-index:40;display:flex;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#eef2d8,#b4c5a5);isolation:isolate}
 .restaurant{--r-ink:#694c37;--r-line:#aa7851;--r-cream:#fff7e3;--r-accent:#e99267;--r-green:#849b65;color:var(--r-ink);position:relative;width:min(100%,480px);height:100%;height:100dvh;display:flex;flex-direction:column;background:#fcf3dc;overflow:hidden;box-shadow:0 0 80px #4a5c4233;font-family:Nunito,"PingFang SC","Microsoft YaHei",sans-serif}
+/* Browser controls can expand during a tap on iOS. Keep the floor and its tap
+   targets at the same scale throughout the gesture. */
+@media (hover:none) and (pointer:coarse) and (orientation:portrait){
+  .restaurant{height:100svh}
+}
 .restaurant *{box-sizing:border-box}
 .restaurant button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .restaurant button:focus-visible{outline:3px solid #579fa5;outline-offset:3px}
-.restaurant button:active:not(:disabled){transform:translateY(2px)}
+.restaurant button:active:not(:disabled){filter:brightness(.96)}
 .restaurant button:disabled{cursor:default}
 .restaurant svg{width:24px;height:24px;flex-shrink:0}
 .restaurant [hidden]{display:none!important}

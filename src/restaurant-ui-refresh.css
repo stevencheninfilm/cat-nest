@@ -154,53 +154,6 @@
 .restaurant[data-r-ui="refresh"] .r-tools .r-round[data-locked="true"]{filter:saturate(.35);opacity:.82}
 .restaurant[data-r-ui="refresh"] .r-tools .r-round[aria-pressed="true"]{background:linear-gradient(180deg,var(--rfx-orange-2),var(--rfx-orange));color:#fff;border-color:var(--rfx-orange-deep)}
 
-/* ---------- 订单气泡：可读、可点、状态一眼可辨 ---------- */
-.restaurant[data-r-ui="refresh"] .rg-order-seat .r-order-bubble{
-  border:1.5px solid var(--rfx-line-strong);border-radius:14px;background:#fff;
-  box-shadow:var(--rfx-chunk);color:var(--rfx-ink);
-}
-.restaurant[data-r-ui="refresh"] .rg-order-seat .r-order-bubble strong{font-size:11px;line-height:1.25;font-weight:900;letter-spacing:0}
-.restaurant[data-r-ui="refresh"] .rg-order-seat .r-order-bubble small{font-size:9px;line-height:1.25;font-weight:700;color:var(--rfx-ink-3)}
-/* 双人桌两只气泡中心相距约 85px：竖排（菜品在上、字在下），宽 66px，不再互相遮挡 */
-.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble{width:66px;min-width:0;max-width:none;min-height:50px;padding:5px 4px 6px;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center}
-.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble strong{display:block;max-width:none;font-size:10.5px;line-height:1.2;white-space:normal}
-.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble small{display:none}
-.restaurant[data-r-ui="refresh"] .rg-order-seat:is(.is-requested,.is-awaiting,.is-preparing)>.r-order-bubble .r-food{width:28px;height:28px}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble strong{font-size:11.5px}
-/* 新点单 = 等你点：橘色描边 + 外圈呼吸 */
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble{
-  background:linear-gradient(180deg,#fff7ea,#ffe3bb);border-color:var(--rfx-orange-deep);color:var(--rfx-ink);box-shadow:0 3px 0 var(--rfx-orange-deep);
-}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble strong{color:var(--rfx-orange-deep)}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble small{color:var(--rfx-ink-2)}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested>.r-order-bubble::after{border-color:var(--rfx-orange-deep)}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-requested:not(.is-accept-pending)>.r-order-bubble::before{
-  content:"";position:absolute;inset:-6px;border-radius:19px;border:2.5px solid var(--rfx-orange);
-  pointer-events:none;animation:rfx-breathe 1.6s ease-in-out infinite;
-}
-@keyframes rfx-breathe{0%,100%{opacity:0;transform:scale(.95)}50%{opacity:.9;transform:scale(1.04)}}
-/* 已接单 / 制作中 = 交给厨房：薄荷绿 */
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-awaiting>.r-order-bubble{background:#f4faf6;border-color:#6f9c86;box-shadow:0 3px 0 #6f9c86;color:#2f5c48}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-awaiting>.r-order-bubble::after{border-color:#6f9c86}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-preparing>.r-order-bubble{background:#f4faf6;border-color:#6f9c86;box-shadow:0 3px 0 #6f9c86}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-preparing>.r-order-bubble strong{color:#2f5c48}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble{
-  background:linear-gradient(180deg,#fff6c9,#ffe28a);border-color:#b07a12;box-shadow:0 3px 0 #b07a12;animation:rfx-coin-wiggle 1.8s ease-in-out infinite;
-}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-collectible:not(.is-course-thinking)>.r-order-bubble strong{color:#6b4300;font-size:15px}
-@keyframes rfx-coin-wiggle{0%,82%,100%{rotate:0deg}86%{rotate:-5deg}90%{rotate:5deg}94%{rotate:-3deg}}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-course-thinking>.r-order-bubble strong{font-size:10px}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-course-thinking>.r-order-bubble small{font-size:9px}
-.restaurant[data-r-ui="refresh"] .rg-order-seat.is-accept-pending .rg-accept-sync strong{font-size:11px}
-.restaurant[data-r-ui="refresh"] .rg-accept-sync-note{font-size:9px}
-/* 接单确认 ✓：从气泡角上弹出，不再盖住菜名 */
-.restaurant[data-r-ui="refresh"] .rg-order-confirm{
-  padding:4px 10px;border:1.5px solid #2f6b4d;border-radius:99px;background:var(--rfx-mint);color:#fff;
-  box-shadow:0 2px 0 #2f6b4d;font-size:11px;font-weight:900;letter-spacing:.5px;margin-top:-30px;
-  animation:rfx-confirm 1s var(--rfx-out) both;
-}
-@keyframes rfx-confirm{0%{opacity:0;transform:translate(-50%,-70%) scale(.4)}16%{opacity:1;transform:translate(-50%,-104%) scale(1.15)}28%,72%{opacity:1;transform:translate(-50%,-100%) scale(1)}100%{opacity:0;transform:translate(-50%,-130%) scale(.96)}}
-
 /* 桌号与桌面状态：最小 10px，深色可读 */
 .restaurant[data-r-ui="refresh"] .rg-table-number{font-size:10px;font-weight:900;padding:1px 7px;border-radius:99px;background:rgba(74,44,28,.72);color:#fff8ea;border:0;width:auto;min-width:0}
 .restaurant[data-r-ui="refresh"] :is(.rg-empty-table,.rg-arrival-label){font-size:10px;font-weight:800;color:var(--rfx-ink-2);background:rgba(255,250,240,.92);border:1px solid var(--rfx-line);border-radius:99px}

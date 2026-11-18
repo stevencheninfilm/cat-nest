@@ -225,12 +225,12 @@ export function interactiveWorkerReservations(workflow){
   return windows;
 }
 
-export function interactiveWorkerProjection(workflow,now=Date.now(),workerId=workflow.workerId){
+export function interactiveWorkerProjection(workflow,now=Date.now(),workerId=workflow.workerId,reservation=null,order=null){
   now=safeTime(now);
-  const window=interactiveWorkerReservations(workflow).find(item=>item.workerId===workerId&&item.startAt<=now&&now<item.endAt);
+  const window=reservation??interactiveWorkerReservations(workflow).find(item=>item.workerId===workerId&&item.startAt<=now&&now<item.endAt);
   if(!window)return null;
   const owned=workflow.segments.filter(s=>s.phase!=='rest-walk'&&s.startAt>=window.startAt&&s.endAt<=window.endAt);
-  const model=interactiveOrderProjection(workflow,now),segment=owned.find(s=>s.startAt<=now&&now<s.endAt),last=owned.filter(s=>s.endAt<=now).at(-1),position=segment?{x:segment.from.x+(segment.to.x-segment.from.x)*model.currentStep.progress,y:segment.from.y+(segment.to.y-segment.from.y)*model.currentStep.progress}:clonePoint(last?.to??KITCHEN_ORIGIN);
+  const model=order??interactiveOrderProjection(workflow,now),segment=owned.find(s=>s.startAt<=now&&now<s.endAt),last=owned.filter(s=>s.endAt<=now).at(-1),position=segment?{x:segment.from.x+(segment.to.x-segment.from.x)*model.currentStep.progress,y:segment.from.y+(segment.to.y-segment.from.y)*model.currentStep.progress}:clonePoint(last?.to??KITCHEN_ORIGIN);
   return {id:workerId,orderId:workflow.orderId,phase:segment?segment.phase:'awaiting',position,from:segment?.from??position,to:segment?.to??position,startAt:segment?.startAt??null,endAt:segment?.endAt??null,progress:model.currentStep.progress,step:model.currentStep,carrying:segment?.carrying??last?.carrying??null};
 }
 

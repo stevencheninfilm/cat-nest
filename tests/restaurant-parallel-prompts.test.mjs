@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
 import { restaurantActionResult, validRestaurant } from '../src/restaurant.js';
-import { kitchenActionPresentations, kitchenActionPresentation, kitchenViewModel, layoutKitchenActions } from '../src/restaurant-kitchen-ui.js';
+import { kitchenActionPresentations, kitchenActionPresentation, kitchenViewModel, kitchenPromptGroups, nextKitchenBoundary, layoutKitchenActions } from '../src/restaurant-kitchen-ui.js';
 import { normalizeStaffTraining } from '../src/restaurant-staff-training.js';
 
 const NOW=Date.parse('2026-10-19T23:00:00Z'),ACTOR={id:'parallel-prompts',name:'店长'};
@@ -111,4 +111,28 @@ test('delivered orders remove only their own circle and an unaccepted order adds
   assert.deepEqual(actions(state,at).map(a=>a.order.id),['table-2']);
   const unaccepted=structuredClone(state);order(unaccepted,'table-2').workflow.acceptedAt=null;
   assert.equal(actions(unaccepted,at).length,0);
+});
+
+test('a crowded kitchen keeps all sixteen orders reachable without stacking fridge controls over diners',()=>{
+  const [sample]=actions(fixture(),NOW+6000);
+  const orders=Array.from({length:16},(_,index)=>({...sample,order:{...sample.order,id:`order-${index}`,seat:Math.floor(index/2)}}));
+  const [queue]=kitchenPromptGroups(orders);
+  assert.equal(queue.items.length,16);
+  assert.equal(kitchenPromptGroups(orders).length,1);
+  for(const order of orders){
+    assert.equal(kitchenPromptGroups(orders,new Map([[queue.key,order.order.id]]))[0].selected,order);
+  }
+  const spread=orders.map((action,i)=>({...action,step:{...action.step,zoneId:i%4+1}}));
+  assert.equal(kitchenPromptGroups(spread).length,4);
+  assert.equal(kitchenPromptGroups(orders.slice(0,4)).length,4);
+});
+
+test('the kitchen clock wakes at saved route boundaries and sleeps at a manual prompt',()=>{
+  let state=fixture(),at=NOW+6000;
+  assert.equal(nextKitchenBoundary(state.restaurant,at),Infinity);
+  state=click(state,'table-1','gather',at);
+  for(const segment of order(state,'table-1').workflow.segments){
+    assert.equal(nextKitchenBoundary(state.restaurant,segment.startAt),segment.endAt);
+  }
+  assert.equal(nextKitchenBoundary(state.restaurant,run(state,'table-1').endAt),Infinity);
 });

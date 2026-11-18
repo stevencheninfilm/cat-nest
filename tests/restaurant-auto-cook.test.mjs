@@ -112,6 +112,26 @@ test('an explicitly refused prior command does not permanently stop valid automa
   assert.equal(h.actions[0].stepId,'gather');h.complete();assert.ok(h.state.restaurant.orders[0].workflow.servedAt);
 });
 
+test('an arriving cloud snapshot supersedes the earlier render when dispatching an automatic step',()=>{
+  const h=harness(),id=h.request();
+  const staleState=h.state, staleInfo=restaurantInfo(staleState,h.at);
+  h.apply({type:'restaurant-kitchen-accept',orderId:id});
+  h.controller.toggle();
+  assert.equal(h.controller.tick({state:staleState,info:staleInfo,sampledAt:h.at}),true);
+  assert.equal(h.actions[0].stepId,'gather');
+  const busyState=h.state, busyInfo=restaurantInfo(busyState,h.at);
+  assert.equal(h.controller.tick({state:busyState,info:busyInfo,sampledAt:h.at}),false);
+  assert.equal(h.actions.length,1);
+});
+
+test('a cached projection cannot turn an invalid wallet into an eligible kitchen step',()=>{
+  const h=harness(),id=h.request();
+  h.apply({type:'restaurant-kitchen-accept',orderId:id});
+  const info=restaurantInfo(h.state,h.at);
+  assert.ok(nextRestaurantAutoCookAction(h.state,h.at,[],info));
+  assert.equal(nextRestaurantAutoCookAction({...h.state,coins:-1},h.at,[],info),null);
+});
+
 test('the right rail exposes a labeled toggle with locked, off and blue active states',()=>{
   assert.match(restaurantMarkup(fixture()),/data-r-auto-cook[^>]*aria-pressed="false"/);
   const attrs={},small={};const button={dataset:{},setAttribute:(k,v)=>attrs[k]=v,querySelector:()=>small};

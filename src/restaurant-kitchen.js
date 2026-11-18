@@ -438,11 +438,28 @@ export function kitchenInfo(restaurant,now=Date.now()) {
     const currentStep=arriving?{id:'arriving',label:'等待客人入座',zoneId:null,prop:null,status:'arriving',startAt:now,endAt:workflow.createdAt,progress:0}:{...current.step,status:current.phase,startAt:current.startAt,endAt:current.endAt,progress:current.progress};
     return {id:workflow.orderId,recipeId:workflow.recipeId,workerId:workflow.workerId,seat:workflow.seat,currentStep,steps,phase:arriving?'arriving':current.active?current.phase:'complete',progress:clamp((now-workflow.createdAt)/(workflow.servedAt-workflow.createdAt)),queuedUntil:workflow.segments.find(segment=>segment.phase!=='wait').startAt};
   });
+  const manualWorkers=new Map(),stationWork=new Map();
+  for(const [index,flow] of workflows.entries()){
+    const manual=isInteractiveWorkflow(flow);
+    if(manual){
+      const reservation=interactiveWorkerReservations(flow).find(slot=>slot.startAt<=now&&now<slot.endAt);
+      if(reservation&&!manualWorkers.has(reservation.workerId)){
+        manualWorkers.set(reservation.workerId,interactiveWorkerProjection(flow,now,reservation.workerId,reservation,orders[index]));
+      }
+    }
+    for(const segment of flow.segments){
+      if(segment.phase!=='work'||segment.endAt<=now)continue;
+      const owner=manual?flow.runs.find(run=>run.startAt<=segment.startAt&&segment.endAt<=run.endAt):null;
+      const workerId=owner?.workerId??flow.workerId;
+      if(!stationWork.has(segment.zoneId))stationWork.set(segment.zoneId,[]);
+      stationWork.get(segment.zoneId).push({...segment,workerId,orderId:flow.orderId});
+    }
+  }
   const workerCount=1+(restaurant?.staff??0);
   const workerRest=restaurantStaffRestInfo(restaurant,now);
   const workers=Array.from({length:workerCount},(_,index)=>{
     const id=workerId(index);
-    const manual=workflows.filter(isInteractiveWorkflow).map(workflow=>interactiveWorkerProjection(workflow,now,id)).find(Boolean);
+    const manual=manualWorkers.get(id);
     if(manual)return manual;
     const candidates=workflows.filter(workflow=>!isInteractiveWorkflow(workflow)&&workflow.workerId===id&&workflow.createdAt<=now&&workflow.completedAt>now).sort((a,b)=>a.completedAt-b.completedAt);
     const workflow=candidates[0];
@@ -455,7 +472,7 @@ export function kitchenInfo(restaurant,now=Date.now()) {
     return {...worker,...energy};
   });
   const zones=INTERACTIVE_KITCHEN_ZONES.map(zone=>{
-    const work=workflows.flatMap(workflow=>workflow.segments.filter(segment=>segment.phase==='work'&&segment.zoneId===zone.id).map(segment=>({...segment,workerId:isInteractiveWorkflow(workflow)?workflow.runs.find(run=>run.startAt<=segment.startAt&&segment.endAt<=run.endAt)?.workerId??workflow.workerId:workflow.workerId,orderId:workflow.orderId}))).filter(segment=>segment.endAt>now).sort((a,b)=>a.startAt-b.startAt);
+    const work=(stationWork.get(zone.id)??[]).sort((a,b)=>a.startAt-b.startAt);
     const active=work.find(segment=>segment.startAt<=now);
     const occupant=active?{workerId:active.workerId,orderId:active.orderId,stepId:active.stepId,progress:clamp((now-active.startAt)/(active.endAt-active.startAt)),startAt:active.startAt,endAt:active.endAt}:null;
     return {...zone,occupant,queue:work.filter(segment=>segment.startAt>now).map(({workerId,orderId,stepId,startAt,endAt})=>({workerId,orderId,stepId,startAt,endAt}))};
