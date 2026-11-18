@@ -400,15 +400,22 @@ export function validKitchenWorkflow(workflow,order,restaurant) {
 }
 
 export function validKitchenReservations(restaurant) {
-  const workflows=restaurant.orders.filter(order=>order.workflow).map(order=>order.workflow);
-  for(let i=0;i<workflows.length;i++)for(let j=i+1;j<workflows.length;j++) {
-    const a=workflows[i],b=workflows[j];
-    if(a.seat===b.seat&&!(restaurant.parties||[]).some(party=>party.table===a.seat&&party.members.some(member=>member.orderId===a.orderId)&&party.members.some(member=>member.orderId===b.orderId)))return false;
-    // The worker belongs to the order once it actually departs, not while that
-    // order waits in the unassigned queue at the kitchen origin.
-    const busy=workflow=>isInteractiveWorkflow(workflow)?[...interactiveWorkerReservations(workflow),...workflow.runs.filter(run=>run.rest).map(run=>({workerId:run.workerId??workflow.workerId,startAt:run.endAt,endAt:run.rest.fullAt}))]:[{workerId:workflow.workerId,startAt:workflow.segments.find(segment=>segment.phase!=='wait')?.startAt??workflow.createdAt,endAt:workflow.completedAt}];
-    for(const left of busy(a))for(const right of busy(b))if(left.workerId===right.workerId&&intervalsOverlap(left,right))return false;
-    for(const left of a.segments.filter(segment=>segment.phase==='work'))for(const right of b.segments.filter(segment=>segment.phase==='work'))if(left.zoneId===right.zoneId&&intervalsOverlap(left,right))return false;
+  // A reservation is a property of one workflow. Compute it once, even when
+  // the entire room shares the same worker pool and kitchen counters.
+  const bookings=restaurant.orders.filter(order=>order.workflow).map(({workflow})=>{
+    const workers=isInteractiveWorkflow(workflow)?interactiveWorkerReservations(workflow):[{
+      workerId:workflow.workerId,startAt:workflow.segments.find(segment=>segment.phase!=='wait')?.startAt??workflow.createdAt,endAt:workflow.completedAt,
+    }];
+    for(const run of workflow.runs??[]){
+      if(run.rest)workers.push({workerId:run.workerId??workflow.workerId,startAt:run.endAt,endAt:run.rest.fullAt});
+    }
+    return {seat:workflow.seat,id:workflow.orderId,workers,stations:workflow.segments.filter(segment=>segment.phase==='work')};
+  });
+  for(let i=0;i<bookings.length;i++)for(let j=i+1;j<bookings.length;j++) {
+    const a=bookings[i],b=bookings[j];
+    if(a.seat===b.seat&&!(restaurant.parties||[]).some(party=>party.table===a.seat&&party.members.some(member=>member.orderId===a.id)&&party.members.some(member=>member.orderId===b.id)))return false;
+    for(const left of a.workers)for(const right of b.workers)if(left.workerId===right.workerId&&intervalsOverlap(left,right))return false;
+    for(const left of a.stations)for(const right of b.stations)if(left.zoneId===right.zoneId&&intervalsOverlap(left,right))return false;
   }
   return true;
 }

@@ -3,6 +3,8 @@ import { advanceInteractiveWorkflow } from './restaurant-kitchen-interactive.js'
 import { RESTAURANT_AUTO_COOK_LEVEL, restaurantExperienceInfo } from './restaurant-progression.js';
 
 export const AUTO_COOK_PREFERENCE='catnest.restaurant.autoCook';
+// One in-flight command plus a full six-command save can keep all seven cooks busy.
+const MAX_UNCONFIRMED_AUTO_STEPS = 7;
 
 /** Automation submits the same durable step intents as a player. It never
  * accepts a new request, shortens a timer, skips a reservation or collects XP. */
@@ -38,9 +40,11 @@ export function createRestaurantAutoCook({getState,getAvailability=()=>({ready:t
     tick({active=true,state,info,sampledAt}={}){
       const availability=getAvailability();
       if(pumping||!active||!enabled||!(availability.ready??availability.connected)||(availability.savePhase==='error'&&!availability.saveRejected)||!unlocked())return false;
+      const pendingSteps=availability.pendingKitchenSteps??[];
+      if(availability.connected && !availability.retrying && pendingSteps.length>=MAX_UNCONFIRMED_AUTO_STEPS)return false;
       const current=getState();
       const sameSnapshot=state===current&&info;
-      const action=nextRestaurantAutoCookAction(current,sameSnapshot?sampledAt:now(),availability.pendingKitchenSteps??[],sameSnapshot?info:undefined);
+      const action=nextRestaurantAutoCookAction(current,sameSnapshot?sampledAt:now(),pendingSteps,sameSnapshot?info:undefined);
       if(!action)return false;
       pumping=true;
       try{

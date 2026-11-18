@@ -1,3 +1,4 @@
+import { isInteractiveWorkflow } from './restaurant-kitchen-interactive.js';
 import { restaurantResearchTestControls } from './restaurant-recipe-celebration.js';
 import { restaurantTierFood, restaurantTierName, restaurantGuestTestButtons, restaurantOrderOddsMarkup } from './restaurant-order-tiers-ui.js';
 import { restaurantGuestTier } from './restaurant-order-probabilities.js';
@@ -32,6 +33,18 @@ function createEntryForeground(container){
   return ()=>{observer.disconnect();for(const wall of walls)wall.remove();};
 }
 
+// Interactive delivery may finish locally while its last station commands are
+// still uploading. Each table can settle as soon as its own delivery is saved.
+export function unconfirmedRestaurantDeliveries(displayed, confirmed, connected) {
+  if (!connected || displayed === confirmed) return [];
+  return displayed.orders.filter(({id,workflow}) => {
+    if (!isInteractiveWorkflow(workflow) || workflow.servedAt == null) return false;
+    const saved = confirmed?.orders.find(order => order.id === id);
+    const deliveredAt = isInteractiveWorkflow(saved?.workflow) ? saved.workflow.servedAt : saved?.servedAt ?? saved?.workflow?.servedAt;
+    return deliveredAt == null;
+  }).map(order => order.id);
+}
+
 export function restaurantGuestTables(info, options) {
   return Array.from({length:Math.max(6,info.capacity)}, (_,table) =>
     restaurantGuestTable(info, table, options)).join('');
@@ -46,7 +59,7 @@ const ticketCaption = {
   'dish-ready':'送餐', ready:'送餐', delivering:'送餐中', dining:'用餐中', paid:'已结账',
 };
 
-export function restaurantGuestTable(info, table, {icon,food,blocked=false,replaying=[],pendingCourses=[],pendingAccepts=[]}={}) {
+export function restaurantGuestTable(info, table, {icon,food,blocked=false,replaying=[],pendingCourses=[],pendingAccepts=[],pendingDeliveries=[]}={}) {
   const position=RESTAURANT_TABLES[table];
   const party=info.parties.find(party=>party.table===table);
   const base=`data-r-table="${table}" style="--tx:${position.x}%;--ty:${position.y}%"`;
@@ -60,7 +73,9 @@ export function restaurantGuestTable(info, table, {icon,food,blocked=false,repla
   // tabletop centres, leaving the centre table its own two touch targets.
   const lane=info.capacity>6 && table<6 ? (table%2===0?20:80) : position.x;
   const tickets=party.members.map(member=>{
-    const order=member.order,status=order?.status||'paid';
+    const order=member.order;
+    const pendingDelivery=order?.status==='collectible' && pendingDeliveries.includes(order.id) && !pendingCourses.includes(order.id);
+    const status=pendingDelivery?'delivering':order?.status||'paid';
     const tier=order?.guestTier??member.service?.tier;
     const course=order?.course??member.service?.round, rounds=order?.courses??member.service?.rounds;
     const collecting=Boolean(status==='collectible' && pendingCourses.includes(order.id));
@@ -84,7 +99,7 @@ export function restaurantGuestTable(info, table, {icon,food,blocked=false,repla
     else content=`<strong>${ticketCaption[status]}</strong>${status==='cooking'?`<span data-r-countdown="${order.id}"></span>`:''}`;
     if(['cooking','preparing'].includes(status))content+=`<i class="r-order-progress" data-r-progress="${order.id}"></i>`;
     const classes=`rg-order-seat is-${status}${waiting?' is-course-thinking':''}${acceptPending?' is-accept-pending':''}`;
-    const button=`<button class="r-order-bubble" ${command} ${disabled?'disabled':''} ${collecting?'aria-busy="true" ':''}aria-label="${esc(label)}${stamp?'，结账可为招牌菜单集章':''}" title="${esc(description)}"><span class="rg-ticket-face">${content}${tier&&!collecting?`<em class="rg-ticket-course" aria-hidden="true">${course}/${rounds}</em>`:''}${stamp?'<em class="rs-order-stamp" aria-hidden="true">集章</em>':''}</span></button>`;
+    const button=`<button class="r-order-bubble" ${command} ${disabled?'disabled':''} ${collecting||pendingDelivery?'aria-busy="true" ':''}aria-label="${esc(label)}${stamp?'，结账可为招牌菜单集章':''}" title="${esc(description)}"><span class="rg-ticket-face">${content}${tier&&!collecting?`<em class="rg-ticket-course" aria-hidden="true">${course}/${rounds}</em>`:''}${stamp?'<em class="rs-order-stamp" aria-hidden="true">集章</em>':''}</span></button>`;
     const item=`<div class="r-table-guest ${classes}" data-r-table="${table}" data-r-seat="${member.seat}"${party.members.length===1?' data-r-single':''}${tier?` data-r-guest-tier="${tier}"`:''} style="--tx:${lane}%;--ty:${position.y}%" data-r-order="${order?.id||member.orderId}">${button}</div>`;
     if(status!=='dining')return item;
     return item+`<span class="rg-dining-food" data-r-table="${table}" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${dish(order.recipe.id)}</span>`;

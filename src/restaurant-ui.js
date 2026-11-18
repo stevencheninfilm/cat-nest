@@ -20,7 +20,7 @@ import { restaurantCustomersPanel, restaurantCustomerDetail } from './restaurant
 import { restaurantInfo, restaurantActionResult, RESTAURANT_RECIPE_CATEGORIES, RESTAURANT_STAFF } from './restaurant.js';
 import { levelInfo } from './state.js';
 import { KITCHEN_FLOWS } from './restaurant-kitchen.js';
-import { restaurantGuestTable, restaurantTerminalPanel, createRestaurantGuests, createRestaurantGuestFeedback } from './restaurant-guests-ui.js';
+import { unconfirmedRestaurantDeliveries, restaurantGuestTable, restaurantTerminalPanel, createRestaurantGuests, createRestaurantGuestFeedback } from './restaurant-guests-ui.js';
 import { createRestaurantArrivalRhythm } from './restaurant-street.js';
 import { restaurantStreetMarkup, createRestaurantStreet } from './restaurant-street-ui.js';
 import { kitchenSceneMarkup, kitchenFlowPanel, createKitchenScene } from './restaurant-kitchen-ui.js';
@@ -235,11 +235,12 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
     },
     message(text){log(text);toast(text);render();},
   });
-  function paintTables(info,availability){
+  function paintTables(info,availability,pendingDeliveries){
     const tables=$('[data-r-tables]');
     const options={
       icon:restaurantIcon, food, blocked:pending||restaurantInputBlocked(availability),
       replaying:guests?.replaying()||[],
+      pendingDeliveries,
       pendingCourses:[...pendingCourseOrders,...(availability.pendingRestaurantCollections??[])],
       pendingAccepts:availability.pendingRestaurantAccepts,
     };
@@ -501,15 +502,16 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
       $('[data-r-save]').textContent=saveLabel;
       $('[data-r-kitchen-level]').textContent=`Lv.${info.restaurant.levels.kitchen}`;
     }
+    const pendingDeliveries=unconfirmedRestaurantDeliveries(state.restaurant,confirmed.restaurant,availability.connected);
     const thinkingCourse=order=>order.hasNextCourse&&(pendingCourseOrders.has(order.id)||availability.pendingRestaurantCollections?.includes(order.id));
-    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible'&&!thinkingCourse(o))?'小鱼干在闪闪发光，点一下收好它':info.orders.some(thinkingCourse)?'猫猫正在看菜单，想好后就能接第二道餐':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCookEnabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCookEnabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
+    const hint=info.parties.some(p=>p.status==='arriving')?'新客人正在走进小馆，入座后各点一道菜':info.orders.some(o=>o.status==='collectible'&&!thinkingCourse(o)&&!pendingDeliveries.includes(o.id))?'小鱼干在闪闪发光，点一下收好它':info.orders.some(thinkingCourse)?'猫猫正在看菜单，想好后就能接第二道餐':info.orders.some(o=>o.status==='requested')?'点击顾客的菜品需求，接下这一单':info.orders.some(o=>o.status==='awaiting')?(autoCookEnabled?'自动制作中 · 等待空闲员工与工位':'点食材圈，员工才会继续下一步'):info.orders.some(o=>['ready','dish-ready'].includes(o.status))?(autoCookEnabled?'料理做好啦，员工正在准备送餐':'料理做好啦，点击餐桌送餐'):pendingDeliveries.length||info.orders.some(o=>['cooking','preparing','delivering'].includes(o.status))?'主厨忙碌中，客人正在期待美味':info.orders.some(o=>o.status==='dining')?'吃饱饱，心情也变好啦':`今日已完成 ${info.restaurant.stats.served} 份料理 · ${info.availableTables} 张空桌等待新朋友`;
     setText($('[data-r-hint]'),hint);
-    const nextSignature=JSON.stringify([[...pendingCourseOrders],info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,pending||restaurantInputBlocked(availability),availability.pendingRestaurantCollections,availability.pendingRestaurantAccepts]);
+    const nextSignature=JSON.stringify([[...pendingCourseOrders],pendingDeliveries,info.orders.map(o=>[o.id,o.status]),info.parties.map(p=>[p.id,p.status]),info.kitchen?.orders.map(order=>[order.id,order.currentStep.id,order.phase]),guests.replaying(),info.capacity,info.level,info.restaurant.revision,pending||restaurantInputBlocked(availability),availability.pendingRestaurantCollections,availability.pendingRestaurantAccepts]);
     if(nextSignature!==signature||renderedLedger!==state.restaurant){
       signature=nextSignature;renderedLedger=state.restaurant;
       const tables=$('[data-r-tables]'), focus=document.activeElement;
       const focusedOrder=tables.contains(focus)?focus.closest('[data-r-order]')?.dataset.rOrder:null;
-      paintTables(info,availability);
+      paintTables(info,availability,pendingDeliveries);
       guestFeedback.sync(info.orders, availability.pendingRestaurantAccepts);
       if(focusedOrder&&!focus.isConnected)tables.querySelector(`[data-r-order="${focusedOrder}"] > .r-order-bubble:not(:disabled)`)?.focus({preventScroll:true});
     }
@@ -554,7 +556,8 @@ export function createRestaurant({container,getState,getConfirmedState=getState,
     }
     const before=getState(),availability=getAvailability();
     if(restaurantInputBlocked(availability)){toast('小馆正在读取，稍后就能开始营业');return;}
-    if(type==='collect'&&availability.pendingRestaurantCollections?.includes(action.orderId)){render();return;}
+    if(type==='collect' && (availability.pendingRestaurantCollections?.includes(action.orderId)
+      || unconfirmedRestaurantDeliveries(before.restaurant,getConfirmedState()?.restaurant,availability.connected).includes(action.orderId))){render();return;}
     const result=restaurantActionResult(before,action);
     if(!result.ok){toast(result.reason);return;}
     if(type==='research-draw'&&!researchReveal.start(action.draw,action.count??1))return;

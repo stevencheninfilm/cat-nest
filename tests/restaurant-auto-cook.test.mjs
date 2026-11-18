@@ -138,3 +138,18 @@ test('the right rail exposes a labeled toggle with locked, off and blue active s
   paintRestaurantAutoCook(button,restaurantInfo(fixture({level:9}),NOW),true);assert.equal(attrs['aria-pressed'],'false');assert.match(attrs['aria-label'],/Lv.10/);
   paintRestaurantAutoCook(button,restaurantInfo(fixture(),NOW),true);assert.equal(attrs['aria-pressed'],'true');assert.equal(small.textContent,'已开启');
 });
+
+test('automatic kitchen waits for a crowded online save queue and resumes after the next receipt',()=>{
+  const h=harness(),id=h.request();
+  h.apply({type:'restaurant-kitchen-accept',orderId:id});h.controller.toggle();
+  const pending=Array.from({length:7},(_,index)=>`other-${index}:gather`);
+  h.availability={ready:true,connected:true,pendingKitchenSteps:pending};
+  assert.equal(h.controller.tick(),false);
+  assert.equal(h.actions.length,0);
+  h.availability={ready:true,connected:true,pendingKitchenSteps:pending.slice(1)};
+  assert.equal(h.controller.tick(),true);
+  assert.equal(h.actions[0].orderId,id);
+  h.at=h.state.restaurant.orders[0].workflow.runs[0].endAt;
+  h.availability={ready:true,connected:false,pendingKitchenSteps:pending};
+  assert.equal(h.controller.tick(),true,'offline service can keep recording local steps');
+});

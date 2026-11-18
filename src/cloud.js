@@ -55,6 +55,7 @@ export function createCloudRoom(options) {
   // confirmedState and never change the payload sent to the server.
   const restaurantTimelines = new Map();
   const liveReceipts = new Map();
+  let serviceBatch = null, servicePublication = null;
   let actionBatchLimit = 1;
   const retryIndividually = new WeakSet();
   const previewTypes = new Set(['feed', 'pet', 'play', 'sleep', 'claim-growth', 'claim-restaurant-growth', 'dress', 'rename','diary-favorite','invite-cat','nest-buy','nest-place','nest-store','nest-palette','nest-upgrade']);
@@ -122,10 +123,24 @@ export function createCloudRoom(options) {
     if(!local?.workflow?.runs||!actual?.workflow?.runs)return;
     restaurantTimelines.set(id,{order:structuredClone(local),training:preview.training?structuredClone(preview.training):null,workers:preview.workers?structuredClone(preview.workers):null});
   }
+  function withRestaurantTimeline(restaurant, overlay) {
+    const { id, order, clocks } = overlay;
+    const next = { ...restaurant, orders:restaurant.orders.map(actual => actual.id === id ? order : actual) };
+    for (const [workerId, training, through] of clocks) {
+      const current = next.staffTraining?.[workerId];
+      // Another job or later training may already own this worker's energy clock.
+      if (!current || current.energyAt > through) continue;
+      next.staffTraining = { ...next.staffTraining, [workerId]:{
+        ...current, energy:training.energy, energyAt:training.energyAt,
+        ...(Object.hasOwn(training,'rest') ? {rest:structuredClone(training.rest),energyMode:training.energyMode} : {}),
+      } };
+    }
+    return next;
+  }
   function projectRestaurantTimelines(state){
-    let display=state;
+    const overlays=[];
     for(const [id,local] of restaurantTimelines){
-      const actual=display.restaurant?.orders?.find(order=>order.id===id),a=actual?.workflow,b=local.order.workflow;
+      const actual=restaurantOrder(state,{orderId:id}),a=actual?.workflow,b=local.order.workflow;
       // Keep an earlier visual start, but never replay a speculative future
       // start or a different fatigue/rest outcome after the real receipt.
       const compatible=a?.runs&&a.recipeId===b.recipeId&&a.workerId===b.workerId&&JSON.stringify(a.workerLevels)===JSON.stringify(b.workerLevels)&&a.runs.length===b.runs.length&&a.runs.every((run,index)=>{
@@ -133,20 +148,26 @@ export function createCloudRoom(options) {
         return run.stepId===localRun.stepId&&(run.workerId??a.workerId)===(localRun.workerId??b.workerId)&&localRun.commandAt<=run.commandAt&&run.durationMultiplier===localRun.durationMultiplier&&Boolean(run.rest)===Boolean(localRun.rest);
       });
       if(!compatible){restaurantTimelines.delete(id);continue;}
-      const next={...display.restaurant,orders:display.restaurant.orders.map(order=>order.id===id?structuredClone(local.order):order)};
-      // Preserve current training levels. Only the local command's exertion
-      // clock is projected; the real ledger remains in confirmedState.
       const workerClocks=local.workers??(local.training&&b.workerId?{[b.workerId]:local.training}:{});
+      const clocks=[];
       for(const [workerId,training] of Object.entries(workerClocks)){
-        const current=next.staffTraining?.[workerId],run=a.runs.filter(run=>(run.workerId??a.workerId)===workerId).at(-1);
-        // Never replace a ledger already advanced by a later job or training.
-        if(!current||!run||current.energyAt>(run.rest?.arriveAt??run.endAt))continue;
-        next.staffTraining={...next.staffTraining,[workerId]:{...current,energy:training.energy,energyAt:training.energyAt,...(Object.hasOwn(training,'rest')?{rest:structuredClone(training.rest),energyMode:training.energyMode}:{})}};
+        const run=a.runs.filter(run=>(run.workerId??a.workerId)===workerId).at(-1);
+        if(run)clocks.push([workerId,training,run.rest?.arriveAt??run.endAt]);
       }
-      if(validRestaurant(next))display={...display,restaurant:next};
-      else restaurantTimelines.delete(id);
+      overlays.push({id,order:structuredClone(local.order),clocks});
     }
-    return display;
+    if(!overlays.length)return state;
+    const projected=overlays.reduce(withRestaurantTimeline,state.restaurant);
+    if(validRestaurant(projected))return {...state,restaurant:projected};
+    // A partner may have reserved one of the same stations. Keep independent
+    // local clocks whose inclusion still leaves the full schedule valid.
+    let restaurant=state.restaurant;
+    for(const overlay of overlays){
+      const next=withRestaurantTimeline(restaurant,overlay);
+      if(validRestaurant(next))restaurant=next;
+      else restaurantTimelines.delete(overlay.id);
+    }
+    return restaurant===state.restaurant?state:{...state,restaurant};
   }
   function scheduleDrain(delay=8000){const wait=Math.max(1,delay);retryAt=Date.now()+wait;clearTimeout(retry);retry=setTimeout(()=>{retry=null;retryAt=0;void drain();},wait);}
   function queuedStatus(message='餐厅操作已在本机排队，连接恢复后自动保存',retrying=true){onSaveStatus({phase:'queued',message,retrying,pending:queue.length});}
@@ -230,6 +251,18 @@ export function createCloudRoom(options) {
     publishState();
     onRollback(item.action, me, { operationId:item.operationId, reason:'rejected', code:error.code });
   }
+  // A group of independent kitchen receipts often arrives in one turn (an HTTP
+  // batch or back-to-back live events). Keep each canonical revision and its
+  // feedback, but project the remaining queue just once before delivering them.
+  function flushServicePublication(){
+    const publication=servicePublication;
+    if(!publication)return;
+    servicePublication=null;
+    clearTimeout(publication.timer);
+    if(destroyed)return;
+    if(publication.changed)publishState();
+    for(const args of publication.actions)onAction(...args);
+  }
   function apply(data, acknowledgement) {
     if (destroyed || !data?.state || !Number.isFinite(data.revision) || data.roomId!==undefined&&data.roomId!==room) return;
     if(!validRestaurantMetadata(data))return;
@@ -243,6 +276,8 @@ export function createCloudRoom(options) {
       ? { ...data.state, restaurant: { ...data.state.restaurant, ...additions } }
       : data.state;
     const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
+    const grouped=event && serviceBatch?.has(event.operationId);
+    if(!grouped)flushServicePublication();
     const preview = previews.get(event?.operationId || acknowledgement?.operationId);
     const previousXp = authoritativeState?.xp;
     const claimsGrowth = growthClaimIds(event?.action).length > 0;
@@ -258,10 +293,20 @@ export function createCloudRoom(options) {
     if (data.revision === revision && event && seen.has(event.operationId) && !preview) return;
     const changed = data.revision >= revision;
     if (changed) { revision=data.revision; authoritativeState=incomingState; }
-    if (changed || preview) publishState();
+    if(grouped && !servicePublication){
+      // A streamed batch can span separate browser tasks. Partial receipts
+      // still reach the UI promptly if the HTTP body or a later event stalls.
+      servicePublication={changed:false,actions:[],timer:setTimeout(flushServicePublication,16)};
+    }
+    if (changed || preview) {
+      if (grouped) servicePublication.changed=true;
+      else publishState();
+    }
     if (event && !seen.has(event.operationId)) {
       seen.add(event.operationId); if (seen.size > 200) seen.delete(seen.values().next().value);
-      onAction(event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp, confirmedGrowth, restaurantCheckout:event.restaurantCheckout });
+      const args=[event.action, event.actor, { operationId:event.operationId, optimistic:false, previewed:Boolean(preview?.animated), previousXp, confirmedXp:authoritativeState?.xp, confirmedGrowth, restaurantCheckout:event.restaurantCheckout }];
+      if(grouped)servicePublication.actions.push(args);
+      else onAction(...args);
     }
     if(event)liveReceipts.get(event.operationId)?.(data);
     // A late durable receipt also releases a queue waiting for its retry timer.
@@ -316,6 +361,9 @@ export function createCloudRoom(options) {
   async function sendBatch(items) {
     // An older tab still receives ordinary per-action SSE events. This tab
     // can also move on when all durable receipts arrive ahead of the HTTP body.
+    if(items.every(({action})=>action.type==='restaurant-kitchen-accept'||action.type==='restaurant-kitchen-step')){
+      serviceBatch=new Set(items.map(item=>item.operationId));
+    }
     const live = Promise.all(items.map(item => new Promise(resolve => liveReceipts.set(item.operationId, resolve))));
     try {
       const post = request(`/api/rooms/${room}/actions/batch`, {
@@ -331,6 +379,7 @@ export function createCloudRoom(options) {
           && result.state && typeof result.state === 'object' && !Array.isArray(result.state) && validRestaurantMetadata(result);
       })) throw new Error('云端尚未确认全部操作');
       for (const [index, item] of items.entries()) apply(results[index], item);
+      flushServicePublication();
       queue.splice(0, items.length);
       saveQueue();
       onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
@@ -344,6 +393,8 @@ export function createCloudRoom(options) {
         queuedStatus(); scheduleDrain();
       }
     } finally {
+      serviceBatch=null;
+      flushServicePublication();
       for (const item of items) liveReceipts.delete(item.operationId);
     }
   }
@@ -524,6 +575,7 @@ export function createCloudRoom(options) {
   return {
     start,
     dispatch(action) {
+      flushServicePublication();
       if (!ready || destroyed) return false;
       // A repeated receipt tap joins the original durable intent. It is not a
       // failed save and must not allocate another ID, reward or POST, even when

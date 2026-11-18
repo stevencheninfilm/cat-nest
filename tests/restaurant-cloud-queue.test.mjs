@@ -7,6 +7,7 @@ import { validRestaurant,restaurantInfo,restaurantRecipe } from '../src/restaura
 import { createRestaurantAutoCook } from '../src/restaurant-auto-cook.js';
 import { restaurantStaffIdleAt } from '../src/restaurant-staff-training.js';
 import { KITCHEN_FLOWS } from '../src/restaurant-kitchen.js';
+import { restaurantStaffDebugResult } from '../demo/restaurant-staff.js';
 import { restaurantGuestDebugResult } from '../demo/restaurant-guests.js';
 import { restaurantResearchDebugResult } from '../demo/restaurant-research.js';
 import { prepareRestaurantMealForCollection } from './restaurant-meal-fixtures.mjs';
@@ -856,6 +857,103 @@ test('seven rapid restaurant and home taps save in two round trips with immediat
   assert.equal(h.posts().length, 2);
   assert.equal(h.observed.actions.filter(a => !a.optimistic).length, 7);
   assert.deepEqual(h.latest(), saved);
+});
+
+function fullRoom() {
+  let state=restaurantStaffDebugResult(initialState(NOW-360000),{mode:'max-level'},NOW-100000).state;
+  for(let table=0;table<8;table++)state=reduceAction(state,{type:'restaurant-arrive',partySize:2},ACTOR,NOW-95000+table*7800);
+  assert.equal(state.restaurant.orders.length,16);
+  return state;
+}
+
+for(const channel of ['http','live','partial live','mixed']){
+  test(`full-room kitchen batch publishes one projection per receipt burst via ${channel}`, async t=>{
+    let state=fullRoom();
+    const first=deferred(),batch=deferred(),remaining=deferred();
+    const requests=[first,batch];
+    const h=harness(t,req=>req.method==='GET'?response({...snapshot(state),actionBatchLimit:6})
+      :(requests.shift()??remaining).promise,{state});
+    await h.cloud.start();
+    const ids=state.restaurant.orders.map(order=>order.id);
+    for(const orderId of ids)assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId}),true);
+    const items=h.pending();
+    first.resolve(response(receipt(items[0],state=apply(state,items[0]),1)));await flush();
+    const results=items.slice(1,7).map((item,index)=>receipt(item,state=apply(state,item),index+2));
+    const before=h.observed.states.length;
+    if(channel==='http')batch.resolve(response({results}));
+    else if(channel==='mixed'){
+      h.sources[0].emit('action',results[0]);
+      // A partner changes the already committed kitchen snapshot before the
+      // remaining live events arrive. HTTP later repeats all six receipts.
+      const partner={id:'queue-partner',name:'伙伴'};
+      const action={type:'rename',name:'团子'};
+      const later=reduceAction(state,action,partner,NOW+1000,'partner-after-batch');
+      h.sources[0].emit('action',snapshot(later,8,{actor:partner,action,operationId:'partner-after-batch'}));
+      h.sources[0].emit('action',results[1]);
+      batch.resolve(response({results}));
+    }else {
+      h.sources[0].emit('action',results[0]);
+      if(channel==='partial live'){
+        t.mock.timers.tick(16);
+        assert.equal(h.observed.states.length,before+1,'a partial durable receipt is visible even when its batch is delayed');
+      }
+      for(const result of results.slice(1))h.sources[0].emit('action',result);
+    }
+    await flush();
+    if(channel==='mixed'){
+      h.sources[0].emit('action',results[5]);
+      assert.equal(h.latest().name,'团子','late duplicate receipts cannot replace the partner snapshot');
+      assert.equal(h.observed.actions.filter(event=>event.operationId==='partner-after-batch').length,1);
+    } else assert.equal(h.observed.states.length-before,channel==='partial live'?2:1);
+    assert.equal(h.latest().restaurant.orders.filter(order=>order.workflow.acceptedAt!==null).length,16);
+    assert.deepEqual(h.pending().map(item=>item.operationId),items.slice(7).map(item=>item.operationId));
+    const own=h.observed.actions.filter(event=>!event.optimistic&&event.operationId!=='partner-after-batch');
+    assert.deepEqual(own.map(event=>event.operationId),items.slice(0,7).map(item=>item.operationId));
+    assert.equal(h.observed.rollbacks.length,0);
+  });
+}
+
+test('one refused accept in a full room rolls back only that order and delivers every other receipt', async t => {
+  const state=fullRoom(), first=deferred();
+  const refusedOrder=state.restaurant.orders[3].id;
+  const savedIds=[], refusedIds=[];
+  let saved=state, batchRefused=false;
+  function commit(item) {
+    assert.ok(!savedIds.includes(item.operationId));
+    savedIds.push(item.operationId);
+    saved=apply(saved,item);
+    return receipt(item,saved,savedIds.length);
+  }
+  const h=harness(t,req=>{
+    if(req.method==='GET')return response({...snapshot(saved,savedIds.length),actionBatchLimit:6});
+    if(req.url.endsWith('/batch')){
+      if(!batchRefused){
+        assert.ok(req.body.operations.some(item=>item.action.orderId===refusedOrder));
+        batchRefused=true;
+        return response({error:{code:'DEMO_ACTION_REJECTED',message:'订单已更新'}},409);
+      }
+      return response({results:req.body.operations.map(commit)});
+    }
+    if(!savedIds.length)return first.promise;
+    if(req.body.action.orderId===refusedOrder){
+      refusedIds.push(req.body.operationId);
+      return response({error:{code:'DEMO_ACTION_REJECTED',message:'订单已更新'}},409);
+    }
+    return response(commit(req.body));
+  },{state});
+  await h.cloud.start();
+  for(const order of state.restaurant.orders)assert.equal(h.cloud.dispatch({type:'restaurant-kitchen-accept',orderId:order.id}),true);
+  const items=h.pending(),refused=items.find(item=>item.action.orderId===refusedOrder);
+  first.resolve(response(commit(items[0])));
+  for(let pass=0;h.pending().length&&pass<15;pass++)await flush();
+  assert.deepEqual(h.pending(),[]);
+  assert.deepEqual(refusedIds,[refused.operationId]);
+  assert.deepEqual(savedIds,items.filter(item=>item!==refused).map(item=>item.operationId));
+  assert.deepEqual(h.observed.actions.filter(event=>!event.optimistic).map(event=>event.operationId),savedIds);
+  assert.equal(h.observed.rollbacks.length,1);
+  assert.equal(h.observed.saves.filter(status=>status.rejected).length,1);
+  assert.equal(h.latest().restaurant.orders.filter(order=>order.workflow.acceptedAt!==null).length,15);
+  assert.equal(h.latest().restaurant.orders.find(order=>order.id===refusedOrder).workflow.acceptedAt,null);
 });
 
 test('a rejected batch settles each original intent individually and keeps later valid taps', async t => {
