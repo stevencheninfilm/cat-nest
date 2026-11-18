@@ -2,6 +2,7 @@ import { restaurantTableCapacity } from './restaurant-facilities.js';
 import { initialRestaurantGuestService, validRestaurantGuestService, restaurantGuestCourseStart, restaurantGuestHasNextCourse } from './restaurant-guest-service.js';
 import { RESTAURANT_GUEST_CATS, eligibleRestaurantGuestCats } from './restaurant-customers.js';
 import { restaurantGuestArrivalPool, restaurantDishOrderPool, restaurantGuestTier, pickRestaurantProbability } from './restaurant-order-probabilities.js';
+import { activeSupperFavoriteCategory } from './restaurant-supper-club.js';
 import { restaurantQueuePosition } from './restaurant-street.js';
 export { RESTAURANT_GUESTS, RESTAURANT_GUEST_CATS } from './restaurant-customers.js';
 export const RESTAURANT_ARRIVAL_MS=6000;
@@ -55,9 +56,10 @@ export function restaurantArrivalPlan(restaurant,recipes,action,actor,now,waitin
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   const size=waiting?.cats.length??action.partySize??(random()<RESTAURANT_PAIR_CHANCE?2:1),dishes=[...recipes],cats=eligibleRestaurantGuestCats(restaurant,now);
   const table=Array.from({length:restaurantTableCapacity(restaurant.levels.tables)},(_,i)=>i).find(index=>!restaurant.parties.some(party=>party.table===index));
+  const favoriteCategory=action.recipeId?null:activeSupperFavoriteCategory(restaurant.supperClub);
   const members=Array.from({length:size},(_,seat)=>{
     const cat=waiting?.cats[seat]??pickRestaurantProbability(restaurantGuestArrivalPool(cats),random()).cat;
-    const recipe=seat===0&&action.recipeId?dishes.find(recipe=>recipe.id===action.recipeId):pickRestaurantProbability(restaurantDishOrderPool(dishes,restaurantGuestTier(cat)),random()).recipe;
+    const recipe=seat===0&&action.recipeId?dishes.find(recipe=>recipe.id===action.recipeId):pickRestaurantProbability(restaurantDishOrderPool(dishes,restaurantGuestTier(cat),favoriteCategory),random()).recipe;
     if(cats.includes(cat))cats.splice(cats.indexOf(cat),1);dishes.splice(dishes.indexOf(recipe),1);
     return {cat,recipe};
   });

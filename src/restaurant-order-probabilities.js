@@ -22,14 +22,20 @@ export function restaurantGuestArrivalPool(cats){
 
 /** Sample a quality first, then a dish within that quality. Catalog size
  * cannot dilute a quality's advertised share. Never invent a higher grade. */
-export function restaurantDishOrderPool(recipes,tier='ordinary'){
+export function restaurantDishOrderPool(recipes,tier='ordinary',favoriteCategory=null){
   // restaurantInfo.recipes already includes only owned specials. A full
   // catalog can additionally mark unowned entries explicitly with owned:false.
   const choices=recipes.filter(recipe=>recipe.unlocked!==false&&recipe.owned!==false);
   const groups=groupBy(choices,recipe=>restaurantDishGrade(recipe.level??1));
   const weights=RESTAURANT_DISH_ORDER_WEIGHTS[tier]??RESTAURANT_DISH_ORDER_WEIGHTS.ordinary;
   const total=RESTAURANT_DISH_GRADES.reduce((sum,grade)=>sum+(groups[grade]?.length?weights[grade]:0),0);
-  return choices.map(recipe=>{const grade=restaurantDishGrade(recipe.level??1);return {recipe,grade,chance:weights[grade]/total/groups[grade].length};});
+  const pool=choices.map(recipe=>{const grade=restaurantDishGrade(recipe.level??1);return {recipe,grade,chance:weights[grade]/total/groups[grade].length};});
+  if(!favoriteCategory||tier!=='ordinary')return pool;
+  const favoriteChance=pool.reduce((sum,item)=>sum+(item.recipe.category===favoriteCategory?item.chance:0),0);
+  if(!favoriteChance || pool.every(item=>item.recipe.category===favoriteCategory))return pool;
+  // Doubling the matching weights adds exactly their former share to total.
+  // The original seeded roll still selects one dish from the whole eligible menu.
+  return pool.map(item=>({...item,chance:item.chance*(item.recipe.category===favoriteCategory?2:1)/(1+favoriteChance)}));
 }
 
 /** The caller supplies its authoritative seeded roll; no client outcome or

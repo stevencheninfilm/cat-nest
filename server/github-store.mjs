@@ -11,6 +11,7 @@ import { sanitizeLocalGameAction, localGameReceipt, validLocalEvent } from '../s
 import { validCoupleCare } from '../src/couple-care.js';
 import { validMemoryJournal, normalizeMemoryJournal, validMemoryId } from '../src/memory-journal.js';
 import { validNest, sanitizeNestAction, validFurnitureCare } from '../src/nest-decor.js';
+import { legacySupperClub } from '../src/restaurant-supper-club.js';
 import { validGoldFish } from '../src/restaurant-economy.js';
 import { validRestaurant, restaurantProgressPreserved, normalizeRestaurant, sanitizeRestaurantAction, restaurantActionResult } from '../src/restaurant.js';
 
@@ -86,10 +87,18 @@ export function publicRoom(room) {
   // Older open pages strictly validate restaurant keys. Send the new ledger as
   // envelope metadata so they keep reading their existing restaurant safely.
   const restaurantGuestConditionsV2 = state.restaurant?.completedGuestConditions;
-  if (state.restaurant) delete state.restaurant.completedGuestConditions;
+  const supperClub = state.restaurant?.supperClub;
+  const legacyClub = supperClub && legacySupperClub(supperClub);
+  if (state.restaurant) {
+    delete state.restaurant.completedGuestConditions;
+    delete state.restaurant.supperClub;
+  }
   // V1 pages reject unknown achievement keys. Keep their bounded vocabulary;
   // current pages read the complete ledger, including the lowered gold gates.
-  return { roomId:room.roomId, state, revision:room.revision, ...(restaurantGuestConditionsV2 ? {restaurantGuestConditions:legacyRestaurantGuestConditions(restaurantGuestConditionsV2),restaurantGuestConditionsV2} : {}) };
+  return { roomId:room.roomId, state, revision:room.revision,
+    ...(restaurantGuestConditionsV2 ? {restaurantGuestConditions:legacyRestaurantGuestConditions(restaurantGuestConditionsV2),restaurantGuestConditionsV2} : {}),
+    ...(supperClub ? {restaurantSupperClub:legacyClub} : {}),
+    ...(supperClub !== legacyClub ? {restaurantSupperClubV2:supperClub} : {}) };
 }
 
 function careRejection(action, info, now) {

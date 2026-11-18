@@ -1,3 +1,5 @@
+@import './restaurant-banquet.css';
+
 /* Compact management sheets: keep the restaurant visible above the controls. */
 .r-sheet{--r-panel-height:52dvh;height:var(--r-panel-height);max-height:calc(100dvh - 64px);padding:6px 12px max(10px,env(safe-area-inset-bottom));border-width:1px;border-bottom:0;border-radius:20px 20px 0 0;container-type:inline-size}
 .r-sheet[data-panel=staff]{--r-panel-height:auto;padding-bottom:max(8px,env(safe-area-inset-bottom))}

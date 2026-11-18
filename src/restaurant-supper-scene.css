@@ -1,0 +1,108 @@
+.restaurant .rs-shortcut {
+  --rs-ink: #75452f;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  align-content: end;
+  flex: none;
+  width: 50px;
+  height: 65px;
+  padding: 0 0 3px;
+  border: 0;
+  background: transparent;
+  color: var(--rs-ink);
+  pointer-events: auto;
+}
+.rs-shortcut::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 16% 9% 0;
+  border: 1px solid #ad8153;
+  border-radius: 48% 48% 8px 8px;
+  background: linear-gradient(#fbebc9, #eec891);
+  box-shadow: inset 0 0 0 2px #fff0cc, 0 2px 2px #64432447;
+}
+.rs-shortcut img { position: absolute; top: 0; width: 83%; height: 67%; object-fit: contain; pointer-events: none }
+.rs-shortcut strong {
+  position: relative;
+  width: 100%;
+  border: 1px solid #a76a49;
+  border-radius: 7px;
+  background: linear-gradient(#fff1d6, #f2d1a4);
+  box-shadow: inset 0 1px #fff9dd;
+  font-size: 11px;
+  line-height: 17px;
+  letter-spacing: .4px;
+}
+.rs-shortcut small { font-size: 8px; font-weight: 750; line-height: 12px; font-variant-numeric: tabular-nums }
+.rs-shortcut:focus-visible { outline: 3px solid #773e36; outline-offset: 2px; border-radius: 8px }
+.restaurant .rs-shortcut:active { transform: translateY(1px) }
+.rs-shortcut[data-theme]:not([data-theme=""]) strong { color: #fff8ea; background: var(--rs-ribbon); border-color: var(--rs-ribbon) }
+:is(.rs-shortcut, .rs-garlands)[data-theme="mains"] { --rs-ribbon: #99462b; --rs-accent: #edb851 }
+:is(.rs-shortcut, .rs-garlands)[data-theme="desserts"] { --rs-ribbon: #9b4361; --rs-accent: #f5b1bb }
+:is(.rs-shortcut, .rs-garlands)[data-theme="drinks"] { --rs-ribbon: #32665b; --rs-accent: #c0dc9b }
+
+/* Fabric pennants are attached to the storefront. All guest taps pass through. */
+.rs-garlands {
+  position: absolute;
+  z-index: 5;
+  inset: 14% 8% auto;
+  display: flex;
+  justify-content: space-between;
+  height: 2.8%;
+  pointer-events: none;
+}
+.rs-garlands[hidden] { display: none }
+.rs-garlands span {
+  display: flex;
+  align-items: start;
+  justify-content: space-around;
+  width: 33%;
+  height: 36%;
+  border-bottom: 2px solid #795439;
+  border-radius: 0 0 50% 50%;
+  transform: rotate(5deg);
+}
+.rs-garlands span:last-child { transform: rotate(-5deg) }
+.rs-garlands i {
+  width: 12%;
+  height: 165%;
+  margin-top: 2%;
+  background: var(--rs-ribbon);
+  clip-path: polygon(0 0, 100% 0, 85% 88%, 50% 72%, 12% 100%);
+}
+.rs-garlands i:nth-child(even) { margin-top: 4%; background: var(--rs-accent) }
+.rs-garlands i:nth-child(3) { margin-top: 5%; background: #fff0cd }
+.rs-order-stamp {
+  position: absolute;
+  left: -3px;
+  bottom: -4px;
+  padding: 0 3px;
+  border: 1px solid #92552f;
+  border-radius: 3px;
+  background: #ffebc0;
+  color: #713d23;
+  font: 750 8px/1.4 system-ui, sans-serif;
+  pointer-events: none;
+}
+.restaurant .rg-order-seat[data-supper-clearance] > .r-order-bubble {
+  width: 50px;
+  min-width: 50px;
+  min-height: 44px;
+  flex-direction: column;
+  gap: 0;
+  padding: 3px 2px;
+}
+.restaurant .rg-order-seat[data-supper-clearance] > .r-order-bubble small { display: none }
+.restaurant .rg-order-seat[data-supper-clearance][data-r-guest-tier] > .r-order-bubble { padding-top: 11px }
+@media (max-width: 420px) {
+  .restaurant .rs-shortcut { width: 44px; height: 51px }
+  .rs-shortcut strong { font-size: 9px; line-height: 14px; letter-spacing: 0 }
+  .rs-shortcut small { font-size: 7px; line-height: 10px }
+}
+@media (max-width: 420px) and (max-height: 640px) {
+  .restaurant .rs-shortcut { height: 45px }
+  .rs-shortcut img { height: 59% }
+}

@@ -33,6 +33,8 @@ function createEntryForeground(container){
 }
 
 export function restaurantGuestTables(info,{icon,food,blocked=false,replaying=[],pendingCourses=[],pendingAccepts=[]}={}){
+  const signature = info.supperClub?.active?.signature;
+  const unstamped = new Set(signature && !signature.completed ? signature.dishes.filter(dish => !signature.collected.includes(dish.id)).map(dish => dish.id) : []);
   return Array.from({length:Math.max(6,info.capacity)},(_,table)=>{
     const position=RESTAURANT_TABLES[table],party=info.parties.find(party=>party.table===table);
     const base=`--tx:${position.x}%;--ty:${position.y}%`;
@@ -49,6 +51,7 @@ export function restaurantGuestTables(info,{icon,food,blocked=false,replaying=[]
       const selectable=['awaiting','preparing'].includes(status)&&[2,3,4].includes(order?.workflow?.version);
       const text={requested:'想吃这份',awaiting:'等待厨师继续制作',cooking:'制作中',preparing:'厨师制作中','dish-ready':'送餐啦',ready:'送餐啦',delivering:'正在送餐',dining:'好好吃喵',paid:'已结账'}[status];
       const label=acceptPending?`${order.recipe.name}，本机已接单，待同步${status==='preparing'?'，厨师制作中':''}`:collecting&&!waiting?`${table+1}号桌${member.seat===0?'左':'右'}座，正在收款，这笔小鱼干已记下，无需重复点击`:waiting?`${table+1}号桌${member.seat===0?'左':'右'}座，正在看菜单，思考第二道餐中，请稍候`:action==='kitchen-accept'?`接单 · ${order.recipe.name}`:action==='kitchen-step'||action==='serve'?`送餐 · ${order.recipe.name}`:action==='collect'?`收取 ${order.rewardCoins} 小鱼干和 ${order.rewardXp} 点成长${order.hasNextCourse?'，吃完第一餐，再点第二餐':''}${order.rewardGuestGold?`，额外 ${order.rewardGuestGold} 金鱼干`:''}`:selectable?`${order.recipe.name}，${text}`:`${table+1}号桌${member.seat===0?'左':'右'}座 · ${status==='paid'?'等待伙伴':text}`;
+      const stamp = !collecting && unstamped.has(order?.recipe.id);
       let content;
       if(status==='paid')content='<span><strong>已结账 ♡</strong><small>等伙伴一起回家</small></span>';
       else if(waiting)content=`<span class="rg-menu-icon" aria-hidden="true">${icon('book')}</span><span><strong>正在看菜单…</strong><small>思考第二道餐中</small></span>`;
@@ -59,7 +62,7 @@ export function restaurantGuestTables(info,{icon,food,blocked=false,replaying=[]
       else content=`${dish(order.recipe.id)}<span><strong>${text}</strong><small data-r-countdown="${order.id}">${status==='requested'?'点击记下点餐需求':status==='cooking'?`${Math.ceil(order.remainingMs/1000)}秒`:['ready','dish-ready'].includes(status)?'点击端到餐桌':status==='delivering'?'员工端餐过来啦':'用餐中…'}</small></span>`;
       const progress=waiting?'<span class="rg-menu-progress" role="progressbar" aria-label="思考第二道餐中" aria-valuetext="正在看菜单，请稍候"><i></i></span>':['cooking','preparing'].includes(status)?`<i class="r-order-progress" style="--progress:${order.progress}" data-r-progress="${order.id}"></i>`:'';
       const courseText=tier?`${restaurantTierName(tier)} · ${waiting?'第二餐':`${course}/${rounds} 餐`}`:'';
-      return `<div class="r-table-guest rg-order-seat is-${status}${waiting?' is-course-thinking':''}${acceptPending?' is-accept-pending':''}" data-r-seat="${member.seat}"${table>=6?' data-r-center-table':''}${tier?` data-r-guest-tier="${tier}"`:""} style="--tx:${seat.x}%;--ty:${seat.y}%" data-r-order="${order?.id||member.orderId}"><button class="r-order-bubble" ${action?`data-r-action="${action}" data-r-order-id="${order.id}"${action==='kitchen-step'?' data-r-step="delivery"':''}`:selectable?`data-r-kitchen-select="${order.id}"`:''} ${(!action&&!selectable)||blocked||collecting?'disabled':''} ${collecting?'aria-busy="true" ':''}aria-label="${esc(label)}">${tier?`<em class="rg-course-tag">${courseText}</em>`:""}${content}${progress}</button></div>${status==='dining'?`<span class="rg-dining-food" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${dish(order.recipe.id)}</span>`:''}`;
+      return `<div class="r-table-guest rg-order-seat is-${status}${waiting?' is-course-thinking':''}${acceptPending?' is-accept-pending':''}" data-r-seat="${member.seat}"${table===0?' data-r-supper-front-seat':''}${table>=6?' data-r-center-table':''}${tier?` data-r-guest-tier="${tier}"`:""} style="--tx:${seat.x}%;--ty:${seat.y}%" data-r-order="${order?.id||member.orderId}"><button class="r-order-bubble" ${action?`data-r-action="${action}" data-r-order-id="${order.id}"${action==='kitchen-step'?' data-r-step="delivery"':''}`:selectable?`data-r-kitchen-select="${order.id}"`:''} ${(!action&&!selectable)||blocked||collecting?'disabled':''} ${collecting?'aria-busy="true" ':''}aria-label="${esc(label)}${stamp?'，结账可为招牌菜单集章':''}">${stamp?'<em class="rs-order-stamp" aria-hidden="true">集章</em>':''}${tier?`<em class="rg-course-tag">${courseText}</em>`:""}${content}${progress}</button></div>${status==='dining'?`<span class="rg-dining-food" style="--tx:${position.x+(member.seat===0?-4.2:4.2)}%;--ty:${position.y}%">${dish(order.recipe.id)}</span>`:''}`;
     }).join('');
   }).join('');
 }

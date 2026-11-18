@@ -3,6 +3,9 @@ import { publicGameHub } from '../src/minigames.js';
 import { COUPLE_ROLES } from '../src/couple-profile.js';
 import { demoLocalStorage } from './storage.js';
 import { TOUCH_GAMES, TOUCH_DURATION, touchComputerEvents } from '../src/minigames-touch-rules.js';
+import { RESTAURANT_STAFF } from '../src/restaurant.js';
+import { normalizeStaffTraining } from '../src/restaurant-staff-training.js';
+import { restaurantLevelStartXp } from '../src/growth-levels.js';
 import { restaurantStaffDebugResult, unlockRestaurantDecorations } from './restaurant-staff.js';
 import { restaurantCheckoutReceipt } from '../src/restaurant-checkout-receipt.js';
 
@@ -70,6 +73,20 @@ export function createDemoEngine({ storage = demoLocalStorage, now = Date.now, p
       const other = role === 'male' ? 'female':'male';
       if (kind === 'new-home') { controls.partnerOnline=false;replace({...initialState(now()),xp:0,love:0});notify('presence-refresh',null);return '已准备全新测试小窝，原有正式存档不受影响'; }
       if (kind === 'join') { controls.partnerOnline=true;const result=action({clientId:DEMO_ACTORS[other].id,operationId:`demo-join-${crypto.randomUUID()}`,action:{type:'join-home'}});notify('presence-refresh',null);return result.error||'演示伙伴已加入共同小窝'; }
+      if (kind === 'supper') {
+        const at = now();
+        const state = clone(record.state);
+        const restaurant = state.restaurant;
+        restaurant.stats.experience = Math.max(restaurant.stats.experience, restaurantLevelStartXp(20));
+        restaurant.stats.served = Math.max(restaurant.stats.served, 30);
+        restaurant.nextOrderId = Math.max(restaurant.nextOrderId, restaurant.stats.served + restaurant.orders.length + 1);
+        restaurant.staff = RESTAURANT_STAFF.length;
+        restaurant.staffTraining = normalizeStaffTraining(restaurant.staffTraining, at, restaurant.staff);
+        restaurant.revision++;
+        state.coins = Math.max(state.coins, 50000);
+        replace(state);
+        return '搭档和预算已备好。到餐厅点击「研发」下方的「主题餐会」即可开席。';
+      }
       if (kind === 'restaurant-decorations') {
         replace(unlockRestaurantDecorations(clone(record.state)));
         return '已解锁全部餐厅装扮；选择装扮后，猫猫施工队会照常入场布置。仅影响本次测试存档';

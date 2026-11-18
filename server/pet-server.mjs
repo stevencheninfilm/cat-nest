@@ -78,18 +78,18 @@ export function createPetHandler({
     for (const member of hub.members.values()) for (const response of member.responses) emit(response, event, data);
   }
   function presence(hub) { broadcast(hub, 'presence', [...hub.members.values()].map(({ id, name }) => ({ id, name }))); }
+  function liveSnapshot({ state, revision, restaurantGuestConditions, restaurantGuestConditionsV2, restaurantSupperClub, restaurantSupperClubV2 }) {
+    return { state, revision, restaurantGuestConditions, restaurantGuestConditionsV2, restaurantSupperClub, restaurantSupperClubV2 };
+  }
   function updateHub(hub, result, event = 'state') {
-    if (result.revision <= hub.revision) return;
-    hub.revision = result.revision;
-    hub.state = result.state;
-    hub.restaurantGuestConditions = result.restaurantGuestConditions;
-    hub.restaurantGuestConditionsV2 = result.restaurantGuestConditionsV2;
-    broadcast(hub, event, { state:result.state, revision:result.revision, restaurantGuestConditions:result.restaurantGuestConditions, restaurantGuestConditionsV2:result.restaurantGuestConditionsV2, ...(event==='action'?{event:result.event}:{}) });
+    if (result.revision <= hub.snapshot.revision) return;
+    hub.snapshot = liveSnapshot(result);
+    broadcast(hub, event, event === 'action' ? { ...hub.snapshot, event:result.event } : hub.snapshot);
   }
   function makeHub(id, result) {
-    const hub = { members: new Map(), revision: result.revision, state: result.state, restaurantGuestConditions:result.restaurantGuestConditions, restaurantGuestConditionsV2:result.restaurantGuestConditionsV2, polling: false, heartbeat: null, poll: null };
+    const hub = { members: new Map(), snapshot: liveSnapshot(result), polling: false, heartbeat: null, poll: null };
     hub.heartbeat = setInterval(() => {
-      for (const member of hub.members.values()) for (const response of member.responses) if (!response.destroyed) emit(response, 'heartbeat', { revision:hub.revision });
+      for (const member of hub.members.values()) for (const response of member.responses) if (!response.destroyed) emit(response, 'heartbeat', { revision:hub.snapshot.revision });
     }, heartbeatMs);
     hub.poll = setInterval(async () => {
       if (hub.polling || closed) return;
@@ -184,7 +184,7 @@ export function createPetHandler({
           member.responses.add(response);
           startPetEventStream(request, response);
           writePetEvent(response, ': connected\n\n');
-          emit(response, 'state', { state: hub.state, revision: hub.revision, restaurantGuestConditions:hub.restaurantGuestConditions, restaurantGuestConditionsV2:hub.restaurantGuestConditionsV2 });
+          emit(response, 'state', hub.snapshot);
           presence(hub);
           response.on('close', () => {
             member.responses.delete(response);
