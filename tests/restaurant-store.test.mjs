@@ -342,3 +342,33 @@ test('permanent guest conditions survive storage restart and remain outside the 
   assert.deepEqual(reloaded.restaurantGuestConditions,changed.restaurantGuestConditions);assert.deepEqual(mock.files.get(room.roomId).room,before,'GET derives progress without rewriting the room');
   assert.equal(reloaded.state.coins,state.coins);assert.equal(reloaded.state.xp,state.xp);assert.deepEqual(reloaded.state.restaurant.levels,state.restaurant.levels);
 });
+
+test('concurrent shared bill settlements and their retries pay a single daily commission', async () => {
+  const mock = mockGitHub();
+  let clock = NOW;
+  const first = makeStore(mock, () => clock), second = makeStore(mock, () => clock);
+  const room = await first.createRoom();
+  const ids = [];
+  for (let n = 0; n < 2; n++) {
+    const started = await first.applyAction(room.roomId, payload('restaurant-start', {recipeId: 'lemontea'}, 'commission-start-' + n));
+    const order = started.state.restaurant.orders.at(-1);
+    clock = Math.max(clock, order.readyAt);
+    await first.applyAction(room.roomId, payload('restaurant-serve', {orderId: order.id}, 'commission-serve-' + n));
+    ids.push(order.id);
+  }
+  clock += RESTAURANT_DINING_MS;
+  const requests = ids.map((orderId, n) => payload('restaurant-collect', {orderId}, 'commission-collect-' + n, n ? 'client-two' : 'client-one'));
+  const receipts = await Promise.all([first.applyAction(room.roomId, requests[0]), second.applyAction(room.roomId, requests[1])]);
+  assert.deepEqual(receipts.map(entry => entry.event.restaurantCheckout.commissionCoins ?? 0).sort((a, b) => a - b), [0, 30]);
+  for (const [n, request] of requests.entries()) {
+    const replay = await first.applyAction(room.roomId, request);
+    assert.equal(replay.duplicate, true);
+    assert.deepEqual(replay.event.restaurantCheckout, receipts[n].event.restaurantCheckout);
+  }
+  const {state, restaurantDailyCommission} = await makeStore(mock, () => clock).getRoom(room.roomId);
+  assert.equal(state.coins, room.state.coins + state.restaurant.stats.earned + 30);
+  assert.equal(restaurantDailyCommission.progress, 2);
+  assert.equal(Object.hasOwn(state.restaurant, 'dailyCommission'), false);
+  assert.deepEqual(mock.files.get(room.roomId).room.state.restaurant.dailyCommission, restaurantDailyCommission);
+  assert.equal(state.restaurant.stats.served, 2);
+});

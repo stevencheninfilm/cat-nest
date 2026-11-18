@@ -79,8 +79,8 @@ export function createPetHandler({
     for (const member of hub.members.values()) for (const response of member.responses) emit(response, event, data);
   }
   function presence(hub) { broadcast(hub, 'presence', [...hub.members.values()].map(({ id, name }) => ({ id, name }))); }
-  function liveSnapshot({ state, revision, restaurantGuestConditions, restaurantGuestConditionsV2, restaurantSupperClub, restaurantSupperClubV2 }) {
-    return { state, revision, restaurantGuestConditions, restaurantGuestConditionsV2, restaurantSupperClub, restaurantSupperClubV2 };
+  function liveSnapshot({ state, revision, restaurantGuestConditions, restaurantGuestConditionsV2, restaurantSupperClub, restaurantSupperClubV2, restaurantDailyCommission }) {
+    return { state, revision, restaurantGuestConditions, restaurantGuestConditionsV2, restaurantSupperClub, restaurantSupperClubV2, restaurantDailyCommission };
   }
   function updateHub(hub, result, event = 'state') {
     if (result.revision <= hub.snapshot.revision) return;

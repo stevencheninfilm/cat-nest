@@ -20,6 +20,8 @@ import './restaurant.css';
 import './restaurant-guide.css';
 import './restaurant-audio.css';
 import './restaurant-daily-login.css';
+import './restaurant-daily-commission.css';
+import './restaurant-order-tray.css';
 import './restaurant-decor.css';
 import './restaurant-guests.css';
 import './restaurant-street.css';

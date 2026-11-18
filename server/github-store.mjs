@@ -87,16 +87,19 @@ export function publicRoom(room) {
   // Older open pages strictly validate restaurant keys. Send the new ledger as
   // envelope metadata so they keep reading their existing restaurant safely.
   const restaurantGuestConditionsV2 = state.restaurant?.completedGuestConditions;
+  const restaurantDailyCommission = state.restaurant?.dailyCommission;
   const supperClub = state.restaurant?.supperClub;
   const legacyClub = supperClub && legacySupperClub(supperClub);
   if (state.restaurant) {
     delete state.restaurant.completedGuestConditions;
     delete state.restaurant.supperClub;
+    delete state.restaurant.dailyCommission;
   }
   // V1 pages reject unknown achievement keys. Keep their bounded vocabulary;
   // current pages read the complete ledger, including the lowered gold gates.
   return { roomId:room.roomId, state, revision:room.revision,
     ...(restaurantGuestConditionsV2 ? {restaurantGuestConditions:legacyRestaurantGuestConditions(restaurantGuestConditionsV2),restaurantGuestConditionsV2} : {}),
+    ...(restaurantDailyCommission ? {restaurantDailyCommission} : {}),
     ...(supperClub ? {restaurantSupperClub:legacyClub} : {}),
     ...(supperClub !== legacyClub ? {restaurantSupperClubV2:supperClub} : {}) };
 }
