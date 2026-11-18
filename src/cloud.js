@@ -6,17 +6,23 @@ import { duoPreviewable, previewDuoGameAction, redundantDuoTransition } from './
 import { validRestaurant, restaurantUpgradeCurrentLevel } from './restaurant.js';
 import { isInteractiveWorkflow, interactiveWorkerReservations } from './restaurant-kitchen-interactive.js';
 import { restaurantResearchInfo } from './restaurant-research.js';
+import { validSupperClub } from './restaurant-supper-club.js';
 
 // Random cards and arrival IDs still come from the server. Deterministic
 // upgrades immediately project the exact target clicked and reserve its cost.
 // A first-course collection allocates the next order ID, so it waits for that
 // canonical receipt while unrelated kitchen commands continue to preview.
-const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect','restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration']);
-const RESTAURANT_MANAGEMENT=new Set(['restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration']);
+const RESTAURANT_MANAGEMENT=new Set(['restaurant-upgrade','restaurant-recipe','restaurant-train','restaurant-hire','restaurant-unlock-special','restaurant-research-fuse','restaurant-premium-decoration','restaurant-supper-start']);
+const RESTAURANT_PREVIEWS=new Set(['restaurant-kitchen-accept','restaurant-kitchen-step','restaurant-serve','restaurant-collect',...RESTAURANT_MANAGEMENT]);
 const restaurantPreview=action=>RESTAURANT_PREVIEWS.has(action?.type);
 const restaurantAction=action=>typeof action?.type==='string'&&action.type.startsWith('restaurant-');
 const guestConditions=data=>data?.restaurantGuestConditionsV2??data?.restaurantGuestConditions;
-const validGuestConditionMetadata=data=>['restaurantGuestConditions','restaurantGuestConditionsV2'].every(key=>data?.[key]===undefined||validRestaurantGuestConditions(data[key]));
+function validRestaurantMetadata(data) {
+  if (!['restaurantGuestConditions','restaurantGuestConditionsV2'].every(key=>data?.[key]===undefined||validRestaurantGuestConditions(data[key]))) return false;
+  const restaurant = data?.state?.restaurant;
+  return ['restaurantSupperClub','restaurantSupperClubV2'].every(key => data?.[key] === undefined
+    || Boolean(restaurant && validSupperClub(data[key], restaurant.staff, restaurant.stats?.served)));
+}
 const restaurantWorkerClocks=(state,order)=>Object.fromEntries([...new Set((order?.workflow?.runs??[]).map(run=>run.workerId??order.workflow.workerId))].filter(id=>state.restaurant.staffTraining?.[id]).map(id=>[id,structuredClone(state.restaurant.staffTraining[id])]));
 
 /** GitHub-backed authoritative rooms. The couple home keeps one existing save. */
@@ -140,7 +146,7 @@ export function createCloudRoom(options) {
       if(snapshot&&tag&&res.status===304)return null;
       const data = await res.json();
       if (!res.ok) { const error = new Error(data.error?.message || '云端暂时没有响应'); error.status = res.status; error.code = data.error?.code; throw error; }
-      if(!validGuestConditionMetadata(data))throw new Error('来访条件确认结果不完整');
+      if(!validRestaurantMetadata(data))throw new Error('餐厅同步数据不完整');
       if(snapshot&&data?.state&&Number.isSafeInteger(data.revision)){
         const nextTag=res.headers?.get?.('etag');
         if(nextTag)snapshotTags.set(path,nextTag);else snapshotTags.delete(path);
@@ -211,9 +217,15 @@ export function createCloudRoom(options) {
   }
   function apply(data, acknowledgement) {
     if (destroyed || !data?.state || !Number.isFinite(data.revision) || data.roomId!==undefined&&data.roomId!==room) return;
-    if(!validGuestConditionMetadata(data))return;
+    if(!validRestaurantMetadata(data))return;
     const conditions=guestConditions(data);
-    const incomingState=conditions!==undefined&&data.state.restaurant ? {...data.state,restaurant:{...data.state.restaurant,completedGuestConditions:conditions}} : data.state;
+    const additions = {};
+    if (conditions !== undefined) additions.completedGuestConditions = conditions;
+    const supperClub = data.restaurantSupperClubV2 ?? data.restaurantSupperClub;
+    if (supperClub !== undefined) additions.supperClub = supperClub;
+    const incomingState = data.state.restaurant && Object.keys(additions).length
+      ? { ...data.state, restaurant: { ...data.state.restaurant, ...additions } }
+      : data.state;
     const event = data.event || (optimisticReducer && acknowledgement ? { operationId:acknowledgement.operationId, action:acknowledgement.action, actor:me } : null);
     const preview = previews.get(event?.operationId || acknowledgement?.operationId);
     const previousXp = authoritativeState?.xp;
@@ -300,7 +312,7 @@ export function createCloudRoom(options) {
         liveReceipts.delete(item.operationId);
         if (destroyed) break;
         if (optimisticReducer && (data?.roomId!==undefined&&data.roomId!==room||!data?.state || typeof data.state !== 'object' || Array.isArray(data.state) || !Number.isSafeInteger(data.revision) || data.revision < 0)) throw new Error('云端确认结果不完整');
-        if(!validGuestConditionMetadata(data))throw new Error('来访条件确认结果不完整');
+        if(!validRestaurantMetadata(data))throw new Error('餐厅同步数据不完整');
         apply(data, item); queue.shift(); saveQueue();
         onSaveStatus({ phase:queue.length ? 'saving':'saved', message:queue.length ? '正在保存到云端…':`已保存到 ${storageLabel}`, at:Date.now() });
       } catch (error) {

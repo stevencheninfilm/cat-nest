@@ -1,3 +1,4 @@
+import { RESTAURANT_RECIPES, restaurantRecipe } from './restaurant-recipe-catalog.js';
 import { recipeStepEnergyBase } from './restaurant-recipe-energy.js';
 import { restaurantDailyLoginInfo, validRestaurantDailyLogin } from './restaurant-daily-login.js';
 import { RESTAURANT_GUEST_DINING_MS, initialRestaurantGuestService, restaurantGuestHasNextCourse, restaurantGuestCompletionBonus, nextRestaurantGuestService, nextRestaurantGuestRecipe } from './restaurant-guest-service.js';
@@ -16,28 +17,12 @@ import { restaurantLevelInfo as levelInfo } from './growth-levels.js';
 import { RESTAURANT_FACILITIES, RESTAURANT_FACILITY_MAX_LEVEL, restaurantFacilityTimeMultiplier, restaurantTipsMultiplier, restaurantTableCapacity, restaurantTableIncomeMultiplier } from './restaurant-facilities.js';
 import { restaurantCirclePalette, restaurantCirclePaletteUnlocked } from './restaurant-circle-palettes.js';
 import { premiumRestaurantTheme, equippedPremiumDecorations } from './restaurant-premium-decorations.js';
+import { validSupperClub, supperProgressPreserved, supperClubInfo, sanitizeSupperStart, startSupper, settleSupperMeal } from './restaurant-supper-club.js';
 import { initialRestaurantProgression, validRestaurantProgression, normalizeRestaurantProgression, restaurantExperience, restaurantResourceLevel, restaurantRecipeUnlocked, restaurantProgressionInfo } from './restaurant-progression.js';
 
 /** Shared restaurant rules. Time and rewards come from the authoritative reducer;
  * clients submit only an intent, never elapsed time, currency or experience. */
-export const RESTAURANT_RECIPES = Object.freeze([
-  { id:'rice', name:'暖暖蛋包饭', category:'主食', price:24, xp:6, seconds:8, icon:'rice' },
-  { id:'coffee', name:'猫爪拿铁', category:'饮品', price:32, xp:7, seconds:11, icon:'coffee' },
-  { id:'pancake', name:'蜂蜜松饼', category:'甜点', price:46, xp:9, seconds:14, icon:'pancake' },
-  { id:'burger', name:'芝士汉堡', category:'主食', price:62, xp:12, seconds:18, icon:'burger' },
-  { id:'parfait', name:'莓莓圣代', category:'甜点', price:110, xp:19, seconds:28, icon:'parfait' },
-  { id:'sandwich', name:'猫爪三明治', category:'主食', price:28, xp:6, seconds:9, icon:'sandwich' },
-  { id:'lemontea', name:'柠檬气泡茶', category:'饮品', price:26, xp:6, seconds:9, icon:'lemontea' },
-  { id:'donut', name:'草莓甜甜圈', category:'甜点', price:30, xp:7, seconds:10, icon:'donut' },
-  { id:'pudding', name:'焦糖布丁', category:'甜点', price:42, xp:8, seconds:13, icon:'pudding' },
-  { id:'matcha', name:'抹茶奶盖', category:'饮品', price:44, xp:9, seconds:14, icon:'matcha' },
-  { id:'udon', name:'鲜虾乌冬', category:'主食', price:66, xp:12, seconds:19, icon:'udon' },
-  { id:'waffle', name:'莓果华夫饼', category:'甜点', price:64, xp:12, seconds:18, icon:'waffle' },
-  { id:'strawberrymilk', name:'草莓牛奶', category:'饮品', price:58, xp:11, seconds:17, icon:'strawberrymilk' },
-  { id:'grape', name:'葡萄啵啵', category:'饮品', price:78, xp:14, seconds:21, icon:'grape' },
-  { id:'cheesecake', name:'巴斯克芝士蛋糕', category:'甜点', price:108, xp:18, seconds:27, icon:'cheesecake' },
-  { id:'cocoa', name:'棉花糖可可', category:'饮品', price:104, xp:18, seconds:26, icon:'cocoa' },
-].map(recipe=>Object.freeze({...recipe,unlockLevel:restaurantResourceLevel('recipe',recipe.id)})));
+export { RESTAURANT_RECIPES, restaurantRecipe };
 export const RESTAURANT_RECIPE_CATEGORIES=Object.freeze(['主食','甜点','饮品']);
 export const RESTAURANT_NEW_RECIPE_IDS=Object.freeze(RESTAURANT_RECIPES.filter(recipe=>!['rice','coffee','pancake','burger','parfait'].includes(recipe.id)).map(recipe=>recipe.id));
 // These six keys were mandatory in the first released restaurant schema.
@@ -71,7 +56,6 @@ const validTime = value=>integer(value);
 const validLevel = value=>integer(value,1,RESTAURANT_FACILITY_MAX_LEVEL);
 const validRecipeLevel = value=>integer(value,1,5);
 const safeNow = value=>validTime(value)?value:0;
-export const restaurantRecipe = id=>RESTAURANT_RECIPES.find(recipe=>recipe.id===id)||specialRestaurantRecipe(id);
 const restaurantTheme=id=>RESTAURANT_THEMES.find(theme=>theme.id===id)||PREMIUM_RESTAURANT_THEMES.find(theme=>theme.id===id)||null;
 export const restaurantLevel = experience=>levelInfo(experience).level;
 export const restaurantRecipeUpgradeCost = (recipeId,level)=>restaurantRecipe(recipeId)?restaurantResearchCost(level):null;
@@ -96,7 +80,7 @@ export function initialRestaurant(now=Date.now()) {
 }
 
 export function validRestaurant(value) {
-  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','lastInteractionAt','parties','waitingParties','seenGuests','completedGuestConditions','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
+  if(!exact(value,['version','openedAt','nextOrderId','levels','recipeLevels','staff','theme','ownedThemes','orders','stats','revision',...['dailyLogin','lastInteractionAt','parties','waitingParties','seenGuests','completedGuestConditions','ownedSpecialRecipes','staffTraining','decorationId','ownedDecorations','construction','decorationCarry','progression','research','circlePalette','ownedCirclePalettes','equippedPremiumDecorations','supperClub'].filter(key=>Object.hasOwn(value||{},key))])||value.version!==1||!validTime(value.openedAt)||!integer(value.nextOrderId,1)||!integer(value.revision)||!integer(value.staff,0,RESTAURANT_STAFF.length))return false;
   if(Object.hasOwn(value,'dailyLogin')&&!validRestaurantDailyLogin(value.dailyLogin))return false;
   if(Object.hasOwn(value,'lastInteractionAt')&&(!validTime(value.lastInteractionAt)||value.lastInteractionAt<value.openedAt))return false;
   if(Object.hasOwn(value,'circlePalette')&&!restaurantCirclePalette(value.circlePalette))return false;
@@ -112,6 +96,7 @@ export function validRestaurant(value) {
   if(Object.hasOwn(value,'equippedPremiumDecorations')&&(!Array.isArray(value.equippedPremiumDecorations)||new Set(value.equippedPremiumDecorations).size!==value.equippedPremiumDecorations.length||value.equippedPremiumDecorations.some(id=>!premiumRestaurantTheme(id)||!value.ownedThemes.includes(id))))return false;
   if(!validRestaurantDecorations(value))return false;
   if(!exact(value.stats,['served','earned','experience',...(Object.hasOwn(value.stats||{},'ordinaryServed')?['ordinaryServed']:[])])||!Object.entries(value.stats).every(([key,v])=>integer(v)||key==='experience'&&Number.isFinite(v)&&v>=0&&Number.isSafeInteger(Math.round(v*10))&&Math.abs(v*10-Math.round(v*10))<1e-6)||value.stats.served>=value.nextOrderId||(value.stats.ordinaryServed??0)>value.stats.served)return false;
+  if(Object.hasOwn(value,'supperClub')&&!validSupperClub(value.supperClub,value.staff,value.stats.served))return false;
   if(Object.hasOwn(value,'progression')&&!validRestaurantProgression(value.progression,value.stats.experience))return false;
   if(Object.hasOwn(value,'research')&&!validRestaurantResearch(value.research,value,restaurantRecipe))return false;
   if(!Array.isArray(value.orders)||value.orders.length>2*restaurantTableCapacity(value.levels.tables)||new Set(value.orders.map(order=>order?.id)).size!==value.orders.length)return false;
@@ -136,6 +121,7 @@ export function restaurantProgressPreserved(before,after){
   if(!validRestaurant(before)||!validRestaurant(after))return false;
   return after.openedAt===before.openedAt&&after.revision>=before.revision&&after.nextOrderId>=before.nextOrderId&&after.staff>=before.staff
     &&['served','earned','experience'].every(key=>after.stats[key]>=before.stats[key])
+    &&supperProgressPreserved(before.supperClub,after.supperClub)
     &&Object.entries(before.levels).every(([key,value])=>after.levels[key]>=value)
     &&Object.entries(before.recipeLevels).every(([key,value])=>after.recipeLevels[key]>=value)
     &&(before.completedGuestConditions??[]).every(key=>(after.completedGuestConditions??[]).includes(key));
@@ -189,7 +175,7 @@ export function restaurantInfo(state,now=Date.now()) {
   const decoration=restaurantDecorationInfo(restaurant,now),decorationInfo={...decoration,decorations:decoration.decorations.map(suite=>({...suite,unlockLevel:restaurantResourceLevel('decoration',suite.id),unlocked:suite.owned||level>=restaurantResourceLevel('decoration',suite.id)}))};
   const hireUnlockLevel=RESTAURANT_STAFF[restaurant.staff]?restaurantResourceLevel('staff',RESTAURANT_STAFF[restaurant.staff].id):1;
   const customerBook=restaurantCustomerInfo(restaurant,{recipes:[...RESTAURANT_RECIPES,...SPECIAL_RESTAURANT_RECIPES],staff:RESTAURANT_STAFF,upgrades:RESTAURANT_UPGRADES,decorations:RESTAURANT_DECORATIONS,themes:[...RESTAURANT_THEMES,...PREMIUM_RESTAURANT_THEMES]},now);
-  return {restaurant,dailyLogin:restaurantDailyLoginInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel),fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel)),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
+  return {restaurant,supperClub:supperClubInfo(restaurant,level,RESTAURANT_STAFF,recipes),dailyLogin:restaurantDailyLoginInfo(restaurant,now),waitingParties:restaurantWaitingParties(restaurant,now),research:restaurantResearchInfo(restaurant),progression,decorationInfo,customerBook,kitchen,level,capacity:restaurantTableCapacity(restaurant.levels.tables),availableTables:restaurantTableCapacity(restaurant.levels.tables)-parties.length,guestCount:parties.reduce((count,party)=>count+party.members.length,0),parties,orders,recipes,specialRecipes:SPECIAL_RESTAURANT_RECIPES.map(recipe=>({...recipe,...recipes.find(item=>item.id===recipe.id),level:Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel),fragments:restaurant.research.fragments[recipe.id]??0,grade:restaurantDishGrade(Math.max(restaurant.recipeLevels[recipe.id]??1,recipe.baseLevel)),owned:restaurant.ownedSpecialRecipes.includes(recipe.id),unlocked:restaurantRecipeUnlocked(restaurant,recipe)||recipe.unlockLevel<=level})),upgrades:RESTAURANT_UPGRADES.map(upgrade=>{
     const facilityLevel=restaurant.levels[upgrade.id],unlockLevel=restaurantResourceLevel('facility',upgrade.id,Math.min(upgrade.maxLevel,facilityLevel+1));
     return {...upgrade,level:facilityLevel,cost:upgrade.costs[facilityLevel-1]??null,unlockLevel,unlocked:level>=unlockLevel};
   }),hireCost:RESTAURANT_STAFF_COSTS[restaurant.staff]??null,hireCurrency:premiumStaffHireCost(restaurant.staff)?.currency??'coins',hireUnlockLevel,hireUnlocked:level>=hireUnlockLevel};
@@ -212,6 +198,7 @@ export function sanitizeRestaurantAction(value) {
     const {expectedLevel,...action}=value,clean=sanitizeRestaurantAction(action);
     return clean?{...clean,expectedLevel}:null;
   }
+  if(value.type==='restaurant-supper-start')return sanitizeSupperStart(value);
   if(value.type==='restaurant-daily-login'&&exact(value,['type','day'])&&integer(value.day))return {...value};
   if(value.type==='restaurant-wait'&&exact(value,['type']))return {...value};
   if(value.type==='restaurant-arrive'&&exact(value,['type','waitingPartyId'])&&typeof value.waitingPartyId==='string'&&/^wait-[0-9]{1,16}-[1-9][0-9]{0,15}$/.test(value.waitingPartyId))return {...value};
@@ -252,7 +239,13 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
     if(!training)return false;
     restaurant.staffTraining=training;return true;
   };
-  if(action.type==='restaurant-daily-login'){
+  if(action.type==='restaurant-supper-start'){
+    const result=startSupper(restaurant,info.supperClub,action,coins);
+    if(result.reason)return reject(result.reason);
+    coins-=result.cost;
+    restaurant.supperClub=result.club;
+    text=result.text;
+  }else if(action.type==='restaurant-daily-login'){
     if(action.day!==info.dailyLogin.day)return reject('开店礼已跨天，请领取今天的礼物。');
     if(!info.dailyLogin.available)return reject('今天的开店礼已经领取啦，明天再来。');
     if(coins+info.dailyLogin.amount>999999)return reject('小鱼干快装满啦，留出 300 的空间再领取。');
@@ -359,6 +352,8 @@ export function restaurantActionResult(state,action,actor={id:'local-care',name:
       }
       restaurant.parties=restaurant.parties.filter(party=>party.members.some(member=>restaurant.orders.some(saved=>saved.id===member.orderId)));
       text=`完成${order.recipe.name}订单，收到 ${reward.coins} 小鱼干，生成 ${reward.xp} 点餐厅经营经验气泡${nextRecipe?`；猫猫吃完第一餐，又点了${nextRecipe.name}`:''}${bonusGold?`；完成两餐，额外获得 ${bonusGold} 金鱼干`:''}${inspiration.gift.amount?`；猫猫赠送 ${inspiration.gift.amount} 灵感`:''}`;
+      const supperText=settleSupperMeal(restaurant,order.recipe);
+      if(supperText)text+=' · '+supperText;
     }
   }else if(action.type==='restaurant-upgrade') {
     const upgrade=info.upgrades.find(upgrade=>upgrade.id===action.upgradeId);

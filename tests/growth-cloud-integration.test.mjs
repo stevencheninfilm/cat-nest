@@ -300,3 +300,40 @@ test('guest achievement metadata reaches both real HTTP and SSE clients without 
   assert.ok(packets.length>=3);for(const packet of packets){assert.equal(Object.hasOwn(packet.data.state.restaurant,'completedGuestConditions'),false);assert.ok(packet.data.restaurantGuestConditions.includes('decoration:cream-bakery'));assert.ok(packet.data.restaurantGuestConditionsV2.includes('level:30'));assert.ok(!packet.data.restaurantGuestConditions.includes('level:30'));}
   assert.ok(h.saved.state.restaurant.completedGuestConditions.includes('decoration:cream-bakery'));
 });
+
+test('a shared supper is saved once and restored through both HTTP and live events, with a readable restaurant for old clients', async t => {
+  const state = initialState(START);
+  state.coins = 20000;
+  state.restaurant.stats.experience = restaurantLevelStartXp(20);
+  state.restaurant.staff = 1;
+  const f = await fixture(t, state);
+  const male = f.client('male');
+  const female = f.client('female');
+  await connect(male, female);
+
+  const intent = { type:'restaurant-supper-start', themeId:'mains', workerIds:['worker-1','worker-2'], run:1 };
+  assert.equal(male.cloud.dispatch(intent), true);
+  assert.equal(female.cloud.dispatch(intent), true);
+  await until(() => settled(male) && settled(female) && female.state.restaurant.supperClub?.active && male.state.restaurant.supperClub?.active, 'both devices to see the same booking');
+  assert.equal(f.saved.revision, 1);
+  assert.ok(f.saved.state.coins < state.coins);
+  const club = f.saved.state.restaurant.supperClub;
+  for (const client of [male, female]) {
+    assert.deepEqual(client.state.restaurant.supperClub, club);
+    assert.equal(client.state.coins, f.saved.state.coins);
+  }
+  const live = [...f.sources].flatMap(source => source.events).find(packet => packet.event === 'action');
+  assert.deepEqual(live.data.restaurantSupperClubV2, club);
+  assert.deepEqual(live.data.restaurantSupperClub.active, {run:1, themeId:'mains', workerIds:intent.workerIds, progress:0});
+  assert.equal(Object.hasOwn(live.data.state.restaurant, 'supperClub'), false);
+
+  male.cloud.destroy();
+  female.cloud.destroy();
+  await f.stop();
+  await f.start();
+  const returning = f.client('male');
+  await connect(returning);
+  assert.deepEqual(returning.state.restaurant.supperClub, club);
+  assert.equal(returning.state.coins, f.saved.state.coins);
+  assert.equal(f.saved.revision, 1);
+});

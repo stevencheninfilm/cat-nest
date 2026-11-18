@@ -712,3 +712,40 @@ test('an explicit premium-decoration refusal restores gold and equipment without
   assert.equal(h.pending().length,0);assert.equal(h.latest().goldFish,base.goldFish);assert.deepEqual(h.latest().restaurant.equippedPremiumDecorations,base.restaurant.equippedPremiumDecorations);
   assert.equal(h.observed.rollbacks.length,1);t.mock.timers.tick(10000);await flush();assert.equal(h.posts().length,1);
 });
+
+test('supper bookings reserve coins immediately and replay the same booking after a failed upload and reload', async t => {
+  const base = upgradeFixture();
+  base.restaurant.staff = 1;
+  delete base.restaurant.staffTraining;
+  const intent = { type:'restaurant-supper-start', themeId:'mains', workerIds:['worker-1','worker-2'], run:1 };
+  let online = false;
+  let saved = base;
+  const ids = [];
+  function handler(req) {
+    if (req.method === 'GET') return response(snapshot(saved));
+    ids.push(req.body.operationId);
+    if (!online) throw new TypeError('offline');
+    saved = apply(saved, req.body);
+    return response(receipt(req.body, saved));
+  }
+  const first = harness(t, handler, { state:base });
+  await first.cloud.start();
+  assert.equal(first.cloud.dispatch(intent), true);
+  assert.equal(first.cloud.dispatch(intent), false);
+  const reserved = first.latest().coins;
+  assert.ok(reserved < base.coins);
+  await flush();
+  const pending = first.pending();
+  assert.equal(pending.length, 1);
+  first.cloud.destroy();
+  t.mock.timers.reset();
+
+  online = true;
+  const restored = harness(t, handler, { state:base, pending });
+  await restored.cloud.start();
+  await flush();
+  assert.deepEqual(ids, [pending[0].operationId, pending[0].operationId]);
+  assert.equal(restored.latest().coins, reserved);
+  assert.deepEqual(restored.latest().restaurant.supperClub, saved.restaurant.supperClub);
+  assert.equal(restored.pending().length, 0);
+});

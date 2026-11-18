@@ -141,3 +141,17 @@ test('restaurant income preset adds cumulative receipts to this visit without ch
   const income=after.state.pendingGrowth.filter(r=>r.kind==='restaurant-collect');assert.equal(income.length,4);assert.equal(income.reduce((sum,r)=>sum+Math.round(r.amount*10),0),355);
   const result=engine.action({clientId:DEMO_ACTORS.male.id,operationId:'demo-income-test-batch',action:{type:'claim-restaurant-growth',rewardIds:income.map(r=>r.id)}});assert.equal(result.status,200);assert.equal(engine.snapshot().state.xp,before.state.xp+35.5);
 });
+
+test('the supper demo prepares a restaurant and charges only when the player opens the supper', () => {
+  const {engine} = setup();
+  engine.scenario('supper');
+  const ready = engine.snapshot().state;
+  assert.equal(ready.restaurant.stats.served, 30);
+  assert.equal(ready.restaurant.staff, 6);
+  assert.equal(ready.restaurant.supperClub, undefined);
+  const action = {type:'restaurant-supper-start',themeId:'drinks',workerIds:['worker-6','worker-7'],run:1};
+  assert.equal(engine.action({clientId:DEMO_ACTORS.male.id,operationId:'demo-preview-supper',action}).status, 200);
+  const after = engine.snapshot().state;
+  assert.ok(after.restaurant.supperClub.active);
+  assert.equal(ready.coins - after.coins, 1200);
+});

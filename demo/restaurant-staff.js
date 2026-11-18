@@ -79,6 +79,9 @@ export function restaurantStaffDebugResult(state,command,now=Date.now()) {
   const maxLevel=exact(command,['mode'])&&command.mode==='max-level';
   if(!unlock&&!preset&&!rehearse&&!reset&&!stamina&&!restSix&&!recipes&&!maxLevel)return reject('这项餐厅测试操作无效。');
   if(!Number.isSafeInteger(now)||now<0||!validRestaurant(state?.restaurant)||now<state.restaurant.openedAt)return reject('测试小馆尚未准备好。');
+  if(preset && state.restaurant.supperClub?.active?.workerIds.some(id=>Number(id.slice(7))>command.staff+1)){
+    return reject('这组人数会移走正在筹办餐会的搭档，请先完成本场餐会。');
+  }
   const next=structuredClone(state),restaurant=normalizeRestaurant(state.restaurant,now);
   if(restaurant.revision>=Number.MAX_SAFE_INTEGER-8)return reject('请刷新测试小馆后再试。');
   next.restaurant=restaurant;restaurant.lastInteractionAt=Math.max(restaurant.lastInteractionAt,now);

@@ -1,3 +1,5 @@
+@import './restaurant-supper-scene.css';
+
 /* Keep the wallet independent of the scene. The scene's own container scales
  * its geometry to the space left by the persistent HUD and navigation. */
 .restaurant .r-hud{position:relative;inset:auto;flex-shrink:0;margin:max(4px,env(safe-area-inset-top)) 14px 4px;min-height:40px;align-items:stretch;z-index:25}
