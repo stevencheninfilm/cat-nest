@@ -2,6 +2,7 @@ import { restaurantResearchBatchResult, restaurantResearchBatchMarkup } from './
 import { restaurantDishGrade, restaurantResearchCost, restaurantFragmentSurplus, RESTAURANT_DISH_GRADES } from './restaurant-research.js';
 import { restaurantQualityAttributes, restaurantQualityFood } from './restaurant-order-tiers-ui.js';
 import { restaurantInfo } from './restaurant.js';
+import { restaurantResearchPackMarkup, restaurantResearchCollectMarkup, restaurantResearchAtelier, createRestaurantResearchEffects } from './restaurant-research-pack.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const food=id=>`<span class="r-food r-food-${esc(id)}" aria-hidden="true"></span>`;
@@ -12,7 +13,8 @@ export function restaurantLotteryEffects(){
 }
 
 export function restaurantResearchRevealMarkup(draw,count=1){
-  return `<section class="rr-discovery"><header class="rr-discovery-heading"><span>RECIPE ATELIER · ${count===10?`十连探索 ${draw}–${draw+9}`:draw}</span><h2 id="rr-discovery-title">星光里的美味灵感</h2><p>让每一片灵感，成为新的拿手料理</p></header><button class="rr-discovery-close" data-rr-discovery-close aria-label="关闭灵感翻卡">×</button><div class="rr-discovery-center">${restaurantLotteryEffects()}<div class="rr-discovery-halo" aria-hidden="true"></div><span class="rr-discovery-star rr-discovery-star-one" aria-hidden="true">✧</span><span class="rr-discovery-star rr-discovery-star-two" aria-hidden="true">✦</span><button class="rr-discovery-card" data-rr-flip aria-label="灵感正在研发中" disabled><span class="rr-card-flipper"><span class="rr-card-face rr-card-back" aria-hidden="true"><small>小爪爪的灵感手札</small><span class="rr-card-orbit"><span class="rr-card-seal">${paw}</span></span><strong>美味的秘密</strong><em>等待一双小爪爪揭晓</em><i>✦ &nbsp; RECIPE NOTES &nbsp; ✦</i></span><span class="rr-card-face rr-card-front rr-quality-card" data-rr-result aria-hidden="true"></span></span></button><p class="rr-discovery-message" role="status" aria-live="polite" data-rr-message>小爪爪的美味灵感，正在向中心汇聚…</p></div><div class="rr-discovery-kitchen" aria-hidden="true"><div class="rr-discovery-shelf"><span>✦</span><i></i><i></i><i></i><span>✦</span></div><div class="rr-lab-worker rr-lab-worker-chef"><span class="r-cat r-cat-chef"></span><span class="rr-lab-spoon"></span></div><div class="rr-lab-stove"><span class="rr-lab-steam"><i></i><i></i><i></i></span><span class="rr-lab-pot"></span><span class="rr-lab-flame"></span></div><div class="rr-lab-worker rr-lab-worker-writer"><span class="r-cat r-cat-waiter"></span><span class="rr-lab-pencil"></span></div><span class="rr-lab-notebook"><i></i></span><div class="rr-lab-counter"></div><p>小爪爪研发中 <span>· · ·</span></p></div>${count===10?'<div class="rr-batch-discovery" data-rr-batch-results hidden></div>':''}<footer class="rr-discovery-footer"><section class="rr-wait-prompt" data-rr-wait-prompt role="group" aria-label="研发等待提示" hidden><h3>菜品仍在研发中</h3><p>结果还在确认，请稍候。你可以先去经营，也可以留在这里等待。</p><div><button data-rr-wait-leave>先去经营</button><button data-rr-wait-continue>继续等待</button></div></section><button class="rr-discovery-confirm" data-rr-discovery-confirm disabled>灵感汇聚中<span class="rr-brewing-dots"> · · ·</span></button><small data-rr-discovery-note>${count===10?'300 灵感 · 十份新的美味发现':'30 灵感 · 一次新的美味发现'}</small></footer></section>`;
+  const atelier=restaurantResearchAtelier();
+  return `<section class="rr-discovery"${atelier?` style="--rr-atelier:url('${esc(atelier)}')"`:''}><header class="rr-discovery-heading"><span>RECIPE ATELIER · ${count===10?`十连探索 ${draw}–${draw+9}`:draw}</span><h2 id="rr-discovery-title">星光里的美味灵感</h2><p>让每一片灵感，成为新的拿手料理</p></header><button class="rr-discovery-close" data-rr-discovery-close aria-label="关闭灵感翻卡">×</button><div class="rr-discovery-center">${restaurantLotteryEffects()}<div class="rr-discovery-halo" aria-hidden="true"></div><span class="rr-discovery-star rr-discovery-star-one" aria-hidden="true">✧</span><span class="rr-discovery-star rr-discovery-star-two" aria-hidden="true">✦</span>${restaurantResearchPackMarkup(count)}<button class="rr-discovery-card" data-rr-flip aria-label="灵感正在研发中" disabled><span class="rr-card-flipper"><span class="rr-card-face rr-card-back" aria-hidden="true"><small>小爪爪的灵感手札</small><span class="rr-card-orbit"><span class="rr-card-seal">${paw}</span></span><strong>美味的秘密</strong><em>等待一双小爪爪揭晓</em><i>✦ &nbsp; RECIPE NOTES &nbsp; ✦</i></span><span class="rr-card-face rr-card-front rr-quality-card" data-rr-result aria-hidden="true"></span></span></button><p class="rr-discovery-message" role="status" aria-live="polite" data-rr-message>小爪爪的美味灵感，正在向中心汇聚…</p><div class="rr-collect" data-rr-collect hidden></div></div><div class="rr-discovery-kitchen" aria-hidden="true"><div class="rr-discovery-shelf"><span>✦</span><i></i><i></i><i></i><span>✦</span></div><div class="rr-lab-worker rr-lab-worker-chef"><span class="r-cat r-cat-chef"></span><span class="rr-lab-spoon"></span></div><div class="rr-lab-stove"><span class="rr-lab-steam"><i></i><i></i><i></i></span><span class="rr-lab-pot"></span><span class="rr-lab-flame"></span></div><div class="rr-lab-worker rr-lab-worker-writer"><span class="r-cat r-cat-waiter"></span><span class="rr-lab-pencil"></span></div><span class="rr-lab-notebook"><i></i></span><div class="rr-lab-counter"></div><p>小爪爪研发中 <span>· · ·</span></p></div>${count===10?'<div class="rr-batch-discovery" data-rr-batch-results hidden></div>':''}<footer class="rr-discovery-footer"><section class="rr-wait-prompt" data-rr-wait-prompt role="group" aria-label="研发等待提示" hidden><h3>菜品仍在研发中</h3><p>结果还在确认，请稍候。你可以先去经营，也可以留在这里等待。</p><div><button data-rr-wait-leave>先去经营</button><button data-rr-wait-continue>继续等待</button></div></section><button class="rr-discovery-confirm" data-rr-discovery-confirm disabled>灵感汇聚中<span class="rr-brewing-dots"> · · ·</span></button><small data-rr-discovery-note>${count===10?'300 灵感 · 十份新的美味发现':'30 灵感 · 一次新的美味发现'}</small></footer></section>`;
 }
 
 /** Only a matching, accepted draw supplies the face. Flipping and dismissing
@@ -29,15 +31,17 @@ export function restaurantResearchRevealFace({card,recipe,grade}){
   return `<small class="rr-discovery-quality">${grade} 级菜谱 · ${recipe.level===5?'满阶余片可融合':ready?'灵感集齐':'美味积累中'}</small><span class="rr-discovery-dish">${restaurantQualityFood(recipe.id,grade,food)}</span><strong class="rr-discovery-name">${esc(recipe.name)}</strong><span class="rr-discovery-fragments"><i aria-hidden="true">✦</i> 菜谱碎片 <b>×${card.amount}</b></span><span class="rr-discovery-progress">${recipe.upgradeCost===null?`多余 ${surplus.surplus} 枚 · 可融合 ${surplus.surplus*surplus.fusionValue} 灵感`:`已收集 ${recipe.fragments} / ${recipe.upgradeCost} 枚`}</span><em class="rr-discovery-caption">${surplus.surplus?'多余碎片，可以在手账里再次发光':ready?recipe.researchUnlocked?'新的品质，就差最后一步':'带着灵感，等待小馆再长大一点':'每一片灵感，都离美味更近一点'}</em>`;
 }
 
-const BREW_MS=700,READY_MS=180,FLIP_MS=420,WAIT_NOTICE_MS=4000;
+// The flip window now includes tearing the notebook open (≈.45s) before the card turns; it stays under one second so a resumed tab still settles on the next tick.
+const BREW_MS=700,READY_MS=180,FLIP_MS=980,WAIT_NOTICE_MS=4000;
 
-export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,now=Date.now,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{},onDeferred=()=>{},getInfo=restaurantInfo}){
+export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unschedule=clearTimeout,now=Date.now,reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onPhaseChange=()=>{},onDeferred=()=>{},getInfo=restaurantInfo,effects}){
   let active=null,restoreFocus=null;
+  const fx=effects??createRestaurantResearchEffects(dialog,{reducedMotion});
   const timers=new Set();
   const $=selector=>dialog.querySelector(selector);
   function later(callback,ms){const session=active,id=schedule(()=>{timers.delete(id);if(active===session&&dialog.open)callback();},ms);timers.add(id);return id;}
   function clearTimers(){for(const id of timers)unschedule(id);timers.clear();}
-  function stage(value){if(dialog.dataset.rrPhase===value)return;dialog.dataset.rrPhase=value;if(active)active.phaseAt=now();onPhaseChange(value);}
+  function stage(value){if(dialog.dataset.rrPhase===value)return;dialog.dataset.rrPhase=value;if(active)active.phaseAt=now();onPhaseChange(value);fx.phase(value);}
   function clearWait(){if(active?.waitTimer!==undefined){unschedule(active.waitTimer);timers.delete(active.waitTimer);delete active.waitTimer;}}
   function hideWaitPrompt(){
     const prompt=$('[data-rr-wait-prompt]');
@@ -89,6 +93,9 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
       $('[data-rr-discovery-confirm]').textContent='收好 10 份灵感，继续研发';
       $('[data-rr-message]').textContent=`十连探索完成，菜谱碎片共 ${active.result.total} 枚`;
       $('[data-rr-discovery-note]').textContent=`10 份结果已收进手账 · 共消耗 300 灵感`;
+    }else{
+      const collect=active.preview?'':restaurantResearchCollectMarkup(active.result);
+      if(collect){const node=$('[data-rr-collect]');node.innerHTML=collect;node.hidden=false;dialog.dataset.rrCollect='true';fx.collect();}
     }
   }
   function flip(){
@@ -101,7 +108,7 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
   function closed(){
     if(dialog.open)return;
     const wasActive=!!active;
-    clearTimers();active=null;dialog.innerHTML='';delete dialog.dataset.rQuality;delete dialog.dataset.rrPhase;delete dialog.dataset.rrBatch;
+    clearTimers();fx.reset();active=null;dialog.innerHTML='';delete dialog.dataset.rQuality;delete dialog.dataset.rrCollect;delete dialog.dataset.rrPhase;delete dialog.dataset.rrBatch;
     if(wasActive)onPhaseChange('closed');
     if(restoreFocus?.isConnected&&!restoreFocus.disabled)restoreFocus.focus({preventScroll:true});restoreFocus=null;
   }
@@ -163,6 +170,6 @@ export function createRestaurantResearchReveal({dialog,schedule=setTimeout,unsch
     },
     close,
     reset(){restoreFocus=null;close();},
-    destroy(){restoreFocus=null;close();dialog.removeEventListener('click',click);dialog.removeEventListener('cancel',cancel);dialog.removeEventListener('close',closed);},
+    destroy(){restoreFocus=null;close();fx.destroy();dialog.removeEventListener('click',click);dialog.removeEventListener('cancel',cancel);dialog.removeEventListener('close',closed);},
   };
 }

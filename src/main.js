@@ -33,6 +33,7 @@ import './restaurant-recipe-celebration.css';
 import './restaurant-research-reveal.css';
 import './restaurant-research-lottery.css';
 import './restaurant-research-batch.css';
+import './restaurant-research-pack.css';
 import './restaurant-kitchen.css';
 import './restaurant-economy.css';
 import './restaurant-progression.css';

@@ -16,9 +16,17 @@ export function restaurantRecipeStageMarkup(recipe){
   return `<div class="rr-promotion-stage"><div class="rr-promotion-rays" aria-hidden="true"></div><span class="rr-promotion-spark rr-spark-one" aria-hidden="true">✦</span><span class="rr-promotion-spark rr-spark-two" aria-hidden="true">✧</span><span class="rr-promotion-spark rr-spark-three" aria-hidden="true">✦</span><div class="rr-promotion-platter"><span class="r-food r-food-${esc(recipe.id)}" aria-hidden="true"></span></div><span class="r-cat r-cat-chef rr-promotion-chef" aria-hidden="true"></span><span class="r-cat r-cat-waiter rr-promotion-waiter" aria-hidden="true"></span><span class="rr-promotion-laurel" aria-hidden="true">❧</span></div>`;
 }
 
+/** SSS only: a CSS-timed prelude (grade flashes B→A→S→SS twice, three
+ * heartbeats, a white flash) that lifts to reveal the saved result. Tapping it
+ * skips ahead; it never changes the promotion it introduces. */
+const PRELUDE=[['B',1100,260],['A',1360,200],['S',1560,150],['SS',1710,120],['B',1830,110],['A',1940,140],['S',2080,190],['SS',2270,260]];
+export function restaurantRecipePreludeMarkup(recipe){
+  return `<div class="rr-prelude" data-r-prelude-skip aria-hidden="true"><div class="rr-prelude-vortex"></div><div class="rr-prelude-ladder">${['B','A','S','SS','SSS'].map(grade=>`<span data-grade="${grade}">${grade}</span>`).join('')}</div><div class="rr-prelude-plate"><span class="r-food r-food-${esc(recipe.id)}"></span><i class="rr-prelude-crack"></i></div><div class="rr-prelude-grades">${PRELUDE.map(([grade,delay,span])=>`<b data-grade="${grade}" style="--rr-at:${delay}ms;--rr-for:${span}ms">${grade}</b>`).join('')}</div><p class="rr-prelude-wait">就差最后一下 · · ·</p><small class="rr-prelude-skip">轻点跳过</small><div class="rr-prelude-white"></div></div>`;
+}
+
 export function restaurantRecipeCelebrationMarkup({recipe,from,to},{preview=false}={}){
   const grade=restaurantDishGrade(to),oldGrade=restaurantDishGrade(from);
-  return `<button class="rr-promotion-close" data-r-celebration-close aria-label="关闭菜品升阶庆典">×</button><div class="rr-promotion-heading"><span class="rr-promotion-grade">${grade}</span><div><small>${preview?'品质庆典预览':'RECIPE UPGRADED'}</small><h2 id="rr-promotion-title">${preview?'品质展示':'菜品升阶成功！'}</h2><p>${gradeNames[grade]} · ${grade} 级料理</p></div></div>${restaurantRecipeStageMarkup(recipe)}<div class="rr-promotion-name"><span>✦</span><h3>${esc(recipe.name)}</h3><span>✦</span></div><div class="rr-promotion-path"><span>${oldGrade}</span><i aria-hidden="true">→</i><strong>${grade}</strong></div><div class="rr-promotion-rewards"><div><small>菜品基础售价</small><span>${price(recipe,from)} <i>→</i> <b>${price(recipe,to)}</b><em>小鱼干</em></span></div><div><small>每份基础成长</small><span>${recipe.xp+2*(from-1)} <i>→</i> <b>${recipe.xp+2*(to-1)}</b><em>经验</em></span></div></div><p class="rr-promotion-note">${preview?'仅展示品质效果，不改变菜谱等级。':'新的品质，将从下一份订单开始生效。'}</p><button class="rr-promotion-confirm" data-r-celebration-close>${preview?'收好这份期待':'太棒了，继续研发'}</button><div class="rr-confetti" aria-hidden="true">${Array.from({length:34},(_,index)=>`<i style="--party-x:${index%2?94:6}%;--party-dx:${(index%2?-1:1)*(30+(index*47)%240)}px;--party-dy:${-150-(index*31)%290}px;--party-turn:${240+index*33}deg;--party-delay:${index%7*45}ms;--party-color:${['#e8c56b','#d88e9c','#91c6b5','#c1acd9','#f7e6ad'][index%5]}"></i>`).join('')}<span class="rr-party-left">🎉</span><span class="rr-party-right">🎉</span></div>`;
+  return `<button class="rr-promotion-close" data-r-celebration-close aria-label="关闭菜品升阶庆典">×</button><div class="rr-promotion-heading"><span class="rr-promotion-grade">${grade}</span><div><small>${preview?'品质庆典预览':'RECIPE UPGRADED'}</small><h2 id="rr-promotion-title">${preview?'品质展示':'菜品升阶成功！'}</h2><p>${gradeNames[grade]} · ${grade} 级料理</p></div></div>${restaurantRecipeStageMarkup(recipe)}<div class="rr-promotion-name"><span>✦</span><h3>${esc(recipe.name)}</h3><span>✦</span></div><div class="rr-promotion-path"><span>${oldGrade}</span><i aria-hidden="true">→</i><strong>${grade}</strong></div><div class="rr-promotion-rewards"><div><small>菜品基础售价</small><span>${price(recipe,from)} <i>→</i> <b>${price(recipe,to)}</b><em>小鱼干</em></span></div><div><small>每份基础成长</small><span>${recipe.xp+2*(from-1)} <i>→</i> <b>${recipe.xp+2*(to-1)}</b><em>经验</em></span></div></div><p class="rr-promotion-note">${preview?'仅展示品质效果，不改变菜谱等级。':'新的品质，将从下一份订单开始生效。'}</p><button class="rr-promotion-confirm" data-r-celebration-close>${preview?'收好这份期待':'太棒了，继续研发'}</button><div class="rr-confetti" aria-hidden="true">${Array.from({length:34},(_,index)=>`<i style="--party-x:${index%2?94:6}%;--party-dx:${(index%2?-1:1)*(30+(index*47)%240)}px;--party-dy:${-150-(index*31)%290}px;--party-turn:${240+index*33}deg;--party-delay:${index%7*45}ms;--party-color:${['#e8c56b','#d88e9c','#91c6b5','#c1acd9','#f7e6ad'][index%5]}"></i>`).join('')}<span class="rr-party-left">🎉</span><span class="rr-party-right">🎉</span></div>${to===5?restaurantRecipePreludeMarkup(recipe):''}`;
 }
 
 export function restaurantResearchTestControls(enabled){
@@ -31,17 +39,17 @@ export function createRestaurantRecipeCelebration({dialog}){
   function show(gain,preview=false){
     if(dialog.open){queue.push({gain,preview});return;}
     restoreFocus=document.activeElement;
-    dialog.dataset.rQuality=restaurantDishGrade(gain.to);
+    dialog.dataset.rQuality=restaurantDishGrade(gain.to);if(gain.to===5)dialog.dataset.rPrelude='play';else delete dialog.dataset.rPrelude;
     dialog.innerHTML=restaurantRecipeCelebrationMarkup(gain,{preview});
     dialog.showModal();dialog.querySelector('.rr-promotion-confirm').focus({preventScroll:true});
   }
   function closed(){
-    dialog.innerHTML='';
+    dialog.innerHTML='';delete dialog.dataset.rPrelude;
     if(queue.length){const next=queue.shift();show(next.gain,next.preview);return;}
     if(restoreFocus?.isConnected&&!restoreFocus.disabled)restoreFocus.focus({preventScroll:true});
     restoreFocus=null;
   }
-  function click(event){if(event.target.closest('[data-r-celebration-close]'))dialog.close();}
+  function click(event){if(event.target.closest('[data-r-prelude-skip]')){dialog.dataset.rPrelude='skip';return;}if(event.target.closest('[data-r-celebration-close]'))dialog.close();}
   function cancel(event){event.preventDefault();event.stopPropagation();dialog.close();}
   dialog.addEventListener('click',click);dialog.addEventListener('cancel',cancel);dialog.addEventListener('close',closed);
   return {
