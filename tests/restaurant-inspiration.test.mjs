@@ -103,6 +103,10 @@ test('promotion feedback is silent on load, compares saved grades and uses five 
   const research=restaurantResearchPanel(upgraded),menu=restaurantRecipesPanel(upgraded);
   for(const grade of ['B','A','S','SS','SSS']){assert.match(research,new RegExp(`data-r-quality="${grade}"`));assert.match(menu,new RegExp(`data-r-quality="${grade}"`));}
   const html=restaurantRecipeCelebrationMarkup(gains[0]);assert.match(html,/菜品升阶成功/);assert.match(html,/🎉/);assert.match(html,/下一份订单/);assert.equal((html.match(/--party-color:/g)||[]).length,34);
+  for(const gain of gains.slice(0,3))assert.doesNotMatch(restaurantRecipeCelebrationMarkup(gain),/data-r-prelude-skip/);
+  const legendary=restaurantRecipeCelebrationMarkup(gains[3]);
+  assert.match(legendary,/data-r-prelude-skip/);
+  assert.deepEqual([...legendary.matchAll(/<b data-grade="([^"]+)"/g)].map(match=>match[1]),['B','A','S','SS','B','A','S','SS']);
   assert.match(restaurantRecipeCelebrationMarkup(gains[3],{preview:true}),/不改变菜谱等级/);assert.equal(restaurantResearchTestControls(false),'');
   const css=await readFile(new URL('../src/restaurant-recipe-celebration.css',import.meta.url),'utf8');
   for(const grade of ['A','S','SS','SSS'])assert.ok(css.includes(`[data-r-quality=${grade}]`));assert.match(css,/prefers-reduced-motion/);

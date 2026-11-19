@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, reduceAction } from '../src/state.js';
 import { restaurantInfo } from '../src/restaurant.js';
+import { restaurantResearchCollectMarkup } from '../src/restaurant-research-pack.js';
 import { createRestaurantResearchReveal, restaurantResearchRevealResult, restaurantResearchRevealFace, restaurantResearchRevealMarkup } from '../src/restaurant-research-reveal.js';
 
 const NOW=Date.parse('2026-10-18T12:00:00Z');
@@ -68,6 +69,36 @@ test('a fast receipt does not skip the card back, and closing early cancels anim
   h.view.sync(info);assert.equal(h.dialog.open,false);
 });
 
+test('the collection banner waits for the accepted single draw and shows the saved progress',t=>{
+  const h=harness(t),accepted=drawn();
+  h.view.start(1);
+  h.tick();
+  h.view.syncState(state());
+  assert.equal(h.dialog.dataset.rrCollect,undefined);
+  h.view.syncState(accepted);
+  h.tick();
+  assert.equal(h.dialog.dataset.rrCollect,undefined,'the banner must not disclose the outcome during the flip');
+  h.tick();
+  const banner=h.nodes.get('[data-rr-collect]');
+  assert.equal(banner.hidden,false);
+  assert.match(banner.innerHTML,/集齐！/);
+  assert.match(banner.innerHTML,/<em>3<\/em>\s*\/\s*3/);
+  assert.match(banner.innerHTML,/可以研发了/);
+  h.view.close();
+  assert.equal(h.dialog.dataset.rrCollect,undefined);
+});
+
+test('the collection banner respects fragment and restaurant level requirements, including maxed dishes',()=>{
+  const result=restaurantResearchRevealResult(restaurantInfo(drawn(),NOW),1);
+  const banner=changes=>restaurantResearchCollectMarkup({...result,recipe:{...result.recipe,...changes}});
+  assert.equal(banner({fragments:2,upgradeCost:3}),'');
+  assert.equal(banner({level:5,fragments:20,upgradeCost:null}),'');
+  const locked=banner({level:4,fragments:16,upgradeCost:15,researchUnlocked:false,researchUnlockLevel:32});
+  assert.match(locked,/<em>16<\/em>\s*\/\s*15/);
+  assert.match(locked,/小馆 Lv\.32 可研发/);
+  assert.doesNotMatch(locked,/可以研发了/);
+});
+
 test('submission errors never reveal invented rewards, and reduced motion bypasses timed flourishes',t=>{
   const h=harness(t,{motion:true});h.view.start(1);assert.equal([...h.timers.values()][0].ms,0);
   h.view.sync(restaurantInfo(state(),NOW),{savePhase:'error',refusedResearchDraw:1});assert.equal(h.dialog.dataset.rrPhase,'error');assert.equal(h.timers.size,0);
@@ -92,6 +123,7 @@ test('terminal previews all five materials without altering inspiration, shards 
   for(const grade of ['B','A','S','SS','SSS']){
     assert.equal(h.view.preview(grade,info),true);h.tick();h.click('[data-rr-flip]');h.tick();
     assert.equal(h.dialog.dataset.rQuality,grade);assert.match(h.nodes.get('[data-rr-discovery-note]').textContent,/不增加碎片/);
+    assert.equal(h.dialog.dataset.rrCollect,undefined);
     h.view.close();
   }
   assert.deepEqual(info,before);
@@ -210,6 +242,7 @@ test('ten-draw reveal waits for one matching receipt, then animates all ten card
   h.tick();assert.equal(h.dialog.dataset.rrPhase,'waiting');assert.equal(h.dialog.querySelector('[data-rr-batch-results]').innerHTML,'');
   h.view.syncState(accepted);h.tick();h.tick();assert.equal(h.dialog.dataset.rrPhase,'revealed');
   const result=h.nodes.get('[data-rr-batch-results]');assert.equal(result.hidden,false);assert.match(result.innerHTML,/is-animated/);assert.equal((result.innerHTML.match(/data-rr-batch-draw=/g)||[]).length,10);
+  assert.equal(h.dialog.dataset.rrCollect,undefined);
   assert.equal(h.nodes.get('[data-rr-discovery-confirm]').disabled,false);h.click('[data-rr-discovery-confirm]');assert.equal(h.dialog.open,false);assert.equal(h.timers.size,0);
   assert.equal(h.dialog.dataset.rrBatch,undefined);assert.equal(accepted.restaurant.research.lastBatch.cards.length,10);
 });
